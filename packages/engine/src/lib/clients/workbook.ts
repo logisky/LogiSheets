@@ -20,6 +20,10 @@ import type {
     ErrorMessage,
     AppData,
     BlockField,
+    DuplicateBlockKey,
+    EnumSetInfo,
+    BlockOpForPayload,
+    BlockOpPolicy,
     TempStatusDiff,
     ShadowCellInfo,
     Client,
@@ -532,6 +536,44 @@ export class WorkbookClient implements Client {
     getAllBlockFields(): Resp<readonly BlockField[]> {
         return this._call(MethodName.GetAllBlockFields) as Resp<
             readonly BlockField[]
+        >
+    }
+
+    /**
+     * Every duplicated block row key in the workbook — see
+     * `Client['duplicateBlockKeys']`. The engine refuses to create one; this
+     * finds the ones a file arrived with, which nothing else surfaces.
+     */
+    duplicateBlockKeys(): Resp<readonly DuplicateBlockKey[]> {
+        return this._call(MethodName.DuplicateBlockKeys) as Resp<
+            readonly DuplicateBlockKey[]
+        >
+    }
+
+    /**
+     * The workbook's enum sets — see `Client['getEnumSets']`. Ids and labels;
+     * colours stay in the host's own EnumSetManager, keyed by variant id.
+     */
+    getEnumSets(): Resp<readonly EnumSetInfo[]> {
+        return this._call(MethodName.GetEnumSets) as Resp<
+            readonly EnumSetInfo[]
+        >
+    }
+
+    /** See `Client['getBlockOpForPayloads']`. Static — cache it. */
+    getBlockOpForPayloads(): Resp<readonly BlockOpForPayload[]> {
+        return this._call(MethodName.GetBlockOpForPayloads) as Resp<
+            readonly BlockOpForPayload[]
+        >
+    }
+
+    /** See `Client['getBlockOpPolicies']`. */
+    getBlockOpPolicies(params: {
+        sheetIdx: number
+        blockId: number
+    }): Resp<readonly BlockOpPolicy[]> {
+        return this._call(MethodName.GetBlockOpPolicies, params) as Resp<
+            readonly BlockOpPolicy[]
         >
     }
 

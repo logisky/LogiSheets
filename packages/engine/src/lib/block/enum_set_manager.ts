@@ -25,8 +25,17 @@ export interface EnumInfo {
 }
 
 /**
- * Manager for all enum sets in the application
- * Ensures uniqueness of variant values within each enum
+ * Host-side enum registry.
+ *
+ * **The workbook owns which sets exist and what options each has.** They live
+ * in the engine, persisted in `logisheets/data.xml`, because a field declaring
+ * `enum{setId}` names a list it does not carry and the membership rule is
+ * generated from that list — so no host but this one could see the options
+ * while they lived in the AppData blob. On file open this registry is merged
+ * from the workbook's (`src/core/blocks/enum-hydrate.ts`).
+ *
+ * What stays here: the COLOUR of each variant, which is presentation and which
+ * the engine deliberately does not carry.
  */
 export class EnumSetManager {
   public constructor() {

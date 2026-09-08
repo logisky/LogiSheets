@@ -61,6 +61,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         dirty_cells_next_round: mut dirty_cells,
         mut block_schema_manager,
         mut field_render_manager,
+        mut enum_set_manager,
         mut image_manager,
         mut chart_manager,
         mut data_validation_manager,
@@ -154,6 +155,13 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             &mut field_render_manager,
             &mut style_manager,
             logisheets.field_renders,
+        );
+        // The workbook's enum sets, before any schema loads: a field declaring
+        // `enum{setId}` needs its options present for the membership rule to
+        // mean anything.
+        crate::block_manager::enum_manager::persistence::load_enum_sets(
+            &mut enum_set_manager,
+            logisheets.enum_sets,
         );
         // Links are restored AFTER all sheets' blocks load — a cross-sheet link's
         // target block may live on a sheet loaded later. Collect (source sheet,
@@ -392,6 +400,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     &mut cube_manager,
                     &mut ext_ref_manager,
                     &block_schema_manager,
+                    &enum_set_manager,
                     &mut style_loader,
                     &xl,
                     &mut dirty_cells,
@@ -460,6 +469,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             idx_navigator: &navigator,
             external_links_manager: &mut external_links_manager,
             block_schema_manager: &block_schema_manager,
+            enum_set_manager: &enum_set_manager,
             container: &container,
             sid_assigner: &mut sid,
         };
@@ -485,6 +495,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
         exclusive_manager,
         block_schema_manager,
         field_render_manager,
+        enum_set_manager,
         image_manager,
         chart_manager: {
             // Every chart is loaded by now, so a saved binding has something
@@ -716,7 +727,7 @@ fn table_part_to_spec(
 /// the rest of the workbook still loads.
 fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvertSpec>) {
     use crate::edit_action::{
-        BindFormSchema, ConvertBlock, EditAction, EditPayload, PayloadsAction,
+        BindFormSchema, ConvertBlock, EditAction, EditPayload, PayloadsAction, SchemaFieldSpec,
     };
     for spec in specs {
         let sheet_id = match controller
@@ -748,8 +759,14 @@ fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvert
         } else {
             spec.name.clone()
         };
-        let render_ids: Vec<String> = (0..spec.col_cnt)
-            .map(|c| format!("{}-{}", ref_name, c))
+        // A table adopted from an .xlsx declares nothing about its fields: the
+        // header row gives names, and nothing in the file says what the values
+        // mean. They come in unspecified, which is the honest reading.
+        let fields: Vec<SchemaFieldSpec> = spec
+            .field_names
+            .iter()
+            .enumerate()
+            .map(|(c, name)| SchemaFieldSpec::new(name.clone(), format!("{}-{}", ref_name, c)))
             .collect();
         let payloads = vec![
             EditPayload::ConvertBlock(ConvertBlock {
@@ -766,12 +783,8 @@ fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvert
                 block_id,
                 field_from: 0,
                 key_idx: 0,
-                fields: spec.field_names,
-                render_ids,
+                fields,
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
             }),
         ];
         controller.handle_action(EditAction::Payloads(PayloadsAction {

@@ -22,6 +22,7 @@ use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId};
 
 use logisheets_workbook::logisheets::AppData;
 use logisheets_workbook::prelude::{read, write};
+pub mod block_key_guard;
 pub mod display;
 mod executor;
 pub mod status;
@@ -661,7 +662,8 @@ mod tests {
         Alignment, BindFormSchema, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput,
         CellStyleUpdate, CreateBlock, CreateSheet, DeleteCols, DeleteRows, DeleteSheet, EditAction,
         EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertRows,
-        LineStyleUpdate, PayloadsAction, StatusCode, StyleUpdateType, VerticalAlignment,
+        LineStyleUpdate, PayloadsAction, SchemaFieldSpec, StatusCode, StyleUpdateType,
+        VerticalAlignment,
     };
 
     use super::Controller;
@@ -1455,18 +1457,17 @@ mod tests {
         // Bind a row schema to the block.
         let action = PayloadsAction {
             payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "materials".to_string(),
-                sheet_idx: 0,
-                block_id: 1,
-                field_from: 1,
-                key_idx: 0,
-                fields: vec!["qty".to_string(), "name".to_string()],
-                render_ids: vec!["r1".to_string(), "r2".to_string()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            })],
+                    ref_name: "materials".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 1,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("qty", "r1"),
+                        SchemaFieldSpec::new("name", "r2"),
+                    ],
+                    row: true,
+                })],
             undoable: true,
             init: false,
         };
@@ -1559,18 +1560,16 @@ mod tests {
         // Bind a schema so the frontend's BlockInterface would actually render.
         wb.handle_action(EditAction::Payloads(PayloadsAction {
             payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "scenarios".to_string(),
-                sheet_idx: 0,
-                block_id: 7,
-                field_from: 1,
-                key_idx: 0,
-                fields: vec!["amount".to_string()],
-                render_ids: vec!["render-amount".to_string()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            })],
+                    ref_name: "scenarios".to_string(),
+                    sheet_idx: 0,
+                    block_id: 7,
+                    field_from: 1,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("amount", "render-amount"),
+                    ],
+                    row: true,
+                })],
             undoable: true,
             init: false,
         }));

@@ -3,12 +3,12 @@ use gents_derives::{Interface, TS};
 use crate::BlockId;
 use crate::{
     ActionEffect, AppData, AppendixWithCell, BlockActor, BlockDataRow, BlockField, BlockInfo,
-    BlockModifyInfo, BlockOp, BlockSortOrder, CellCoordinateWithSheet, CellImageInfo, CellInfo,
-    FieldValidationVerdict,
+    BlockModifyInfo, BlockOp, BlockOpForPayload, BlockOpPolicy, BlockSortOrder, CellCoordinateWithSheet, CellImageInfo, CellInfo,
     CellInput, CellPosition, CellRefRange, CfRuleInfo, ChartInfo, ColId, Comment, DependentCell,
-    DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo,
-    LinkInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo,
-    SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
+    DisplayWindow, DisplayWindowWithStartPoint, DuplicateBlockKey, EditPayload, EnumSetInfo,
+    ErrorMessage, FieldValidationVerdict, FormulaDisplayInfo, LinkInfo, MergeCell, ReproducibleCell, RowId,
+    RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate, SheetDimension, SheetId,
+    SheetInfo, Style, TempStatusDiff, Value,
 };
 
 // ============================================================================
@@ -80,6 +80,10 @@ pub enum Message {
     GetBlockInfo(GetBlockInfoParams),
     GetCellInfos(GetCellInfosParams),
     GetAllBlockFields,
+    DuplicateBlockKeys,
+    GetEnumSets,
+    GetBlockOpForPayloads,
+    GetBlockOpPolicies(GetBlockOpPoliciesParams),
     Undo,
     Redo,
     CleanHistory,
@@ -524,6 +528,15 @@ pub struct MayModifyBlockParams {
     pub actor: BlockActor,
 }
 
+/// Which policies a block declares, per operation — beyond whether a given
+/// actor is allowed, which is [`MayModifyBlockParams`].
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "get_block_op_policies_params.ts", rename_all = "camelCase")]
+pub struct GetBlockOpPoliciesParams {
+    pub sheet_idx: usize,
+    pub block_id: BlockId,
+}
+
 /// Ask whether a value would break a block field's validation rule, before
 /// writing it.
 ///
@@ -905,6 +918,15 @@ pub struct WorkbookMethods {
     pub get_available_block_id:
         fn(params: GetAvailableBlockIdParams, book_id: Option<usize>) -> Result<u32, ErrorMessage>,
     pub get_all_block_fields: fn(book_id: Option<usize>) -> Result<Vec<BlockField>, ErrorMessage>,
+    pub duplicate_block_keys:
+        fn(book_id: Option<usize>) -> Result<Vec<DuplicateBlockKey>, ErrorMessage>,
+    pub get_enum_sets: fn(book_id: Option<usize>) -> Result<Vec<EnumSetInfo>, ErrorMessage>,
+    pub get_block_op_for_payloads:
+        fn(book_id: Option<usize>) -> Result<Vec<BlockOpForPayload>, ErrorMessage>,
+    pub get_block_op_policies: fn(
+        params: GetBlockOpPoliciesParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<BlockOpPolicy>, ErrorMessage>,
     pub get_all_blocks: fn(
         params: GetAllBlocksParams,
         book_id: Option<usize>,

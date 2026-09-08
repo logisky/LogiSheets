@@ -2566,50 +2566,14 @@ export function createEngine(L: Locale) {
             // that column regardless of what was declared on fields[0].
             // fields[i>0] carry their own userEditable from the table literal.
             const sheetId = sheetIdByName[sheet]
-            const renderIds = fields.map((field, fieldIdx) => {
-                // Build the FieldTypeEnum variant matching field.fieldType.
-                // formatter (on the number variant) and the cell-style
-                // setNumFmt below are kept in sync from the same field.numFmt.
-                const fieldKind = field.fieldType ?? 'string'
-                const numFmt = field.numFmt ?? ''
-                const validation = field.validation ?? ''
-                const fieldTypeSpec =
-                    fieldKind === 'number'
-                        ? {type: 'number', validation, formatter: numFmt}
-                        : fieldKind === 'boolean'
-                        ? {type: 'boolean'}
-                        : fieldKind === 'enum'
-                        ? {type: 'enum', id: field.enumId ?? ''}
-                        : {type: 'string', validation}
-
-                // FieldInfo carries only host-UI metadata now (post-Phase-1+2):
-                //   - valueFormula moved to Rust schema (BindFormSchema below)
-                //   - userEditable as a string formula moved to Rust schema
-                //     (editabilityFormulas in BindFormSchema below); the engine
-                //     auto-installs the shadow and the host permission patch
-                //     reads schema metadata to decide whether to consult it.
-                // What stays on FieldInfo: the static boolean userEditable
-                // flag (key column false; otherwise permissive — formula, if
-                // any, dynamically tightens via shadow).
-                const staticUserEditable: boolean =
-                    fieldIdx === 0
-                        ? false
-                        : typeof field.userEditable === 'string'
-                        ? true
-                        : field.userEditable
-                const info = blockManager.fieldManager.create(
-                    sheetId,
-                    blockId,
-                    {
-                        name: field.name,
-                        type: fieldTypeSpec,
-                        required: false,
-                        unique: false,
-                        userEditable: staticUserEditable,
-                    }
-                )
-                return info.id as string
-            })
+            // A render id per field. Nothing is stored against it any more:
+            // the field's type, its constraints and its write policy all go
+            // onto the schema below (see the bindFormSchema push), which is
+            // where every host reads them from — including hosts that are not
+            // this craft and not a browser.
+            const renderIds = fields.map(() =>
+                blockManager.fieldManager.nextRenderId()
+            )
 
             blockPayloads.push({
                 type: 'createBlock',
@@ -2687,11 +2651,47 @@ export function createEngine(L: Locale) {
                     .keyIdx(0)
                     .fieldFrom(0)
                     .row(true)
-                    .fields(fieldNames)
-                    .renderIds(renderIds)
-                    .fieldFormulas(fieldNames.map(() => ''))
-                    .validationFormulas(validationFormulas)
-                    .editabilityFormulas(editabilityFormulas)
+                    // The declaration goes on the schema alongside the rules,
+                    // so a reader that is not this craft — the block-interface
+                    // UI, an agent, a headless host — sees what each field is.
+                    // The number format stays on the render info; it is how the
+                    // value is drawn, not what it is.
+                    .fields(
+                        fields.map((field, fieldIdx) => {
+                            const kind = field.fieldType ?? 'string'
+                            const staticEditable =
+                                fieldIdx === 0
+                                    ? false
+                                    : typeof field.userEditable === 'string'
+                                    ? true
+                                    : field.userEditable
+                            return {
+                                name: fieldNames[fieldIdx],
+                                renderId: renderIds[fieldIdx],
+                                validationFormula:
+                                    validationFormulas[fieldIdx] || undefined,
+                                editabilityFormula:
+                                    editabilityFormulas[fieldIdx] || undefined,
+                                // On the schema, so a host that is not this
+                                // craft — or not a browser at all — can see who
+                                // may write here. fields[0] is the key column
+                                // and is always closed.
+                                writePolicy:
+                                    staticEditable === false
+                                        ? 'ownerOnly'
+                                        : staticEditable === true
+                                        ? 'anyone'
+                                        : 'inherit',
+                                fieldType:
+                                    kind === 'enum'
+                                        ? {
+                                              kind: 'enum',
+                                              enumSetId: field.enumId ?? '',
+                                          }
+                                        : {kind},
+                            }
+                        })
+                    )
                     .build(),
             })
             // Stash phase-2 inputs so we can install field formulas after

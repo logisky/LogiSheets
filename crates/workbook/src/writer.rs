@@ -968,6 +968,7 @@ mod tests {
             sheets: vec![],
             apps: vec![],
             field_renders: vec![],
+            enum_sets: vec![],
         });
         let out = write(wb).unwrap();
         let ct = read_zip_entry(&out, "[Content_Types].xml");

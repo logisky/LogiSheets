@@ -20,6 +20,7 @@ use crate::id_manager::TextIdManager;
 use crate::image_manager::ImageManager;
 use crate::navigator::Navigator;
 
+use crate::block_manager::enum_manager::EnumSetManager;
 use crate::block_manager::field_manager::FieldRenderManager;
 use crate::block_manager::schema_manager::SchemaManager;
 use crate::range_manager::RangeManager;
@@ -45,6 +46,9 @@ pub struct Status {
     pub exclusive_manager: ExclusiveManager,
     pub block_schema_manager: SchemaManager,
     pub field_render_manager: FieldRenderManager,
+    /// The workbook's enum sets — the option lists `enum` / `multiSelect`
+    /// fields draw from. Workbook-level: a set is named by id and shared.
+    pub enum_set_manager: EnumSetManager,
     pub image_manager: ImageManager,
     pub chart_manager: ChartManager,
     pub data_validation_manager: DataValidationManager,
@@ -76,6 +80,7 @@ impl Default for Status {
             dirty_cells_next_round: HashSet::new(),
             block_schema_manager: SchemaManager::default(),
             field_render_manager: FieldRenderManager::default(),
+            enum_set_manager: EnumSetManager::default(),
             image_manager: ImageManager::new(),
             chart_manager: ChartManager::new(),
             data_validation_manager: DataValidationManager::new(),

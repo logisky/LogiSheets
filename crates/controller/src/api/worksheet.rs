@@ -1897,14 +1897,7 @@ impl<'a> Worksheet<'a> {
                                             .iter()
                                             .position(|id| id == &e.field_axis_id)
                                             .unwrap();
-                                        crate::controller::display::BlockSchemaFieldEntry {
-                                            field: f.clone(),
-                                            idx,
-                                            render_id: e.render_id.clone(),
-                                            value_formula: e.value_formula.clone(),
-                                            validation_formula: e.validation_formula.clone(),
-                                            editability_formula: e.editability_formula.clone(),
-                                        }
+                                        crate::controller::display::BlockSchemaFieldEntry::from_entry(f, idx, e)
                                     })
                                     .collect::<Vec<_>>();
                                 (keys, fields, vec![])
@@ -1934,14 +1927,7 @@ impl<'a> Worksheet<'a> {
                                             .iter()
                                             .position(|id| id == &e.field_axis_id)
                                             .unwrap();
-                                        crate::controller::display::BlockSchemaFieldEntry {
-                                            field: f.clone(),
-                                            idx,
-                                            render_id: e.render_id.clone(),
-                                            value_formula: e.value_formula.clone(),
-                                            validation_formula: e.validation_formula.clone(),
-                                            editability_formula: e.editability_formula.clone(),
-                                        }
+                                        crate::controller::display::BlockSchemaFieldEntry::from_entry(f, idx, e)
                                     })
                                     .collect::<Vec<_>>();
                                 (keys, fields, vec![])
@@ -2683,14 +2669,9 @@ impl<'a> Worksheet<'a> {
                                     .iter()
                                     .position(|id| id == &e.field_axis_id)
                                     .unwrap();
-                                crate::controller::display::BlockSchemaFieldEntry {
-                                    field: f.clone(),
-                                    idx,
-                                    render_id: e.render_id.clone(),
-                                    value_formula: e.value_formula.clone(),
-                                    validation_formula: e.validation_formula.clone(),
-                                    editability_formula: e.editability_formula.clone(),
-                                }
+                                crate::controller::display::BlockSchemaFieldEntry::from_entry(
+                                    f, idx, e,
+                                )
                             })
                             .collect::<Vec<_>>();
                         (keys, fields, vec![])
@@ -2720,14 +2701,9 @@ impl<'a> Worksheet<'a> {
                                     .iter()
                                     .position(|id| id == &e.field_axis_id)
                                     .unwrap();
-                                crate::controller::display::BlockSchemaFieldEntry {
-                                    field: f.clone(),
-                                    idx,
-                                    render_id: e.render_id.clone(),
-                                    value_formula: e.value_formula.clone(),
-                                    validation_formula: e.validation_formula.clone(),
-                                    editability_formula: e.editability_formula.clone(),
-                                }
+                                crate::controller::display::BlockSchemaFieldEntry::from_entry(
+                                    f, idx, e,
+                                )
                             })
                             .collect::<Vec<_>>();
                         (keys, fields, vec![])

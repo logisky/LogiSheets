@@ -239,6 +239,7 @@ pub fn load_sheet_data(
     cube_manager: &mut CubeManager,
     ext_ref_manager: &mut ExtRefManager,
     block_schema_manager: &SchemaManager,
+    enum_set_manager: &crate::block_manager::enum_manager::EnumSetManager,
     style_loader: &mut StyleLoader,
     xl: &Xl,
     // Formula cells the file gives us no value for. See the insert below.
@@ -328,6 +329,7 @@ pub fn load_sheet_data(
                             cube_manager,
                             ext_ref_manager,
                             block_schema_manager,
+                            enum_set_manager,
                             container,
                             sid_assigner: &mut ShadowIdAssigner::new(),
                         };

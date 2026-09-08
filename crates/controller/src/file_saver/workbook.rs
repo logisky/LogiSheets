@@ -16,6 +16,7 @@ use std::collections::HashMap;
 
 use crate::{
     block_manager::{
+        enum_manager::persistence::enum_sets_to_xml,
         field_manager::{FieldRenderManager, persistence::field_renders_to_xml},
         schema_manager::{SchemaManager, persistence::schemas_to_xml},
     },
@@ -53,6 +54,7 @@ pub fn save_workbook<S: SaverTrait>(
     app_data: Vec<AppData>,
     block_schema_manager: &SchemaManager,
     field_render_manager: &FieldRenderManager,
+    enum_set_manager: &crate::block_manager::enum_manager::EnumSetManager,
     image_manager: &ImageManager,
     chart_manager: &crate::chart_manager::ChartManager,
     data_validation_manager: &DataValidationManager,
@@ -552,6 +554,7 @@ pub fn save_workbook<S: SaverTrait>(
             sheets,
             apps: app_data,
             field_renders: field_renders_to_xml(field_render_manager, style_manager),
+            enum_sets: enum_sets_to_xml(enum_set_manager),
         }),
     };
     Ok(workbook)

@@ -17,8 +17,9 @@ import {useToast} from '@/ui/notification/useToast'
 import {firstFieldFormulaError} from './field-formula'
 import {useEngine, useOps} from '@/core/engine/provider'
 import type {FieldTypeEnum} from 'logisheets-engine'
+import type {EnumSetDecl} from 'logisheets-core'
 import {FieldList} from './field_list'
-import {FieldConfigPanel} from './config_panel'
+import {FieldConfigPanel, type ExternalField} from './config_panel'
 import {dialogPaperSx} from './styles'
 import type {FieldSetting, FormBlockField} from 'logisheets-core'
 
@@ -112,6 +113,37 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         keyIdx: number
     } | null>(null)
 
+    // Every unique field the workbook already has — the candidates a `fieldRef`
+    // can point at. Read off the blocks' schemas, which is what declares
+    // `unique`. This used to come from the host's own field store, so the list
+    // existed only in this host and was empty for any block it had not itself
+    // authored.
+    const [externalUniqueFields, setExternalUniqueFields] = useState<
+        readonly ExternalField[]
+    >([])
+
+    useEffect(() => {
+        let cancelled = false
+        ;(async () => {
+            const all = await DATA_SERVICE.getWorkbook().getAllBlocks({})
+            if (cancelled || isErrorMessage(all)) return
+            setExternalUniqueFields(
+                all.flatMap((b) =>
+                    (b.schema?.fields ?? [])
+                        .filter((f) => f.unique)
+                        .map((f) => ({
+                            sheetId: b.sheetId,
+                            blockId: b.blockId,
+                            name: f.field,
+                        }))
+                )
+            )
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
     useEffect(() => {
         if (!editTarget) return
         let cancelled = false
@@ -150,42 +182,42 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     diyRender: render?.diyRender ?? false,
                     numFmt: render?.style?.formatter ?? '',
                 })
-                // Reconstruct the full authoring setting from the host
-                // FieldInfo so the panel shows the field's real type +
-                // validation and edits are non-lossy. A block loaded from file
-                // with no host state falls back to a plain 'string'.
-                const fi = BLOCK_MANAGER.fieldManager.get(fe.renderId)
+                // Reconstruct the full authoring setting so the panel shows
+                // the field's real type + validation and edits are non-lossy.
+                //
+                // Off the SCHEMA, which is the only place any of this lives:
+                // it carries the declaration and it survives a save/load, so
+                // every host reads the same answer. A field nobody declared a
+                // type for reads as free-form.
+                const declared = fe.fieldType?.kind as
+                    | FieldSetting['type']
+                    | undefined
                 const setting: FieldSetting = {
                     id: fe.renderId,
                     name: fe.field,
-                    type: (fi?.type.type ?? 'string') as FieldSetting['type'],
-                    required: fi?.required ?? false,
-                    unique: fi?.unique ?? false,
+                    type: declared ?? 'string',
+                    required: !!fe.required,
+                    unique: !!fe.unique,
                     primary: fe.idx === keyIdx,
-                    description: fi?.description,
-                    validation: fi?.validationRaw,
+                    description: fe.description ?? undefined,
+                    validation: fe.validationFormula ?? undefined,
                     valueFormula: fe.valueFormula ?? undefined,
                 }
-                if (fi) {
-                    const t = fi.type
-                    if (t.type === 'enum' || t.type === 'multiSelect') {
-                        setting.enumId = t.id
-                    } else if (t.type === 'datetime') {
-                        setting.format = t.formatter
-                    } else if (t.type === 'number') {
-                        setting.format = t.formatter
-                    } else if (
-                        t.type === 'fieldRef' ||
-                        t.type === 'multiSelectRef'
-                    ) {
-                        setting.refSheetId = t.sheetId
-                        setting.refBlockId = t.blockId
-                        setting.refFieldName = t.fieldName
-                        setting.refSelf =
-                            t.sheetId === editTarget.sheetId &&
-                            t.blockId === editTarget.blockId
-                    }
+                if (fe.fieldType?.enumSetId) {
+                    setting.enumId = fe.fieldType.enumSetId
                 }
+                if (fe.fieldType?.refFieldName !== undefined) {
+                    setting.refSheetId = fe.fieldType.refSheetId
+                    setting.refBlockId = fe.fieldType.refBlockId
+                    setting.refFieldName = fe.fieldType.refFieldName
+                    setting.refSelf =
+                        fe.fieldType.refBlockId === editTarget.blockId
+                }
+                if (fe.defaultValue) setting.defaultValue = fe.defaultValue
+                // The number / date format is NOT part of the declaration:
+                // it is how the value is drawn, and it lives on the field's
+                // render info, which is where it is read from here.
+                setting.format = render?.style?.formatter ?? ''
                 return setting
             })
             setOriginalById(orig)
@@ -256,14 +288,14 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const makeFieldBuilder =
         (sheetId: number, blockId: number) =>
         (field: FieldSetting, existingRenderId?: string): FormBlockField => {
-            const composeValidation = (f: FieldSetting): string => {
-                const userValidation = (f.validation ?? '').trim()
-                if (!f.unique) return userValidation
-                const escapedName = f.name.replace(/"/g, '""')
-                const uniqueCheck = `COUNTIF(BLOCKREFSB(${sheetId}, ${blockId}, "*", "${escapedName}"), #PLACEHOLDER) = 1`
-                if (!userValidation) return uniqueCheck
-                return `AND(${userValidation}, ${uniqueCheck})`
-            }
+            // The rules a declaration implies are NOT composed here any more.
+            // `unique`, `required`, enum membership and reference existence are
+            // generated by the engine from the declaration itself
+            // (crates/controller/src/block_manager/derived_rules.rs), which is
+            // what makes them mean the same thing in a headless host and what
+            // lets a field rename regenerate them instead of leaving a rule
+            // naming a field that no longer exists. What goes into the schema's
+            // validation formula is the author's own rule, and nothing else.
             const resolveRefTarget = (
                 f: FieldSetting
             ): {sheetId: number; blockId: number} => {
@@ -272,12 +304,6 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 }
                 return {sheetId: f.refSheetId!, blockId: f.refBlockId!}
             }
-            const composeRefValidation = (f: FieldSetting): string => {
-                const {sheetId: rSheetId, blockId: bid} = resolveRefTarget(f)
-                const escapedName = (f.refFieldName ?? '').replace(/"/g, '""')
-                return `COUNTIF(BLOCKREFSB(${rSheetId}, ${bid}, "*", "${escapedName}"), #PLACEHOLDER) >= 1`
-            }
-
             let ty: FieldTypeEnum
             if (field.type === 'enum') {
                 ty = {type: 'enum', id: field.enumId!}
@@ -288,11 +314,11 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             } else if (field.type === 'boolean') {
                 ty = {type: 'boolean'}
             } else if (field.type === 'string') {
-                ty = {type: 'string', validation: composeValidation(field)}
+                ty = {type: 'string', validation: field.validation ?? ''}
             } else if (field.type === 'number') {
                 ty = {
                     type: 'number',
-                    validation: composeValidation(field),
+                    validation: field.validation ?? '',
                     formatter: field.format ?? '',
                 }
             } else if (field.type === 'image') {
@@ -308,7 +334,8 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     sheetId: rSheetId,
                     blockId: bid,
                     fieldName: field.refFieldName!,
-                    validation: composeRefValidation(field),
+                    // The existence check is derived engine-side now.
+                    validation: field.validation ?? '',
                 }
             } else {
                 // multiSelectRef — no auto-validation in v1 (see create path).
@@ -323,36 +350,12 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 }
             }
             const isUnique = !!field.unique || !!field.primary
-            const fieldData = {
-                name: field.name,
-                type: ty,
-                description: field.description,
-                required: field.required,
-                unique: isUnique,
-                // Keep the raw user rule so a later edit shows/re-composes it
-                // without re-wrapping the auto unique/ref checks.
-                validationRaw: field.validation,
-            }
-            // Editing an existing field: reuse its renderId (so the block's
-            // cells stay wired) and update its FieldInfo in place. New field:
-            // allocate a fresh renderId.
-            let renderId: string
-            if (existingRenderId) {
-                BLOCK_MANAGER.fieldManager.upsert({
-                    ...fieldData,
-                    id: existingRenderId,
-                    sheetId,
-                    blockId,
-                })
-                renderId = existingRenderId
-            } else {
-                const r = BLOCK_MANAGER.fieldManager.create(
-                    sheetId,
-                    blockId,
-                    fieldData
-                )
-                renderId = r.id
-            }
+            // An existing field keeps its render id, so the block's cells and
+            // its render info stay wired to it; a new one gets a fresh id.
+            // Nothing is STORED against that id any more — the declaration
+            // below goes onto the schema, which is the only place it lives.
+            const renderId =
+                existingRenderId ?? BLOCK_MANAGER.fieldManager.nextRenderId()
 
             let diyRender = false
             let numFmt = ''
@@ -372,13 +375,17 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 default:
                     break
             }
-            // The validation rule goes into the SCHEMA, not just the host
-            // FieldInfo: the engine then installs the per-record shadow itself
-            // (including on rows added later), and the same rule answers both
-            // the warning marker and the `overrideValidation` write gate.
-            // Only some field types carry one — the rest send ''.
-            const validationFormula =
-                'validation' in ty ? ty.validation ?? '' : ''
+            // The AUTHOR'S rule goes into the schema. The engine installs the
+            // per-record shadow from it ANDed with whatever the declaration
+            // implies, so one answer serves the warning marker, the
+            // `overrideValidation` write gate, and every other host.
+            const validationFormula = (field.validation ?? '').trim()
+            // The DECLARATION goes into the schema too, beside the rule it
+            // implies. Until now it stopped at the host FieldManager, keyed by
+            // renderId and persisted as opaque JSON — so a headless host had no
+            // field semantics and `describe_block` could not report a type in
+            // any host, this one included. See
+            // design/block-field-semantics.md.
             return {
                 name: field.name,
                 renderId,
@@ -386,8 +393,43 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 validationFormula,
                 diyRender,
                 numFmt,
+                fieldType: field.type,
+                enumSetId: field.enumId,
+                refTarget:
+                    field.type === 'fieldRef' || field.type === 'multiSelectRef'
+                        ? {
+                              ...resolveRefTarget(field),
+                              fieldName: field.refFieldName ?? '',
+                          }
+                        : undefined,
+                description: field.description,
+                required: field.required,
+                unique: isUnique,
+                defaultValue: field.defaultValue,
+                // fields[0] is the key column: keys are row identifiers, not
+                // user data, so it is closed. Every other field the composer
+                // authors inherits the block's own rules — the composer's panel
+                // has no per-field permission control, and a craft that wants
+                // one declares it itself.
+                //
+                // On the SCHEMA now rather than only in the host store, so a
+                // headless host sees it too.
+                writePolicy:
+                    field.id === fields[0]?.id ? 'ownerOnly' : 'inherit',
             }
         }
+
+    // The option lists the composed fields reference, in the shape the engine
+    // stores them (ids + labels; colour stays host-side, keyed by variant id).
+    // Sent with the bind so a field declaring `enum{setId}` and the set it
+    // names never land apart — without the options beside it, the declaration
+    // tells another host nothing about what is allowed.
+    const referencedEnumSets = (): EnumSetDecl[] =>
+        BLOCK_MANAGER.enumSetManager.getAll().map((s) => ({
+            id: s.id,
+            name: s.name,
+            variants: s.variants.map((v) => ({id: v.id, label: v.value})),
+        }))
 
     // Lightweight ref-name guard shared by create / convert / edit. Ref names
     // are the handle formulas use (`BLOCKREF("name", …)`) and are workbook-wide
@@ -450,6 +492,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 refName,
                 keyIdx: editMeta.keyIdx,
                 fields: formBlockFields,
+                enumSets: referencedEnumSets(),
             })
         } catch (e) {
             toast((e as Error).message, {type: 'error'})
@@ -503,6 +546,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     refName,
                     keyIdx,
                     fields: formBlockFields,
+                    enumSets: referencedEnumSets(),
                 })
             } else {
                 await ops.createFormBlock({
@@ -513,6 +557,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                     refName,
                     keyIdx,
                     fields: formBlockFields,
+                    enumSets: referencedEnumSets(),
                 })
             }
         } catch (e) {
@@ -608,7 +653,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                             onCancel={close}
                             onSave={handleSave}
                             enumSetManager={BLOCK_MANAGER.enumSetManager}
-                            fieldManager={BLOCK_MANAGER.fieldManager}
+                            externalUniqueFields={externalUniqueFields}
                             localFields={fields}
                             // Existing fields are editable (type / validation /
                             // required) but never deletable — editFormBlock keeps

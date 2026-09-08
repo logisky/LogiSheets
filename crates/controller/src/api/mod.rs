@@ -4,7 +4,10 @@ pub use crate::{
     edit_action::EditAction,
     errors::{Error, ErrorMessage, Result},
 };
+mod block_policy;
 mod cell_positioner;
+mod duplicate_keys;
+mod enum_sets;
 mod field_validation;
 mod fill;
 mod sort_block;
@@ -14,6 +17,9 @@ mod worksheet;
 
 #[cfg(test)]
 mod test;
+pub use block_policy::{BlockOpForPayload, BlockOpPolicy};
+pub use duplicate_keys::DuplicateBlockKey;
+pub use enum_sets::{EnumSetInfo, EnumVariantInfo};
 pub use field_validation::FieldValidationVerdict;
 pub use fill::FillRange;
 pub use logisheets_base::BlockId;

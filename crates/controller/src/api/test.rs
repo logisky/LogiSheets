@@ -2,7 +2,8 @@ use crate::edit_action::{
     AddComment, AuthorInput, CellInput, CommentMention, CreateBlock, CreateChart,
     CreateChartSeries, CreateDiyCell, DeleteCellImage, DeleteChart, DeleteComment, EditComment,
     EditPayload, LineStyleUpdate, ModifyPolicy, MoveChart, PayloadsAction, RemoveDiyCell,
-    ResolveComment, SetCellImage, SheetRename, StyleUpdateType, UpdateChart, WorkbookUpdateType,
+    ResolveComment, SchemaFieldSpec, SetCellImage, SheetRename, StyleUpdateType, UpdateChart,
+    WorkbookUpdateType,
 };
 
 #[test]
@@ -1093,18 +1094,16 @@ fn range_link_redirects_to_block_and_tracks_growth() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("v", "r0"),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1231,18 +1230,16 @@ fn clearing_field_rule_purges_stale_shadow_value() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![Some("#PLACEHOLDER>100".into())],
-                editability_formulas: vec![Some("#PLACEHOLDER>100".into())],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("v", "r0").with_validation_formula(Some("#PLACEHOLDER>100".into())).with_editability_formula(Some("#PLACEHOLDER>100".into())),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1344,18 +1341,17 @@ fn a_templated_field_refuses_every_user_write() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["qty".into(), "total".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
-                row: true,
-                field_formulas: vec![None, Some("=#FIELD(\"qty\")*2".into())],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("qty", "r0"),
+                        SchemaFieldSpec::new("total", "r1").with_value_formula(Some("=#FIELD(\"qty\")*2".into())),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1477,18 +1473,17 @@ fn a_proposed_value_is_judged_without_touching_the_workbook() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["key".into(), "qty".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![None, Some("#PLACEHOLDER>0".into())],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("key", "r0"),
+                        SchemaFieldSpec::new("qty", "r1").with_validation_formula(Some("#PLACEHOLDER>0".into())),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1585,18 +1580,16 @@ fn create_link_payload_redirects_existing_formula() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("v", "r0"),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -1888,18 +1881,16 @@ fn cross_sheet_linked_column_tracks_block_and_survives_save_load() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 1,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 1,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("v", "r0"),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 1,
                 row: 0,
@@ -2025,18 +2016,16 @@ fn link_survives_save_load() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("v", "r0"),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -2140,18 +2129,16 @@ fn linked_column_tracks_tail_append() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("v", "r0"),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -2767,18 +2754,17 @@ fn sort_block_by_field_end_to_end() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "people".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["name".into(), "age".into()],
-                render_ids: vec!["r_name".into(), "r_age".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "people".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("name", "r_name"),
+                        SchemaFieldSpec::new("age", "r_age"),
+                    ],
+                    row: true,
+                }),
         ];
         for (r, (name, age)) in records.iter().enumerate() {
             payloads.push(EditPayload::CellInput(CellInput {
@@ -2981,18 +2967,16 @@ fn sort_block_grown_by_insert_rows() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "people".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["Customer Status".into()],
-                render_ids: vec!["r0".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "people".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("Customer Status", "r0"),
+                    ],
+                    row: true,
+                }),
             // Add two rows (interior insert at index 1), like clicking "add row".
             EditPayload::InsertRowsInBlock(InsertRowsInBlock {
                 sheet_idx: 0,
@@ -3100,18 +3084,17 @@ fn sort_block_reference_follows_moved_cell() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "people".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["name".into(), "age".into()],
-                render_ids: vec!["r_name".into(), "r_age".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "people".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("name", "r_name"),
+                        SchemaFieldSpec::new("age", "r_age"),
+                    ],
+                    row: true,
+                }),
             cell(0, 0, "Charlie"),
             cell(0, 1, "30"),
             cell(1, 0, "Alice"),
@@ -4448,18 +4431,17 @@ fn block_schema_key_entries_report_record_row() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["year".into(), "amount".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("year", "r0"),
+                        SchemaFieldSpec::new("amount", "r1"),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -4573,18 +4555,17 @@ fn range_straddling_a_block_boundary_does_not_panic() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["id".into(), "qty".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("id", "r0"),
+                        SchemaFieldSpec::new("qty", "r1"),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 0,
@@ -5713,18 +5694,18 @@ fn chart_bound_to_block_follows_it() {
             description: None,
         }),
         EditPayload::BindFormSchema(BindFormSchema {
-            ref_name: "sales".into(),
-            sheet_idx: 0,
-            block_id: bid,
-            field_from: 0,
-            key_idx: 0,
-            fields: vec!["name".into(), "qty".into(), "price".into()],
-            render_ids: vec!["r0".into(), "r1".into(), "r2".into()],
-            row: true,
-            field_formulas: vec![],
-            validation_formulas: vec![],
-            editability_formulas: vec![],
-        }),
+                    ref_name: "sales".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("name", "r0"),
+                        SchemaFieldSpec::new("qty", "r1"),
+                        SchemaFieldSpec::new("price", "r2"),
+                    ],
+                    row: true,
+                }),
     ];
     for (i, (name, qty)) in [("a", "10"), ("b", "20"), ("c", "30")].iter().enumerate() {
         payloads.push(cell(1 + i, 1, name));
@@ -5862,18 +5843,17 @@ fn block_bound_chart_survives_save() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "rec".into(),
-                sheet_idx: 0,
-                block_id: bid,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["name".into(), "qty".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
-                row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "rec".into(),
+                    sheet_idx: 0,
+                    block_id: bid,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("name", "r0"),
+                        SchemaFieldSpec::new("qty", "r1"),
+                    ],
+                    row: true,
+                }),
             cell(0, 0, "a"),
             cell(0, 1, "10"),
             cell(1, 0, "b"),
@@ -6153,5 +6133,1059 @@ fn a_moved_chart_range_survives_a_save() {
     assert_eq!(
         c.series[0].values,
         vec![Some(11.0), Some(13.0), Some(15.0), Some(24.0)]
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Block row-key uniqueness
+//
+// `(block, key, field)` is how a block addresses a cell: BLOCKREF scans the key
+// column and takes the FIRST match. A repeated key therefore raises nothing —
+// one record just becomes unreachable and every aggregate counts the reachable
+// one twice. The tool layer refused duplicates at two doors; the engine has to
+// refuse them at all of them.
+// ---------------------------------------------------------------------------
+
+/// A 3x2 block at A1 bound as `rec` (key column + an `amt` field), with the
+/// three row keys seeded. Returns the workbook ready to be written into.
+#[cfg(test)]
+fn block_with_keys(keys: [&str; 3]) -> (Workbook, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "r0"),
+                SchemaFieldSpec::new("amt", "r1"),
+            ],
+            row: true,
+        }),
+    ];
+    for (row, key) in keys.iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: key.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+    (wb, bid)
+}
+
+#[cfg(test)]
+fn key_at(wb: &Workbook, row: usize) -> String {
+    use crate::controller::display::Value;
+    match wb.get_sheet_by_idx(0).unwrap().get_value(row, 0).unwrap() {
+        Value::Str(s) => s,
+        Value::Number(n) => n.to_string(),
+        Value::Empty => String::new(),
+        other => panic!("unexpected key value {:?}", other),
+    }
+}
+
+#[test]
+fn a_write_that_repeats_a_row_key_is_refused() {
+    let (mut wb, _bid) = block_with_keys(["a", "b", "c"]);
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 0,
+            content: "a".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "renaming row 1's key to \"a\" collides with row 0 and must be refused"
+    );
+    let msg = effect.error_message.unwrap_or_default();
+    assert!(
+        msg.contains("rec") && msg.contains('a'),
+        "the refusal should name the block and the key, got {:?}",
+        msg
+    );
+    assert_eq!(
+        key_at(&wb, 1),
+        "b",
+        "a refused transaction must leave the key untouched"
+    );
+}
+
+#[test]
+fn a_repeated_key_inside_one_transaction_is_refused() {
+    // Both writes land in the same transaction, so neither is a collision with
+    // "what was already there" — the guard has to judge the finished state.
+    let (mut wb, _bid) = block_with_keys(["a", "b", "c"]);
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "x".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 2,
+                col: 0,
+                content: "x".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "two records given the same key in one transaction must be refused"
+    );
+    assert_eq!(key_at(&wb, 1), "b", "neither write may have landed");
+    assert_eq!(key_at(&wb, 2), "c", "neither write may have landed");
+}
+
+#[test]
+fn two_records_may_swap_keys_in_one_transaction() {
+    // Judged per-write, the first half of a swap always looks like a
+    // collision. Judging the transaction's end state is what makes this legal.
+    let (mut wb, _bid) = block_with_keys(["a", "b", "c"]);
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "b".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "a".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "swapping two keys leaves them unique: {:?}",
+        effect.error_message
+    );
+    assert_eq!(key_at(&wb, 0), "b");
+    assert_eq!(key_at(&wb, 1), "a");
+}
+
+#[test]
+fn empty_keys_are_not_duplicates_of_each_other() {
+    // Inserting rows mints blank key cells; if blanks collided, the ordinary
+    // insert-then-fill sequence could never get off the ground.
+    use crate::edit_action::InsertRowsInBlock;
+
+    let (mut wb, bid) = block_with_keys(["a", "b", "c"]);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+            sheet_idx: 0,
+            block_id: bid,
+            start: 3,
+            cnt: 2,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "two blank key cells are not a collision: {:?}",
+        effect.error_message
+    );
+    assert_eq!(key_at(&wb, 3), "");
+    assert_eq!(key_at(&wb, 4), "");
+}
+
+#[test]
+fn rewriting_a_key_with_its_own_value_is_not_a_collision() {
+    let (mut wb, _bid) = block_with_keys(["a", "b", "c"]);
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 0,
+            content: "b".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "a key colliding only with itself is fine: {:?}",
+        effect.error_message
+    );
+}
+
+/// Plant duplicate keys the only way that is still possible: write the column
+/// in one transaction, name it the key column in the next. Declaring the key
+/// column over values written in the SAME transaction is itself refused, since
+/// the guard reads the finished state.
+#[cfg(test)]
+fn block_with_legacy_duplicates() -> (Workbook, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: 4,
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+    })];
+    // Rows 0 and 2 share "dup"; row 1 is unique; row 3 is left blank.
+    for (row, key) in [(0usize, "dup"), (1, "solo"), (2, "dup")] {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: key.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "writing two equal values into a column that is not yet a key column \
+         is nobody's collision: {:?}",
+        effect.error_message
+    );
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "r0"),
+                SchemaFieldSpec::new("amt", "r1"),
+            ],
+            row: true,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "binding a schema writes no cells, so it has nothing for the guard to \
+         judge: {:?}",
+        effect.error_message
+    );
+    (wb, bid)
+}
+
+#[test]
+fn a_block_that_already_has_duplicates_stays_editable() {
+    // A workbook can arrive with duplicates — from an .xlsx written elsewhere,
+    // or from before this guard existed. Refusing every later write to such a
+    // block would lock out the very edits that repair it, so the guard only
+    // judges the keys THIS transaction wrote.
+    let (mut wb, _bid) = block_with_legacy_duplicates();
+
+    // Writing an unrelated field must not be punished for a collision it did
+    // not cause.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 1,
+            content: "10".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "a non-key write into a block with pre-existing duplicates must still \
+         land: {:?}",
+        effect.error_message
+    );
+
+    // And the repair — giving one of the two rows a distinct key — must be
+    // allowed even though the block is dirty when the write starts.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 2,
+            col: 0,
+            content: "other".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "repairing a duplicate must be allowed: {:?}",
+        effect.error_message
+    );
+    assert_eq!(key_at(&wb, 2), "other");
+}
+
+#[test]
+fn duplicate_block_keys_reports_what_the_guard_could_not_refuse() {
+    // A block can hold duplicates the write-path guard never saw: written
+    // before the column was named a key column here, arriving from an .xlsx in
+    // the field. Nothing surfaces them on its own — BLOCKREF resolves the first
+    // match and stays quiet — so this is the only way anyone finds out.
+    let (mut wb, bid) = block_with_legacy_duplicates();
+
+    let dups = wb.duplicate_block_keys();
+    assert_eq!(
+        dups.len(),
+        1,
+        "one repeated key — \"solo\" is unique and the blank row is exempt, got {:?}",
+        dups
+    );
+    let d = &dups[0];
+    assert_eq!(d.block_name, "rec");
+    assert_eq!(d.sheet_idx, 0);
+    assert_eq!(d.block_id, bid);
+    assert_eq!(d.key, "dup");
+    assert_eq!(
+        d.records,
+        vec![0, 2],
+        "both records holding the key, in block order"
+    );
+
+    // Repairing one of them empties the report — the same read that raised the
+    // problem has to be able to say it is gone.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 2,
+            col: 0,
+            content: "other".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the repair must be allowed: {:?}",
+        effect.error_message
+    );
+    assert!(
+        wb.duplicate_block_keys().is_empty(),
+        "after the repair there is nothing left to report"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Stage 0 evidence: what a BLOCKREFS whose field name no longer exists does.
+//
+// The host composes a `unique` constraint into a field's validation rule as
+// `COUNTIF(BLOCKREFSB(sheet, block, "*", "fieldName"), #PLACEHOLDER) = 1`
+// (src/components/block-composer/index.tsx). The field name lives there as the
+// fourth argument — a runtime string, resolved at evaluation rather than at
+// parse time — so renaming the field leaves the rule parseable and pointing at
+// a name nothing answers to.
+//
+// This pins what happens then, because that decides whether the user sees
+// nothing at all or sees the whole column light up. See
+// design/block-field-semantics.md §2.4.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_blockrefs_naming_a_field_that_does_not_exist_matches_nothing() {
+    use crate::controller::display::Value;
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // 3x2 block at A1 bound as `rec`: keys a/b/c down column 0, `amt` 1/2/3
+    // down column 1.
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "r0"),
+                SchemaFieldSpec::new("amt", "r1"),
+            ],
+            row: true,
+        }),
+    ];
+    for (row, key, amt) in [(0usize, "a", "1"), (1, "b", "2"), (2, "c", "3")] {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: key.to_string(),
+        }));
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 1,
+            content: amt.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+
+    let sheet_id = wb
+        .controller
+        .status
+        .sheet_info_manager
+        .get_sheet_id(0)
+        .unwrap();
+
+    // E1 counts through the field that exists, E2 through one that does not,
+    // and E3 is the shape the composed `unique` rule actually takes.
+    let formulas = [
+        (
+            0usize,
+            format!(r#"=COUNTIF(BLOCKREFSB({sheet_id}, {bid}, "*", "amt"), 2)"#),
+        ),
+        (
+            1,
+            format!(r#"=COUNTIF(BLOCKREFSB({sheet_id}, {bid}, "*", "nope"), 2)"#),
+        ),
+        (
+            2,
+            format!(r#"=COUNTIF(BLOCKREFSB({sheet_id}, {bid}, "*", "nope"), 2) = 1"#),
+        ),
+    ];
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: formulas
+            .iter()
+            .map(|(row, f)| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row: *row,
+                    col: 4,
+                    content: f.clone(),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the formulas should be accepted: {:?}",
+        effect.error_message
+    );
+
+    let read = |wb: &Workbook, row: usize| -> Value {
+        wb.get_sheet_by_idx(0).unwrap().get_value(row, 4).unwrap()
+    };
+
+    assert!(
+        matches!(read(&wb, 0), Value::Number(n) if n == 1.0),
+        "sanity: through a field that exists, the value 2 is found once, got {:?}",
+        read(&wb, 0)
+    );
+
+    // The point of the test. A field name nothing answers to is not an error —
+    // the field filter simply matches no column, the matrix comes back with no
+    // values in it, and COUNTIF counts zero.
+    assert!(
+        matches!(read(&wb, 1), Value::Number(n) if n == 0.0),
+        "a BLOCKREFS naming a field that does not exist must match nothing \
+         rather than raise, got {:?}",
+        read(&wb, 1)
+    );
+
+    // So the composed `unique` rule reads FALSE — for every row, forever. After
+    // a field rename the whole column shows a validation warning, and the
+    // engine's `overrideValidation` gate treats every write to it as violating.
+    assert!(
+        matches!(read(&wb, 2), Value::Bool(false)),
+        "`COUNTIF(...) = 1` over a dead field name evaluates FALSE, which is \
+         what a renamed unique field leaves behind, got {:?}",
+        read(&wb, 2)
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Stage 2: the engine derives the rule from the declaration.
+//
+// `required` had no formula form at all before this, so a required-but-empty
+// cell raised no marker and was invisible to `list_violations` and to an agent.
+// `unique` and enum membership were host-composed strings, so they meant
+// nothing in a headless host — and a composed string cannot be regenerated,
+// which is how renaming a unique field left a rule naming a dead field.
+//
+// See design/block-field-semantics.md §5, stage 2.
+// ---------------------------------------------------------------------------
+
+/// A 3-row block whose `amt` field carries the given declaration, plus the
+/// author's own rule. Returns the workbook and the block id.
+#[cfg(test)]
+fn block_with_declared_field(
+    required: bool,
+    unique: bool,
+    field_type: Option<crate::block_manager::schema_manager::field_type::FieldType>,
+    own_rule: Option<&str>,
+) -> (Workbook, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let mut spec = SchemaFieldSpec::new("amt", "r1")
+        .with_required(required)
+        .with_unique(unique)
+        .with_validation_formula(own_rule.map(|s| s.to_string()));
+    if let Some(t) = field_type {
+        spec = spec.with_field_type(t);
+    }
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![SchemaFieldSpec::new("key", "r0"), spec],
+            row: true,
+        }),
+    ];
+    // Keys matter: the derived `unique` rule counts through
+    // `BLOCKREFSB(…, "*", …)`, whose key filter matches the KEY column's
+    // values. A block with a blank key column matches no records at all, so
+    // the count would be zero for every value and the rule would read FALSE
+    // everywhere — which says nothing about uniqueness.
+    for row in 0..3 {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: format!("k{row}"),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+    (wb, bid)
+}
+
+/// Write into the `amt` column of the block built above.
+#[cfg(test)]
+fn write_amts(wb: &mut Workbook, values: &[&str]) {
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: values
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| !v.is_empty())
+            .map(|(row, v)| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row,
+                    col: 1,
+                    content: v.to_string(),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the writes should land: {:?}",
+        effect.error_message
+    );
+}
+
+/// Whether the validation shadow on (`row`, `amt`) currently reads as a
+/// violation. `None` when the field carries no rule at all.
+#[cfg(test)]
+fn amt_violates(wb: &mut Workbook, row: usize) -> Option<bool> {
+    use crate::controller::display::Value;
+    use crate::sid_assigner::ShadowKind;
+
+    use logisheets_base::CellId;
+
+    let scid = wb
+        .get_shadow_cell_id(0, row, 1, ShadowKind::Validation)
+        .ok()?;
+    let CellId::EphemeralCell(eid) = scid.cell_id else {
+        return None;
+    };
+    let info = wb.get_shadow_info_by_id(eid).ok()?;
+    match info.value {
+        Value::Bool(b) => Some(!b),
+        // An error counts as a violation: a rule nobody can evaluate is not a
+        // rule anybody has met.
+        Value::Error(_) => Some(true),
+        _ => None,
+    }
+}
+
+#[test]
+fn required_now_has_a_formula_form_and_flags_the_empty_cell() {
+    // Before this, `required` lived only in the host's own field store with no
+    // formula behind it — nothing rendered a marker, nothing reached
+    // list_violations, and an agent could not see it at all.
+    let (mut wb, _bid) = block_with_declared_field(true, false, None, None);
+    write_amts(&mut wb, &["5", "", "7"]);
+
+    assert_eq!(amt_violates(&mut wb, 0), Some(false), "5 is present");
+    assert_eq!(
+        amt_violates(&mut wb, 1),
+        Some(true),
+        "a required field left empty is a violation"
+    );
+    assert_eq!(amt_violates(&mut wb, 2), Some(false), "7 is present");
+}
+
+#[test]
+fn unique_is_derived_and_exempts_the_empty_cell() {
+    let (mut wb, _bid) = block_with_declared_field(false, true, None, None);
+    write_amts(&mut wb, &["5", "5", ""]);
+
+    assert_eq!(amt_violates(&mut wb, 0), Some(true), "5 appears twice");
+    assert_eq!(amt_violates(&mut wb, 1), Some(true), "5 appears twice");
+    assert_eq!(
+        amt_violates(&mut wb, 2),
+        Some(false),
+        "unique without required must still allow a blank"
+    );
+}
+
+#[test]
+fn a_field_declaring_nothing_gets_no_rule_at_all() {
+    let (mut wb, _bid) = block_with_declared_field(false, false, None, None);
+    write_amts(&mut wb, &["5", "5", ""]);
+    assert_eq!(
+        amt_violates(&mut wb, 0),
+        None,
+        "no declaration and no author rule means no shadow to read"
+    );
+}
+
+#[test]
+fn an_enum_whitelist_is_derived_from_the_workbooks_own_set() {
+    use crate::edit_action::{EnumVariantSpec, UpsertEnumSet};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::UpsertEnumSet(UpsertEnumSet {
+                id: "status".into(),
+                name: None,
+                variants: vec![
+                    EnumVariantSpec {
+                        id: "open".into(),
+                        label: None,
+                    },
+                    EnumVariantSpec {
+                        id: "done".into(),
+                        label: None,
+                    },
+                ],
+            }),
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 3,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+            }),
+            EditPayload::BindFormSchema(crate::edit_action::BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0"),
+                    SchemaFieldSpec::new("amt", "r1").with_field_type(
+                        crate::block_manager::schema_manager::field_type::FieldType::Enum {
+                            set_id: "status".into(),
+                        },
+                    ),
+                ],
+                row: true,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+
+    // No whitelist formula was written anywhere: the rule comes from the set.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: (0..3)
+            .map(|row| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row,
+                    col: 0,
+                    content: format!("k{row}"),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    write_amts(&mut wb, &["open", "OPEN", "nope"]);
+    assert_eq!(amt_violates(&mut wb, 0), Some(false), "an option");
+    assert_eq!(
+        amt_violates(&mut wb, 1),
+        Some(true),
+        "membership is case-sensitive — variant ids are what cells store"
+    );
+    assert_eq!(amt_violates(&mut wb, 2), Some(true), "not an option");
+}
+
+#[test]
+fn the_authors_own_rule_is_kept_and_anded_with_the_derived_ones() {
+    let (mut wb, _bid) =
+        block_with_declared_field(true, false, None, Some("#PLACEHOLDER<100"));
+    write_amts(&mut wb, &["5", "", "500"]);
+
+    assert_eq!(amt_violates(&mut wb, 0), Some(false), "present and under 100");
+    assert_eq!(
+        amt_violates(&mut wb, 1),
+        Some(true),
+        "the derived required check still applies"
+    );
+    assert_eq!(
+        amt_violates(&mut wb, 2),
+        Some(true),
+        "the author's own rule still applies"
+    );
+}
+
+#[test]
+fn the_derived_rule_survives_a_field_rename_because_it_is_regenerated() {
+    // The whole point of deriving rather than baking in. The host used to
+    // compose `COUNTIF(BLOCKREFSB(…, "amt"), …)` and store it, and a rename
+    // left that string naming a field the block no longer had — FALSE for
+    // every record, forever. Now the rule is rebuilt from the current name.
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, bid) = block_with_declared_field(false, true, None, None);
+    write_amts(&mut wb, &["5", "6", "7"]);
+    assert_eq!(amt_violates(&mut wb, 0), Some(false), "sanity: all distinct");
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "r0"),
+                // Same renderId, new name — exactly what rename_field sends.
+                SchemaFieldSpec::new("amount", "r1").with_unique(true),
+            ],
+            row: true,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the rename should succeed: {:?}",
+        effect.error_message
+    );
+
+    assert_eq!(
+        amt_violates(&mut wb, 0),
+        Some(false),
+        "the unique check still passes after the rename — it names the new field"
+    );
+
+    // And it still catches a real duplicate, so it did not merely stop working.
+    write_amts(&mut wb, &["6", "6", "7"]);
+    assert_eq!(amt_violates(&mut wb, 0), Some(true), "6 now appears twice");
+}
+
+// ---------------------------------------------------------------------------
+// Field-level and block-level write policy: declared in the engine.
+//
+// `userEditable` was a tri-state boolean on the host's own field store — the
+// last field-level rule a headless host could not see. The payload-to-operation
+// mapping and "does this block state a policy at all" were re-implemented in
+// the app, so the same payload could be governed differently in different
+// hosts. All three are the engine's answers now.
+//
+// The engine DECLARES and answers; it does not enforce. It does not know who is
+// writing — the host does, so the host decides with these in hand. See
+// design/block-field-semantics.md.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_fields_write_policy_is_declared_on_the_schema_and_survives_a_round_trip() {
+    use crate::block_manager::schema_manager::field_type::FieldWritePolicy;
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0")
+                        .with_write_policy(FieldWritePolicy::OwnerOnly),
+                    SchemaFieldSpec::new("note", "r1")
+                        .with_write_policy(FieldWritePolicy::Anyone),
+                    // Says nothing — inherits the block's own rules.
+                    SchemaFieldSpec::new("amt", "r2"),
+                ],
+                row: true,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+
+    let read = |wb: &Workbook| -> Vec<(String, String)> {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let blocks = ws.get_all_blocks();
+        let schema = blocks[0].schema.as_ref().unwrap();
+        let mut fields = schema.fields.clone();
+        fields.sort_by_key(|f| f.idx);
+        fields
+            .iter()
+            .map(|f| (f.field.clone(), f.write_policy.clone()))
+            .collect()
+    };
+
+    assert_eq!(
+        read(&wb),
+        vec![
+            ("key".to_string(), "ownerOnly".to_string()),
+            ("note".to_string(), "anyone".to_string()),
+            // Always reported, so a reader never has to guess what an absent
+            // value meant.
+            ("amt".to_string(), "inherit".to_string()),
+        ]
+    );
+
+    // It has to survive the file, or it is no better than the host store it
+    // replaced.
+    let saved = wb.save().unwrap();
+    let reopened = Workbook::from_file(&saved, "again".to_string()).unwrap();
+    assert_eq!(read(&reopened), read(&wb));
+}
+
+#[test]
+fn the_engine_says_which_operation_a_payload_counts_as() {
+    // One table, in the thing that defines the operations. Each host keeping
+    // its own is how the same payload comes to be governed differently.
+    let wb = Workbook::default();
+    let table = wb.get_block_op_for_payloads();
+    let lookup = |t: &str| {
+        table
+            .iter()
+            .find(|e| e.payload_type == t)
+            .map(|e| e.op.as_wire_str())
+    };
+
+    assert_eq!(lookup("cellInput"), Some("cellInput"));
+    assert_eq!(lookup("blockInput"), Some("cellInput"));
+    assert_eq!(lookup("removeBlock"), Some("removeBlock"));
+    assert_eq!(lookup("insertRowsInBlock"), Some("insertDeleteLines"));
+    assert_eq!(lookup("reorderBlockLines"), Some("sortByField"));
+    assert_eq!(lookup("setBlockDescription"), Some("modifyDescription"));
+    // Handing the policies over is itself a schema change — otherwise anyone
+    // could unlock a block by asking to.
+    assert_eq!(lookup("setBlockPermissions"), Some("modifySchema"));
+    // Not something a block singles out. Not unguarded either: the caller falls
+    // back to its owner check.
+    assert_eq!(lookup("moveBlock"), None);
+    assert_eq!(lookup("createSheet"), None);
+}
+
+#[test]
+fn a_block_reports_whether_it_states_a_policy_at_all() {
+    use crate::edit_action::{BlockOp, BlockPermissions, ModifyPolicy, SetBlockPermissions};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 2,
+            col_cnt: 2,
+            // An owner but no policy — the case that matters. Reading the
+            // unstated policy as "anyone" would make this block LESS protected
+            // than it was before the engine knew about policies, so a host has
+            // to be able to tell "nobody said" from "anyone may".
+            owner: Some("some-craft".to_string()),
+            modify_policy: None,
+            permissions: None,
+            description: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let policies = wb.get_block_op_policies(0, bid).unwrap();
+    assert_eq!(
+        policies.len(),
+        BlockOp::ALL.len(),
+        "every operation is reported, in a fixed order"
+    );
+    assert!(
+        policies.iter().all(|p| p.policy == "all" && !p.stated),
+        "an owner with no policy states nothing: {:?}",
+        policies
+    );
+
+    // Now it says something about one operation, and only that one changes.
+    let mut perms = BlockPermissions::default();
+    perms.set(BlockOp::CellInput, Some(ModifyPolicy::OwnerOnly));
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetBlockPermissions(SetBlockPermissions {
+            sheet_idx: 0,
+            block_id: bid,
+            permissions: perms,
+            modify_policy: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let policies = wb.get_block_op_policies(0, bid).unwrap();
+    let cell_input = policies
+        .iter()
+        .find(|p| matches!(p.op, BlockOp::CellInput))
+        .unwrap();
+    assert_eq!(cell_input.policy, "ownerOnly");
+    assert!(cell_input.stated);
+    assert!(
+        policies
+            .iter()
+            .filter(|p| !matches!(p.op, BlockOp::CellInput))
+            .all(|p| !p.stated),
+        "the other operations still say nothing"
     );
 }

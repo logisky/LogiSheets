@@ -27,6 +27,10 @@ import type {
     SheetCellId,
     ShadowCellInfo,
     BlockField,
+    DuplicateBlockKey,
+    EnumSetInfo,
+    BlockOpForPayload,
+    BlockOpPolicy,
     AppData,
     CellCoordinateWithSheet,
     BlockDataRow,
@@ -470,6 +474,25 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         return this.workbook.getAllBlockFields()
     }
 
+    public duplicateBlockKeys(): Result<readonly DuplicateBlockKey[]> {
+        return this.workbook.duplicateBlockKeys()
+    }
+
+    public getEnumSets(): Result<readonly EnumSetInfo[]> {
+        return this.workbook.getEnumSets()
+    }
+
+    public getBlockOpForPayloads(): Result<readonly BlockOpForPayload[]> {
+        return this.workbook.getBlockOpForPayloads()
+    }
+
+    public getBlockOpPolicies(params: {
+        sheetIdx: number
+        blockId: number
+    }): Result<readonly BlockOpPolicy[]> {
+        return this.workbook.getBlockOpPolicies(params)
+    }
+
     public getFullyCoveredBlocks(params: {
         sheetIdx: number
         rowIdx: number
@@ -873,6 +896,18 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetAllBlockFields:
                     result = this.getAllBlockFields()
+                    break
+                case MethodName.DuplicateBlockKeys:
+                    result = this.duplicateBlockKeys()
+                    break
+                case MethodName.GetEnumSets:
+                    result = this.getEnumSets()
+                    break
+                case MethodName.GetBlockOpForPayloads:
+                    result = this.getBlockOpForPayloads()
+                    break
+                case MethodName.GetBlockOpPolicies:
+                    result = this.getBlockOpPolicies(args)
                     break
                 case MethodName.GetFullyCoveredBlocks:
                     result = this.getFullyCoveredBlocks(args)

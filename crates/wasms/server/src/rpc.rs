@@ -442,6 +442,17 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             JsValue::NULL
         }
         Message::GetAllBlockFields => res_to_js(controller::get_all_block_fields(&mut mgr, id)),
+        Message::DuplicateBlockKeys => res_to_js(controller::duplicate_block_keys(&mgr, id)),
+        Message::GetEnumSets => res_to_js(controller::get_enum_sets(&mgr, id)),
+        Message::GetBlockOpForPayloads => {
+            res_to_js(controller::get_block_op_for_payloads(&mgr, id))
+        }
+        Message::GetBlockOpPolicies(params) => res_to_js(controller::get_block_op_policies(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.block_id,
+        )),
         Message::Release => {
             controller::release(&mut mgr, id);
             JsValue::NULL

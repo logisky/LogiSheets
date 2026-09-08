@@ -41,6 +41,10 @@ pub struct FormulaConnector<'a> {
     pub idx_navigator: &'a Navigator,
     pub external_links_manager: &'a mut ExtBooksManager,
     pub block_schema_manager: &'a SchemaManager,
+    /// The workbook's enum sets. Needed because a field declaring
+    /// `enum{setId}` names its options rather than carrying them, and the
+    /// membership rule is generated from them.
+    pub enum_set_manager: &'a crate::block_manager::enum_manager::EnumSetManager,
     /// Read-only access to the container so the formula executor can
     /// fetch the current `#KEY` value when materializing a templated
     /// block cell's formula.
@@ -441,9 +445,21 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         kind: crate::sid_assigner::ShadowKind,
     ) -> Option<String> {
         match kind {
-            crate::sid_assigner::ShadowKind::Validation => self
-                .block_schema_manager
-                .validation_for_block_cell(sheet_id, cell),
+            // Not the stored template — the EFFECTIVE rule: what the field's
+            // declaration implies (required / unique / membership /
+            // reference), ANDed with what its author wrote. Composing it here,
+            // at the single point where the shadow's formula is materialized,
+            // is what makes the declaration mean the same thing in every host
+            // and lets a rename regenerate the rule instead of leaving a
+            // stale copy behind. See `block_manager::derived_rules`.
+            crate::sid_assigner::ShadowKind::Validation => {
+                crate::block_manager::derived_rules::effective_validation(
+                    self.block_schema_manager,
+                    self.enum_set_manager,
+                    sheet_id,
+                    cell,
+                )
+            }
             crate::sid_assigner::ShadowKind::UserEditable => self
                 .block_schema_manager
                 .editability_for_block_cell(sheet_id, cell),

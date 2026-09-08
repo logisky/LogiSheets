@@ -427,6 +427,65 @@ pub fn get_all_block_fields(mgr: &mut Manager, id: usize) -> Result<Vec<BlockFie
     wb.get_all_block_fields().map_err(ErrorMessage::from)
 }
 
+/// Every duplicated block row key in the workbook.
+///
+/// The companion to the engine's write-path refusal: that stops a caller from
+/// creating a collision, this finds the ones a file arrived with. Nothing else
+/// surfaces them — `BLOCKREF` resolves a repeated key to its first match and
+/// says nothing — so a caller has to ask.
+/// Which [`BlockOp`](logisheets_controller::edit_action::BlockOp) each payload
+/// counts as, keyed by wire type name.
+///
+/// Static, so fetch once and cache. It lives here because the engine defines
+/// the operations: every host that enforces a policy needs the mapping, and
+/// each keeping its own table is how the same payload comes to be governed
+/// differently in different hosts.
+pub fn get_block_op_for_payloads(
+    mgr: &Manager,
+    id: usize,
+) -> Result<Vec<crate::BlockOpForPayload>, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    Ok(wb.get_block_op_for_payloads())
+}
+
+/// What a block declares for each operation, beyond whether a given actor is
+/// allowed. `stated` is the difference between a block that says "anyone may"
+/// and one that says nothing — a host needs it to know whether its own owner
+/// check still applies.
+pub fn get_block_op_policies(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+) -> Result<Vec<crate::BlockOpPolicy>, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.get_block_op_policies(sheet_idx, block_id)
+        .map_err(ErrorMessage::from)
+}
+
+/// The workbook's enum sets — the option lists `enum` / `multiSelect` fields
+/// draw from.
+///
+/// A field's declaration names a set by id and does not carry it, so without
+/// this a host can read the declaration and still not know what is allowed —
+/// which is the state every headless host was in while the sets lived in the
+/// browser's AppData blob.
+pub fn get_enum_sets(
+    mgr: &Manager,
+    id: usize,
+) -> Result<Vec<crate::EnumSetInfo>, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    Ok(wb.get_enum_sets())
+}
+
+pub fn duplicate_block_keys(
+    mgr: &Manager,
+    id: usize,
+) -> Result<Vec<crate::DuplicateBlockKey>, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    Ok(wb.duplicate_block_keys())
+}
+
 pub fn handle_transaction(mgr: &mut Manager, id: usize, transaction: Transaction) -> ActionEffect {
     // Process all payloads at once
     let payloads_action = PayloadsAction {

@@ -15,7 +15,67 @@ use logisheets_workbook::logisheets::{
 };
 
 use super::SchemaManager;
+use super::field_type::{FieldType, FieldWritePolicy};
 use super::schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema};
+
+/// Project a field entry into its on-disk attributes. Shared by the row and
+/// column variants, which have identical field shapes — before this existed the
+/// two arms were copy-pasted, and adding the declaration to only one of them
+/// would have been a very quiet bug.
+fn field_to_xml<F: Copy + Into<u32>>(name: &str, entry: &FieldEntry<F>) -> SchemaFieldXml {
+    let parts = entry.field_type.to_parts();
+    SchemaFieldXml {
+        name: name.to_string(),
+        axis_id: entry.field_axis_id.into(),
+        render_id: entry.render_id.clone(),
+        value_formula: entry.value_formula.clone(),
+        validation_formula: entry.validation_formula.clone(),
+        editability_formula: entry.editability_formula.clone(),
+        kind: parts.kind,
+        enum_set_id: parts.enum_set_id,
+        ref_sheet_id: parts.ref_sheet_id.map(|v| v as u32),
+        ref_block_id: parts.ref_block_id.map(|v| v as u32),
+        ref_field_name: parts.ref_field_name,
+        description: entry.description.clone(),
+        // Only written when set, so an ordinary field costs no attribute and a
+        // file's schema stays readable by eye.
+        required: entry.required.then_some(true),
+        unique: entry.unique.then_some(true),
+        default_value: entry.default_value.clone(),
+        // Only written when it says something, so an ordinary field costs no
+        // attribute.
+        write_policy: match entry.write_policy {
+            FieldWritePolicy::Inherit => None,
+            p => Some(p.as_str().to_string()),
+        },
+    }
+}
+
+/// Inverse of [`field_to_xml`]: rebuild the in-memory entry, including the
+/// declaration. Absent attributes mean "nobody said", which is what a file
+/// written before the declaration existed meant.
+fn field_from_xml<F: From<u32>>(f: SchemaFieldXml) -> (String, FieldEntry<F>) {
+    let field_type = FieldType::from_parts(
+        f.kind.as_deref(),
+        f.enum_set_id.as_deref(),
+        f.ref_sheet_id.map(|v| v as logisheets_base::SheetId),
+        f.ref_block_id.map(|v| v as logisheets_base::BlockId),
+        f.ref_field_name.as_deref(),
+    );
+    (
+        f.name,
+        FieldEntry::new(F::from(f.axis_id), f.render_id)
+            .with_value_formula(f.value_formula)
+            .with_validation_formula(f.validation_formula)
+            .with_editability_formula(f.editability_formula)
+            .with_field_type(field_type)
+            .with_description(f.description)
+            .with_required(f.required.unwrap_or(false))
+            .with_unique(f.unique.unwrap_or(false))
+            .with_default_value(f.default_value)
+            .with_write_policy(FieldWritePolicy::from_str(f.write_policy.as_deref())),
+    )
+}
 
 /// Pull every schema bound to `sheet_id` out of `manager` and project it
 /// into the three xmlserde-friendly vecs that the workbook's `Sheet` carries.
@@ -41,14 +101,7 @@ pub fn schemas_to_xml(
                 fields: s
                     .fields
                     .iter()
-                    .map(|(name, entry)| SchemaFieldXml {
-                        name: name.clone(),
-                        axis_id: entry.field_axis_id as u32,
-                        render_id: entry.render_id.clone(),
-                        value_formula: entry.value_formula.clone(),
-                        validation_formula: entry.validation_formula.clone(),
-                        editability_formula: entry.editability_formula.clone(),
-                    })
+                    .map(|(name, entry)| field_to_xml(name, entry))
                     .collect(),
             }),
             Schema::ColSchema(s) => cols.push(ColSchemaXml {
@@ -58,14 +111,7 @@ pub fn schemas_to_xml(
                 fields: s
                     .fields
                     .iter()
-                    .map(|(name, entry)| SchemaFieldXml {
-                        name: name.clone(),
-                        axis_id: entry.field_axis_id as u32,
-                        render_id: entry.render_id.clone(),
-                        value_formula: entry.value_formula.clone(),
-                        validation_formula: entry.validation_formula.clone(),
-                        editability_formula: entry.editability_formula.clone(),
-                    })
+                    .map(|(name, entry)| field_to_xml(name, entry))
                     .collect(),
             }),
             Schema::RandomSchema(s) => randoms.push(RandomSchemaXml {
@@ -102,19 +148,7 @@ pub fn load_schemas_for_sheet(
         let block_id = x.block_id;
         let resolved = free_ref_name(&manager, x.name.clone(), block_id);
         let schema = RowSchema {
-            fields: x
-                .fields
-                .into_iter()
-                .map(|f| {
-                    (
-                        f.name,
-                        FieldEntry::new(f.axis_id as ColId, f.render_id)
-                            .with_value_formula(f.value_formula)
-                            .with_validation_formula(f.validation_formula)
-                            .with_editability_formula(f.editability_formula),
-                    )
-                })
-                .collect(),
+            fields: x.fields.into_iter().map(field_from_xml).collect(),
             name: resolved.clone(),
             key: x.key as RowId,
         };
@@ -128,19 +162,7 @@ pub fn load_schemas_for_sheet(
         let block_id = x.block_id;
         let resolved = free_ref_name(&manager, x.name.clone(), block_id);
         let schema = ColSchema {
-            fields: x
-                .fields
-                .into_iter()
-                .map(|f| {
-                    (
-                        f.name,
-                        FieldEntry::new(f.axis_id as RowId, f.render_id)
-                            .with_value_formula(f.value_formula)
-                            .with_validation_formula(f.validation_formula)
-                            .with_editability_formula(f.editability_formula),
-                    )
-                })
-                .collect(),
+            fields: x.fields.into_iter().map(field_from_xml).collect(),
             name: resolved.clone(),
             key: x.key as ColId,
         };
@@ -178,13 +200,19 @@ mod tests {
                 (
                     "qty".to_string(),
                     FieldEntry::new(3, "render-qty".to_string())
-                        .with_value_formula(Some("=#KEY*2".to_string())),
+                        .with_value_formula(Some("=#KEY*2".to_string()))
+                        .with_field_type(FieldType::Number)
+                        .with_description(Some("how many, in units of 10".to_string()))
+                        .with_required(true),
                 ),
                 (
                     "name".to_string(),
                     FieldEntry::new(4, "render-name".to_string())
                         .with_validation_formula(Some("LEN(#PLACEHOLDER)>0".to_string()))
-                        .with_editability_formula(Some("TRUE".to_string())),
+                        .with_editability_formula(Some("TRUE".to_string()))
+                        .with_field_type(FieldType::Text)
+                        .with_unique(true)
+                        .with_default_value(Some("(unnamed)".to_string())),
                 ),
             ],
             name: "materials".to_string(),
@@ -250,6 +278,22 @@ mod tests {
                     s.fields[1].1.validation_formula.as_deref(),
                     Some("LEN(#PLACEHOLDER)>0")
                 );
+
+                // The declaration travels with the templates. Without this the
+                // field's meaning would be wiped by every save/load — which is
+                // exactly what happens while it lives in the host's AppData
+                // blob and nothing but the browser app reads it.
+                assert_eq!(s.fields[0].1.field_type, FieldType::Number);
+                assert_eq!(
+                    s.fields[0].1.description.as_deref(),
+                    Some("how many, in units of 10")
+                );
+                assert!(s.fields[0].1.required);
+                assert!(!s.fields[0].1.unique);
+                assert_eq!(s.fields[1].1.field_type, FieldType::Text);
+                assert!(s.fields[1].1.unique);
+                assert!(!s.fields[1].1.required);
+                assert_eq!(s.fields[1].1.default_value.as_deref(), Some("(unnamed)"));
             }
             _ => panic!("expected RowSchema at (1, 10)"),
         }

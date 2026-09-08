@@ -37,6 +37,37 @@ pub struct LogiSheetsData {
     /// keyed by `RenderId` alone, which is sheet-agnostic.
     #[xmlserde(name = b"fieldRender", ty = "child")]
     pub field_renders: Vec<FieldRenderXml>,
+    /// The workbook's enum sets: the option lists that `enum` / `multiSelect`
+    /// fields draw from. Workbook-level because a set is named by id and shared
+    /// across blocks and sheets.
+    ///
+    /// Ids and labels only. A variant's COLOUR is presentation and stays in the
+    /// host — the engine needs the options to decide whether a value is one of
+    /// them, and needs nothing else.
+    #[xmlserde(name = b"enumSet", ty = "child")]
+    pub enum_sets: Vec<EnumSetXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct EnumSetXml {
+    #[xmlserde(name = b"id", ty = "attr")]
+    pub id: String,
+    /// Human-readable name for the set. Optional: a set minted by inference
+    /// (from a column's distinct values) has no name worth writing down.
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: Option<String>,
+    #[xmlserde(name = b"variant", ty = "child")]
+    pub variants: Vec<EnumVariantXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct EnumVariantXml {
+    /// What the cell stores.
+    #[xmlserde(name = b"id", ty = "attr")]
+    pub id: String,
+    /// What a reader sees. Absent when it is the same as the id.
+    #[xmlserde(name = b"label", ty = "attr")]
+    pub label: Option<String>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -270,6 +301,41 @@ pub struct SchemaFieldXml {
     pub validation_formula: Option<String>,
     #[xmlserde(name = b"editabilityFormula", ty = "attr")]
     pub editability_formula: Option<String>,
+    /// The field's *declaration* — what it is and what it is for — as opposed
+    /// to the templates above, which are what currently guards it.
+    ///
+    /// Every one of these is optional, and absent means "nobody said". A file
+    /// written before the declaration existed loads with an unspecified type
+    /// and both constraints off, which is exactly what it meant. `kind` is a
+    /// free string rather than a closed set on purpose: a kind a newer build
+    /// introduced must not stop this one from opening the file — the reader
+    /// degrades it to unspecified.
+    #[xmlserde(name = b"kind", ty = "attr")]
+    pub kind: Option<String>,
+    /// Enum set backing a `kind` of `enum` / `multiSelect`.
+    #[xmlserde(name = b"enumSetId", ty = "attr")]
+    pub enum_set_id: Option<String>,
+    /// Target of a `kind` of `fieldRef` / `multiSelectRef`.
+    #[xmlserde(name = b"refSheetId", ty = "attr")]
+    pub ref_sheet_id: Option<u32>,
+    #[xmlserde(name = b"refBlockId", ty = "attr")]
+    pub ref_block_id: Option<u32>,
+    #[xmlserde(name = b"refFieldName", ty = "attr")]
+    pub ref_field_name: Option<String>,
+    #[xmlserde(name = b"description", ty = "attr")]
+    pub description: Option<String>,
+    /// Written only when true, so an ordinary field costs no attribute.
+    #[xmlserde(name = b"required", ty = "attr")]
+    pub required: Option<bool>,
+    #[xmlserde(name = b"unique", ty = "attr")]
+    pub unique: Option<bool>,
+    #[xmlserde(name = b"defaultValue", ty = "attr")]
+    pub default_value: Option<String>,
+    /// Who may write to this field's cells: `inherit` (absent) | `ownerOnly` |
+    /// `anyone`. A free string for the same reason `kind` is — a policy a newer
+    /// build introduces must not stop this one from opening the file.
+    #[xmlserde(name = b"writePolicy", ty = "attr")]
+    pub write_policy: Option<String>,
 }
 
 /// A free-form schema: explicit `(key, row, col, renderId)` tuples with no

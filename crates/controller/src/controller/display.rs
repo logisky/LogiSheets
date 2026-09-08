@@ -1,4 +1,5 @@
 use crate::CellInfo;
+use crate::block_manager::schema_manager::field_type::FieldTypeParts;
 
 use super::style::Style;
 use gents_derives::TS;
@@ -180,6 +181,52 @@ pub struct BlockSchemaFieldEntry {
     /// `ShadowKind::UserEditable` shadow per row at bind / insert time;
     /// host permission layer reads the shadow to gate writes.
     pub editability_formula: Option<String>,
+    /// The field's declaration — what it is, what it is for, and the two
+    /// non-formula constraints. Absent means nobody said: a block bound before
+    /// the declaration existed, or converted from plain cells.
+    ///
+    /// This is the half that used to live only in the host, keyed by
+    /// `render_id` and persisted as opaque JSON, so no headless host could read
+    /// it and `describe_block` could not report a type in any host. See
+    /// `design/block-field-semantics.md`.
+    pub field_type: Option<FieldTypeParts>,
+    pub description: Option<String>,
+    pub required: bool,
+    pub unique: bool,
+    pub default_value: Option<String>,
+    /// Who may write to this field's cells: `inherit` | `ownerOnly` |
+    /// `anyone`. A declaration for the host to decide with — the engine does
+    /// not know who is writing. Always reported, so a reader never has to
+    /// guess what an absent value meant.
+    pub write_policy: String,
+}
+
+impl BlockSchemaFieldEntry {
+    /// Project one schema field for a reader. Four call sites in
+    /// `api/worksheet.rs` built this by hand and differed only in how they
+    /// found `idx`; going through one constructor is what keeps a newly-added
+    /// declaration field from reaching two of them and not the other two.
+    pub fn from_entry<F>(
+        name: &str,
+        idx: usize,
+        entry: &crate::block_manager::schema_manager::schema::FieldEntry<F>,
+    ) -> Self {
+        let parts = entry.field_type.to_parts();
+        Self {
+            field: name.to_string(),
+            idx,
+            render_id: entry.render_id.clone(),
+            value_formula: entry.value_formula.clone(),
+            validation_formula: entry.validation_formula.clone(),
+            editability_formula: entry.editability_formula.clone(),
+            field_type: parts.kind.is_some().then_some(parts),
+            description: entry.description.clone(),
+            required: entry.required,
+            unique: entry.unique,
+            default_value: entry.default_value.clone(),
+            write_policy: entry.write_policy.as_str().to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, TS)]

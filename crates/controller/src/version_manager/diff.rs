@@ -72,6 +72,12 @@ fn convert_diff<C: VersionExecCtx>(
 ) -> Result<Option<(Diff, SheetId)>, Error> {
     match payload {
         EditPayload::UpsertFieldRenderInfo(_) => Ok(None),
+        // An enum set is workbook-level metadata, not cell content. What
+        // changing one CAN affect is the membership rule of every field that
+        // declares it — those are per-record shadows, dirtied through the
+        // schema, not through this cell-level diff.
+        EditPayload::UpsertEnumSet(_) => Ok(None),
+        EditPayload::RemoveEnumSet(_) => Ok(None),
         // A conditional-formatting edit changes how the whole covered range
         // renders, and the range is not known here without resolving anchors, so
         // the sheet is marked wholly stale rather than diffed cell by cell.

@@ -2,7 +2,8 @@ use logisheets::Workbook;
 use logisheets_controller::edit_action::{
     BindFormSchema, BlockInput, CellInput, CreateBlock, CreateSheet, DeleteRows, DeleteRowsInBlock,
     DeleteSheet, EditPayload, InsertCols, InsertRows, InsertRowsInBlock, MoveBlock, PayloadsAction,
-    StatusCode,
+    StatusCode, SchemaFieldSpec,
+
 };
 
 use crate::load_script;
@@ -36,22 +37,18 @@ fn test_bind_block_schema() {
     let mut workbook = load_script("tests/block/create_block.script");
     let _ = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
         payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
-            sheet_idx: 0,
-            block_id: 1,
-            ref_name: "test".to_string(),
-            field_from: 0,
-            key_idx: 0,
-            fields: vec!["name".to_string(), "age".to_string(), "address".to_string()],
-            render_ids: vec![
-                "test1".to_string(),
-                "test2".to_string(),
-                "test3".to_string(),
-            ],
-            field_formulas: vec![],
-            validation_formulas: vec![],
-            editability_formulas: vec![],
-            row: true,
-        })],
+                    ref_name: "test".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("name", "test1"),
+                        SchemaFieldSpec::new("age", "test2"),
+                        SchemaFieldSpec::new("address", "test3"),
+                    ],
+                    row: true,
+                })],
         undoable: true,
         init: false,
     }));
@@ -87,18 +84,17 @@ fn test_form_block_rowcnt1_two_fields() {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                sheet_idx: 0,
-                block_id: 1,
-                ref_name: "".to_string(),
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["abcd".to_string(), "111a".to_string()],
-                render_ids: vec!["r0".to_string(), "r1".to_string()],
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-                row: true,
-            }),
+                    ref_name: "".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("abcd", "r0"),
+                        SchemaFieldSpec::new("111a", "r1"),
+                    ],
+                    row: true,
+                }),
         ],
         undoable: true,
         init: false,
@@ -951,18 +947,18 @@ fn test_blockref_readers_recompute_after_reload() {
                 input: "10".to_string(),
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "t".to_string(),
-                sheet_idx: 0,
-                block_id: 1,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["key".to_string(), "a".to_string(), "b".to_string()],
-                render_ids: vec!["r0".to_string(), "r1".to_string(), "r2".to_string()],
-                field_formulas: vec![None, None, Some("=#FIELD(\"a\")*2".to_string())],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-                row: true,
-            }),
+                    ref_name: "t".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("key", "r0"),
+                        SchemaFieldSpec::new("a", "r1"),
+                        SchemaFieldSpec::new("b", "r2").with_value_formula(Some("=#FIELD(\"a\")*2".to_string())),
+                    ],
+                    row: true,
+                }),
             // Two readers outside the block: the single form and the aggregate.
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1075,18 +1071,17 @@ fn test_save_can_resolve_block_refs_to_coordinates() {
                 input: "20".to_string(),
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "t".to_string(),
-                sheet_idx: 0,
-                block_id: 1,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["key".to_string(), "v".to_string()],
-                render_ids: vec!["r0".to_string(), "r1".to_string()],
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-                row: true,
-            }),
+                    ref_name: "t".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("key", "r0"),
+                        SchemaFieldSpec::new("v", "r1"),
+                    ],
+                    row: true,
+                }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
                 row: 5,
@@ -1186,18 +1181,17 @@ fn test_block_row_removal_dirties_readers() {
         }));
     }
     payloads.push(EditPayload::BindFormSchema(BindFormSchema {
-        ref_name: "t".to_string(),
-        sheet_idx: 0,
-        block_id: 1,
-        field_from: 0,
-        key_idx: 0,
-        fields: vec!["key".to_string(), "v".to_string()],
-        render_ids: vec!["r0".to_string(), "r1".to_string()],
-        field_formulas: vec![],
-        validation_formulas: vec![],
-        editability_formulas: vec![],
-        row: true,
-    }));
+                    ref_name: "t".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("key", "r0"),
+                        SchemaFieldSpec::new("v", "r1"),
+                    ],
+                    row: true,
+                }));
     // Readers outside the block: one aggregate over the field, one count.
     payloads.push(EditPayload::CellInput(CellInput {
         sheet_idx: 0,
@@ -1305,18 +1299,17 @@ fn test_save_resolves_a_block_join_to_index_match() {
                 input: "L2".to_string(),
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "products".to_string(),
-                sheet_idx: 0,
-                block_id: 1,
-                field_from: 0,
-                key_idx: 0,
-                fields: vec!["product".to_string(), "line".to_string()],
-                render_ids: vec!["r0".to_string(), "r1".to_string()],
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-                row: true,
-            }),
+                    ref_name: "products".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("product", "r0"),
+                        SchemaFieldSpec::new("line", "r1"),
+                    ],
+                    row: true,
+                }),
             // An ordinary cell naming the product to look up, and the join.
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1408,18 +1401,18 @@ fn build_pct_block(pct_rule: &str, rows: &[(&str, f64)]) -> (Workbook, StatusCod
         }));
     }
     payloads.push(EditPayload::BindFormSchema(BindFormSchema {
-        ref_name: "t".to_string(),
-        sheet_idx: 0,
-        block_id: 1,
-        field_from: 0,
-        key_idx: 0,
-        fields: vec!["key".to_string(), "amt".to_string(), "pct".to_string()],
-        render_ids: vec!["r0".to_string(), "r1".to_string(), "r2".to_string()],
-        field_formulas: vec![None, None, Some(pct_rule.to_string())],
-        validation_formulas: vec![],
-        editability_formulas: vec![],
-        row: true,
-    }));
+                    ref_name: "t".to_string(),
+                    sheet_idx: 0,
+                    block_id: 1,
+                    field_from: 0,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("key", "r0"),
+                        SchemaFieldSpec::new("amt", "r1"),
+                        SchemaFieldSpec::new("pct", "r2").with_value_formula(Some(pct_rule.to_string())),
+                    ],
+                    row: true,
+                }));
     let effect = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
         payloads,
         undoable: true,

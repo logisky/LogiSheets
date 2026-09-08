@@ -26,6 +26,7 @@ import {MenuComponent} from './menu'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {useEngine, useOps, useDataService} from '@/core/engine/provider'
 import type {FieldInfo} from 'logisheets-engine'
+import {projectBlockFields} from '@/core/blocks/field-projection'
 import {
     BlockCellInfo,
     BlockDisplayInfo,
@@ -104,36 +105,6 @@ function cellAtCanvas(
     return {row, col}
 }
 
-/**
- * Blocks converted from an OOXML `<table>` at load time carry a schema ref name
- * of `unspecified-*` but NO host-side FieldInfo — that state lives in the
- * appData blob, which a foreign .xlsx has none of. The renderer skips any block
- * whose fields don't resolve in FieldManager, so synthesize a plain
- * "unspecified" field (name from the schema, keyed by renderId) for each one
- * that's missing. Idempotent — it only writes fields not already registered, so
- * it's safe to call on every render.
- */
-function hydrateUnspecifiedFields(
-    blockManager: BlockManager,
-    info: BlockDisplayInfo['info']
-): void {
-    const schema = info.schema
-    if (!schema || !schema.name.startsWith('unspecified-')) return
-    for (const f of schema.fields) {
-        if (blockManager.fieldManager.get(f.renderId)) continue
-        blockManager.fieldManager.upsert({
-            id: f.renderId,
-            sheetId: info.sheetId,
-            blockId: info.blockId,
-            refName: schema.name,
-            name: f.field,
-            type: {type: 'unspecified'},
-            required: false,
-            unique: false,
-        })
-    }
-}
-
 export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
     const {grid, canvasStartX, canvasStartY} = props
     const engine = useEngine()
@@ -164,20 +135,12 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                 // parse runs before the craft re-registers fields).
                 if (!info.schema) return null
 
-                // Tables converted on load (`unspecified-*` schema ref) have no
-                // host FieldInfo yet — synthesize plain fields so they render.
-                hydrateUnspecifiedFields(BLOCK_MANAGER, info)
-
-                const sortedFields = [...info.schema.fields].sort(
-                    (a, b) => a.idx - b.idx
-                )
-                const fieldInfos = sortedFields.map((f) =>
-                    BLOCK_MANAGER.fieldManager.get(f.renderId)
-                )
-                if (fieldInfos.some((f) => !f)) return null
-                const safeFieldInfos = fieldInfos as NonNullable<
-                    (typeof fieldInfos)[number]
-                >[]
+                // Built from the SCHEMA. Every schema field projects to a
+                // FieldInfo, so there is no "a field did not resolve, skip the
+                // whole block" case any more — which is what used to make a
+                // foreign .xlsx render as nothing until a placeholder pass
+                // papered over it.
+                const safeFieldInfos = projectBlockFields(info)
 
                 return (
                     <BlockInterface

@@ -2,340 +2,146 @@
  * Represents a field's type and configuration
  */
 export type FieldTypeEnum =
-  /**
-   * A field whose type has not been declared. Free-form: rendered as a plain
-   * cell (no widget), no type validation, not a membership field, no
-   * number/date formatting. The explicit "not yet decided" state.
-   */
-  | { type: "unspecified" }
-  | { type: "enum"; id: string }
-  | { type: "multiSelect"; id: string }
-  | { type: "datetime"; formatter: string }
-  | { type: "boolean" }
-  | { type: "string"; validation: string }
-  | { type: "number"; validation: string; formatter: string }
-  | { type: "image" }
-  /**
-   * Reference to another block's field. The dropdown options are pulled
-   * dynamically from the target block at render time. The validation
-   * formula carries an existence check so dangling refs surface as a
-   * warning indicator.
-   */
-  | {
-      type: "fieldRef";
-      sheetId: number;
-      blockId: number;
-      fieldName: string;
-      validation: string;
-    }
-  /**
-   * Reference to another block's field, picking multiple values. Storage
-   * is a comma-separated string in the cell. Renderer parses the string
-   * into a list and shows a multi-select dropdown sourced from the same
-   * (sheetId, blockId, fieldName) target as `fieldRef`. v1 does not
-   * auto-inject existence validation — dangling refs are not surfaced.
-   */
-  | {
-      type: "multiSelectRef";
-      sheetId: number;
-      blockId: number;
-      fieldName: string;
-      validation: string;
-    };
+    /**
+     * A field whose type has not been declared. Free-form: rendered as a plain
+     * cell (no widget), no type validation, not a membership field, no
+     * number/date formatting. The explicit "not yet decided" state.
+     */
+    | {type: 'unspecified'}
+    | {type: 'enum'; id: string}
+    | {type: 'multiSelect'; id: string}
+    | {type: 'datetime'; formatter: string}
+    | {type: 'boolean'}
+    | {type: 'string'; validation: string}
+    | {type: 'number'; validation: string; formatter: string}
+    | {type: 'image'}
+    /**
+     * Reference to another block's field. The dropdown options are pulled
+     * dynamically from the target block at render time. The existence check
+     * that surfaces a dangling ref is derived by the engine from this
+     * declaration; `validation` here carries only the author's own rule.
+     */
+    | {
+          type: 'fieldRef'
+          sheetId: number
+          blockId: number
+          fieldName: string
+          validation: string
+      }
+    /**
+     * Reference to another block's field, picking multiple values. Storage
+     * is a comma-separated string in the cell. Renderer parses the string
+     * into a list and shows a multi-select dropdown sourced from the same
+     * (sheetId, blockId, fieldName) target as `fieldRef`. v1 does not
+     * auto-inject existence validation — dangling refs are not surfaced.
+     */
+    | {
+          type: 'multiSelectRef'
+          sheetId: number
+          blockId: number
+          fieldName: string
+          validation: string
+      }
 
 /**
  * Represents a complete field definition
  */
 export interface FieldInfo {
-  /** Unique identifier for this field (cannot be changed or reused) */
-  id: string;
-  /** Sheet ID this field belongs to */
-  sheetId: number;
-  /** Block ID this field belongs to */
-  blockId: number;
-  /**
-   * Block-schema ref name (the `refName` passed to `bindFormSchema`).
-   * Optional because fields may be created before the schema is bound;
-   * the host fills this in once the bind happens.
-   */
-  refName?: string;
-  /** Name of the field */
-  name: string;
-  /** Type of the field */
-  type: FieldTypeEnum;
-  /** Optional description */
-  description?: string;
-  /** Whether this field is required */
-  required: boolean;
-  /**
-   * Whether this field's values must be unique within the block.
-   * Used by the composer to enumerate eligible target fields when
-   * configuring a `fieldRef` cell. The actual duplicate check is
-   * enforced by an auto-injected COUNTIF validation formula.
-   */
-  unique: boolean;
-  /** Default value */
-  defaultValue?: string
-  /**
-   * The user's RAW validation rule as typed in the composer, before the host
-   * auto-composes the unique / reference existence checks into
-   * `type.validation`. Kept so the edit dialog can show (and re-edit) the
-   * original rule without re-wrapping the auto-injected checks. Undefined for
-   * fields with no user validation, or blocks loaded from file (no host state).
-   */
-  validationRaw?: string
-  /**
-   * Static field-level write permission flag for the player (non-owner
-   * caller). Read by the host permission patch:
-   *
-   *   - `false`     — permanently locks the field's cells against
-   *                   player edits; the owner is still allowed.
-   *   - `true`      — always allows player edits (overrides
-   *                   block-owner restrictions).
-   *   - `undefined` — fall back to block-owner rules (default): only
-   *                   the owner can write; if there's no owner, anyone
-   *                   can.
-   *
-   * For dynamic, formula-based editability rules, declare a
-   * `editabilityFormula` (string) on the schema field at
-   * `BindFormSchema` time — the Rust engine auto-installs a
-   * `ShadowKind::UserEditable` shadow per row, and the host permission
-   * patch reads the schema (via `BlockInfo.schema.fields[i]`) to
-   * decide when to consult the shadow. FieldInfo no longer carries the
-   * formula itself.
-   */
-  userEditable?: boolean;
+    /** Unique identifier for this field (cannot be changed or reused) */
+    id: string
+    /** Sheet ID this field belongs to */
+    sheetId: number
+    /** Block ID this field belongs to */
+    blockId: number
+    /**
+     * Block-schema ref name (the `refName` passed to `bindFormSchema`).
+     * Optional because fields may be created before the schema is bound;
+     * the host fills this in once the bind happens.
+     */
+    refName?: string
+    /** Name of the field */
+    name: string
+    /** Type of the field */
+    type: FieldTypeEnum
+    /** Optional description */
+    description?: string
+    /** Whether this field is required */
+    required: boolean
+    /**
+     * Whether this field's values must be unique within the block.
+     * Used by the composer to enumerate eligible target fields when
+     * configuring a `fieldRef` cell. The duplicate check itself is DERIVED by
+     * the engine from the schema's `unique` declaration — nothing composes a
+     * COUNTIF into a stored formula any more, which is what lets a field rename
+     * regenerate the rule instead of leaving one naming a dead field.
+     */
+    unique: boolean
+    /** Default value */
+    defaultValue?: string
+    /**
+     * The user's own validation rule, as typed in the composer.
+     *
+     * Historically this existed because the host wrapped the auto unique /
+     * reference checks around it and needed the original back for the edit
+     * dialog. Those are derived engine-side now, so the schema's
+     * `validationFormula` IS the author's rule and this is simply a copy of it —
+     * kept because the migration that adopts an older workbook's declarations
+     * relies on it to tell the author's rule from the composed one
+     * (`src/core/blocks/backfill.ts`).
+     */
+    validationRaw?: string
+    /**
+     * Static field-level write permission flag for the player (non-owner
+     * caller). Read by the host permission patch:
+     *
+     *   - `false`     — permanently locks the field's cells against
+     *                   player edits; the owner is still allowed.
+     *   - `true`      — always allows player edits (overrides
+     *                   block-owner restrictions).
+     *   - `undefined` — fall back to block-owner rules (default): only
+     *                   the owner can write; if there's no owner, anyone
+     *                   can.
+     *
+     * For dynamic, formula-based editability rules, declare a
+     * `editabilityFormula` (string) on the schema field at
+     * `BindFormSchema` time — the Rust engine auto-installs a
+     * `ShadowKind::UserEditable` shadow per row, and the host permission
+     * patch reads the schema (via `BlockInfo.schema.fields[i]`) to
+     * decide when to consult the shadow. FieldInfo no longer carries the
+     * formula itself.
+     */
+    userEditable?: boolean
 }
 
 /**
- * Manager for all fields in the application
- * Ensures field IDs are unique and immutable
+ * Mints render ids.
+ *
+ * This was the host-side field store: it held a full `FieldInfo` per field —
+ * type, description, `required`, `unique`, `defaultValue`, `writePolicy` — and
+ * was the authority for all of it, persisted as an opaque JSON blob inside the
+ * workbook's AppData. That is why a headless host had no field semantics and
+ * `describe_block` could not report a field type in any host.
+ *
+ * All of it is on the engine schema now, and the app projects a `FieldInfo`
+ * straight off the schema (`src/core/blocks/field-projection.ts`). What is
+ * left is the one thing the schema cannot do for itself: hand out a fresh
+ * render id when a field is created. A render id is the stable key that ties a
+ * field to its cells and to its render info, so it has to be minted before the
+ * schema can be bound with it — and it is the host that is creating the field.
+ *
+ * See design/block-field-semantics.md.
  */
 export class FieldManager {
-  private fields: Map<string, FieldInfo> = new Map();
-  private _counter = 0;
+    private counter = 0
 
-  /**
-   * Generate a unique field ID
-   * @returns A unique field ID that will never be reused
-   */
-  private generateFieldId(): string {
-    const id = `field_${Date.now()}_${++this._counter}`;
-    return id;
-  }
-
-  /**
-   * Create a new field
-   * @param sheetId The sheet ID
-   * @param blockId The block ID
-   * @param fieldData Field configuration (without id)
-   * @returns The created FieldInfo with generated ID
-   */
-  create(
-    sheetId: number,
-    blockId: number,
-    fieldData: Omit<FieldInfo, "id" | "sheetId" | "blockId">,
-  ): FieldInfo {
-    const fieldId = this.generateFieldId();
-
-    const fieldInfo: FieldInfo = {
-      ...fieldData,
-      id: fieldId,
-      sheetId,
-      blockId,
-    };
-    // (Pre-Phase-1+2 we forced `userEditable=false` here when
-    // valueFormula was set. The Rust engine now drops every user-facing
-    // write to a templated cell — CellInput, CellClear, paste/fill and
-    // BlockInput alike — and the host reads the template off
-    // `BlockInfo.schema` to gate the UI, so FieldInfo no longer needs to
-    // carry either the formula or a flag standing in for it.)
-
-    this.fields.set(fieldId, fieldInfo);
-
-    return fieldInfo;
-  }
-
-  /**
-   * Register a field under its own `id`, creating it or replacing an existing
-   * entry. Unlike {@link create} (which allocates a fresh id), this preserves a
-   * caller-supplied id — used when editing a block so an existing field keeps
-   * its `renderId` (the block's cells stay wired) while its type / validation /
-   * required flags are updated. Also covers blocks loaded from file that have
-   * no host `FieldInfo` yet.
-   */
-  upsert(field: FieldInfo): void {
-    this.fields.set(field.id, field);
-  }
-
-  /**
-   * Get a field by its composite key
-   * @param fieldId The field ID
-   * @returns The FieldInfo if found, undefined otherwise
-   */
-  get(fieldId: string): FieldInfo | undefined {
-    return this.fields.get(fieldId);
-  }
-
-  /**
-   * Get all fields for a specific sheet and block
-   * @param sheetId The sheet ID
-   * @param blockId The block ID
-   * @returns Array of all FieldInfo objects for the block
-   */
-  getByBlock(sheetId: number, blockId: number): FieldInfo[] {
-    return Array.from(this.fields.values()).filter(
-      (field) => field.sheetId === sheetId && field.blockId === blockId,
-    );
-  }
-
-  /**
-   * Get all fields for a specific sheet
-   * @param sheetId The sheet ID
-   * @returns Array of all FieldInfo objects for the sheet
-   */
-  getBySheet(sheetId: number): FieldInfo[] {
-    return Array.from(this.fields.values()).filter(
-      (field) => field.sheetId === sheetId,
-    );
-  }
-
-  /**
-   * Get all fields
-   * @returns Array of all FieldInfo objects
-   */
-  getAll(): FieldInfo[] {
-    return Array.from(this.fields.values());
-  }
-
-  /**
-   * Check if a field exists
-   * @param fieldId The field ID
-   * @returns true if the field exists, false otherwise
-   */
-  has(fieldId: string): boolean {
-    return this.fields.has(fieldId);
-  }
-
-  /**
-   * Update a field (ID cannot be changed)
-   * @param fieldId The field ID
-   * @param updates Partial field updates
-   * @returns The updated FieldInfo, or undefined if field not found
-   * @throws Error if attempting to change the field ID
-   */
-  update(
-    fieldId: string,
-    updates: Partial<Omit<FieldInfo, "id" | "sheetId" | "blockId">>,
-  ): FieldInfo | undefined {
-    const field = this.fields.get(fieldId);
-
-    if (!field) {
-      return undefined;
+    /**
+     * A render id nothing else will be given.
+     *
+     * The timestamp keeps two sessions apart; the counter keeps two fields in
+     * the same session apart. Never reused, because a reused id would silently
+     * attach a new field to the old one's cells and render info.
+     */
+    nextRenderId(): string {
+        return `field_${Date.now()}_${++this.counter}`
     }
-
-    const updatedField: FieldInfo = {
-      ...field,
-      ...updates,
-      // Ensure these cannot be changed
-      id: field.id,
-      sheetId: field.sheetId,
-      blockId: field.blockId,
-    };
-
-    this.fields.set(fieldId, updatedField);
-    return updatedField;
-  }
-
-  /**
-   * Set the schema ref-name on every field of a block. Call this right
-   * after the corresponding `bindFormSchema` payload — the host knows
-   * the refName at bind time, the field manager doesn't, so we stamp it
-   * onto every field belonging to the block.
-   */
-  setBlockRefName(sheetId: number, blockId: number, refName: string): void {
-    this.getByBlock(sheetId, blockId).forEach((field) => {
-      this.fields.set(field.id, {...field, refName});
-    });
-  }
-
-  /**
-   * Delete a field
-   * @param fieldId The field ID
-   * @returns true if the field was deleted, false if it didn't exist
-   * @note The field ID will never be reused even after deletion
-   */
-  delete(fieldId: string): boolean {
-    return this.fields.delete(fieldId);
-  }
-
-  /**
-   * Delete all fields for a specific block
-   * @param sheetId The sheet ID
-   * @param blockId The block ID
-   * @returns Number of fields deleted
-   */
-  deleteBlock(sheetId: number, blockId: number): number {
-    const fieldsToDelete = this.getByBlock(sheetId, blockId);
-    fieldsToDelete.forEach((field) => {
-      this.delete(field.id);
-    });
-    return fieldsToDelete.length;
-  }
-
-  /**
-   * Delete all fields for a specific sheet
-   * @param sheetId The sheet ID
-   * @returns Number of fields deleted
-   */
-  deleteSheet(sheetId: number): number {
-    const fieldsToDelete = this.getBySheet(sheetId);
-    fieldsToDelete.forEach((field) => {
-      this.delete(field.id);
-    });
-    return fieldsToDelete.length;
-  }
-
-  /**
-   * Clear all fields
-   * @note Field IDs remain reserved to prevent reuse
-   */
-  clear(): void {
-    this.fields.clear();
-    // usedFieldIds is NOT cleared to prevent ID reuse
-  }
-
-  /**
-   * Get the total number of fields
-   * @returns The count of fields
-   */
-  count(): number {
-    return this.fields.size;
-  }
-
-  /**
-   * Search fields by name (case-insensitive partial match)
-   * @param query The search query
-   * @returns Array of matching FieldInfo objects
-   */
-  search(query: string): FieldInfo[] {
-    const lowerQuery = query.toLowerCase();
-    return Array.from(this.fields.values()).filter((field) =>
-      field.name.toLowerCase().includes(lowerQuery),
-    );
-  }
-
-  /**
-   * Import fields from JSON
-   * @param json JSON string representation of fields
-   * @throws Error if JSON is invalid
-   */
-  fromJSON(json: string): void {
-    try {
-      const data = JSON.parse(json) as FieldInfo[];
-      this.fields = new Map(data.map((f) => [f.id, f]));
-    } catch (error) {
-      throw new Error(`Failed to import fields from JSON: ${error}`);
-    }
-  }
 }

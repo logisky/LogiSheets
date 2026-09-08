@@ -28,7 +28,8 @@ use logisheets_controller::edit_action::{
     BindFormSchema, BindRandomSchema, BlockActor, BlockLineNameFieldUpdate, BlockOp,
     BlockPermissions, CellInput, CreateAppendix, CreateBlock, CreateLink, CreateSheet, EditAction,
     EditPayload, InsertRows, ModifyPolicy, PayloadsAction, RandomSchemaUnit, StatusCode,
-    StyleUpdateType, UpsertFieldRenderInfo,
+    StyleUpdateType, UpsertFieldRenderInfo, SchemaFieldSpec,
+
 };
 
 // ---------------------------------------------------------------------------
@@ -122,18 +123,18 @@ fn authored() -> Workbook {
                 ),
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "orders".into(),
-                sheet_idx: 0,
-                block_id: ORDERS,
-                field_from: 1,
-                key_idx: 0,
-                fields: vec!["qty".into(), "price".into(), "total".into()],
-                render_ids: vec!["r-qty".into(), "r-price".into(), "r-total".into()],
-                row: true,
-                field_formulas: vec![None, None, Some(TOTAL_VALUE_RULE.into())],
-                validation_formulas: vec![None, None, Some(TOTAL_VALIDATION_RULE.into())],
-                editability_formulas: vec![None, None, Some(TOTAL_EDITABILITY_RULE.into())],
-            }),
+                    ref_name: "orders".into(),
+                    sheet_idx: 0,
+                    block_id: ORDERS,
+                    field_from: 1,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("qty", "r-qty"),
+                        SchemaFieldSpec::new("price", "r-price"),
+                        SchemaFieldSpec::new("total", "r-total").with_value_formula(Some(TOTAL_VALUE_RULE.into())).with_validation_formula(Some(TOTAL_VALIDATION_RULE.into())).with_editability_formula(Some(TOTAL_EDITABILITY_RULE.into())),
+                    ],
+                    row: true,
+                }),
         ],
     );
 
@@ -209,18 +210,18 @@ fn authored() -> Workbook {
                 description: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
-                ref_name: "specs".into(),
-                sheet_idx: 1,
-                block_id: SPECS,
-                field_from: 1,
-                key_idx: 0,
-                fields: vec!["alpha".into(), "beta".into(), "gamma".into()],
-                render_ids: vec!["r-alpha".into(), "r-beta".into(), "r-gamma".into()],
-                row: false,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
-            }),
+                    ref_name: "specs".into(),
+                    sheet_idx: 1,
+                    block_id: SPECS,
+                    field_from: 1,
+                    key_idx: 0,
+                    fields: vec![
+                        SchemaFieldSpec::new("alpha", "r-alpha"),
+                        SchemaFieldSpec::new("beta", "r-beta"),
+                        SchemaFieldSpec::new("gamma", "r-gamma"),
+                    ],
+                    row: false,
+                }),
             // Random schema: keys pinned to explicit (row, col) offsets, which
             // is the only schema kind with no axis at all.
             EditPayload::CreateBlock(CreateBlock {

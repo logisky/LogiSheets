@@ -120,6 +120,10 @@ export enum MethodName {
     GetDataBoundary = 'getDataBoundary',
 
     GetAllBlockFields = 'getAllBlockFields',
+    DuplicateBlockKeys = 'duplicateBlockKeys',
+    GetEnumSets = 'getEnumSets',
+    GetBlockOpForPayloads = 'getBlockOpForPayloads',
+    GetBlockOpPolicies = 'getBlockOpPolicies',
     GetAppData = 'getAppData',
     GetVersion = 'getVersion',
     GetFullyCoveredBlocks = 'getFullyCoveredBlocks',

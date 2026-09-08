@@ -8,6 +8,7 @@ use logisheets_base::{
 use crate::{
     Error,
     async_func_manager::AsyncFuncManager,
+    block_manager::enum_manager::executor::EnumSetExecutor,
     block_manager::field_manager::executor::FieldRenderExecutor,
     block_manager::schema_manager::executor::BlockSchemaExecutor,
     calc_engine::CalcEngine,
@@ -72,6 +73,20 @@ impl<'a> Executor<'a> {
         let mut result = self;
         for payload in payload_action.clone().payloads.into_iter() {
             result = result.execute_payload(payload)?;
+        }
+
+        // Row keys are the block's addressing scheme, so a duplicate corrupts
+        // every lookup and aggregate over it without raising anything. Judge
+        // the transaction's finished state — before `calc`, before the version
+        // manager records it — so a collision aborts the whole thing and the
+        // caller's status is left as it was. `init` builds a workbook's opening
+        // state and is not a user edit; a file already carrying duplicates must
+        // still open.
+        if !payload_action.init {
+            super::block_key_guard::check_block_key_uniqueness(
+                &result.status,
+                &result.updated_cells,
+            )?;
         }
 
         let result = result.calc()?;
@@ -211,6 +226,21 @@ impl<'a> Executor<'a> {
             result.execute_field_render(payload.clone())?;
         result.status.field_render_manager = field_render_executor.manager;
 
+        // An enum set is workbook-level, so it is applied here rather than per
+        // sheet. Changing one changes what the fields declaring it allow, so
+        // every block that references a touched set is marked dirty and its
+        // per-record membership rules are regenerated.
+        let (enum_set_executor, enum_sets_updated) =
+            result.execute_enum_sets(payload.clone())?;
+        result.status.enum_set_manager = enum_set_executor.manager;
+        let mut dirty_blocks = dirty_blocks;
+        if !enum_set_executor.dirty_sets.is_empty() {
+            dirty_blocks.extend(blocks_using_enum_sets(
+                &result.status,
+                &enum_set_executor.dirty_sets,
+            ));
+        }
+
         result.status.navigator = nav_executor.nav;
         result.row_inserted.extend(nav_executor.row_inserted);
         result.row_removed.extend(nav_executor.row_removed);
@@ -257,6 +287,7 @@ impl<'a> Executor<'a> {
             || image_updated
             || chart_updated
             || cf_updated
+            || enum_sets_updated
             || result.updated_cells.len() > 0
             || result.cells_removed.len() > 0;
 
@@ -306,6 +337,7 @@ impl<'a> Executor<'a> {
                 exclusive_manager: result.status.exclusive_manager,
                 block_schema_manager: result.status.block_schema_manager,
                 field_render_manager: result.status.field_render_manager,
+                enum_set_manager: result.status.enum_set_manager,
                 image_manager: result.status.image_manager,
                 chart_manager: result.status.chart_manager,
                 data_validation_manager: result.status.data_validation_manager,
@@ -469,6 +501,14 @@ impl<'a> Executor<'a> {
         };
         let executor = FieldRenderExecutor::new(self.status.field_render_manager.clone());
         executor.execute(&mut ctx, payload)
+    }
+
+    fn execute_enum_sets(
+        &mut self,
+        payload: EditPayload,
+    ) -> Result<(EnumSetExecutor, bool), Error> {
+        let executor = EnumSetExecutor::new(self.status.enum_set_manager.clone());
+        executor.execute(payload)
     }
 
     fn execute_cube(&mut self, payload: EditPayload) -> Result<CubeExecutor, Error> {
@@ -703,6 +743,7 @@ impl<'a> Executor<'a> {
             idx_navigator: old_navigator,
             external_links_manager: &mut self.status.external_links_manager,
             block_schema_manager: &self.status.block_schema_manager,
+            enum_set_manager: &self.status.enum_set_manager,
             container: &self.status.container,
             sid_assigner: &mut *self.sid_assigner,
         };
@@ -717,4 +758,36 @@ impl<'a> Executor<'a> {
         };
         executor.execute(payload, &mut ctx)
     }
+}
+
+/// Which blocks declare a field drawing on one of `sets`.
+///
+/// Changing an enum set changes what those fields allow, and the membership
+/// rule is a per-record shadow — so the blocks have to be dirtied for it to be
+/// regenerated. Scanning every schema is fine: enum-set edits are rare and a
+/// workbook holds tens of blocks, not thousands.
+fn blocks_using_enum_sets(
+    status: &Status,
+    sets: &[String],
+) -> Vec<(SheetId, BlockId)> {
+    use crate::block_manager::schema_manager::schema::Schema;
+
+    let mut out = Vec::new();
+    for ((sheet_id, block_id), schema) in status.block_schema_manager.schemas.iter() {
+        let fields = match schema {
+            Schema::RowSchema(s) => &s.fields,
+            Schema::ColSchema(s) => &s.fields,
+            // RandomSchema carries no field declarations.
+            Schema::RandomSchema(_) => continue,
+        };
+        let uses = fields.iter().any(|(_, e)| {
+            e.field_type
+                .enum_set_id()
+                .is_some_and(|id| sets.iter().any(|s| s == id))
+        });
+        if uses {
+            out.push((*sheet_id, *block_id));
+        }
+    }
+    out
 }

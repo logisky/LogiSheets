@@ -1,5 +1,6 @@
 use logisheets_base::{BlockCellId, BlockFieldId, BlockId, ColId, RowId};
 
+use super::field_type::{FieldType, FieldWritePolicy};
 use crate::navigator::BlockPlace;
 
 /// Position of a single block-cell within a schema. Used by the dependency
@@ -36,6 +37,16 @@ pub type RenderId = String;
 ///                              shadow on the cell (advisory red marker)
 ///   - `editability_formula`  → installed as a `ShadowKind::UserEditable`
 ///                              shadow on the cell (host edit gate)
+/// Alongside the templates, the field's *declaration*: what it is, what it is
+/// for, and the two non-formula constraints. These used to live only in the
+/// host, keyed by `render_id` and persisted as opaque JSON, which is why no
+/// headless host had field semantics and `describe_block` could not report a
+/// type in any host. See `design/block-field-semantics.md`.
+///
+/// `required` and `unique` are declarations, not enforcement: they say what the
+/// schema means, and the rule that enforces them is derived from them. Keeping
+/// the declaration and its lowering apart is the point — a derived rule can be
+/// regenerated (on a field rename, say), a baked-in formula string cannot.
 #[derive(Debug, Clone)]
 pub struct FieldEntry<F> {
     pub field_axis_id: F,
@@ -43,6 +54,24 @@ pub struct FieldEntry<F> {
     pub value_formula: Option<String>,
     pub validation_formula: Option<String>,
     pub editability_formula: Option<String>,
+    /// What kind of value belongs here. `Unspecified` for a field nobody has
+    /// claimed a type for — a block from before this existed, or one converted
+    /// from plain cells.
+    pub field_type: FieldType,
+    /// What the field means, in prose, for whoever reads the block next —
+    /// a person or an agent. The place for a unit ("amount, in units of 10k"),
+    /// a convention, or a warning.
+    pub description: Option<String>,
+    /// Every record must carry a value here.
+    pub required: bool,
+    /// No two records may carry the same value here.
+    pub unique: bool,
+    /// What a newly-added record starts with.
+    pub default_value: Option<String>,
+    /// Who may write to this field's cells. A declaration the host decides
+    /// with — the engine does not know who is writing. `Inherit` falls back to
+    /// the block's own owner / policy rules.
+    pub write_policy: FieldWritePolicy,
 }
 
 impl<F> FieldEntry<F> {
@@ -53,7 +82,43 @@ impl<F> FieldEntry<F> {
             value_formula: None,
             validation_formula: None,
             editability_formula: None,
+            field_type: FieldType::Unspecified,
+            description: None,
+            required: false,
+            unique: false,
+            default_value: None,
+            write_policy: FieldWritePolicy::Inherit,
         }
+    }
+
+    pub fn with_field_type(mut self, t: FieldType) -> Self {
+        self.field_type = t;
+        self
+    }
+
+    pub fn with_description(mut self, d: Option<String>) -> Self {
+        self.description = d;
+        self
+    }
+
+    pub fn with_required(mut self, r: bool) -> Self {
+        self.required = r;
+        self
+    }
+
+    pub fn with_unique(mut self, u: bool) -> Self {
+        self.unique = u;
+        self
+    }
+
+    pub fn with_default_value(mut self, v: Option<String>) -> Self {
+        self.default_value = v;
+        self
+    }
+
+    pub fn with_write_policy(mut self, p: FieldWritePolicy) -> Self {
+        self.write_policy = p;
+        self
     }
 
     pub fn with_value_formula(mut self, f: Option<String>) -> Self {

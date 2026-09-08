@@ -3,7 +3,20 @@ use logisheets_base::{BlockCellId, BlockFieldId, BlockId, SheetId};
 
 use crate::navigator::BlockPlace;
 
-use super::schema::{BlockCellRole, Field, RenderId, Schema, SchemaTrait};
+use super::field_type::FieldType;
+use super::schema::{BlockCellRole, Field, FieldEntry, RenderId, Schema, SchemaTrait};
+
+/// One field's declaration plus the rule its author wrote, borrowed.
+#[derive(Debug, Clone, Copy)]
+pub struct BlockFieldView<'a> {
+    pub name: &'a str,
+    pub field_type: &'a FieldType,
+    pub required: bool,
+    pub unique: bool,
+    /// The author's own rule. The rules the declaration implies are derived, not
+    /// stored — see `block_manager::derived_rules`.
+    pub validation_formula: Option<&'a str>,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct SchemaManager {
@@ -170,6 +183,43 @@ impl SchemaManager {
             Schema::RowSchema(s) => s.formula_for_field_axis(cell.col).map(String::from),
             Schema::ColSchema(s) => s.formula_for_field_axis(cell.row).map(String::from),
             // RandomSchema doesn't carry templates in v1.
+            Schema::RandomSchema(_) => None,
+        }
+    }
+
+    /// A read-only view of one field's declaration and its author-written
+    /// rule, resolved from a cell.
+    ///
+    /// Exists so the rule derivation can see a field without knowing whether it
+    /// came from a `RowSchema` or a `ColSchema` — `FieldEntry` is generic over
+    /// its axis id, so it cannot be handed out directly across both.
+    pub fn field_view_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<BlockFieldView<'_>> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        fn view<'a, F>(name: &'a str, e: &'a FieldEntry<F>) -> BlockFieldView<'a> {
+            BlockFieldView {
+                name,
+                field_type: &e.field_type,
+                required: e.required,
+                unique: e.unique,
+                validation_formula: e.validation_formula.as_deref(),
+            }
+        }
+        match schema {
+            Schema::RowSchema(s) => s
+                .fields
+                .iter()
+                .find(|(_, e)| e.field_axis_id == cell.col)
+                .map(|(n, e)| view(n, e)),
+            Schema::ColSchema(s) => s
+                .fields
+                .iter()
+                .find(|(_, e)| e.field_axis_id == cell.row)
+                .map(|(n, e)| view(n, e)),
+            // RandomSchema carries no field declarations.
             Schema::RandomSchema(_) => None,
         }
     }

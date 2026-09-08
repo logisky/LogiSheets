@@ -34,10 +34,7 @@ import {
     type ValidationRule,
     type Violation,
 } from '../validation/index.js'
-import {
-    checkFieldConstraints as checkFieldConstraintsPure,
-    type FieldColumn,
-} from '../field/index.js'
+import type {FieldTypeEnum} from '../field/index.js'
 import {
     generateFontPayload,
     generateAlgnmentPayload,
@@ -82,10 +79,131 @@ export interface FormBlockField {
      * `overrideValidation` write gate, and any other host.
      */
     validationFormula?: string
+    /**
+     * Per-field editability template — FALSE installs a `UserEditable` lock the
+     * host permission layer reads.
+     *
+     * Carried here because a schema re-bind replaces the field wholesale: the
+     * three bind sites below used to send `editabilityFormulas: []` ("all
+     * None"), so editing a block through this layer silently dropped any
+     * editability template it had.
+     */
+    editabilityFormula?: string
     /** Whether the field renders via a host-drawn (DIY) overlay. */
     diyRender: boolean
     /** Number format applied to the field's render info. */
     numFmt?: string
+
+    // ---- Declaration -----------------------------------------------------
+    // What the field IS, as opposed to what currently guards it. These reach
+    // the engine schema, so every host reads the same answer and they survive
+    // a save/load — previously they lived only in the browser's FieldManager,
+    // persisted as opaque JSON nothing but the browser read. See
+    // design/block-field-semantics.md.
+
+    /** Declared type. Omitted reads as unspecified (free-form). */
+    fieldType?: FieldTypeEnum
+    /** Enum set backing a `fieldType` of 'enum' / 'multiSelect'. */
+    enumSetId?: string
+    /** Target of a `fieldType` of 'fieldRef' / 'multiSelectRef'. */
+    refTarget?: {sheetId: number; blockId: number; fieldName: string}
+    /** What the field means, in prose, for whoever reads the block next. */
+    description?: string
+    /** Every record must carry a value here. */
+    required?: boolean
+    /** No two records may carry the same value here. */
+    unique?: boolean
+    /** What a newly-added record starts with. */
+    defaultValue?: string
+    /**
+     * Who may write to this field's cells: `'inherit'` (the block's own owner
+     * rules) | `'ownerOnly'` | `'anyone'`.
+     *
+     * Declared on the schema so every host reads the same answer — it was the
+     * last field-level rule that lived only in the browser's own field store,
+     * as a tri-state `userEditable` boolean. The engine persists and answers;
+     * it does not enforce, because it does not know who is writing.
+     */
+    writePolicy?: 'inherit' | 'ownerOnly' | 'anyone'
+}
+
+/** The engine's flat `FieldTypeParts` shape, or undefined for unspecified. */
+function fieldTypeParts(f: FormBlockField) {
+    if (!f.fieldType || f.fieldType === 'unspecified') return undefined
+    return {
+        kind: f.fieldType,
+        enumSetId: f.enumSetId,
+        refSheetId: f.refTarget?.sheetId,
+        refBlockId: f.refTarget?.blockId,
+        refFieldName: f.refTarget?.fieldName,
+    }
+}
+
+/**
+ * An option list a field can draw from, as the engine stores it.
+ *
+ * Ids and labels only. A variant's COLOUR is presentation and stays in the
+ * host, keyed by variant id — the engine needs the options in order to judge a
+ * value and needs nothing else.
+ */
+export interface EnumSetDecl {
+    id: string
+    name?: string
+    variants: ReadonlyArray<{id: string; label?: string}>
+}
+
+/**
+ * `upsertEnumSet` payloads for the sets a block's fields reference.
+ *
+ * Emitted in the same transaction as the schema bind, so a field declaring
+ * `enum{setId}` and the set it names never land apart — the declaration is
+ * useless to any other host without the options beside it. A set with no
+ * variants is skipped rather than sent: the engine refuses it (it would allow
+ * nothing), and failing the whole bind over a half-authored option list is the
+ * wrong trade.
+ */
+function enumSetPayloads(
+    fields: readonly FormBlockField[],
+    sets: readonly EnumSetDecl[] | undefined
+): Payload[] {
+    if (!sets || sets.length === 0) return []
+    const referenced = new Set(
+        fields.map((f) => f.enumSetId).filter((id): id is string => !!id)
+    )
+    return sets
+        .filter((s) => referenced.has(s.id) && s.variants.length > 0)
+        .map((s) => ({
+            type: 'upsertEnumSet' as const,
+            value: {
+                id: s.id,
+                name: s.name,
+                variants: s.variants.map((v) => ({id: v.id, label: v.label})),
+            },
+        }))
+}
+
+/**
+ * One field of a `bindFormSchema` payload.
+ *
+ * The payload used to take five positionally-aligned arrays (names, renderIds,
+ * and one per rule kind), which three call sites below each spelled out by
+ * hand. Carrying the declaration too would have made it eight — so the payload
+ * became a list of these, and the three call sites became one function.
+ */
+function toSchemaFieldSpec(f: FormBlockField) {
+    return {
+        name: f.name,
+        renderId: f.renderId,
+        valueFormula: f.valueFormula || undefined,
+        validationFormula: f.validationFormula || undefined,
+        editabilityFormula: f.editabilityFormula || undefined,
+        fieldType: fieldTypeParts(f),
+        description: f.description || undefined,
+        required: f.required,
+        unique: f.unique,
+        defaultValue: f.defaultValue || undefined,
+        writePolicy: f.writePolicy,
+    }
 }
 
 /**
@@ -456,6 +574,8 @@ export class WorkbookOps {
         refName: string
         keyIdx: number
         fields: readonly FormBlockField[]
+        /** Option lists the fields reference; written in the same transaction. */
+        enumSets?: readonly EnumSetDecl[]
     }): Promise<void> {
         const {
             sheetIdx,
@@ -478,6 +598,7 @@ export class WorkbookOps {
                     colCnt: fields.length,
                 },
             },
+            ...enumSetPayloads(fields, opts.enumSets),
             {
                 type: 'bindFormSchema',
                 value: {
@@ -487,13 +608,7 @@ export class WorkbookOps {
                     fieldFrom: 0,
                     row: true,
                     keyIdx: keyIdx < 0 ? 0 : keyIdx,
-                    fields: fields.map((f) => f.name),
-                    renderIds: fields.map((f) => f.renderId),
-                    fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                    validationFormulas: fields.map(
-                        (f) => f.validationFormula ?? ''
-                    ),
-                    editabilityFormulas: [],
+                    fields: fields.map(toSchemaFieldSpec),
                 },
             },
             ...fields.map((f) => ({
@@ -524,6 +639,8 @@ export class WorkbookOps {
         refName: string
         keyIdx: number
         fields: readonly FormBlockField[]
+        /** Option lists the fields reference; written in the same transaction. */
+        enumSets?: readonly EnumSetDecl[]
     }): Promise<void> {
         const {
             sheetIdx,
@@ -548,6 +665,7 @@ export class WorkbookOps {
                     colCnt,
                 },
             },
+            ...enumSetPayloads(fields, opts.enumSets),
             {
                 type: 'bindFormSchema',
                 value: {
@@ -557,13 +675,7 @@ export class WorkbookOps {
                     fieldFrom: 0,
                     row: true,
                     keyIdx: keyIdx < 0 ? 0 : keyIdx,
-                    fields: fields.map((f) => f.name),
-                    renderIds: fields.map((f) => f.renderId),
-                    fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                    validationFormulas: fields.map(
-                        (f) => f.validationFormula ?? ''
-                    ),
-                    editabilityFormulas: [],
+                    fields: fields.map(toSchemaFieldSpec),
                 },
             },
             ...fields.map((f) => ({
@@ -606,6 +718,8 @@ export class WorkbookOps {
         refName: string
         keyIdx: number
         fields: readonly FormBlockField[]
+        /** Option lists the fields reference; written in the same transaction. */
+        enumSets?: readonly EnumSetDecl[]
     }): Promise<void> {
         const {sheetIdx, blockId, currentColCnt, refName, keyIdx, fields} = opts
         const newColCnt = fields.length
@@ -626,6 +740,7 @@ export class WorkbookOps {
                 },
             })
         }
+        payloads.push(...enumSetPayloads(fields, opts.enumSets))
         payloads.push({
             type: 'bindFormSchema',
             value: {
@@ -635,13 +750,7 @@ export class WorkbookOps {
                 fieldFrom: 0,
                 row: true,
                 keyIdx: keyIdx < 0 ? 0 : keyIdx,
-                fields: fields.map((f) => f.name),
-                renderIds: fields.map((f) => f.renderId),
-                fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                validationFormulas: fields.map(
-                    (f) => f.validationFormula ?? ''
-                ),
-                editabilityFormulas: [],
+                fields: fields.map(toSchemaFieldSpec),
             },
         })
         payloads.push(
@@ -854,31 +963,5 @@ export class WorkbookOps {
             rules,
             (_sheetIdx, formula) => values.get(formula) as Value
         )
-    }
-
-    /** Check required / unique / membership field constraints. */
-    async checkFieldConstraints(
-        columns: readonly FieldColumn[]
-    ): Promise<Violation[]> {
-        const values = new Map<string, Value>()
-        for (const {cells} of columns) {
-            for (const c of cells) {
-                const key = `${c.sheetIdx}:${c.row}:${c.col}`
-                if (values.has(key)) continue
-                const v = await this.client.getValue({
-                    sheetIdx: c.sheetIdx,
-                    row: c.row,
-                    col: c.col,
-                })
-                if (isErrorMessage(v)) {
-                    throw new Error('Failed to read cell value: ' + v.msg)
-                }
-                values.set(key, v)
-            }
-        }
-        return checkFieldConstraintsPure(columns, (sheetIdx, row, col) => {
-            const v = values.get(`${sheetIdx}:${row}:${col}`)
-            return (v ?? 'empty') as Value
-        })
     }
 }

@@ -9,6 +9,10 @@ import {
     MayModifyBlockParams,
     CheckFieldValidationParams,
     FieldValidationVerdict,
+    DuplicateBlockKey,
+    EnumSetInfo,
+    BlockOpForPayload,
+    BlockOpPolicy,
     GetBlockModifyInfoParams,
     BlockModifyInfo,
     FormulaDisplayInfo,
@@ -786,6 +790,78 @@ export class Workbook {
 
     public getAllBlockFields(): Result<readonly BlockField[]> {
         return rpc('getAllBlockFields', undefined, this._id)
+    }
+
+    /**
+     * Which block operation each payload counts as, keyed by the payload's
+     * `type`. Static — fetch once and cache.
+     *
+     * The engine defines the operations, so it answers this. Every host that
+     * enforces a policy needs the mapping, and each keeping its own table is
+     * how the same payload comes to be governed differently in different
+     * hosts. A payload absent from the table is not unguarded: the caller
+     * falls back to its own owner check.
+     */
+    public getBlockOpForPayloads(): Result<readonly BlockOpForPayload[]> {
+        return rpc('getBlockOpForPayloads', undefined, this._id)
+    }
+
+    /**
+     * What a block declares for each operation — the policy in force, and
+     * whether the block says anything about that operation at all.
+     *
+     * `stated` is the half a host cannot compute for itself: "anyone may,
+     * because nobody said" and "anyone may, because someone said so" are
+     * different facts, and only the first leaves room for the host's own owner
+     * check. Whether a given ACTOR is allowed is `mayModifyBlock`.
+     */
+    public getBlockOpPolicies(params: {
+        sheetIdx: number
+        blockId: number
+    }): Result<readonly BlockOpPolicy[]> {
+        return rpc(
+            'getBlockOpPolicies',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * The workbook's enum sets — the option lists `enum` / `multiSelect` fields
+     * draw from.
+     *
+     * A field's declaration names a set by id and does not carry it, so without
+     * this a host can read the declaration and still not know what is allowed.
+     * That was every headless host's position while the sets lived in the
+     * browser's AppData blob.
+     *
+     * Ids and labels only: a variant's colour is presentation and stays in the
+     * host, keyed by variant id.
+     */
+    public getEnumSets(): Result<readonly EnumSetInfo[]> {
+        return rpc('getEnumSets', undefined, this._id)
+    }
+
+    /**
+     * Every duplicated block row key in the workbook.
+     *
+     * The engine refuses to CREATE a duplicate: a transaction that would leave
+     * two records of one block sharing a key is rejected whole. That guard
+     * judges only the keys the transaction itself wrote, so a block that
+     * arrived already broken — from an .xlsx written elsewhere, or by an older
+     * build — stays editable rather than being locked out of its own repair.
+     *
+     * This is the other half. Nothing surfaces those on its own: `BLOCKREF`
+     * resolves a repeated key to its first match and reports no error, so one
+     * record is unreachable and every aggregate over the block counts the
+     * reachable one twice, silently. Poll it at a decision point (opening a
+     * file, before trusting a total) and filter by sheet or block yourself.
+     *
+     * An empty key is not a duplicate — that is what an inserted row starts
+     * life with, and it is unaddressable rather than wrong.
+     */
+    public duplicateBlockKeys(): Result<readonly DuplicateBlockKey[]> {
+        return rpc('duplicateBlockKeys', undefined, this._id)
     }
 
     /**

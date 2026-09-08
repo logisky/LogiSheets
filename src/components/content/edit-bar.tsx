@@ -3,6 +3,8 @@ import {
     getSelectedCellRange,
 } from 'logisheets-engine'
 import {Cell, ErrorMessage} from 'logisheets-engine'
+import type {BlockDisplayInfo} from 'logisheets-engine'
+import {fieldAt} from '@/core/permissions/field-editable'
 import {toA1notation, parseA1notation} from 'logisheets-core'
 import {SelectedData, getFirstCell} from 'logisheets-engine'
 import {useEffect, useState, useRef, useCallback, useMemo} from 'react'
@@ -133,19 +135,25 @@ export const EditBarComponent = observer(function EditBarComponent({
                 if (isErrorMessage(cellId)) return ''
                 if (cellId.cellId.type !== 'blockCell') return ''
                 const bcid = cellId.cellId.value
-                const renderId = callerRegistry.getFieldRenderId(
-                    sheetIdx,
-                    bcid.blockId,
-                    bcid.row,
-                    bcid.col
+                // Off the block's SCHEMA, which the grid already carries. This
+                // used to go through the caller registry to a renderId and then
+                // into the host's own field store — three hops for a rule the
+                // schema states directly, and the reason the registry had to be
+                // populated for the edit bar to show anything.
+                const block = engine
+                    .getGrid()
+                    ?.blockInfos?.find(
+                        (b: BlockDisplayInfo) =>
+                            b.info.sheetIdx === sheetIdx &&
+                            b.info.blockId === bcid.blockId
+                    )
+                if (!block) return ''
+                const field = fieldAt(
+                    block.info,
+                    block.info.rowStart + bcid.row,
+                    block.info.colStart + bcid.col
                 )
-                if (!renderId) return ''
-                const info = engine.getBlockManager().fieldManager.get(renderId)
-                if (!info) return ''
-                // FieldInfo.type is a tagged union; validation only lives on
-                // string / number / fieldRef / multiSelectRef variants.
-                const t = info.type as {validation?: string}
-                return t.validation ?? ''
+                return field?.validationFormula ?? ''
             } catch {
                 return ''
             }

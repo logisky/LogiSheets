@@ -124,6 +124,7 @@ pub fn save_file(
         controller.app_data.clone(),
         block_schema_manager,
         field_render_manager,
+        &controller.status.enum_set_manager,
         &controller.status.image_manager,
         &controller.status.chart_manager,
         &controller.status.data_validation_manager,
