@@ -8,6 +8,7 @@ import {
     GetBlockSortOrderParams,
     PivotPlan,
     PivotPlanParams,
+    PivotExcelNote,
     PivotPlanForParams,
     MayModifyBlockParams,
     CheckFieldValidationParams,
@@ -675,6 +676,22 @@ export class Workbook {
     public pivotPlan(params: PivotPlanParams): Result<PivotPlan> {
         return rpc(
             'pivotPlan',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Read-only: why this pivot could NOT be saved as a real Excel pivot
+     * table, or `null` when it can.
+     *
+     * The saver decides this on every write. Asking it here means a recipe can
+     * be chosen knowing whether it survives the trip, instead of the file
+     * quietly degrading to a grid of numbers Excel cannot recompute.
+     */
+    public pivotExcelNote(params: PivotPlanParams): Result<PivotExcelNote> {
+        return rpc(
+            'pivotExcelNote',
             params as unknown as Record<string, unknown>,
             this._id
         )

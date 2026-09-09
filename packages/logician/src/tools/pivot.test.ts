@@ -45,6 +45,8 @@ function clientWith(
         extraPivotFields?: Array<Record<string, unknown>>
         /** Render entries for the SOURCE, so a pivot of it can inherit them. */
         sourceRenders?: Array<Record<string, unknown>>
+        /** What the engine says about saving this pivot to .xlsx. */
+        excelReason?: string
     } = {}
 ) {
     const committed: Array<{type: string; value: Record<string, unknown>}> = []
@@ -141,6 +143,10 @@ function clientWith(
             // `isErrorMessage` wants both fields, as the real RPC sends.
             opts.planError ? {msg: opts.planError, ty: 'unspecified'} : plan,
         pivotPlanFor: async () => plan,
+        pivotExcelNote: async () =>
+            opts.excelReason
+                ? {expressible: false, reason: opts.excelReason}
+                : {expressible: true},
         handleTransaction: async ({
             transaction,
         }: {
@@ -941,5 +947,53 @@ describe('COUNTA through the tools', () => {
         )
         const set = committed.find((p) => p.type === 'setBlockAnalyzes')!
         expect((set.value.pivot as {func: string}).func).toBe('COUNTA')
+    })
+})
+
+/**
+ * `describe_block` says whether a pivot survives a save to .xlsx.
+ *
+ * The saver already decides this on every write, and used to be the only one
+ * who knew. An agent could therefore build a pivot for someone who works in
+ * Excel and have the file degrade silently to a grid of numbers — right
+ * numbers, no pivot object, nothing recomputable.
+ */
+describe('build__describe_block reports Excel expressibility', () => {
+    it('says nothing when the pivot maps exactly', async () => {
+        const {client} = clientWith({withPivotBlock: true})
+        const d = await describeBlock.handler(
+            {name: 'sales_pivot'},
+            ctxFor(client)
+        )
+        expect(d.data.pivot_excel_note).toBeUndefined()
+    })
+
+    it('names the part that does not map, and what to do instead', async () => {
+        const {client} = clientWith({
+            withPivotBlock: true,
+            excelReason:
+                "it filters records by condition, and Excel's pivot filters select items from a list. Drop the filters.",
+        })
+        const d = await describeBlock.handler(
+            {name: 'sales_pivot'},
+            ctxFor(client)
+        )
+        expect(d.data.pivot_excel_note).toContain(
+            'filters records by condition'
+        )
+        expect(d.data.pivot_excel_note).toContain('still right')
+    })
+
+    it('survives a host that does not have the call at all', async () => {
+        // A read-only report should not fail because one optional RPC is
+        // missing — an older host simply says nothing about Excel.
+        const {client} = clientWith({withPivotBlock: true})
+        delete (client as unknown as Record<string, unknown>).pivotExcelNote
+        const d = await describeBlock.handler(
+            {name: 'sales_pivot'},
+            ctxFor(client)
+        )
+        expect(d.data.pivot_excel_note).toBeUndefined()
+        expect(d.data.pivot).toBeDefined()
     })
 })

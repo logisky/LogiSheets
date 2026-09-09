@@ -7,9 +7,9 @@ use crate::{
     CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
     CfRuleInfo, ChartInfo, ColId, Comment, DependentCell, DisplayWindow,
     DisplayWindowWithStartPoint, DuplicateBlockKey, EditPayload, EnumSetInfo, ErrorMessage,
-    FieldValidationVerdict, FormulaDisplayInfo, LinkInfo, MergeCell, PivotPlan, PivotSpecParts,
-    ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate,
-    SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
+    FieldValidationVerdict, FormulaDisplayInfo, LinkInfo, MergeCell, PivotExcelNote, PivotPlan,
+    PivotSpecParts, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId,
+    SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
 };
 
 // ============================================================================
@@ -64,6 +64,7 @@ pub enum Message {
     GetBlockValues(GetBlockValuesParams),
     GetBlockSortOrder(GetBlockSortOrderParams),
     PivotPlan(PivotPlanParams),
+    PivotExcelNote(PivotPlanParams),
     PivotPlanFor(PivotPlanForParams),
     MayModifyBlock(MayModifyBlockParams),
     CheckFieldValidation(CheckFieldValidationParams),
@@ -933,6 +934,10 @@ pub struct WorkbookMethods {
         fn(params: PivotPlanParams, book_id: Option<usize>) -> Result<PivotPlan, ErrorMessage>,
     pub pivot_plan_for:
         fn(params: PivotPlanForParams, book_id: Option<usize>) -> Result<PivotPlan, ErrorMessage>,
+    /// Why a pivot would not survive a save to .xlsx as a real pivot table, or
+    /// `None`. Asked before building, not discovered after saving.
+    pub pivot_excel_note:
+        fn(params: PivotPlanParams, book_id: Option<usize>) -> Result<PivotExcelNote, ErrorMessage>,
     pub may_modify_block:
         fn(params: MayModifyBlockParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
     pub check_field_validation: fn(

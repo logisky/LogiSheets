@@ -729,6 +729,11 @@ export class WorkbookClient implements Client {
             Client['pivotPlan']
         >
 
+    pivotExcelNote: Client['pivotExcelNote'] = (params) =>
+        this._call(MethodName.PivotExcelNote, params) as ReturnType<
+            Client['pivotExcelNote']
+        >
+
     pivotPlanFor: Client['pivotPlanFor'] = (params) =>
         this._call(MethodName.PivotPlanFor, params) as ReturnType<
             Client['pivotPlanFor']

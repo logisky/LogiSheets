@@ -31,6 +31,23 @@ use super::Workbook;
 const MAX_PIVOT_KEYS: usize = 1000;
 const MAX_PIVOT_FIELDS: usize = 200;
 
+/// Whether a pivot survives a save to `.xlsx` as a REAL Excel pivot table.
+///
+/// A struct rather than an `Option<String>` return: a bare `Option` generates
+/// a TypeScript type that claims `string` and hands back `null`, while an
+/// `Option` FIELD generates the `?:` a caller can actually rely on.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "pivot_excel_note.ts", rename_all = "camelCase")]
+pub struct PivotExcelNote {
+    /// True when the pivot maps exactly, so the saved file carries a pivot
+    /// object Excel can recompute and re-pivot.
+    pub expressible: bool,
+    /// Why not, when not — naming the part that does not map and what to use
+    /// instead. Absent when `expressible`, and also when the block is not a
+    /// pivot at all.
+    pub reason: Option<String>,
+}
+
 /// The shape a pivot should have, what it has, and the difference.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "pivot_plan.ts", rename_all = "camelCase")]
@@ -100,7 +117,8 @@ impl Workbook {
             .analyzes
             .ok_or_else(|| Error::PayloadError(format!("pivot {block_id} analyses nothing")))?;
 
-        let (current_keys, current_derived, declared) = current_shape(status, sheet_id, block_id);
+        let (current_keys, current_derived, declared, declared_measures) =
+            current_shape(status, sheet_id, block_id);
         plan_from(
             status,
             sheet_id,
@@ -109,6 +127,45 @@ impl Workbook {
             current_keys,
             current_derived,
             declared,
+            declared_measures,
+        )
+    }
+
+    /// Why this pivot could NOT be saved as a real Excel pivot table, or
+    /// `None` when it can.
+    ///
+    /// The saver already decides this every time a file is written; asking it
+    /// here means a host can find out BEFORE building something, rather than
+    /// discovering after the fact that the file quietly degraded to a grid of
+    /// numbers. `Ok(None)` for a block that is not a pivot at all.
+    pub fn pivot_excel_note(
+        &self,
+        sheet_idx: usize,
+        block_id: BlockId,
+    ) -> crate::errors::Result<PivotExcelNote> {
+        let status = self.status();
+        let sheet_id = status
+            .sheet_info_manager
+            .get_sheet_id(sheet_idx)
+            .ok_or(Error::UnavailableSheetIdx(sheet_idx))?;
+        Ok(
+            match crate::file_saver::pivot_ooxml::expressibility(
+                sheet_id,
+                block_id,
+                &status.navigator,
+                &status.block_schema_manager,
+            ) {
+                Some(Err(why)) => PivotExcelNote {
+                    expressible: false,
+                    reason: Some(why.reason().to_string()),
+                },
+                // Expressible, or not a pivot at all — either way there is
+                // nothing to warn about.
+                _ => PivotExcelNote {
+                    expressible: true,
+                    reason: None,
+                },
+            },
         )
     }
 
@@ -150,6 +207,7 @@ impl Workbook {
             Vec::new(),
             Vec::new(),
             Vec::new(),
+            Vec::new(),
         )
     }
 }
@@ -166,11 +224,25 @@ fn plan_from(
     // Columns the caller declared by hand. Carried through untouched: the
     // refresh owns the derived columns only.
     declared_fields: Vec<String>,
+    // Measures the pivot's hand-declared columns name, if any override the
+    // recipe's own.
+    declared_measures: Vec<String>,
 ) -> crate::errors::Result<PivotPlan> {
     let distinct =
         |field: &str, limit: usize, what: &str| -> crate::errors::Result<(Vec<String>, usize)> {
             distinct_values(status, sheet_id, source, field, pivot, limit, what)
         };
+
+    // The MEASURE, before anything else. Nothing else here needs it — the rows
+    // and columns are distinct values of the DIMENSIONS — so a measure naming a
+    // field the source does not have used to plan perfectly: `is_stale: false`,
+    // no error, and every cell reading 0 because `BLOCKREFS` matching nothing
+    // yields an empty matrix rather than a failure. A pivot reporting zeros as
+    // fact is the exact thing this module exists to make impossible, so the
+    // measure is checked even though the plan does not use it.
+    //
+    // Declared columns are checked too: one may measure something of its own.
+    check_measures(status, sheet_id, source, pivot, &declared_measures)?;
 
     let (keys, blank_rows) = distinct(&pivot.row_dim, MAX_PIVOT_KEYS, "rows")?;
     let (fields, blank_cols) = match &pivot.col_dim {
@@ -363,16 +435,16 @@ fn current_shape(
     status: &crate::controller::status::Status,
     sheet_id: logisheets_base::SheetId,
     block_id: BlockId,
-) -> (Vec<String>, Vec<String>, Vec<String>) {
+) -> (Vec<String>, Vec<String>, Vec<String>, Vec<String>) {
     let Some(schema) = status
         .block_schema_manager
         .schemas
         .get(&(sheet_id, block_id))
     else {
-        return (Vec::new(), Vec::new(), Vec::new());
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     };
     let Ok(bp) = status.navigator.get_block_place(&sheet_id, &block_id) else {
-        return (Vec::new(), Vec::new(), Vec::new());
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     };
     let text_fetcher = |id: TextId| status.text_id_manager.get_string(&id).unwrap_or_default();
 
@@ -398,26 +470,63 @@ fn current_shape(
     // justify removing them.
     let mut derived = Vec::new();
     let mut declared = Vec::new();
-    let mut sort = |name: &String, is_key: bool, hand: bool| {
-        if is_key {
-            return;
-        }
-        if hand {
-            declared.push(name.clone())
-        } else {
-            derived.push(name.clone())
-        }
-    };
+    // A declared column may measure something of its own, and that something
+    // can go missing from the source just as the recipe's measure can.
+    let mut declared_measures = Vec::new();
+    let mut sort =
+        |name: &String,
+         is_key: bool,
+         column: Option<&crate::block_manager::schema_manager::field_type::PivotColumn>| {
+            if is_key {
+                return;
+            }
+            match column {
+                Some(c) => {
+                    declared.push(name.clone());
+                    if let Some(m) = &c.measure {
+                        declared_measures.push(m.clone());
+                    }
+                }
+                None => derived.push(name.clone()),
+            }
+        };
     match schema {
         Schema::RowSchema(s) => s
             .fields
             .iter()
-            .for_each(|(n, e)| sort(n, e.field_axis_id == s.key, e.pivot_column.is_some())),
+            .for_each(|(n, e)| sort(n, e.field_axis_id == s.key, e.pivot_column.as_ref())),
         Schema::ColSchema(s) => s
             .fields
             .iter()
-            .for_each(|(n, e)| sort(n, e.field_axis_id == s.key, e.pivot_column.is_some())),
+            .for_each(|(n, e)| sort(n, e.field_axis_id == s.key, e.pivot_column.as_ref())),
         Schema::RandomSchema(_) => {}
     }
-    (keys, derived, declared)
+    (keys, derived, declared, declared_measures)
+}
+
+/// Refuse a recipe whose MEASURE (or a declared column's own) names a field
+/// the source does not have.
+///
+/// Separate from `distinct_values` because nothing about the plan needs the
+/// measure — see the call site for why it is checked anyway.
+fn check_measures(
+    status: &crate::controller::status::Status,
+    sheet_id: logisheets_base::SheetId,
+    source: BlockId,
+    pivot: &crate::block_manager::schema_manager::field_type::PivotSpec,
+    declared_measures: &[String],
+) -> crate::errors::Result<()> {
+    use crate::block_manager::schema_manager::schema::SchemaTrait;
+    let Some(schema) = status.block_schema_manager.schemas.get(&(sheet_id, source)) else {
+        // `distinct_values` reports the missing schema with its own message.
+        return Ok(());
+    };
+    for measure in std::iter::once(&pivot.measure).chain(declared_measures) {
+        if schema.resolve_field_id(measure).is_none() {
+            return Err(Error::PayloadError(format!(
+                "the pivot measures \"{measure}\", which block {source} does not have"
+            )));
+        }
+    }
+    Ok(())
 }

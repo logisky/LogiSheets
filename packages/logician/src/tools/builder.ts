@@ -2148,6 +2148,18 @@ interface DescribeBlockOutput {
      */
     pivot_unassigned_records?: number
     /**
+     * Why this pivot would NOT survive a save to .xlsx as a real Excel pivot
+     * table, when it would not.
+     *
+     * Absent means it maps exactly. Present means the file still opens and
+     * still shows the right numbers — but as a grid Excel cannot recompute or
+     * re-pivot, because the recipe uses something Excel's pivots have no way
+     * to say. Worth knowing BEFORE building, whenever the workbook is headed
+     * for Excel: the reason names the part that does not map and what to use
+     * instead.
+     */
+    pivot_excel_note?: string
+    /**
      * What the block is for, in prose, as whoever built it wrote it. The
      * schema says what shape the records are; this is the only thing that says
      * what they mean or how they are meant to be used. `null` when nobody said.
@@ -2329,6 +2341,7 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
             pivot_is_stale?: string
             pivot_is_broken?: string
             pivot_unassigned_records?: number
+            pivot_excel_note?: string
         } = {}
         if (block.pivot) {
             const p = block.pivot
@@ -2369,6 +2382,24 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
                     ? "; rows in the source's own order"
                     : '') +
                 (declared.length ? `; ${declared.map(says).join('; ')}` : '')
+
+            // Whether it survives a save to .xlsx as a real pivot. The saver
+            // already decides this on every write; reporting it here is what
+            // lets a recipe be chosen knowing the answer, rather than the file
+            // degrading quietly.
+            // Optional: a host that predates this RPC simply says nothing
+            // about Excel. `describe_block` is a read-only report, and losing
+            // one line of it is not worth failing the whole description over.
+            const excel = await client.pivotExcelNote?.({
+                sheetIdx: block.sheetIdx,
+                blockId: block.blockId,
+            })
+            if (excel && !isErrorMessage(excel) && excel.reason) {
+                pivotReport.pivot_excel_note =
+                    `Saved to .xlsx this will NOT be a real Excel pivot table, ` +
+                    `because ${excel.reason} The numbers are still written and ` +
+                    `still right; Excel just cannot recompute or re-pivot them.`
+            }
 
             const plan = await client.pivotPlan({
                 sheetIdx: block.sheetIdx,

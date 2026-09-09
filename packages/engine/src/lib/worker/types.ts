@@ -98,6 +98,7 @@ export enum MethodName {
     GetBlockValues = 'getBlockValues',
     GetBlockSortOrder = 'getBlockSortOrder',
     PivotPlan = 'pivotPlan',
+    PivotExcelNote = 'pivotExcelNote',
     PivotPlanFor = 'pivotPlanFor',
     MayModifyBlock = 'mayModifyBlock',
     CheckFieldValidation = 'checkFieldValidation',

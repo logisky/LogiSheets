@@ -1,9 +1,9 @@
 use crate::{
     ActionEffect, AppData, BasicError, BlockDataRow, BlockField, BlockId, BlockSortOrder,
     CellCoordinateWithSheet, CellInfo, ColId, DisplayWindow, EditAction, Error, ErrorMessage,
-    FormulaDisplayInfo, PayloadsAction, PivotPlan, PivotSpecParts, RowId, RowInfo, SaveFileResult,
-    ShadowCellInfo, SheetCellId, SheetId, SheetInfo, TempStatusDiff, Workbook, lex_and_fmt,
-    lex_success,
+    FormulaDisplayInfo, PayloadsAction, PivotExcelNote, PivotPlan, PivotSpecParts, RowId, RowInfo,
+    SaveFileResult, ShadowCellInfo, SheetCellId, SheetId, SheetInfo, TempStatusDiff, Workbook,
+    lex_and_fmt, lex_success,
 };
 
 use super::{Manager, Transaction};
@@ -293,6 +293,22 @@ pub fn pivot_plan(
 ) -> Result<PivotPlan, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
     wb.pivot_plan(sheet_idx, block_id)
+        .map_err(ErrorMessage::from)
+}
+
+/// Why a pivot could not be saved as a real Excel pivot table, or `None`.
+///
+/// Asked BEFORE building, so a recipe can be chosen knowing whether it will
+/// survive the trip — rather than discovering after a save that the file
+/// degraded to a grid of numbers Excel cannot recompute.
+pub fn pivot_excel_note(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+) -> Result<PivotExcelNote, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.pivot_excel_note(sheet_idx, block_id)
         .map_err(ErrorMessage::from)
 }
 

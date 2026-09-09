@@ -332,6 +332,12 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.sheet_idx,
             params.block_id,
         )),
+        Message::PivotExcelNote(params) => res_to_js(controller::pivot_excel_note(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.block_id,
+        )),
         Message::PivotPlanFor(params) => res_to_js(controller::pivot_plan_for(
             &mgr,
             id,

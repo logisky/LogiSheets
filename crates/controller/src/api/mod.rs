@@ -28,7 +28,7 @@ pub use enum_sets::{EnumSetInfo, EnumVariantInfo};
 pub use field_validation::FieldValidationVerdict;
 pub use fill::FillRange;
 pub use logisheets_base::BlockId;
-pub use pivot_plan::PivotPlan;
+pub use pivot_plan::{PivotExcelNote, PivotPlan};
 pub use sort_block::BlockSortOrder;
 pub use types::*;
 pub use workbook::Workbook;

@@ -417,6 +417,10 @@ export class WorkbookWorkerService implements IWorkbookWorker {
      * pivot's numbers are live formulas, but its rows and columns are the
      * source's distinct values, which no formula can produce.
      */
+    public pivotExcelNote(params: PivotPlanParams) {
+        return this.workbook.pivotExcelNote(params)
+    }
+
     public pivotPlan(params: PivotPlanParams): Result<PivotPlan> {
         return this.workbook.pivotPlan(params)
     }
@@ -857,6 +861,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.PivotPlan:
                     result = this.pivotPlan(args)
+                    break
+                case MethodName.PivotExcelNote:
+                    result = this.pivotExcelNote(args)
                     break
                 case MethodName.PivotPlanFor:
                     result = this.pivotPlanFor(args)

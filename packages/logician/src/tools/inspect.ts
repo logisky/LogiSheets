@@ -120,6 +120,7 @@ export const listViolations: Tool<
     {
         violations: ValidationViolation[]
         duplicate_keys: DuplicateKeyViolation[]
+        pivots_needing_attention: PivotHealthNote[]
         truncated: boolean
     }
 > = {
@@ -132,7 +133,9 @@ export const listViolations: Tool<
         '',
         'Also returns `duplicate_keys`: blocks where two records carry the same row key. That is not an advisory rule but a broken address — BLOCKREF resolves a key to the FIRST matching record, so the others are unreachable and every aggregate over the block double-counts, silently and without an error anywhere. The engine refuses to create a duplicate, so anything reported here came in with the file. Fix it by giving one of the records a distinct key before trusting any total over that block.',
         '',
-        "Use this when answering 'why is something red?', 'what's broken after my last edit?', or before committing a multi-step build that depends on existing constraints.",
+        "Also returns `pivots_needing_attention`. A pivot fails in a way no validation rule can see: `stale` means its numbers are each correct while whole groups are MISSING, and `broken` means its recipe stopped resolving so every cell reads 0 rather than erroring. Neither shows up as a red cell anywhere. Treat a broken pivot's numbers as unusable and fix the recipe; refresh a stale one before quoting any total from it.",
+        '',
+        "Use this when answering 'why is something red?', 'what's broken after my last edit?', or before quoting any number you did not just compute yourself. It is the one call that answers 'is anything here untrustworthy' — the alternative is describe_block on every block, which is easy to skip and easy to forget.",
         '',
         'Filters compose: omit both `block` and `sheet` to scan the whole workbook; pass either to narrow.',
         '',
@@ -207,6 +210,16 @@ export const listViolations: Tool<
                 records: [...d.records],
             }))
 
+        // 2b. Pivot health, for the blocks in scope.
+        //
+        // A pivot fails in a way no validation rule can see: its numbers are
+        // each correct while whole groups are missing, or its recipe has
+        // stopped resolving and every cell reads 0 rather than erroring. Both
+        // are "a number you should not trust", which is what this tool is for
+        // — and asking `describe_block` per block is not something an agent
+        // reliably remembers to do before reporting a total.
+        const pivots = await fetchPivotHealth(client, blocks)
+
         // 3. For each block, enumerate (row, field-with-validation)
         //    pairs as sheet-absolute coordinates. Group by sheetIdx so
         //    we can issue one bulk shadow fetch per sheet.
@@ -265,15 +278,20 @@ export const listViolations: Tool<
         }
 
         if (probesBySheet.size === 0) {
+            const parts: string[] = []
+            if (duplicateKeys.length)
+                parts.push(describeDuplicates(duplicateKeys))
+            if (pivots.length) parts.push(describePivots(pivots))
             return {
                 data: {
                     violations: [],
                     duplicate_keys: duplicateKeys,
+                    pivots_needing_attention: pivots,
                     truncated: false,
                 },
-                display: duplicateKeys.length
-                    ? `No validation rules declared in scope, but ${describeDuplicates(
-                          duplicateKeys
+                display: parts.length
+                    ? `No validation rules declared in scope, but ${parts.join(
+                          '; '
                       )}.`
                     : 'No validation rules declared in scope.',
             }
@@ -364,9 +382,15 @@ export const listViolations: Tool<
             )
         }
         if (duplicateKeys.length) parts.push(describeDuplicates(duplicateKeys))
+        if (pivots.length) parts.push(describePivots(pivots))
 
         return {
-            data: {violations, duplicate_keys: duplicateKeys, truncated},
+            data: {
+                violations,
+                duplicate_keys: duplicateKeys,
+                pivots_needing_attention: pivots,
+                truncated,
+            },
             display: `${parts.join('; ')}.`,
         }
     },
@@ -429,6 +453,79 @@ async function fetchDuplicateKeys(
     if (typeof ask !== 'function') return []
     const res = await ask.call(client)
     return isErrorMessage(res) ? [] : res
+}
+
+/** A pivot whose shape or recipe means its numbers cannot be taken at face value. */
+interface PivotHealthNote {
+    block: string
+    sheet_idx: number
+    /** `stale` — correct numbers, missing groups. `broken` — every cell 0. */
+    state: 'stale' | 'broken'
+    detail: string
+}
+
+/**
+ * Ask the engine for each pivot's plan and report the ones that need doing
+ * something about.
+ *
+ * `pivot_plan` erroring IS the broken signal — it means the recipe names
+ * something the source no longer has, and the cells are quietly reading 0
+ * because a `BLOCKREFS` matching nothing yields an empty matrix. Swallowing
+ * that error would leave the one failure with no symptom at all.
+ */
+async function fetchPivotHealth(
+    client: Client,
+    blocks: readonly BlockInfo[]
+): Promise<PivotHealthNote[]> {
+    const out: PivotHealthNote[] = []
+    for (const b of blocks) {
+        if (!b.pivot) continue
+        const name = b.schema?.name ?? `block#${b.blockId}`
+        const plan = await client.pivotPlan({
+            sheetIdx: b.sheetIdx,
+            blockId: b.blockId,
+        })
+        if (isErrorMessage(plan)) {
+            out.push({
+                block: name,
+                sheet_idx: b.sheetIdx,
+                state: 'broken',
+                detail:
+                    `${plan.msg}. Every cell of this pivot is reading 0 rather ` +
+                    `than failing — do NOT report any number from it. Fix the ` +
+                    `recipe with build__edit_pivot, or rebuild it.`,
+            })
+            continue
+        }
+        if (plan.isStale) {
+            const missing = [...plan.missingKeys, ...plan.missingFields]
+            out.push({
+                block: name,
+                sheet_idx: b.sheetIdx,
+                state: 'stale',
+                detail:
+                    `${missing.length} group(s)/column(s) the source has are not ` +
+                    `shown here${
+                        missing.length ? ` (${missing.join(', ')})` : ''
+                    }. ` +
+                    `Every number in it is correct but the table is INCOMPLETE — ` +
+                    `call build__refresh_pivot before reading or reporting it.`,
+            })
+        }
+    }
+    return out
+}
+
+function describePivots(notes: readonly PivotHealthNote[]): string {
+    const broken = notes.filter((n) => n.state === 'broken').length
+    const stale = notes.length - broken
+    const bits: string[] = []
+    if (broken)
+        bits.push(
+            `${broken} pivot${broken === 1 ? '' : 's'} whose recipe is broken`
+        )
+    if (stale) bits.push(`${stale} stale pivot${stale === 1 ? '' : 's'}`)
+    return bits.join(' and ')
 }
 
 function describeDuplicates(dups: readonly DuplicateKeyViolation[]): string {

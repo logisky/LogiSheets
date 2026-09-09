@@ -22,8 +22,8 @@
 pub use logisheets_controller::api::{
     BlockOpForPayload, BlockOpPolicy, BlockSortOrder, CellInfo, CellRefRange, CfRuleInfo,
     DependentCell, DuplicateBlockKey, EnumSetInfo, EnumVariantInfo, FieldValidationVerdict,
-    FillRange, PivotPlan, PivotSpecParts, ReproducibleCell, SaveFileResult, SheetCoordinate,
-    SheetDimension, Workbook, Worksheet,
+    FillRange, PivotExcelNote, PivotPlan, PivotSpecParts, ReproducibleCell, SaveFileResult,
+    SheetCoordinate, SheetDimension, Workbook, Worksheet,
 };
 
 // Re-export display types

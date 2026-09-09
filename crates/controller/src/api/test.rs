@@ -10410,6 +10410,63 @@ fn a_value_the_custom_order_does_not_mention_still_gets_a_row() {
     );
 }
 
+/// A recipe whose MEASURE names nothing must be reported broken.
+///
+/// Nothing about the plan needs the measure — rows and columns are distinct
+/// values of the DIMENSIONS — so this used to plan perfectly: `is_stale:
+/// false`, no error, and every cell reading 0, because a `BLOCKREFS` that
+/// matches nothing yields an empty matrix rather than a failure. An agent
+/// reading that pivot reports zeros as fact, which is the one thing the whole
+/// design is built to prevent.
+#[test]
+fn a_pivot_whose_measure_is_gone_is_broken_not_merely_zero() {
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    assert!(wb.pivot_plan(0, pivot).is_ok(), "healthy to begin with");
+
+    // Re-bind the source with the measure gone. A different render id, so it
+    // reads as "field removed, field added" rather than a rename — the one
+    // shape rename-propagation cannot follow.
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "sales".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            row: true,
+            header_idx: None,
+            fields: vec![
+                SchemaFieldSpec::new("id", "s0"),
+                SchemaFieldSpec::new("region", "s1"),
+                SchemaFieldSpec::new("quarter", "s2"),
+                SchemaFieldSpec::new("gone", "s9").with_field_type(
+                    crate::block_manager::schema_manager::field_type::FieldType::Number,
+                ),
+            ],
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    // Every cell reads 0 — which is exactly why the plan has to object.
+    assert_eq!(cell_num(&wb, 10, 1), Some(0.0));
+
+    let err = wb
+        .pivot_plan(0, pivot)
+        .expect_err("a recipe measuring a field that is gone is broken");
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("measures") && msg.contains("amt"),
+        "the reason names the measure the RECIPE wants — which is the field a \
+         reader has to go and restore or rename: {msg}"
+    );
+}
+
 #[test]
 fn a_key_excluded_by_a_filter_is_flagged_even_though_it_occurs_in_the_source() {
     // "Occurs in the source" and "belongs in this pivot" stop being the same
@@ -10701,6 +10758,59 @@ fn a_plain_pivot_is_also_written_as_a_real_ooxml_pivot_table() {
     // A11:C12. The header line, when a schema declares one, is one of the
     // block's own lines rather than a row above it.
     assert_eq!(table.definition.location.reference, "A11:C12");
+}
+
+/// A host can ask whether a pivot will survive a trip to Excel, BEFORE it
+/// builds one.
+///
+/// The saver already decides this on every write. Answering only there means
+/// the choice is made by whoever wrote the recipe without being told there was
+/// one — and the degradation is silent: the file still opens, it just holds a
+/// grid of numbers Excel cannot recompute.
+#[test]
+fn a_host_can_ask_why_a_pivot_would_not_survive_excel() {
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+
+    // A plain cross-tab maps exactly, so there is nothing to warn about.
+    let (wb, _src, pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Q2", "p2"),
+        ],
+        &["East", "South"],
+    );
+    assert!(wb.pivot_excel_note(0, pivot).unwrap().expressible);
+
+    // A filtered one does not, and the reason says what to do about it.
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "quarter".into(),
+            criteria: "Q1".into(),
+        }]),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South"],
+    );
+    let note = wb.pivot_excel_note(0, pivot).unwrap();
+    assert!(!note.expressible, "a filtered pivot cannot be expressed");
+    let why = note.reason.expect("and it says why");
+    assert!(
+        why.contains("filters"),
+        "the reason names the part that does not map: {why}"
+    );
+
+    // And an ordinary block is not a pivot, so there is nothing to say.
+    let (wb, src, _pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East"],
+    );
+    let note = wb.pivot_excel_note(0, src).unwrap();
+    assert!(note.expressible && note.reason.is_none());
 }
 
 #[test]

@@ -329,6 +329,86 @@ pub fn generate_for_block(
     build(&name, cache_id, geometry, &source_table, &source_fields, &e)
 }
 
+/// Whether this block's pivot could be written as an OOXML pivot table, asked
+/// on its own.
+///
+/// The saver asks the same question when it decides whether to emit the parts.
+/// This exists so a HOST can ask it too — before building something, not after
+/// discovering the file degraded. Answering only at save time means the choice
+/// is made by whoever wrote the recipe, without being told there was one.
+pub fn expressibility(
+    sheet_id: logisheets_base::SheetId,
+    block_id: logisheets_base::BlockId,
+    navigator: &crate::navigator::Navigator,
+    schema: &crate::block_manager::schema_manager::SchemaManager,
+) -> Option<Result<Expressible, NotExpressible>> {
+    let place = navigator.get_block_place(&sheet_id, &block_id).ok()?;
+    let spec = place.pivot.as_ref()?;
+    let source_block = place.analyzes?;
+    let source_fields = schema.get_all_fields_by_block(sheet_id, source_block)?;
+    Some(representable(
+        spec,
+        &source_fields,
+        &pivot_field_facts(sheet_id, block_id, place, schema),
+    ))
+}
+
+/// The pivot's own columns, read the way the display path reads them, so "is
+/// this a declared column" has one answer in the codebase.
+fn pivot_field_facts(
+    sheet_id: logisheets_base::SheetId,
+    block_id: logisheets_base::BlockId,
+    place: &crate::navigator::BlockPlace,
+    schema: &crate::block_manager::schema_manager::SchemaManager,
+) -> Vec<PivotFieldFacts> {
+    let Some(first_row) = place.rows.get(0).copied() else {
+        return Vec::new();
+    };
+    place
+        .cols
+        .iter()
+        .map(|col| {
+            let cell = logisheets_base::BlockCellId {
+                block_id,
+                row: first_row,
+                col: *col,
+            };
+            let view = schema.field_view_for_block_cell(sheet_id, &cell);
+            let column = view.as_ref().and_then(|v| v.pivot_column);
+            PivotFieldFacts {
+                col_value: column.map(|c| c.col_value.clone().unwrap_or_else(|| "*".to_string())),
+                has_override: column.is_some_and(|c| c.measure.is_some() || c.func.is_some()),
+            }
+        })
+        .collect()
+}
+
+impl NotExpressible {
+    /// Why, in words a host can pass on — and what to do instead.
+    pub fn reason(&self) -> &'static str {
+        match self {
+            NotExpressible::HasFilters => {
+                "it filters records by condition, and Excel's pivot filters select \
+                 items from a list. Drop the filters, or accept that Excel will \
+                 show the numbers without a pivot object."
+            }
+            NotExpressible::CountIsApproximate => {
+                "COUNT counts records whatever the measure holds, and Excel's \
+                 nearest (`count`) skips blanks — the same number only when the \
+                 measure has no gaps. Use COUNTA, which maps exactly."
+            }
+            NotExpressible::MultipleMeasures => {
+                "it shows more than one number per group, which Excel lays out \
+                 with a values axis and therefore differently from this table."
+            }
+            NotExpressible::UnknownField => {
+                "its recipe names a field the source does not have — the pivot is \
+                 broken, so there is nothing correct to express."
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
