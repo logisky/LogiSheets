@@ -318,7 +318,8 @@ describe('WorkbookOps pivots against the real engine', () => {
             schema?: {fields: Array<{field: string}>}
         }>
         const p = blocks.find((b) => b.blockId === pivotId)!
-        expect(p.rowCnt).toBe(2)
+        // Two surviving groups plus the header line.
+        expect(p.rowCnt).toBe(3)
         // The schema really lost the row — no orphaned entry.
         expect(p.schema!.fields.map((f) => f.field)).toEqual([
             'region',
@@ -755,9 +756,8 @@ describe('editing a pivot recipe, against the real engine', () => {
             blockId: pivotId,
             refName: 'p',
             source: source(),
-            rowStart: 7,
-            colStart: 0,
-            currentRowCnt: 3,
+            // Three groups plus the header line the schema declares.
+            currentRowCnt: 4,
             currentColCnt: 3,
             rowDim: 'region',
             colDim: 'quarter',

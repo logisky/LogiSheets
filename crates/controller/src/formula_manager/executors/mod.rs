@@ -358,6 +358,12 @@ impl FormulaExecutor {
                         dirty_vertices.insert(Vertex::BlockKey(sheet, bcid.block_id));
                         dirty_vertices.insert(Vertex::BlockAll(sheet, bcid.block_id));
                     }
+                    // A header cell holds a field NAME. Nothing subscribes
+                    // to it: `BLOCKREFS` filters on names as they are
+                    // declared on the schema, never on what a cell of the
+                    // block happens to say, so changing this cell changes no
+                    // formula's answer.
+                    BlockCellRole::Header => {}
                     BlockCellRole::None => {}
                 }
             }

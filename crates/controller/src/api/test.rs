@@ -1107,6 +1107,7 @@ fn range_link_redirects_to_block_and_tracks_growth() {
                 key_idx: 0,
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1247,6 +1248,7 @@ fn clearing_field_rule_purges_stale_shadow_value() {
                         .with_editability_formula(Some("#PLACEHOLDER>100".into())),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1362,6 +1364,7 @@ fn a_templated_field_refuses_every_user_write() {
                         .with_value_formula(Some("=#FIELD(\"qty\")*2".into())),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1497,6 +1500,7 @@ fn a_proposed_value_is_judged_without_touching_the_workbook() {
                         .with_validation_formula(Some("#PLACEHOLDER>0".into())),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1603,6 +1607,7 @@ fn create_link_payload_redirects_existing_formula() {
                 key_idx: 0,
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1908,6 +1913,7 @@ fn cross_sheet_linked_column_tracks_block_and_survives_save_load() {
                 key_idx: 0,
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 1,
@@ -2043,6 +2049,7 @@ fn link_survives_save_load() {
                 key_idx: 0,
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -2156,6 +2163,7 @@ fn linked_column_tracks_tail_append() {
                 key_idx: 0,
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -2744,6 +2752,289 @@ fn dependency_tracking_precedents_and_dependents() {
 // (unknown field, random-schema block). The sort_block unit tests already cover
 // the pure comparator; this exercises field resolution, typed value reads, and
 // the reorder semantics against a live controller.
+/// A schema may declare one of its lines a HEADER: names, not a record.
+///
+/// The block is only "there is a thing here, at this position"; the schema is
+/// how to read it. Which line is names rather than data is a matter of
+/// reading, so it is declared here — and that is what makes a header travel
+/// with the block instead of being a stray row above it.
+#[test]
+fn a_declared_header_line_is_not_a_record() {
+    use crate::edit_action::{BindFormSchema, CellInput};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    // Four lines: a header and three records.
+    let rows = [
+        ("name", "age"),
+        ("Charlie", "30"),
+        ("Alice", "10"),
+        ("Bob", "20"),
+    ];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (name, age)) in rows.iter().enumerate() {
+        for (c, v) in [name, age].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "people".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("name", "r0"),
+            SchemaFieldSpec::new("age", "r1"),
+        ],
+        row: true,
+        header_idx: Some(0),
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    // The header is excluded from the records, which is what keeps it out of
+    // `BLOCKREFS`, the key-uniqueness guard and everything else downstream —
+    // they all ask this one question.
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let block = ws
+        .get_all_blocks()
+        .into_iter()
+        .find(|b| b.block_id == bid)
+        .unwrap();
+    let keys: Vec<String> = block
+        .schema
+        .as_ref()
+        .unwrap()
+        .keys
+        .iter()
+        .map(|k| k.key.clone())
+        .collect();
+    assert_eq!(
+        keys,
+        vec!["Charlie", "Alice", "Bob"],
+        "\"name\" is the header, not a key"
+    );
+
+    // And a total over the block counts three records, not four — the header
+    // is text, so a fourth key would not even have shown up as a number.
+    let count = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_all_blocks()
+        .into_iter()
+        .find(|b| b.block_id == bid)
+        .unwrap()
+        .row_cnt;
+    assert_eq!(count, 4, "the block still OWNS four lines");
+}
+
+/// A header cell declares itself NOT editable, and that is ENFORCED.
+///
+/// Typing over a heading would not rename the field — it would leave a
+/// heading that disagrees with what the column means, which is the same shape
+/// of trap the pivot key column has. A field's write POLICY is only a
+/// declaration the host may interpret; the per-record editability rule is the
+/// half that bites, because it becomes the cell's `UserEditable` shadow and
+/// the host permission layer refuses an edit whose shadow reads false.
+#[test]
+fn a_header_cell_is_not_editable() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput};
+    use crate::sid_assigner::ShadowKind;
+    use logisheets_base::CellId;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let rows = [("name", "age"), ("Alice", "10")];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (name, age)) in rows.iter().enumerate() {
+        for (c, v) in [name, age].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "people".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("name", "h0"),
+            SchemaFieldSpec::new("age", "h1"),
+        ],
+        row: true,
+        header_idx: Some(0),
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let editable = |wb: &mut Workbook, row: usize, col: usize| -> Value {
+        let scid = wb
+            .get_shadow_cell_id(0, row, col, ShadowKind::UserEditable)
+            .unwrap();
+        let id = match scid.cell_id {
+            CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        wb.get_shadow_info_by_id(id).unwrap().value
+    };
+
+    // Row 0 is the header: false, in both columns — the whole LINE is names.
+    assert!(
+        matches!(editable(&mut wb, 0, 0), Value::Bool(false)),
+        "the header's key column is not editable, got {:?}",
+        editable(&mut wb, 0, 0)
+    );
+    assert!(
+        matches!(editable(&mut wb, 0, 1), Value::Bool(false)),
+        "nor any other column of it, got {:?}",
+        editable(&mut wb, 0, 1)
+    );
+
+    // Row 1 is a record, and nothing here made records read-only: no rule was
+    // declared for them, so the shadow stays empty and the host falls back to
+    // the field's own policy.
+    assert!(
+        matches!(editable(&mut wb, 1, 0), Value::Empty),
+        "a record keeps whatever editability it had, got {:?}",
+        editable(&mut wb, 1, 0)
+    );
+}
+
+#[test]
+fn sorting_a_block_leaves_its_header_on_top() {
+    // A header has no key to sort by, and `headerRowCount="1"` can only mean
+    // the FIRST line of a table — so a sort that buried it would make the
+    // block inexpressible as well as unreadable.
+    use crate::edit_action::{BindFormSchema, CellInput, ReorderBlockLines};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let rows = [
+        ("name", "age"),
+        ("Charlie", "30"),
+        ("Alice", "10"),
+        ("Bob", "20"),
+    ];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (name, age)) in rows.iter().enumerate() {
+        for (c, v) in [name, age].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "people".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("name", "r0"),
+            SchemaFieldSpec::new("age", "r1"),
+        ],
+        row: true,
+        header_idx: Some(0),
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let order = wb.get_block_sort_order(0, bid, "age", true).unwrap();
+    // Four lines in, four lines out: `ReorderBlockLines` permutes LINES, and
+    // the records are one fewer than the lines now.
+    assert_eq!(order.new_order.len(), 4, "a full permutation of the lines");
+    assert_eq!(order.new_order[0], 0, "the header stays first");
+
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::ReorderBlockLines(ReorderBlockLines {
+            sheet_idx: 0,
+            block_id: bid,
+            is_row: order.is_row,
+            new_order: order.new_order.clone(),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let cell = |r: usize, c: usize| -> String {
+        match wb.get_sheet_by_idx(0).unwrap().get_value(r, c).unwrap() {
+            crate::controller::display::Value::Str(s) => s,
+            crate::controller::display::Value::Number(n) => n.to_string(),
+            other => format!("{other:?}"),
+        }
+    };
+    assert_eq!(cell(0, 0), "name", "the header did not move");
+    assert_eq!(cell(1, 0), "Alice", "10");
+    assert_eq!(cell(2, 0), "Bob", "20");
+    assert_eq!(cell(3, 0), "Charlie", "30");
+}
+
 #[test]
 fn sort_block_by_field_end_to_end() {
     use crate::api::BlockSortOrder;
@@ -2790,6 +3081,7 @@ fn sort_block_by_field_end_to_end() {
                     SchemaFieldSpec::new("age", "r_age"),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ];
         for (r, (name, age)) in records.iter().enumerate() {
@@ -3004,6 +3296,7 @@ fn sort_block_grown_by_insert_rows() {
                 key_idx: 0,
                 fields: vec![SchemaFieldSpec::new("Customer Status", "r0")],
                 row: true,
+                header_idx: None,
             }),
             // Add two rows (interior insert at index 1), like clicking "add row".
             EditPayload::InsertRowsInBlock(InsertRowsInBlock {
@@ -3124,6 +3417,7 @@ fn sort_block_reference_follows_moved_cell() {
                     SchemaFieldSpec::new("age", "r_age"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             cell(0, 0, "Charlie"),
             cell(0, 1, "30"),
@@ -4475,6 +4769,7 @@ fn block_schema_key_entries_report_record_row() {
                     SchemaFieldSpec::new("amount", "r1"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -4601,6 +4896,7 @@ fn range_straddling_a_block_boundary_does_not_panic() {
                     SchemaFieldSpec::new("qty", "r1"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -5743,6 +6039,7 @@ fn chart_bound_to_block_follows_it() {
                 SchemaFieldSpec::new("price", "r2"),
             ],
             row: true,
+            header_idx: None,
         }),
     ];
     for (i, (name, qty)) in [("a", "10"), ("b", "20"), ("c", "30")].iter().enumerate() {
@@ -5893,6 +6190,7 @@ fn block_bound_chart_survives_save() {
                     SchemaFieldSpec::new("qty", "r1"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             cell(0, 0, "a"),
             cell(0, 1, "10"),
@@ -6222,6 +6520,7 @@ fn block_with_keys(keys: [&str; 3]) -> (Workbook, logisheets_base::BlockId) {
                 SchemaFieldSpec::new("amt", "r1"),
             ],
             row: true,
+            header_idx: None,
         }),
     ];
     for (row, key) in keys.iter().enumerate() {
@@ -6459,6 +6758,7 @@ fn block_with_legacy_duplicates() -> (Workbook, logisheets_base::BlockId) {
                 SchemaFieldSpec::new("amt", "r1"),
             ],
             row: true,
+            header_idx: None,
         })],
         undoable: true,
         init: false,
@@ -6619,6 +6919,7 @@ fn a_blockrefs_naming_a_field_that_does_not_exist_matches_nothing() {
                 SchemaFieldSpec::new("amt", "r1"),
             ],
             row: true,
+            header_idx: None,
         }),
     ];
     for (row, key, amt) in [(0usize, "a", "1"), (1, "b", "2"), (2, "c", "3")] {
@@ -6776,6 +7077,7 @@ fn block_with_declared_field(
             key_idx: 0,
             fields: vec![SchemaFieldSpec::new("key", "r0"), spec],
             row: true,
+            header_idx: None,
         }),
     ];
     // Keys matter: the derived `unique` rule counts through
@@ -6949,6 +7251,7 @@ fn an_enum_whitelist_is_derived_from_the_workbooks_own_set() {
                     ),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ],
         undoable: true,
@@ -7040,6 +7343,7 @@ fn the_derived_rule_survives_a_field_rename_because_it_is_regenerated() {
                 SchemaFieldSpec::new("amount", "r1").with_unique(true),
             ],
             row: true,
+            header_idx: None,
         })],
         undoable: true,
         init: false,
@@ -7112,6 +7416,7 @@ fn a_fields_write_policy_is_declared_on_the_schema_and_survives_a_round_trip() {
                     SchemaFieldSpec::new("amt", "r2"),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ],
         undoable: true,
@@ -7301,6 +7606,7 @@ fn orders_with_analysis(
                 SchemaFieldSpec::new("amt", "s1"),
             ],
             row: true,
+            header_idx: None,
         }),
     ];
     for (row, amt) in [(0usize, "10"), (1, "20"), (2, "30")] {
@@ -7362,6 +7668,7 @@ fn orders_with_analysis(
                     SchemaFieldSpec::new("amt", "a1").with_aggregate(func, "amt"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -7726,6 +8033,7 @@ fn renaming_a_source_field_regenerates_the_analysis_formula() {
                     SchemaFieldSpec::new("amount", "a1").with_aggregate(AggFunc::Sum, "amount"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "orders".into(),
@@ -7738,6 +8046,7 @@ fn renaming_a_source_field_regenerates_the_analysis_formula() {
                     SchemaFieldSpec::new("amount", "s1"),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ],
         undoable: true,
@@ -7848,6 +8157,7 @@ fn bind_t(block_id: logisheets_base::BlockId, fields: &[(&str, Option<&str>)]) -
             })
             .collect(),
         row: true,
+        header_idx: None,
     })
 }
 
@@ -8595,6 +8905,7 @@ fn a_pivot_field_cannot_also_declare_its_own_aggregate() {
                 SchemaFieldSpec::new("Q1", "p1").with_aggregate(AggFunc::Sum, "amt"),
             ],
             row: true,
+            header_idx: None,
         })],
     );
     assert!(
@@ -8708,6 +9019,7 @@ fn sales_block(wb: &mut Workbook) -> logisheets_base::BlockId {
                 SchemaFieldSpec::new("amt", "s3"),
             ],
             row: true,
+            header_idx: None,
         }),
     ];
     for (r, (id, region, quarter, amt)) in rows.iter().enumerate() {
@@ -8794,6 +9106,7 @@ fn sales_with_pivot(
         key_idx: 0,
         fields,
         row: true,
+        header_idx: None,
     }));
 
     let effect = apply(&mut wb, payloads);
@@ -9456,6 +9769,7 @@ fn a_dimension_with_too_many_values_is_refused_with_the_count() {
                 SchemaFieldSpec::new("amt", "w2"),
             ],
             row: true,
+            header_idx: None,
         }),
     ];
     for r in 0..N {
@@ -9605,6 +9919,7 @@ fn refreshing_a_pivot_with_a_trailing_no_op_resize_loses_the_new_row() {
                     SchemaFieldSpec::new("Q2", "p2"),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ];
         if trailing {
@@ -9723,6 +10038,7 @@ fn sales_with_columns(
         key_idx: 0,
         fields,
         row: true,
+        header_idx: None,
     }));
 
     let effect = apply(&mut wb, payloads);
@@ -9787,6 +10103,7 @@ fn gappy_block(wb: &mut Workbook) -> logisheets_base::BlockId {
                 SchemaFieldSpec::new("amt", "g2"),
             ],
             row: true,
+            header_idx: None,
         }),
     ];
     for (r, (id, region, amt)) in rows.iter().enumerate() {
@@ -9872,6 +10189,7 @@ fn counta_counts_present_values_where_count_counts_numbers() {
             ),
         ],
         row: true,
+        header_idx: None,
     }));
     let effect = apply(&mut wb, payloads);
     assert!(
@@ -10027,6 +10345,7 @@ fn a_declared_column_on_a_block_that_is_not_a_pivot_is_refused() {
                 SchemaFieldSpec::new("amt", "s1").with_pivot_total(),
             ],
             row: true,
+            header_idx: None,
         })],
     );
     assert!(matches!(
@@ -10378,9 +10697,10 @@ fn a_plain_pivot_is_also_written_as_a_real_ooxml_pivot_table() {
         table.definition.data_fields.as_ref().unwrap().data_field[0].fld,
         3
     );
-    // The label row plus the block's two rows: the pivot block starts at row
-    // 10 (0-based), so the labels are on row 9 — A10:C12 in A1 terms.
-    assert_eq!(table.definition.location.reference, "A10:C12");
+    // Exactly the block: it starts at row 10 (0-based) and owns two rows, so
+    // A11:C12. The header line, when a schema declares one, is one of the
+    // block's own lines rather than a row above it.
+    assert_eq!(table.definition.location.reference, "A11:C12");
 }
 
 #[test]
@@ -10522,6 +10842,7 @@ fn rename_region_to_area(wb: &mut Workbook, src: logisheets_base::BlockId) {
                 SchemaFieldSpec::new("amt", "s3"),
             ],
             row: true,
+            header_idx: None,
         })],
     );
     assert!(
@@ -10585,6 +10906,7 @@ fn renaming_a_measure_carries_into_the_recipe_and_the_declared_columns() {
                 SchemaFieldSpec::new("amount", "s3"),
             ],
             row: true,
+            header_idx: None,
         })],
     );
     assert!(matches!(
@@ -10643,6 +10965,7 @@ fn renaming_a_filtered_field_carries_into_the_filter() {
                 SchemaFieldSpec::new("amt", "s3"),
             ],
             row: true,
+            header_idx: None,
         })],
     );
     assert!(matches!(
@@ -10684,6 +11007,7 @@ fn renaming_a_source_field_carries_into_a_total_rows_aggregate() {
                 SchemaFieldSpec::new("amount", "s1"),
             ],
             row: true,
+            header_idx: None,
         })],
     );
     assert!(matches!(
@@ -10737,6 +11061,7 @@ fn adding_and_reordering_fields_is_not_read_as_a_rename() {
                     SchemaFieldSpec::new("note", "s4"),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ],
     );

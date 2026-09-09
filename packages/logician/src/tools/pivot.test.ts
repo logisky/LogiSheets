@@ -186,14 +186,14 @@ describe('build__create_pivot', () => {
         // One transaction: the shape was known before anything was created.
         expect(committed.map((p) => p.type)).toEqual([
             'insertRows',
-            // The label row, outside the block, above it.
-            'cellInput',
-            'cellInput',
-            'cellInput',
             'createBlock',
-            // Then one key per group.
-            'cellInput',
-            'cellInput',
+            // The header line (three columns), then one key per group — all
+            // block-relative, all inside the block.
+            'blockInput',
+            'blockInput',
+            'blockInput',
+            'blockInput',
+            'blockInput',
             'bindFormSchema',
             // Formats last, attaching to the render ids the bind declares:
             // key column plus one per column-dimension value.

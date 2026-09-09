@@ -118,55 +118,57 @@ describe('WorkbookOps.createPivot', () => {
         const types = committed.map((p) => p.type)
         expect(types).toEqual([
             'insertRows',
-            // The label row: three columns of it, outside the block.
-            'cellInput',
-            'cellInput',
-            'cellInput',
             'createBlock',
-            // Then the keys.
-            'cellInput',
-            'cellInput',
-            'cellInput',
+            // The header line, then one key per group — all block-relative.
+            'blockInput',
+            'blockInput',
+            'blockInput',
+            'blockInput',
+            'blockInput',
+            'blockInput',
             'bindFormSchema',
             // Formats last: they attach to the render ids the bind declares.
             'upsertFieldRenderInfo',
             'upsertFieldRenderInfo',
             'upsertFieldRenderInfo',
         ])
-        expect(types.lastIndexOf('cellInput')).toBeLessThan(
+        expect(types.lastIndexOf('blockInput')).toBeLessThan(
             types.indexOf('bindFormSchema')
         )
     })
 
-    it('writes a label row above the block, outside it', async () => {
+    it('writes its header as the block’s own first line', async () => {
         // The column names are the column dimension's own VALUES, so a sheet
-        // without them shows a grid of numbers that says nothing. They go
-        // above the block rather than in it: every row of a block is a record,
-        // so a header row inside would be a record keyed "region".
+        // without them shows a grid of numbers that says nothing. They are the
+        // block's first LINE, and the bind declares it a header — which is
+        // what makes them travel when the block moves. They used to be a row
+        // ABOVE the block, and that row stayed behind on a move.
         const {committed} = await create(FRESH)
         const labels = committed
-            .filter((p) => p.type === 'cellInput' && p.value.row === 6)
-            .map((p) => [p.value.col, p.value.content])
+            .filter((p) => p.type === 'blockInput' && p.value.row === 0)
+            .map((p) => [p.value.col, p.value.input])
         expect(labels).toEqual([
             [0, 'region'],
             [1, 'Q1'],
             [2, 'Q2'],
         ])
-        // And the block starts BELOW it.
-        expect(committed.find((p) => p.type === 'createBlock')!.value).toMatchObject(
-            {masterRow: 7}
-        )
+        const bind = committed.find((p) => p.type === 'bindFormSchema')!
+        expect(bind.value.headerIdx).toBe(0)
+        // The block starts where the source ends, and owns the header line.
+        expect(
+            committed.find((p) => p.type === 'createBlock')!.value
+        ).toMatchObject({masterRow: 6, rowCnt: 4})
     })
 
     it('creates the block at the size the plan says, with the recipe on it', async () => {
         const {committed} = await create(FRESH)
-        // One row more than there are groups — the label row.
+        // One row more than there are groups — the header line.
         expect(committed[0].value).toMatchObject({start: 6, count: 4})
         expect(
             committed.find((p) => p.type === 'createBlock')!.value
         ).toMatchObject({
-            masterRow: 7,
-            rowCnt: 3,
+            masterRow: 6,
+            rowCnt: 4,
             // key column + one per column-dimension value
             colCnt: 3,
             analyzes: 3,
@@ -177,12 +179,16 @@ describe('WorkbookOps.createPivot', () => {
     it('writes each group into the key column, in the plan order', async () => {
         const {committed} = await create(FRESH)
         const keys = committed.filter(
-            (p) => p.type === 'cellInput' && p.value.col === 0 && p.value.row !== 6
+            (p) =>
+                p.type === 'blockInput' &&
+                p.value.col === 0 &&
+                p.value.row !== 0
         )
-        expect(keys.map((p) => [p.value.row, p.value.content])).toEqual([
-            [7, 'East'],
-            [8, 'North'],
-            [9, 'South'],
+        // Block-relative, and starting after the header line.
+        expect(keys.map((p) => [p.value.row, p.value.input])).toEqual([
+            [1, 'East'],
+            [2, 'North'],
+            [3, 'South'],
         ])
         expect(keys.every((p) => p.value.col === 0)).toBe(true)
     })
@@ -259,8 +265,6 @@ describe('WorkbookOps.refreshPivot', () => {
         blockId: 9,
         refName: 'sales_pivot',
         keyField: 'region',
-        rowStart: 10,
-        colStart: 0,
     }
 
     it('does nothing, and says so, when the pivot is already current', async () => {
@@ -287,11 +291,12 @@ describe('WorkbookOps.refreshPivot', () => {
 
         const types = committed.map((p) => p.type)
         expect(types[0]).toBe('resizeBlock')
-        expect(types.lastIndexOf('cellInput')).toBeLessThan(
+        expect(types.lastIndexOf('blockInput')).toBeLessThan(
             types.indexOf('bindFormSchema')
         )
-        // The grow leaves room for every key before the bind materializes.
-        expect(committed[0].value).toMatchObject({newRowCnt: 4, newColCnt: 3})
+        // The grow leaves room for every key AND the header line before the
+        // bind materializes: four groups, so five lines.
+        expect(committed[0].value).toMatchObject({newRowCnt: 5, newColCnt: 3})
         expect(changed).toMatchObject({
             addedKeys: ['Northwest'],
             removedKeys: [],
@@ -330,7 +335,7 @@ describe('WorkbookOps.refreshPivot', () => {
         )
         expect(committed[0]).toMatchObject({
             type: 'resizeBlock',
-            value: {newRowCnt: 2, newColCnt: 2},
+            value: {newRowCnt: 3, newColCnt: 2},
         })
         expect(changed).toMatchObject({
             removedKeys: ['North'],
@@ -373,24 +378,27 @@ describe('WorkbookOps.refreshPivot', () => {
             unassignedRecords: 0,
             isStale: true,
         })
-        await ops.refreshPivot({...target, rowStart: 42, colStart: 3})
+        await ops.refreshPivot(target)
         const keys = committed.filter(
-            (p) => p.type === 'cellInput' && p.value.row !== 41
+            (p) => p.type === 'blockInput' && p.value.row !== 0
         )
+        // Block-relative: a refresh no longer needs to be told where the block
+        // is, which is one fewer thing a caller can get wrong. A stale
+        // `rowStart` used to write the keys outside the block, silently.
         expect(
-            keys.map((p) => [p.value.row, p.value.col, p.value.content])
+            keys.map((p) => [p.value.row, p.value.col, p.value.input])
         ).toEqual([
-            [42, 3, 'a'],
-            [43, 3, 'b'],
+            [1, 0, 'a'],
+            [2, 0, 'b'],
         ])
-        // And the labels went to the row directly above the block.
+        // And the header names went to the block's own first line.
         expect(
             committed
-                .filter((p) => p.type === 'cellInput' && p.value.row === 41)
-                .map((p) => [p.value.col, p.value.content])
+                .filter((p) => p.type === 'blockInput' && p.value.row === 0)
+                .map((p) => [p.value.col, p.value.input])
         ).toEqual([
-            [3, 'region'],
-            [4, 'Q1'],
+            [0, 'region'],
+            [1, 'Q1'],
         ])
     })
 })
@@ -692,9 +700,7 @@ describe('WorkbookOps.editPivot', () => {
         blockId: 9,
         refName: 'p',
         source: SALES,
-        rowStart: 6,
-        colStart: 0,
-        currentRowCnt: 3,
+        currentRowCnt: 4,
         currentColCnt: 3,
         rowDim: 'region',
         colDim: 'quarter',
@@ -763,7 +769,8 @@ describe('WorkbookOps.editPivot', () => {
         await ops.editPivot({...target, currentRowCnt: 8, currentColCnt: 9})
         const resizes = committed.filter((p) => p.type === 'resizeBlock')
         expect(resizes).toHaveLength(1)
-        expect(resizes[0].value).toMatchObject({newRowCnt: 3, newColCnt: 3})
+        // Three groups plus the header line.
+        expect(resizes[0].value).toMatchObject({newRowCnt: 4, newColCnt: 3})
     })
 
     it('does not resize at all when the shape is unchanged', async () => {

@@ -47,6 +47,7 @@ fn test_bind_block_schema() {
                 SchemaFieldSpec::new("address", "test3"),
             ],
             row: true,
+            header_idx: None,
         })],
         undoable: true,
         init: false,
@@ -95,6 +96,7 @@ fn test_form_block_rowcnt1_two_fields() {
                     SchemaFieldSpec::new("111a", "r1"),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ],
         undoable: true,
@@ -981,6 +983,7 @@ fn test_blockref_readers_recompute_after_reload() {
                         .with_value_formula(Some("=#FIELD(\"a\")*2".to_string())),
                 ],
                 row: true,
+                header_idx: None,
             }),
             // Two readers outside the block: the single form and the aggregate.
             EditPayload::CellInput(CellInput {
@@ -1106,6 +1109,7 @@ fn test_save_can_resolve_block_refs_to_coordinates() {
                     SchemaFieldSpec::new("v", "r1"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1218,6 +1222,7 @@ fn test_block_row_removal_dirties_readers() {
             SchemaFieldSpec::new("v", "r1"),
         ],
         row: true,
+        header_idx: None,
     }));
     // Readers outside the block: one aggregate over the field, one count.
     payloads.push(EditPayload::CellInput(CellInput {
@@ -1338,6 +1343,7 @@ fn test_save_resolves_a_block_join_to_index_match() {
                     SchemaFieldSpec::new("line", "r1"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             // An ordinary cell naming the product to look up, and the join.
             EditPayload::CellInput(CellInput {
@@ -1443,6 +1449,7 @@ fn build_pct_block(pct_rule: &str, rows: &[(&str, f64)]) -> (Workbook, StatusCod
             SchemaFieldSpec::new("pct", "r2").with_value_formula(Some(pct_rule.to_string())),
         ],
         row: true,
+        header_idx: None,
     }));
     let effect = workbook.handle_action(logisheets::EditAction::Payloads(PayloadsAction {
         payloads,

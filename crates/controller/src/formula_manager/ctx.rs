@@ -46,6 +46,15 @@ pub trait FormulaExecCtx:
         block_id: logisheets_base::BlockId,
     ) -> Vec<logisheets_base::BlockId>;
 
+    /// True if `block_id` ANALYSES another block — a total row, a pivot.
+    ///
+    /// Every non-key cell of such a block is generated from a declaration, so
+    /// a cell with no declaration must have no formula. That is the one place
+    /// re-materialization has to REMOVE rather than install: an ordinary
+    /// block's cells can hold formulas a person wrote, and those must survive
+    /// a re-bind untouched.
+    fn block_is_analysis(&self, sheet_id: SheetId, block_id: logisheets_base::BlockId) -> bool;
+
     /// True if this block cell sits in a field carrying a value-formula
     /// template. Cheaper than {@link block_cell_template} (no sibling map,
     /// no key lookup) and used by the write-guard on user-facing payloads.

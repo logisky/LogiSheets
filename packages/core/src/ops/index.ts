@@ -262,6 +262,18 @@ function plainSpec(spec: {
     }
 }
 
+/**
+ * A pivot's header is the FIRST line of its block, and its records follow.
+ *
+ * Named because three places have to agree about it: the geometry (a pivot is
+ * one line taller than it has groups), the bind (`headerIdx`), and the writes
+ * that fill it. It is first because Excel's `headerRowCount="1"` cannot mean
+ * anything else.
+ */
+const PIVOT_HEADER_ROW = 0
+/** Block-relative row of a pivot's first RECORD, i.e. just after the header. */
+const PIVOT_FIRST_RECORD = 1
+
 /** The block being analysed. */
 export interface AnalysisSource {
     sheetIdx: number
@@ -1118,6 +1130,134 @@ export class WorkbookOps {
             .map((f) => ({field: f.name, func: chosen.get(f.name)!}))
     }
 
+    /**
+     * Change WHAT an existing analysis block computes — which source fields it
+     * aggregates, with which function, and the label its row is addressed by.
+     *
+     * The shape never changes: an analysis block is one row with one column
+     * per source field, so an edit is a re-bind and nothing else. That is the
+     * whole difference from {@link editPivot}, where changing the recipe
+     * changes how many rows and columns there are.
+     *
+     * Exists so an analysis can be arrived at in STEPS. The first guess (sum
+     * every number) is often nearly right and occasionally wrong in one
+     * column, and without this the only remedy was to delete the block and
+     * build it again — losing its ref name, and with it every formula pointing
+     * at it.
+     */
+    async editAnalysisBlock(opts: {
+        sheetIdx: number
+        /** The analysis block being edited. */
+        blockId: number
+        /** Its ref name, which the re-bind has to restate. */
+        refName: string
+        /** The block it analyses, for its field list and number formats. */
+        source: AnalysisSource
+        aggregates: readonly AnalysisAggregate[]
+        /**
+         * A new row label, or omit to leave it alone. Rewriting it re-aims
+         * nothing — unlike a pivot key, an analysis block's label is just the
+         * name its single row is addressed by.
+         */
+        label?: string
+        /** Where the block sits, needed only when `label` is given. */
+        rowStart?: number
+        colStart?: number
+    }): Promise<readonly AnalysisAggregate[]> {
+        const {sheetIdx, blockId, refName, source} = opts
+        const chosen = new Map<string, AggFunc>()
+        for (const a of opts.aggregates) {
+            if (!source.fields.some((f) => f.name === a.field)) {
+                throw new Error(
+                    `Cannot aggregate "${a.field}": the block has no such field.`
+                )
+            }
+            chosen.set(a.field, a.func)
+        }
+        if (chosen.size === 0) {
+            throw new Error(
+                'Nothing to aggregate: choose at least one field and function.'
+            )
+        }
+
+        const renderIdOf = (i: number) => `${refName}__agg${i}`
+        const payloads: Payload[] = [
+            {
+                type: 'bindFormSchema',
+                value: {
+                    refName,
+                    sheetIdx,
+                    blockId,
+                    fieldFrom: 0,
+                    row: true,
+                    keyIdx: source.keyIdx < 0 ? 0 : source.keyIdx,
+                    fields: source.fields.map((f, i) => {
+                        const func = chosen.get(f.name)
+                        return {
+                            name: f.name,
+                            renderId: renderIdOf(i),
+                            aggFunc: func,
+                            aggField: func ? f.name : undefined,
+                        }
+                    }),
+                },
+            },
+        ]
+        const keyCol = source.keyIdx < 0 ? 0 : source.keyIdx
+        if (opts.label !== undefined) {
+            payloads.push({
+                type: 'blockInput',
+                value: {
+                    sheetIdx,
+                    blockId,
+                    row: 0,
+                    col: keyCol,
+                    input: opts.label,
+                },
+            })
+        }
+        // Blank the columns this edit STOPPED computing.
+        //
+        // The engine drops the formula on its own — a generated cell with no
+        // declaration must not keep one, or it would go on recomputing under a
+        // heading that no longer claims it. What it does not do is clear the
+        // VALUE the formula last produced: removing a formula normally leaves
+        // its value behind, which is right everywhere else and wrong here, and
+        // a re-bind gives the container no hook to say so. So the caller says
+        // it. Never the key column — that holds the label.
+        source.fields.forEach((f, i) => {
+            if (i === keyCol || chosen.has(f.name)) return
+            payloads.push({
+                type: 'blockInput',
+                value: {sheetIdx, blockId, row: 0, col: i, input: ''},
+            })
+        })
+        // Formats last, for the same reason as everywhere else: they attach to
+        // the render ids the bind declares. A column that stopped being a SUM
+        // and became a COUNT stops being currency with it.
+        payloads.push(
+            ...source.fields.map((f, i) => {
+                const func = chosen.get(f.name)
+                const keep = func === undefined || aggregateKeepsFormat(func)
+                return {
+                    type: 'upsertFieldRenderInfo' as const,
+                    value: {
+                        renderId: renderIdOf(i),
+                        diyRender: false,
+                        styleUpdate: {
+                            setNumFmt: (keep ? f.numFmt : undefined) ?? '',
+                        },
+                    },
+                }
+            })
+        )
+
+        await this.apply(payloads, true)
+        return source.fields
+            .filter((f) => chosen.has(f.name))
+            .map((f) => ({field: f.name, func: chosen.get(f.name)!}))
+    }
+
     // ---- pivots -----------------------------------------------------------
 
     /**
@@ -1143,23 +1283,26 @@ export class WorkbookOps {
      */
     private pivotHeaderRow(opts: {
         sheetIdx: number
-        row: number
-        colStart: number
+        blockId: number
         fieldNames: readonly string[]
-        /** Columns the block had before, so a shrink clears what it left. */
-        previousColCnt?: number
     }): Payload[] {
-        const width = Math.max(
-            opts.fieldNames.length,
-            opts.previousColCnt ?? 0
-        )
-        return Array.from({length: width}, (_, i) => ({
-            type: 'cellInput' as const,
+        // Block-relative, so nothing here depends on where the block sits.
+        // The header is one of the block's own lines — the schema says which —
+        // so it travels with the block, which a row above it did not.
+        //
+        // Exactly the columns the block now has, and no attempt to blank the
+        // ones a shrink dropped: those cells went with the columns. Reaching
+        // past the block's width is not a harmless no-op either — a
+        // `blockInput` outside the block fails the whole transaction, which is
+        // how the old absolute-coordinate version hid the mistake.
+        return opts.fieldNames.map((name, i) => ({
+            type: 'blockInput' as const,
             value: {
                 sheetIdx: opts.sheetIdx,
-                row: opts.row,
-                col: opts.colStart + i,
-                content: opts.fieldNames[i] ?? '',
+                blockId: opts.blockId,
+                row: PIVOT_HEADER_ROW,
+                col: i,
+                input: name,
             },
         }))
     }
@@ -1285,34 +1428,26 @@ export class WorkbookOps {
             ...(colDim ? plan.fields : [opts.valueColumn ?? measure]),
             ...extra.map((c) => c.name),
         ]
-        // The label row goes directly below the source; the block itself
-        // starts one row further down. See `pivotHeaderRow` for why the labels
-        // are not inside the block.
-        const headerRow = source.rowStart + source.rowCnt
-        const row = headerRow + 1
+        // The block starts directly below the source and OWNS its header
+        // line, so it is one row taller than it has groups.
+        const row = source.rowStart + source.rowCnt
         // The key column is named after the row dimension: it holds that
         // dimension's values, and the name is what a reader sees.
         const fieldNames = [rowDim, ...valueFields]
+        const rowCnt = plan.keys.length + 1
 
         await this.apply(
             [
                 // Room first, so the pivot does not land on whatever sits
-                // below the table. One row more than there are groups: the
-                // label row.
+                // below the table.
                 {
                     type: 'insertRows',
                     value: {
                         sheetIdx: source.sheetIdx,
-                        start: headerRow,
-                        count: plan.keys.length + 1,
+                        start: row,
+                        count: rowCnt,
                     },
                 },
-                ...this.pivotHeaderRow({
-                    sheetIdx: source.sheetIdx,
-                    row: headerRow,
-                    colStart: source.colStart,
-                    fieldNames,
-                }),
                 {
                     type: 'createBlock',
                     value: {
@@ -1320,7 +1455,7 @@ export class WorkbookOps {
                         id: blockId,
                         masterRow: row,
                         masterCol: source.colStart,
-                        rowCnt: plan.keys.length,
+                        rowCnt,
                         colCnt: fieldNames.length,
                         analyzes: source.blockId,
                         // Declared as it is created, so it is never briefly a
@@ -1332,16 +1467,23 @@ export class WorkbookOps {
                             `, ${func} of ${measure}.`,
                     },
                 },
-                // KEYS BEFORE THE BIND. `#KEY` is captured when the bind
-                // materializes each row, so a key written afterwards leaves
-                // that row filtering on "" — a whole grid of zeros, no error.
+                // The header names, and the keys, BOTH before the bind.
+                // `#KEY` is captured when the bind materializes each row, so a
+                // key written afterwards leaves that row filtering on "" — a
+                // whole grid of zeros, no error.
+                ...this.pivotHeaderRow({
+                    sheetIdx: source.sheetIdx,
+                    blockId,
+                    fieldNames,
+                }),
                 ...plan.keys.map((key, i) => ({
-                    type: 'cellInput' as const,
+                    type: 'blockInput' as const,
                     value: {
                         sheetIdx: source.sheetIdx,
-                        row: row + i,
-                        col: source.colStart,
-                        content: key,
+                        blockId,
+                        row: PIVOT_FIRST_RECORD + i,
+                        col: 0,
+                        input: key,
                     },
                 })),
                 {
@@ -1353,6 +1495,8 @@ export class WorkbookOps {
                         fieldFrom: 0,
                         keyIdx: 0,
                         row: true,
+                        // The first line holds the field names, not a record.
+                        headerIdx: PIVOT_HEADER_ROW,
                         // Field names ARE the column dimension's values.
                         // Nothing per-field is declared; the engine derives
                         // every cell from the recipe.
@@ -1426,9 +1570,6 @@ export class WorkbookOps {
         refName: string
         /** Its key field's name — the column holding the row dimension. */
         keyField: string
-        /** Sheet row where the block starts, for writing the key column. */
-        rowStart: number
-        colStart: number
         /**
          * The pivot's CURRENT schema fields, so a re-bind can restate any
          * column that was declared by hand.
@@ -1458,7 +1599,12 @@ export class WorkbookOps {
             func: AggFunc
         }
     }): Promise<PivotRefresh | null> {
-        const {sheetIdx, blockId, refName, keyField, rowStart, colStart} = opts
+        // No sheet coordinates: the keys and the header are written
+        // block-relative now, so a caller cannot get them wrong. It used to
+        // take `rowStart`, and a stale one wrote the keys outside the block —
+        // silently, because a key nobody reads just leaves the row filtering
+        // on the value it already had.
+        const {sheetIdx, blockId, refName, keyField} = opts
         const plan = await this.client.pivotPlan({sheetIdx, blockId})
         if (isErrorMessage(plan)) {
             throw new Error(plan.msg)
@@ -1469,7 +1615,9 @@ export class WorkbookOps {
         const fields =
             plan.fields.length > 0 ? [...plan.fields] : [...plan.currentFields]
         const fieldNames = [keyField, ...fields]
-        const newRowCnt = plan.keys.length
+        // The block owns its header line, so it is one row taller than it has
+        // groups.
+        const newRowCnt = plan.keys.length + 1
         const newColCnt = fieldNames.length
         const payloads: Payload[] = []
         // ONE resize, to the final size, BEFORE the bind — in both directions.
@@ -1485,7 +1633,7 @@ export class WorkbookOps {
         // it. Nothing is orphaned, because the bind that follows states the
         // surviving fields and only those.
         if (
-            newRowCnt !== plan.currentKeys.length ||
+            newRowCnt !== plan.currentKeys.length + 1 ||
             newColCnt !== plan.currentFields.length + 1
         ) {
             payloads.push({
@@ -1499,18 +1647,17 @@ export class WorkbookOps {
             // something else.
             ...this.pivotHeaderRow({
                 sheetIdx,
-                row: rowStart - 1,
-                colStart,
+                blockId,
                 fieldNames,
-                previousColCnt: plan.currentFields.length + 1,
             }),
             ...plan.keys.map((key, i) => ({
-                type: 'cellInput' as const,
+                type: 'blockInput' as const,
                 value: {
                     sheetIdx,
-                    row: rowStart + i,
-                    col: colStart,
-                    content: key,
+                    blockId,
+                    row: PIVOT_FIRST_RECORD + i,
+                    col: 0,
+                    input: key,
                 },
             })),
             {
@@ -1522,6 +1669,9 @@ export class WorkbookOps {
                     fieldFrom: 0,
                     keyIdx: 0,
                     row: true,
+                    // Restated: the bind states the whole interpretation, so
+                    // omitting this would turn the header line into a record.
+                    headerIdx: PIVOT_HEADER_ROW,
                     fields: fieldNames.map((name, i) => {
                         const was = opts.currentFields?.find(
                             (f) => f.field === name
@@ -1619,9 +1769,7 @@ export class WorkbookOps {
         refName: string
         /** The block it analyses: what the new recipe is planned against. */
         source: PivotSource
-        /** Where the pivot sits, for writing its key column. */
-        rowStart: number
-        colStart: number
+
         /**
          * Its present size, so the reshape knows whether it grows or shrinks.
          * Asked for rather than planned, so a broken recipe can still be
@@ -1684,7 +1832,8 @@ export class WorkbookOps {
         // The key column is named after the row dimension, which the edit may
         // have just changed.
         const fieldNames = [rowDim, ...valueFields]
-        const newRowCnt = plan.keys.length
+        // One line taller than it has groups: the block owns its header.
+        const newRowCnt = plan.keys.length + 1
         const newColCnt = fieldNames.length
 
         const payloads: Payload[] = []
@@ -1711,10 +1860,8 @@ export class WorkbookOps {
             // The labels, in full — an edit can change the whole column set.
             ...this.pivotHeaderRow({
                 sheetIdx,
-                row: opts.rowStart - 1,
-                colStart: opts.colStart,
+                blockId,
                 fieldNames,
-                previousColCnt: opts.currentColCnt,
             }),
             // The new recipe, BEFORE the bind that regenerates from it.
             {
@@ -1728,12 +1875,13 @@ export class WorkbookOps {
             },
             // Keys before the bind: `#KEY` is captured at materialization.
             ...plan.keys.map((key, i) => ({
-                type: 'cellInput' as const,
+                type: 'blockInput' as const,
                 value: {
                     sheetIdx,
-                    row: opts.rowStart + i,
-                    col: opts.colStart,
-                    content: key,
+                    blockId,
+                    row: PIVOT_FIRST_RECORD + i,
+                    col: 0,
+                    input: key,
                 },
             })),
             {
@@ -1745,6 +1893,9 @@ export class WorkbookOps {
                     fieldFrom: 0,
                     keyIdx: 0,
                     row: true,
+                    // Restated: the bind states the whole interpretation, so
+                    // omitting this would turn the header line into a record.
+                    headerIdx: PIVOT_HEADER_ROW,
                     fields: fieldNames.map((name, i) => {
                         const declared = extra.find((c) => c.name === name)
                         return {

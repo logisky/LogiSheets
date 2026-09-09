@@ -315,6 +315,12 @@ pub struct RowSchemaXml {
     /// of which alias is in the in-memory type).
     #[xmlserde(name = b"key", ty = "attr")]
     pub key: u32,
+    /// The record-axis line holding field NAMES rather than a record, by its
+    /// stable id. Absent for a schema that declares no header line, which is
+    /// every schema written before this attribute existed — so an older file
+    /// keeps meaning exactly what it meant.
+    #[xmlserde(name = b"header", ty = "attr")]
+    pub header: Option<u32>,
     #[xmlserde(name = b"field", ty = "child")]
     pub fields: Vec<SchemaFieldXml>,
 }
@@ -330,6 +336,12 @@ pub struct ColSchemaXml {
     pub name: String,
     #[xmlserde(name = b"key", ty = "attr")]
     pub key: u32,
+    /// The record-axis line holding field NAMES rather than a record, by its
+    /// stable id. Absent for a schema that declares no header line, which is
+    /// every schema written before this attribute existed — so an older file
+    /// keeps meaning exactly what it meant.
+    #[xmlserde(name = b"header", ty = "attr")]
+    pub header: Option<u32>,
     #[xmlserde(name = b"field", ty = "child")]
     pub fields: Vec<SchemaFieldXml>,
 }

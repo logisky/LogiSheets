@@ -1,7 +1,11 @@
 import {describe, expect, it} from 'vitest'
 import type {Client} from 'logisheets-web/pure'
 import type {ToolContext} from '../tool.js'
-import {createAnalysisBlock, describeBlock} from './builder.js'
+import {
+    createAnalysisBlock,
+    describeBlock,
+    editAnalysisBlock,
+} from './builder.js'
 
 /**
  * An analysis block exists so an agent can read a table's conclusions *and use
@@ -313,5 +317,153 @@ describe('build__describe_block reports the relation', () => {
         expect(amt.aggregates).toBe('SUM of amt')
         const key = analysis.data.fields.find((f) => f.name === 'key')!
         expect(key.aggregates).toBeUndefined()
+    })
+})
+
+/**
+ * `build__edit_analysis_block` — arriving at an analysis in steps.
+ *
+ * The contract that matters to a model: `aggregates` REPLACES the set. An
+ * agent that meant to add a column and instead silently dropped the others
+ * would leave a summary row that still looks like a summary row.
+ */
+describe('build__edit_analysis_block', () => {
+    /** An analysis block over `orders`, declaring SUM of amt. */
+    const analysisOf = () => ({
+        sheetIdx: 0,
+        sheetId: 7,
+        blockId: 9,
+        rowStart: 4,
+        colStart: 0,
+        rowCnt: 1,
+        colCnt: 3,
+        description: '',
+        owner: '',
+        modifyPolicy: 'all',
+        permissions: {},
+        fieldRenders: [],
+        cells: [],
+        analyzes: 3,
+        analyzedBy: [],
+        schema: {
+            name: 'orders_analysis',
+            schemaType: 'row',
+            keys: [{key: 'TOTAL', idx: 0}],
+            fields: [
+                {field: 'key', idx: 0, renderId: 'a0', writePolicy: 'inherit'},
+                {
+                    field: 'amt',
+                    idx: 1,
+                    renderId: 'a1',
+                    writePolicy: 'inherit',
+                    aggFunc: 'SUM',
+                    aggField: 'amt',
+                },
+                {field: 'note', idx: 2, renderId: 'a2', writePolicy: 'inherit'},
+            ],
+            randomEntries: [],
+        },
+    })
+
+    it('replaces the declarations with the ones it is given', async () => {
+        const {client, committed} = blockClient({
+            analyzedBy: [9],
+            extraBlocks: [analysisOf()],
+        })
+        const r = await editAnalysisBlock.handler(
+            {
+                name: 'orders_analysis',
+                aggregates: [
+                    {field: 'amt', func: 'AVERAGE'},
+                    {field: 'note', func: 'COUNTA'},
+                ],
+            },
+            ctxFor(client)
+        )
+        const bind = committed.find((p) => p.type === 'bindFormSchema')!
+        const fields = bind.value.fields as Array<{
+            name: string
+            aggFunc?: string
+        }>
+        expect(fields.map((f) => [f.name, f.aggFunc])).toEqual([
+            ['key', undefined],
+            ['amt', 'AVERAGE'],
+            ['note', 'COUNTA'],
+        ])
+        expect(r.data.aggregated).toEqual(['AVERAGE of amt', 'COUNTA of note'])
+    })
+
+    it('blanks a column it stopped computing', async () => {
+        // The engine drops the stale FORMULA on its own; the value it last
+        // produced has to be cleared, or the column keeps showing a number
+        // nothing is claiming any more.
+        const {client, committed} = blockClient({
+            analyzedBy: [9],
+            extraBlocks: [analysisOf()],
+        })
+        await editAnalysisBlock.handler(
+            {
+                name: 'orders_analysis',
+                aggregates: [{field: 'note', func: 'COUNTA'}],
+            },
+            ctxFor(client)
+        )
+        const blanked = committed.filter(
+            (p) => p.type === 'blockInput' && p.value.input === ''
+        )
+        expect(blanked.map((p) => p.value.col)).toEqual([1])
+    })
+
+    it('keeps the declarations when only the label changes', async () => {
+        const {client, committed} = blockClient({
+            analyzedBy: [9],
+            extraBlocks: [analysisOf()],
+        })
+        await editAnalysisBlock.handler(
+            {name: 'orders_analysis', label: 'GRAND'},
+            ctxFor(client)
+        )
+        const bind = committed.find((p) => p.type === 'bindFormSchema')!
+        const fields = bind.value.fields as Array<{
+            name: string
+            aggFunc?: string
+        }>
+        expect(fields.find((f) => f.name === 'amt')?.aggFunc).toBe('SUM')
+        const label = committed.find(
+            (p) => p.type === 'blockInput' && p.value.input === 'GRAND'
+        )
+        expect(label).toBeDefined()
+    })
+
+    it('sends a pivot to the pivot tool instead of half-editing it', async () => {
+        const pivot = {
+            ...analysisOf(),
+            pivot: {
+                rowDim: 'key',
+                measure: 'amt',
+                func: 'SUM',
+                order: 'ascending',
+            },
+        }
+        const {client} = blockClient({analyzedBy: [9], extraBlocks: [pivot]})
+        await expect(
+            editAnalysisBlock.handler(
+                {
+                    name: 'orders_analysis',
+                    aggregates: [{field: 'amt', func: 'MAX'}],
+                },
+                ctxFor(client)
+            )
+        ).rejects.toThrow(/build__edit_pivot/)
+    })
+
+    it('refuses a block that analyses nothing', async () => {
+        const {client} = blockClient()
+        await expect(
+            editAnalysisBlock.handler(
+                {name: 'orders', aggregates: [{field: 'amt', func: 'SUM'}]},
+                ctxFor(client)
+            )
+        ).rejects.toThrow(/does not analyse anything/)
     })
 })

@@ -411,6 +411,12 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         self.id_navigator.analyzed_by(&sheet_id, block_id)
     }
 
+    fn block_is_analysis(&self, sheet_id: SheetId, block_id: logisheets_base::BlockId) -> bool {
+        self.id_navigator
+            .get_block_place(&sheet_id, &block_id)
+            .is_ok_and(|p| p.analyzes.is_some())
+    }
+
     fn is_block_cell_templated(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
         self.block_schema_manager
             .formula_for_block_cell(sheet_id, cell, self.analysis_of(sheet_id, cell.block_id))

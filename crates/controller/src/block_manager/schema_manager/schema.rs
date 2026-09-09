@@ -12,6 +12,14 @@ pub enum BlockCellRole {
     Key,
     /// The cell holds a value for a specific field, identified by `field_id`.
     Field(BlockFieldId),
+    /// The cell holds a FIELD NAME rather than a record's value: it sits on
+    /// the line the schema declares as its header.
+    ///
+    /// A block is only "there is a thing here, at this position"; the schema
+    /// is how to read it. Which line is names rather than data is a matter of
+    /// reading, so it lives here — and having it here is what lets this
+    /// classification happen without asking the navigator anything.
+    Header,
     /// The cell does not participate in the schema (e.g., outside the
     /// described columns/rows). No virtual-node update needed.
     None,
@@ -173,6 +181,20 @@ pub struct FormSchema<F, K, const IS_ROW: bool> {
     pub fields: Vec<(Field, FieldEntry<F>)>,
     pub name: String,
     pub key: K,
+    /// The RECORD-axis line holding field names instead of a record — a row
+    /// for a row schema, a column for a column schema. `None` for a block
+    /// whose names live only in the schema, which is every block bound before
+    /// this existed.
+    ///
+    /// A line id, not a flag, for the same reason `key` is one: it makes the
+    /// classification pure schema knowledge, so `cell_role` can answer
+    /// "header?" without the navigator. It also cannot be lost by a reorder.
+    ///
+    /// Excel decides the other half: `headerRowCount="1"` can only mean the
+    /// FIRST line of a table, so the saver emits a real table header only
+    /// when this is the first line, and otherwise keeps names in the table
+    /// definition as before.
+    pub header: Option<u32>,
 }
 
 impl<F: Copy + PartialEq, K, const IS_ROW: bool> FormSchema<F, K, IS_ROW> {
@@ -321,6 +343,14 @@ impl SchemaTrait for Schema {
             Schema::RandomSchema(s) => s.cell_role(cell),
         }
     }
+
+    fn header_line(&self) -> Option<u32> {
+        match self {
+            Schema::RowSchema(s) => s.header_line(),
+            Schema::ColSchema(s) => s.header_line(),
+            Schema::RandomSchema(s) => s.header_line(),
+        }
+    }
 }
 
 pub trait SchemaTrait {
@@ -338,6 +368,9 @@ pub trait SchemaTrait {
         field_id: BlockFieldId,
     ) -> Option<BlockCellId>;
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole;
+    /// The record-axis line that holds field names, if the schema declares
+    /// one. See [`FormSchema::header`].
+    fn header_line(&self) -> Option<u32>;
 }
 
 impl SchemaTrait for RowSchema {
@@ -379,8 +412,13 @@ impl SchemaTrait for RowSchema {
 
     fn get_all_key_cell_ids(&self, block_id: BlockId, bp: &BlockPlace) -> Vec<BlockCellId> {
         let key = self.key;
+        // The header line is not a record, so it has no key. Excluding it
+        // HERE is what keeps it out of everything downstream at once:
+        // `BLOCKREFS`' matrices, the key-uniqueness guard, a pivot's current
+        // shape, the sort order, and the `BLOCKREF` resolution the saver does.
         bp.rows
             .iter()
+            .filter(|r| Some(**r) != self.header)
             .map(|r| BlockCellId {
                 block_id,
                 row: *r,
@@ -427,13 +465,21 @@ impl SchemaTrait for RowSchema {
     }
 
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole {
-        if cell.col == self.key {
+        // Header first, and on the RECORD axis: the whole line is names,
+        // whichever field's column it sits under.
+        if Some(cell.row) == self.header {
+            BlockCellRole::Header
+        } else if cell.col == self.key {
             BlockCellRole::Key
         } else if self.fields.iter().any(|(_, e)| e.field_axis_id == cell.col) {
             BlockCellRole::Field(cell.col as BlockFieldId)
         } else {
             BlockCellRole::None
         }
+    }
+
+    fn header_line(&self) -> Option<u32> {
+        self.header
     }
 }
 
@@ -476,8 +522,10 @@ impl SchemaTrait for ColSchema {
 
     fn get_all_key_cell_ids(&self, block_id: BlockId, bp: &BlockPlace) -> Vec<BlockCellId> {
         let key = self.key;
+        // A column schema's records are COLUMNS, so its header is a column.
         bp.cols
             .iter()
+            .filter(|c| Some(**c) != self.header)
             .map(|c| BlockCellId {
                 block_id,
                 row: key,
@@ -518,13 +566,19 @@ impl SchemaTrait for ColSchema {
     }
 
     fn cell_role(&self, cell: &BlockCellId) -> BlockCellRole {
-        if cell.row == self.key {
+        if Some(cell.col) == self.header {
+            BlockCellRole::Header
+        } else if cell.row == self.key {
             BlockCellRole::Key
         } else if self.fields.iter().any(|(_, e)| e.field_axis_id == cell.row) {
             BlockCellRole::Field(cell.row as BlockFieldId)
         } else {
             BlockCellRole::None
         }
+    }
+
+    fn header_line(&self) -> Option<u32> {
+        self.header
     }
 }
 
@@ -590,5 +644,11 @@ impl SchemaTrait for RandomSchema {
         // Conservative: never claim a cell is a Key/Field for random schemas
         // because dirty propagation falls back to BlockAll for them.
         BlockCellRole::None
+    }
+
+    /// A random schema names its cells individually, so there is no line of
+    /// names to declare.
+    fn header_line(&self) -> Option<u32> {
+        None
     }
 }

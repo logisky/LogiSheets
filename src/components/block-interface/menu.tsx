@@ -34,18 +34,25 @@ export interface MenuProps {
     /** Select and scroll to another block. Absent where no view is wired. */
     readonly onGoToBlock?: (blockId: number) => void
     /** Create the block that analyses this one. */
-    readonly onCreateAnalysis: () => void
     /**
-     * Open the pivot dialog over this block. Absent when the block cannot
-     * usefully be pivoted — a pivot itself, or a block with one field.
+     * Open the analysis dialog over this block. A summary row and a pivot are
+     * two kinds of the same thing, so they are one item rather than two: the
+     * dialog asks which, and each form links to the other. Absent when the
+     * block cannot be analysed (no schema).
      */
-    readonly onCreatePivot?: () => void
+    readonly onAnalyse?: () => void
     /**
      * Re-open the pivot dialog over this pivot's own recipe. Pivots only.
      * Distinct from a refresh: a refresh re-derives the SHAPE from an
      * unchanged recipe, this changes the recipe itself.
      */
     readonly onEditPivot?: () => void
+    /**
+     * Re-open the summary form over this analysis block's own declarations.
+     * Analysis blocks that are NOT pivots — a pivot has its own item, because
+     * changing a recipe changes the shape as well as the number.
+     */
+    readonly onEditAnalysis?: () => void
     /** Bring this pivot's rows and columns back in line. Pivots only. */
     readonly onRefreshPivot?: () => void
     /**
@@ -97,8 +104,8 @@ export const MenuComponent = (props: MenuProps) => {
         analyzes,
         analyzedBy = [],
         onGoToBlock,
-        onCreateAnalysis,
-        onCreatePivot,
+        onAnalyse,
+        onEditAnalysis,
         onEditPivot,
         onRefreshPivot,
         pivotStaleCount,
@@ -120,18 +127,20 @@ export const MenuComponent = (props: MenuProps) => {
                 onModify()
             },
         },
-        {
-            label: 'Create analysis block',
-            icon: <FunctionsIcon />,
-            onClick: onCreateAnalysis,
-        },
     ]
 
-    if (onCreatePivot) {
+    if (onAnalyse) {
         items.push({
-            label: 'Create pivot table…',
-            icon: <PivotTableChartOutlinedIcon />,
-            onClick: onCreatePivot,
+            label: 'Analyse…',
+            icon: <FunctionsIcon />,
+            onClick: onAnalyse,
+        })
+    }
+    if (onEditAnalysis) {
+        items.push({
+            label: 'Edit summary…',
+            icon: <FunctionsIcon />,
+            onClick: onEditAnalysis,
         })
     }
     if (onEditPivot) {

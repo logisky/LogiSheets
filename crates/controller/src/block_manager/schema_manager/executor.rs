@@ -205,23 +205,42 @@ impl BlockSchemaExecutor {
                         });
                     fields.push((spec.name, entry));
                 }
+                // The header arrives as an INDEX along the record axis and is
+                // stored as that line's stable ID: an index would be wrong the
+                // moment a line is inserted above it, and the id is also what
+                // lets `cell_role` classify a header cell without consulting
+                // the navigator.
                 let schema = if p.row {
                     let key = ctx
                         .fetch_block_cell_id(&sheet_id, &block_id, 0, p.key_idx)?
                         .col;
+                    let header = match p.header_idx {
+                        Some(idx) => {
+                            Some(ctx.fetch_block_cell_id(&sheet_id, &block_id, idx, 0)?.row)
+                        }
+                        None => None,
+                    };
                     Schema::RowSchema(RowSchema {
                         fields,
                         key,
                         name: p.ref_name.clone(),
+                        header,
                     })
                 } else {
                     let key = ctx
                         .fetch_block_cell_id(&sheet_id, &block_id, p.key_idx, 0)?
                         .row;
+                    let header = match p.header_idx {
+                        Some(idx) => {
+                            Some(ctx.fetch_block_cell_id(&sheet_id, &block_id, 0, idx)?.col)
+                        }
+                        None => None,
+                    };
                     Schema::ColSchema(ColSchema {
                         fields,
                         key,
                         name: p.ref_name.clone(),
+                        header,
                     })
                 };
                 // A ref name addresses one block for the whole workbook. Taking

@@ -1969,6 +1969,7 @@ impl<'a> Worksheet<'a> {
                             keys,
                             fields,
                             random_entries,
+                            header_idx: header_index(s, &block_place),
                         }
                     });
 
@@ -2742,6 +2743,7 @@ impl<'a> Worksheet<'a> {
                     keys,
                     fields,
                     random_entries,
+                    header_idx: header_index(s, &block_place),
                 }
             });
 
@@ -2972,6 +2974,25 @@ fn build_comment_note(comments: &InternalComments, note: &InternalNote) -> Comme
             .collect(),
         resolved: note.resolved,
     }
+}
+
+/// A schema's header line as a block-relative INDEX, for reporting.
+///
+/// The schema stores the line's stable id — that is what makes classification
+/// independent of the navigator — but a host counts lines from the block's
+/// corner, so the id is resolved here rather than leaking outward.
+fn header_index(
+    schema: &crate::block_manager::schema_manager::schema::Schema,
+    bp: &crate::navigator::BlockPlace,
+) -> Option<usize> {
+    use crate::block_manager::schema_manager::schema::{Schema, SchemaTrait};
+    let header = schema.header_line()?;
+    let lines = match schema {
+        Schema::RowSchema(_) => &bp.rows,
+        Schema::ColSchema(_) => &bp.cols,
+        Schema::RandomSchema(_) => return None,
+    };
+    lines.iter().position(|l| *l == header)
 }
 
 #[cfg(test)]

@@ -12,6 +12,17 @@
  */
 import {describe, it, expect, beforeEach} from 'vitest'
 import {handle} from '../wasm/logisheets_wasm_server'
+import {WorkbookOps} from 'logisheets-core'
+import type {Client} from 'logisheets-web/pure'
+
+/** The smallest Client `WorkbookOps` needs here: a transaction sink. */
+function clientFor(bookId: number): Client {
+    return {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        handleTransaction: async (p: any) =>
+            rpc('handleTransaction', p, bookId),
+    } as unknown as Client
+}
 
 function rpc(
     method: string,
@@ -377,5 +388,119 @@ describe('an analysis block, driven the way a host drives it', () => {
         ])
         expect(eff.status.type, eff.errorMessage).toBe('ok')
         expect(num(bookId, 3, 1)).toBe(60)
+    })
+})
+
+/**
+ * `WorkbookOps.editAnalysisBlock` against the real engine.
+ *
+ * An analysis is arrived at in steps: summing every number is a good first
+ * guess and a wrong one in some column. Before this the only remedy was to
+ * delete the block and rebuild it, which loses its ref name and with it every
+ * formula pointing at it — so the edit has to work in place.
+ */
+describe('editing what an analysis block computes, against the real engine', () => {
+    let bookId: number
+    let src: number
+    let analysis: number
+    let ops: WorkbookOps
+
+    const source = () => ({
+        sheetIdx: 0,
+        blockId: src,
+        refName: 'orders',
+        rowStart: 0,
+        rowCnt: 3,
+        colStart: 0,
+        fields: [
+            {name: 'key', isNumber: false},
+            {name: 'amt', isNumber: true},
+        ],
+        keyIdx: 0,
+    })
+
+    beforeEach(() => {
+        bookId = rpc('newWorkbook') as number
+        ;({src, analysis} = ordersWithAnalysis(bookId))
+        ops = new WorkbookOps(clientFor(bookId))
+        // 10 + 20 + 30
+        expect(num(bookId, 3, 1)).toBe(60)
+    })
+
+    it('swaps the function, and the row recomputes in place', async () => {
+        await ops.editAnalysisBlock({
+            sheetIdx: 0,
+            blockId: analysis,
+            refName: 'orders_analysis',
+            source: source(),
+            aggregates: [{field: 'amt', func: 'AVERAGE'}],
+        })
+        expect(num(bookId, 3, 1)).toBe(20)
+        // And the block still answers to its own name, which is the reason to
+        // edit rather than rebuild.
+        expect(byName(bookId, 'orders_analysis').blockId).toBe(analysis)
+    })
+
+    it('drops a column from the analysis by leaving it out', async () => {
+        // The set is replaced, not merged: a field left out stops being
+        // computed and its cell goes blank.
+        await ops.editAnalysisBlock({
+            sheetIdx: 0,
+            blockId: analysis,
+            refName: 'orders_analysis',
+            source: source(),
+            aggregates: [{field: 'key', func: 'COUNTA'}],
+        })
+        expect(num(bookId, 3, 0)).toBe(3) // three keys are filled in
+        expect(num(bookId, 3, 1)).toBeUndefined()
+    })
+
+    it('renames the row, and the key follows for BLOCKREF', async () => {
+        await ops.editAnalysisBlock({
+            sheetIdx: 0,
+            blockId: analysis,
+            refName: 'orders_analysis',
+            source: source(),
+            aggregates: [{field: 'amt', func: 'SUM'}],
+            label: 'GRAND',
+        })
+        const eff = commit(bookId, [
+            {
+                type: 'cellInput',
+                value: {
+                    sheetIdx: 0,
+                    row: 12,
+                    col: 5,
+                    content: '=BLOCKREF("orders_analysis","GRAND","amt")',
+                },
+            },
+        ])
+        expect(eff.status.type, eff.errorMessage).toBe('ok')
+        expect(num(bookId, 12, 5)).toBe(60)
+    })
+
+    it('refuses a field the source does not have, before changing anything', async () => {
+        await expect(
+            ops.editAnalysisBlock({
+                sheetIdx: 0,
+                blockId: analysis,
+                refName: 'orders_analysis',
+                source: source(),
+                aggregates: [{field: 'nope', func: 'SUM'}],
+            })
+        ).rejects.toThrow(/no such field/)
+        expect(num(bookId, 3, 1)).toBe(60)
+    })
+
+    it('refuses an empty set rather than blanking the whole row', async () => {
+        await expect(
+            ops.editAnalysisBlock({
+                sheetIdx: 0,
+                blockId: analysis,
+                refName: 'orders_analysis',
+                source: source(),
+                aggregates: [],
+            })
+        ).rejects.toThrow(/Nothing to aggregate/)
     })
 })

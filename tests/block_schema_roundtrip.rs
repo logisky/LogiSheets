@@ -138,6 +138,7 @@ fn authored() -> Workbook {
                         .with_editability_formula(Some(TOTAL_EDITABILITY_RULE.into())),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ],
     );
@@ -227,6 +228,7 @@ fn authored() -> Workbook {
                     SchemaFieldSpec::new("gamma", "r-gamma"),
                 ],
                 row: false,
+                header_idx: None,
             }),
             // Random schema: keys pinned to explicit (row, col) offsets, which
             // is the only schema kind with no axis at all.

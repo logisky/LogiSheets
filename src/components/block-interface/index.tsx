@@ -55,6 +55,7 @@ import type {
 } from 'logisheets-core'
 import {FieldRuleDialog} from './field-rule-dialog'
 import {PivotDialog, type PivotSpecChoice} from './pivot-dialog'
+import {AnalysisDialog, type AnalysisChoice} from './analysis-dialog'
 import type {FieldRuleKind} from '@/components/block-composer/field-formula'
 import {LeftTop} from '@/core/settings'
 import {BlockCellProps, RenderedCellSpec, buildRenderedCells} from './cell'
@@ -91,6 +92,26 @@ function numFmtsOf(
     return Object.fromEntries(
         (source?.fields ?? []).map((f) => [f.name, f.numFmt])
     )
+}
+
+/**
+ * The text an analysis block's single row is labelled with — the value in its
+ * key cell, which is also the key a `BLOCKREF` reaches the row by.
+ *
+ * `cells` arrives flat, row-major, so the first row's key column is just an
+ * index into it.
+ */
+function labelOf(
+    cells: readonly BlockCellInfo[],
+    colCnt: number,
+    keyIdx: number
+): string {
+    const cell = cells[keyIdx]
+    if (!cell || colCnt <= keyIdx) return ''
+    const v = cell.value as {type?: string; value?: unknown} | undefined
+    return typeof v?.value === 'string' || typeof v?.value === 'number'
+        ? String(v.value)
+        : ''
 }
 
 /** Inclusive sheet-index rectangle. */
@@ -270,7 +291,9 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
      * hand.
      */
     const pivotContextOf = (info: BlockInfo) => {
-        if (!info.pivot || info.analyzes === undefined) return undefined
+        // Any analysis block, pivot or not: both kinds name fields of their
+        // SOURCE, so both need it in hand. `spec` is what tells them apart.
+        if (info.analyzes === undefined) return undefined
         const src = infos.find((i: BlockInfo) => i.blockId === info.analyzes)
         if (!src?.schema) return undefined
         return {
@@ -360,6 +383,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         schemaFields={info.schema.fields}
                         analysisSource={analysisSourceOf(info)}
                         pivotContext={pivotContextOf(info)}
+                        headerRowIdx={info.schema.headerIdx}
                         analyzes={
                             info.analyzes === undefined
                                 ? undefined
@@ -454,8 +478,14 @@ interface BlockInterfaceInternalProps {
         source: PivotSource
         fields: readonly BlockSchemaFieldEntry[]
         keyIdx?: number
-        spec: PivotSpecParts
+        /** The pivot recipe — absent on a plain analysis block. */
+        spec?: PivotSpecParts
     }
+    /**
+     * Block-relative line the schema declares its header, if any. Its cells
+     * are field names rather than a record's values.
+     */
+    headerRowIdx?: number
     /** The block this one analyses, and the blocks that analyse it. */
     analyzes?: {blockId: number; name: string}
     analyzedBy: ReadonlyArray<{blockId: number; name: string}>
@@ -507,6 +537,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         schemaFields,
         analysisSource,
         pivotContext,
+        headerRowIdx,
         analyzes,
         analyzedBy,
         isPaired,
@@ -571,9 +602,10 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
      * renaming a field of this block rebuilds the total rather than silently
      * zeroing it. See `design/block-analysis.md`.
      */
-    const handleCreateAnalysis = async () => {
+    const handleCreateAnalysis = async (choice: AnalysisChoice) => {
+        setAnalysisDialog(null)
         if (!analysisSource) return
-        const refName = `${analysisSource.refName}_analysis`
+        const refName = choice.refName
         try {
             const newId = await dataService.getAvailableBlockId(sheetIdx)
             if (isErrorMessage(newId)) {
@@ -584,7 +616,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                 source: analysisSource,
                 blockId: newId,
                 refName,
-                label: 'Total',
+                label: choice.label,
+                aggregates: choice.aggregates,
             })
             toast.success(
                 `Created analysis block "${refName}": ` +
@@ -600,14 +633,22 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         }
     }
 
-    // Pivot creation asks three questions that have no safe default, so it
-    // opens a dialog rather than acting on a menu click.
-    const [pivotDialog, setPivotDialog] = useState(false)
+    // A pivot is one KIND of analysis and a summary row is the other, so one
+    // menu item opens whichever form the reader wants and each links to the
+    // other. `null` is closed.
+    const [analysisDialog, setAnalysisDialog] = useState<
+        null | 'summary' | 'pivot'
+    >(null)
+    // The same summary form over this block's OWN declarations. `undefined` is
+    // closed.
+    const [analysisEdit, setAnalysisEdit] = useState<
+        AnalysisChoice | undefined
+    >()
     // Editing reuses the same dialog, prefilled. `undefined` means creating.
     const [pivotEdit, setPivotEdit] = useState<PivotSpecChoice | undefined>()
 
     const handleCreatePivot = async (spec: PivotSpecChoice) => {
-        setPivotDialog(false)
+        setAnalysisDialog(null)
         try {
             const newId = await dataService.getAvailableBlockId(sheetIdx)
             if (isErrorMessage(newId)) {
@@ -660,8 +701,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
      * is a second number.
      */
     const openPivotEdit = () => {
-        if (!pivotContext) return
-        const spec = pivotContext.spec
+        const spec = pivotContext?.spec
+        if (!spec) return
         setPivotEdit({
             refName: title,
             rowDim: spec.rowDim,
@@ -693,8 +734,6 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                 sheetIdx,
                 blockId,
                 source: pivotContext.source,
-                rowStart,
-                colStart,
                 currentRowCnt: rowCnt,
                 currentColCnt: colCnt,
                 ...spec,
@@ -721,6 +760,63 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         }
     }
 
+    /**
+     * Re-open the summary form over what this analysis block already computes,
+     * read off its own schema — which is where the declarations live.
+     */
+    const openAnalysisEdit = () => {
+        if (!pivotContext) return
+        setAnalysisEdit({
+            refName: title,
+            // The label is whatever sits in the key cell — an analysis block
+            // has one row, so it is the first cell of the key column.
+            label: labelOf(cells, colCnt, pivotContext.keyIdx ?? 0) || 'Total',
+            aggregates: schemaFields
+                .filter((f) => f.aggFunc && f.aggField)
+                .map((f) => ({
+                    field: f.aggField as string,
+                    func: f.aggFunc as AggFunc,
+                })),
+        })
+    }
+
+    const handleEditAnalysis = async (choice: AnalysisChoice) => {
+        setAnalysisEdit(undefined)
+        if (!pivotContext) return
+        try {
+            const applied = await ops.editAnalysisBlock({
+                sheetIdx,
+                blockId,
+                refName: title,
+                source: {
+                    ...pivotContext.source,
+                    fields: pivotContext.fields
+                        .slice()
+                        .sort((a, b) => a.idx - b.idx)
+                        .map((f) => ({
+                            name: f.field,
+                            isNumber: f.fieldType?.kind === 'number',
+                            numFmt: pivotContext.source.numFmts?.[f.field],
+                        })),
+                    keyIdx: pivotContext.keyIdx ?? 0,
+                },
+                aggregates: choice.aggregates,
+                label: choice.label,
+            })
+            toast.success(
+                `“${title}” now computes ` +
+                    applied.map((a) => `${a.func}(${a.field})`).join(', ') +
+                    '.'
+            )
+        } catch (e) {
+            toast.error(
+                `Could not change the summary: ${
+                    e instanceof Error ? e.message : String(e)
+                }`
+            )
+        }
+    }
+
     const handleRefreshPivot = async () => {
         try {
             const changed = await ops.refreshPivot({
@@ -730,14 +826,12 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                 // The key column holds the row dimension; its FIELD name is
                 // what the re-bind has to restate.
                 keyField: schemaFields[0]?.field ?? '',
-                rowStart,
-                colStart,
                 // So a row total or a second measure is restated rather than
                 // rewritten as an ordinary derived column.
                 currentFields: schemaFields,
                 // So a column the refresh ADDS is formatted like the ones
                 // beside it instead of arriving as a bare number.
-                formats: pivotContext
+                formats: pivotContext?.spec
                     ? {
                           numFmts: pivotContext.source.numFmts ?? {},
                           measure: pivotContext.spec.measure,
@@ -882,6 +976,11 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
     const renderedCells: RenderedCellSpec[] = cells.flatMap((cell, idx) => {
         const rowIdx = Math.floor(idx / fieldInfo.length)
         const colIdx = idx % fieldInfo.length
+        // The header line holds field NAMES, not a record's values, so none of
+        // the per-field widgets apply to it: no enum dropdown, no date picker,
+        // no required marker, no validation flag. It is names, and names are
+        // never one of the things the field allows.
+        if (headerRowIdx !== undefined && rowIdx === headerRowIdx) return []
         const absRow = rowStart + rowIdx
         const absCol = colStart + colIdx
         const colInfo = grid.columns.find(
@@ -1734,10 +1833,16 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     analyzes={analyzes}
                     analyzedBy={analyzedBy}
                     onGoToBlock={onGoToBlock}
-                    onCreateAnalysis={handleCreateAnalysis}
-                    onCreatePivot={
-                        pivotSource && pivotSource.length > 1
-                            ? () => setPivotDialog(true)
+                    onAnalyse={
+                        analysisSource
+                            ? () => setAnalysisDialog('summary')
+                            : undefined
+                    }
+                    onEditAnalysis={
+                        // An analysis block that is not a pivot: `analyzes` is
+                        // set, no recipe.
+                        !isPivot && analyzes && pivotContext
+                            ? openAnalysisEdit
                             : undefined
                     }
                     onEditPivot={
@@ -1769,12 +1874,38 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
             {/* Deleting a block deletes its analyses with it — an analysis of
                 a block that no longer exists would sit there reading empty
                 with nothing to say why. Named, so the user knows what goes. */}
-            {pivotDialog && pivotSource && (
+            {analysisDialog === 'summary' && analysisSource && (
+                <AnalysisDialog
+                    sourceName={title}
+                    fields={schemaFields}
+                    onCrossTab={
+                        // Only offered when a cross-tab is possible at all: it
+                        // needs a field to group by and one to measure.
+                        pivotSource && pivotSource.length > 1
+                            ? () => setAnalysisDialog('pivot')
+                            : undefined
+                    }
+                    onCancel={() => setAnalysisDialog(null)}
+                    onConfirm={handleCreateAnalysis}
+                />
+            )}
+            {analysisEdit && pivotContext && (
+                <AnalysisDialog
+                    sourceName={pivotContext.source.refName}
+                    fields={pivotContext.fields}
+                    initial={analysisEdit}
+                    onCancel={() => setAnalysisEdit(undefined)}
+                    onConfirm={handleEditAnalysis}
+                />
+            )}
+
+            {analysisDialog === 'pivot' && pivotSource && (
                 <PivotDialog
                     sourceName={title}
                     fields={pivotSource}
                     keyIdx={pivotKeyIdx}
-                    onCancel={() => setPivotDialog(false)}
+                    onSummary={() => setAnalysisDialog('summary')}
+                    onCancel={() => setAnalysisDialog(null)}
                     onConfirm={handleCreatePivot}
                 />
             )}

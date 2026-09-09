@@ -3893,6 +3893,136 @@ interface CreatePivotInput {
     }>
 }
 
+export const editAnalysisBlock: Tool<
+    {
+        name: string
+        aggregates?: Array<{field: string; func: AggFunc}>
+        label?: string
+    },
+    {block: string; aggregated: string[]}
+> = {
+    namespace: 'build',
+    name: 'edit_analysis_block',
+    description: [
+        "Change what an existing analysis block computes: which of the source's fields it aggregates, with which function, and the label its row is addressed by.",
+        '',
+        'Use this to arrive at an analysis in STEPS. Summing every number is often nearly right and wrong in one column — a rate wants AVERAGE, a text column wants COUNTA, an id column wants nothing at all. Adjust rather than rebuild: the block keeps its ref name, so formulas pointing at it keep working, and it is one undo.',
+        '',
+        '`aggregates` REPLACES the set outright — a field you leave out stops being computed and its cell goes blank. Read the current set from describe_block first if you mean to add to it.',
+        '',
+        'This is the simple kind of analysis: one row, one number per column. For one number per GROUP, use build__create_pivot / build__edit_pivot instead.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            name: {
+                type: 'string',
+                description: 'Ref name of the analysis block.',
+            },
+            aggregates: {
+                type: 'array',
+                description:
+                    'Replaces the whole set. Omit to leave the functions alone and change only `label`.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        field: {
+                            type: 'string',
+                            description: 'Field name of the SOURCE block.',
+                        },
+                        func: {type: 'string', enum: [...AGG_FUNCS]},
+                    },
+                    required: ['field', 'func'],
+                },
+            },
+            label: {
+                type: 'string',
+                description:
+                    'New row label, which is also the key the result is addressed by. Omit to keep it.',
+            },
+        },
+        required: ['name'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const block = await blockByName(client, input.name)
+        if (block.analyzes === undefined) {
+            throw new Error(
+                `block "${input.name}" does not analyse anything, so there is nothing to edit. Create one with build__create_analysis_block.`
+            )
+        }
+        if (block.pivot) {
+            throw new Error(
+                `block "${input.name}" is a pivot — use build__edit_pivot, which changes rows and columns as well as the number.`
+            )
+        }
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const source = all.find((b) => b.blockId === block.analyzes)
+        if (!source?.schema) {
+            throw new Error(
+                `analysis block "${input.name}" no longer has a source block`
+            )
+        }
+
+        // Omitted means unchanged, so the current declarations are the
+        // starting point — read off this block's own schema, where they live.
+        const current: Array<{field: string; func: AggFunc}> = (
+            block.schema?.fields ?? []
+        )
+            .filter((f) => f.aggFunc !== undefined && f.aggField !== undefined)
+            .map((f) => ({
+                field: f.aggField as string,
+                func: f.aggFunc as AggFunc,
+            }))
+        const aggregates = input.aggregates ?? current
+        if (aggregates.length === 0) {
+            throw new Error(
+                `nothing to aggregate: pass \`aggregates\` with at least one field`
+            )
+        }
+
+        const numFmtOf = (renderId: string) =>
+            source.fieldRenders?.find((r) => r.renderId === renderId)?.style
+                ?.formatter || undefined
+        const ops = new WorkbookOps(client)
+        const applied = await ops.editAnalysisBlock({
+            sheetIdx: block.sheetIdx,
+            blockId: block.blockId,
+            refName: input.name,
+            source: {
+                sheetIdx: source.sheetIdx,
+                blockId: source.blockId,
+                refName: source.schema.name,
+                rowStart: source.rowStart,
+                rowCnt: source.rowCnt,
+                colStart: source.colStart,
+                fields: [...source.schema.fields]
+                    .sort((a, b) => a.idx - b.idx)
+                    .map((f) => ({
+                        name: f.field,
+                        isNumber: f.fieldType?.kind === 'number',
+                        numFmt: numFmtOf(f.renderId),
+                    })),
+                keyIdx: source.schema.keys?.[0]?.idx ?? 0,
+            },
+            aggregates,
+            label: input.label,
+        })
+
+        const aggregated = applied.map((a) => `${a.func} of ${a.field}`)
+        return {
+            data: {block: input.name, aggregated},
+            display:
+                `"${input.name}" now computes ${aggregated.join(', ')}.` +
+                (input.label ? ` Row labelled "${input.label}".` : ''),
+        }
+    },
+}
+
 export const createPivot: Tool<
     CreatePivotInput,
     {
@@ -4352,8 +4482,6 @@ export const editPivot: Tool<
                 colStart: source.colStart,
                 numFmts: numFmtsOf(source),
             },
-            rowStart: block.rowStart,
-            colStart: block.colStart,
             currentRowCnt: block.rowCnt,
             currentColCnt: block.colCnt,
             rowDim,
@@ -4443,8 +4571,6 @@ export const refreshPivot: Tool<
             blockId: block.blockId,
             refName: input.name,
             keyField,
-            rowStart: block.rowStart,
-            colStart: block.colStart,
             // So a row total or a second measure is restated rather than
             // rewritten as an ordinary derived column.
             currentFields: block.schema?.fields,
@@ -4514,6 +4640,7 @@ export const BUILDER_TOOLS: Tool[] = [
     listBlocks,
     describeBlock,
     createAnalysisBlock as Tool,
+    editAnalysisBlock as Tool,
     createPivot as Tool,
     editPivot as Tool,
     refreshPivot as Tool,

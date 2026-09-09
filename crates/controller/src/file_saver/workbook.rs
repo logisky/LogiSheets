@@ -226,11 +226,30 @@ pub fn save_workbook<S: SaverTrait>(
                     );
                     table_id_counter += 1;
                     table_names.insert(display_name.clone());
+                    // A schema that declares its FIRST line the header can say
+                    // so in Excel's own terms. `headerRowCount="1"` cannot
+                    // mean anything but the first line, so a header anywhere
+                    // else keeps the older shape — names in the table
+                    // definition, `headerRowCount="0"` — which is a table
+                    // Excel also writes, rather than a claim that is untrue.
+                    let header_first = navigator
+                        .get_block_place(&sheet_id, &range.block_id)
+                        .ok()
+                        .and_then(|bp| {
+                            block_schema_manager.header_is_first_line(sheet_id, range.block_id, bp)
+                        })
+                        .unwrap_or(false);
                     worksheet
                         .tables
                         .push(logisheets_workbook::workbook::TablePart {
                             rel_id,
-                            table: block_to_table(table_id_counter, &display_name, &a1, &fields),
+                            table: block_to_table(
+                                table_id_counter,
+                                &display_name,
+                                &a1,
+                                &fields,
+                                header_first,
+                            ),
                         });
                 }
                 // Now the pivot tables. A pivot block already has a table
@@ -808,13 +827,19 @@ pub(super) fn excel_table_name(ref_name: &str) -> String {
     }
 }
 
-/// A minimal `<table>` over a block: its rows, its fields as column names, no
-/// header row. Styling is left to Excel's default so nothing is invented.
+/// A minimal `<table>` over a block: its lines, its fields as column names.
+/// Styling is left to Excel's default so nothing is invented.
+///
+/// `header_first` says the schema declares the block's FIRST line a header, in
+/// which case the table has a real one and Excel shows the names in the sheet.
+/// Otherwise the names live only in the table definition — the shape Excel
+/// writes for a table created with "My table has headers" unchecked.
 fn block_to_table(
     id: u32,
     display_name: &str,
     reference: &str,
     fields: &[String],
+    header_first: bool,
 ) -> logisheets_workbook::prelude::Table {
     use logisheets_workbook::prelude::{CtTableColumn, CtTableColumns, Table};
     Table {
@@ -853,7 +878,7 @@ fn block_to_table(
         comment: None,
         reference: reference.to_string(),
         table_type: None,
-        header_row_count: 0,
+        header_row_count: if header_first { 1 } else { 0 },
         insert_row: false,
         insert_row_shift: false,
         totals_row_count: 0,

@@ -164,6 +164,13 @@ pub struct BlockSchema {
     pub keys: Vec<BlockSchemaKeyEntry>,
     pub fields: Vec<BlockSchemaFieldEntry>,
     pub random_entries: Vec<BlockSchemaRandomEntry>,
+    /// Block-relative index of the line holding field NAMES rather than a
+    /// record, when the schema declares one.
+    ///
+    /// An INDEX rather than the line id the schema stores, because a host
+    /// counts lines from the block's corner and has no business knowing line
+    /// ids. Absent for the blocks that have no header line, which is most.
+    pub header_idx: Option<usize>,
 }
 
 #[derive(Debug, Clone, TS)]

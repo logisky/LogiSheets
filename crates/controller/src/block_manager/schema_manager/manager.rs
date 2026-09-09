@@ -206,6 +206,14 @@ impl SchemaManager {
         cell: &BlockCellId,
         analysis: Option<crate::block_manager::analysis::AnalysisTarget<'_>>,
     ) -> Option<String> {
+        // A header cell holds a field NAME. It is not a record's value, so
+        // nothing generates it and no template applies — which is also what
+        // keeps the re-materialization walks from installing an aggregate into
+        // it: they ask this, get `None`, and (in an analysis block) clear
+        // whatever was there.
+        if self.is_header_cell(sheet_id, cell) {
+            return None;
+        }
         if let Some(target) = analysis {
             if let Some(pivot) = target.pivot {
                 // A pivot's cells are generated wholesale from the recipe, so
@@ -291,6 +299,14 @@ impl SchemaManager {
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<String> {
+        // A field name is not one of the values the field allows, so no rule
+        // reaches the header. Without this, the pivot key column's derived
+        // rule ("must name a group that occurs in the source") flagged the
+        // header cell that names the DIMENSION — a red marker on the one cell
+        // that is definitionally right.
+        if self.is_header_cell(sheet_id, cell) {
+            return None;
+        }
         let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
         match schema {
             Schema::RowSchema(s) => s.validation_for_field_axis(cell.col).map(String::from),
@@ -301,11 +317,59 @@ impl SchemaManager {
 
     /// Look up the editability-formula template attached to a cell's field,
     /// if any.
+    /// Whether this cell sits on the line its schema declares as the header.
+    ///
+    /// Pure schema knowledge — the schema stores the header as a line id, so
+    /// this needs nothing from the navigator.
+    pub fn is_header_cell(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
+        self.schemas
+            .get(&(sheet_id, cell.block_id))
+            .is_some_and(|s| matches!(s.cell_role(cell), BlockCellRole::Header))
+    }
+
+    /// Whether this block's schema declares a header AND it is the FIRST line
+    /// of the block. `None` when the block has no schema.
+    ///
+    /// Needs the navigator, because "first" is a question about where lines
+    /// are — which is the block's business, not the schema's. The schema knows
+    /// WHICH line; only the two together know whether it leads.
+    pub fn header_is_first_line(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        bp: &BlockPlace,
+    ) -> Option<bool> {
+        let schema = self.schemas.get(&(sheet_id, block_id))?;
+        let header = schema.header_line();
+        // Which axis holds the records is the schema's own kind, so callers do
+        // not get to guess it.
+        let is_row = matches!(schema, Schema::RowSchema(_));
+        let first = if is_row {
+            bp.rows.get(0).copied()
+        } else {
+            bp.cols.get(0).copied()
+        };
+        Some(header.is_some() && header == first)
+    }
+
     pub fn editability_for_block_cell(
         &self,
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<String> {
+        // A header cell holds a field NAME, and typing over it would not
+        // rename the field — it would leave a heading that disagrees with what
+        // the column means. So the header declares itself NOT editable, which
+        // is enforced: the editability rule becomes this cell's `UserEditable`
+        // shadow, and the host permission layer refuses an edit whose shadow
+        // reads false. (The field's WRITE POLICY is only a declaration the
+        // host may interpret; the per-record rule is the half that bites.)
+        //
+        // Not simply "no rule": no rule means editable, which is how the
+        // heading could be typed over in the first place.
+        if self.is_header_cell(sheet_id, cell) {
+            return Some("FALSE()".to_string());
+        }
         let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
         match schema {
             Schema::RowSchema(s) => s.editability_for_field_axis(cell.col).map(String::from),

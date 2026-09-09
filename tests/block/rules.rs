@@ -129,6 +129,7 @@ fn fresh_block_with_data(
                         .with_editability_formula(editability_formulas.get(1).cloned().flatten()),
                 ],
                 row: true,
+                header_idx: None,
             }),
             // Value cells last — so #PLACEHOLDER references the cell
             // that already exists with these literals.
@@ -544,6 +545,7 @@ fn test_validation_field_ref_unknown_field_errors() {
                         .with_validation_formula(Some(r#"#FIELD("nope")>0"#.into())),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ],
         undoable: true,
@@ -594,6 +596,7 @@ fn test_field_rule_coordinate_into_own_block_errors() {
                         .with_value_formula(Some(r#"=C1+#FIELD("amt")"#.into())),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ],
         undoable: true,
@@ -648,6 +651,7 @@ fn test_field_rule_coordinate_outside_block_is_fine() {
                         .with_value_formula(Some(r#"=#FIELD("amt")*(1-$A$21)"#.into())),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,

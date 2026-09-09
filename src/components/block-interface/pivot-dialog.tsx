@@ -60,6 +60,11 @@ export interface PivotDialogProps {
      * pointing at it keeps working.
      */
     initial?: PivotSpecChoice
+    /**
+     * Switch to the summary form — the other kind of analysis. Absent when
+     * editing: an existing pivot cannot become a summary row in place.
+     */
+    onSummary?: () => void
     onCancel: () => void
     onConfirm: (spec: PivotSpecChoice) => void
 }
@@ -100,6 +105,7 @@ export const PivotDialog = ({
     fields,
     keyIdx,
     initial,
+    onSummary,
     onCancel,
     onConfirm,
 }: PivotDialogProps) => {
@@ -593,6 +599,18 @@ export const PivotDialog = ({
                 </Stack>
             </DialogContent>
             <DialogActions>
+                {onSummary && !editing && (
+                    <Link
+                        component="button"
+                        type="button"
+                        underline="hover"
+                        variant="body2"
+                        sx={{mr: 'auto', ml: 1}}
+                        onClick={onSummary}
+                    >
+                        One row for the whole table instead…
+                    </Link>
+                )}
                 <Button onClick={onCancel}>Cancel</Button>
                 <Button variant="contained" disabled={!ready} onClick={confirm}>
                     {editing ? 'Apply' : 'Create'}

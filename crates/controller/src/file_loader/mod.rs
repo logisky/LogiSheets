@@ -819,6 +819,10 @@ fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvert
                 key_idx: 0,
                 fields,
                 row: true,
+                // A structured table adopted from a file keeps its own header
+                // handling: the loader reads `headerRowCount` into the block's
+                // geometry, so what arrives here is records only.
+                header_idx: None,
             }),
         ];
         controller.handle_action(EditAction::Payloads(PayloadsAction {

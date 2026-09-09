@@ -522,6 +522,18 @@ pub fn input_block_cell_template<C: FormulaExecCtx>(
         .map_err(|l| BasicError::SheetIdxExceed(l))?;
     let bcid = ctx.fetch_block_cell_id(&sheet, &block_id, block_row, block_col)?;
     let Some(tpl) = ctx.block_cell_template(sheet, &bcid) else {
+        // No declaration for this cell. In an ANALYSIS block that means the
+        // cell must hold nothing: every non-key cell of one is generated, so a
+        // field that stopped declaring an aggregate — or a pivot column the
+        // recipe no longer produces — has to lose the formula it was given.
+        // Without this, dropping a column from an analysis left the previous
+        // formula computing away under a heading that no longer claimed it.
+        //
+        // Only for analysis blocks. An ordinary block's cells can hold
+        // formulas a person wrote, and a re-bind must not touch those.
+        if ctx.block_is_analysis(sheet, block_id) {
+            return remove(executor, sheet, CellId::BlockCell(bcid), ctx);
+        }
         return Ok(executor);
     };
 

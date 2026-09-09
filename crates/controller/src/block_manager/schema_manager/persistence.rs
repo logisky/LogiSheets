@@ -124,6 +124,7 @@ pub fn schemas_to_xml(
                 block_id: *block_id,
                 name: s.name.clone(),
                 key: s.key as u32,
+                header: s.header,
                 fields: s
                     .fields
                     .iter()
@@ -134,6 +135,7 @@ pub fn schemas_to_xml(
                 block_id: *block_id,
                 name: s.name.clone(),
                 key: s.key as u32,
+                header: s.header,
                 fields: s
                     .fields
                     .iter()
@@ -177,6 +179,7 @@ pub fn load_schemas_for_sheet(
             fields: x.fields.into_iter().map(field_from_xml).collect(),
             name: resolved.clone(),
             key: x.key as RowId,
+            header: x.header,
         };
         manager.refs.insert(resolved, (sheet_id, block_id));
         manager
@@ -191,6 +194,7 @@ pub fn load_schemas_for_sheet(
             fields: x.fields.into_iter().map(field_from_xml).collect(),
             name: resolved.clone(),
             key: x.key as ColId,
+            header: x.header,
         };
         manager.refs.insert(resolved, (sheet_id, block_id));
         manager
@@ -243,6 +247,7 @@ mod tests {
             ],
             name: "materials".to_string(),
             key: 2,
+            header: None,
         }
     }
 
@@ -254,6 +259,7 @@ mod tests {
             )],
             name: "transposed".to_string(),
             key: 5,
+            header: None,
         }
     }
 

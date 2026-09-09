@@ -182,6 +182,7 @@ mod funcs {
                 key_idx: 0,
                 fields: vec![SchemaFieldSpec::new(String::from("v"), format!("r{id}"))],
                 row: true,
+                header_idx: None,
             })
         };
         // Phase 1: sellers's sheet before baking. A1/A2/A3 hold plain values;
@@ -361,6 +362,7 @@ mod funcs {
                         SchemaFieldSpec::new(String::from("field2"), String::from("render2")),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -408,6 +410,7 @@ mod funcs {
                         SchemaFieldSpec::new(String::from("field2"), String::from("render2")),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -507,6 +510,7 @@ mod funcs {
                         SchemaFieldSpec::new("age", "r-age"),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -639,6 +643,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec![SchemaFieldSpec::new("age", "r-age")],
                     row: true,
+                    header_idx: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -730,6 +735,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec![SchemaFieldSpec::new("age", "r-age")],
                     row: true,
+                    header_idx: None,
                 })
                 // Two formulas referencing the block BY NAME "people".
                 .add_payload(CellInput {
@@ -769,6 +775,7 @@ mod funcs {
                 key_idx: 0,
                 fields: vec![SchemaFieldSpec::new("age", "r-age")],
                 row: true,
+                header_idx: None,
             },
         )));
 
@@ -855,6 +862,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec![SchemaFieldSpec::new("v", "r-v")],
                     row: true,
+                    header_idx: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -933,6 +941,7 @@ mod funcs {
                     key_idx: 0,
                     fields: vec![SchemaFieldSpec::new("v", "r-v")],
                     row: true,
+                    header_idx: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -969,6 +978,7 @@ mod funcs {
                         SchemaFieldSpec::new(String::from("field2"), String::from("render2")),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -992,6 +1002,7 @@ mod funcs {
                     SchemaFieldSpec::new(String::from("field2"), String::from("render2")),
                 ],
                 row: true,
+                header_idx: None,
             },
         )));
 
@@ -1067,6 +1078,7 @@ mod funcs {
                         SchemaFieldSpec::new("v", "L1-v"),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 // L2 block at A3:B3 (one row, key "1").
                 .add_payload(CreateBlock {
@@ -1106,6 +1118,7 @@ mod funcs {
                         SchemaFieldSpec::new("v", "L2-v"),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 // PL block at A5:C6 (two rows, keys "R1"/"R2").
                 // Keys first (so #KEY substitutes at BindFormSchema).
@@ -1150,6 +1163,7 @@ mod funcs {
                         )),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 // Seed LEVEL = "1" for both PL rows AFTER bind, as the
                 // simulator does for ProductionLine.
@@ -1275,6 +1289,7 @@ mod funcs {
                         SchemaFieldSpec::new("value", "A-value"),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 .add_payload(BindFormSchema {
                     ref_name: "B".to_string(),
@@ -1287,6 +1302,7 @@ mod funcs {
                         SchemaFieldSpec::new("v", "B-v"),
                     ],
                     row: true,
+                    header_idx: None,
                 })
                 // Seed B's v column with literal numbers so A's SUM
                 // has something to add up.
@@ -1665,6 +1681,7 @@ fn test_block_is_saved_as_an_excel_table() {
                     SchemaFieldSpec::new("amount", "r1"),
                 ],
                 row: true,
+                header_idx: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -1767,6 +1784,7 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
                     SchemaFieldSpec::new("v", format!("{}-1", name)),
                 ],
                 row: true,
+                header_idx: None,
             }),
         ]
     };
@@ -1812,6 +1830,7 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
                 SchemaFieldSpec::new("value", "dup-1"),
             ],
             row: true,
+            header_idx: None,
         })],
         undoable: true,
         init: false,

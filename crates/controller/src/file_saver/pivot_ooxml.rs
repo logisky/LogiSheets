@@ -35,8 +35,8 @@ use xmlserde::xml_deserialize_from_str;
 
 use crate::block_manager::schema_manager::field_type::{AggFunc, PivotSpec};
 
-/// A pivot block's geometry: where the BLOCK sits, which is one row below the
-/// label row the pivot writes above itself.
+/// A pivot block's geometry. The block INCLUDES its header line, because the
+/// schema declares one — so the range Excel is told about is the block's own.
 pub struct PivotGeometry {
     pub start_row: usize,
     pub start_col: usize,
@@ -182,9 +182,11 @@ pub fn table_definition_xml(
     source_field_cnt: usize,
     e: &Expressible,
 ) -> String {
-    // The label row sits directly above the block, and the pivot table spans
-    // both: to Excel, the labels ARE the pivot's header row.
-    let first_row = geometry.start_row.saturating_sub(1);
+    // The header line is the block's own first row now, so the pivot table's
+    // range is exactly the block's. It used to reach one row higher, back when
+    // the labels were a stray row above it — which is the thing that did not
+    // travel when the block moved.
+    let first_row = geometry.start_row;
     let last_row = geometry.start_row + geometry.row_cnt.saturating_sub(1);
     let last_col = geometry.start_col + geometry.col_cnt.saturating_sub(1);
     let reference = format!(
@@ -440,9 +442,11 @@ mod tests {
     }
 
     #[test]
-    fn the_table_covers_the_label_row_as_well_as_the_block() {
-        // Excel's pivot owns its header row, and ours is the label row
-        // directly above the block — so the ref starts one row higher.
+    fn the_table_covers_exactly_the_block() {
+        // Excel's pivot owns its header row, and so does the block: the schema
+        // declares which line holds the names, so the header is INSIDE. The
+        // ref used to reach a row higher, back when the labels were a stray
+        // row above the block — the row that stayed behind on a move.
         let e = representable(&spec(AggFunc::Sum, Some("quarter")), &source(), &derived(3))
             .expect("expressible");
         let xml = table_definition_xml(
@@ -457,8 +461,8 @@ mod tests {
             4,
             &e,
         );
-        // Block rows 7..9 (1-based 8..10) plus the label row 7.
-        assert!(xml.contains("ref=\"A7:C10\""), "{xml}");
+        // The block owns rows 7..9, which is A8:C10 in A1 terms.
+        assert!(xml.contains("ref=\"A8:C10\""), "{xml}");
     }
 
     #[test]

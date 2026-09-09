@@ -406,16 +406,21 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 required: field.required,
                 unique: isUnique,
                 defaultValue: field.defaultValue,
-                // fields[0] is the key column: keys are row identifiers, not
-                // user data, so it is closed. Every other field the composer
-                // authors inherits the block's own rules — the composer's panel
-                // has no per-field permission control, and a craft that wants
-                // one declares it itself.
+                // Every field the composer authors inherits the block's own
+                // rules, the key column included.
                 //
-                // On the SCHEMA now rather than only in the host store, so a
-                // headless host sees it too.
-                writePolicy:
-                    field.id === fields[0]?.id ? 'ownerOnly' : 'inherit',
+                // The key used to be closed here, on the reasoning that keys
+                // are row identifiers rather than user data. That is true of a
+                // key the ENGINE writes — a pivot's row labels — and false of
+                // every table a person builds by hand, where the key column is
+                // the order number, the code, the name: exactly the data they
+                // came to type. Closing it left a new block with a column its
+                // author could not fill in.
+                //
+                // A craft or a host that wants a closed key declares it; the
+                // composer's panel has no per-field permission control, so it
+                // states the neutral thing.
+                writePolicy: 'inherit',
             }
         }
 

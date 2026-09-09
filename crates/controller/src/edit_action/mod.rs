@@ -1425,6 +1425,16 @@ pub struct BindFormSchema {
     /// The fields, in order along the schema's field axis.
     pub fields: Vec<SchemaFieldSpec>,
     pub row: bool,
+    /// Index along the RECORD axis of the line that holds field NAMES rather
+    /// than a record — row 0 for a table with a header row above its data.
+    ///
+    /// `None` (the default, and what every caller sent before this existed)
+    /// means the names live only in the schema, and every line of the block is
+    /// a record. Declaring one is what makes a header travel with the block:
+    /// it is part of the block rather than a stray row above it, and it is the
+    /// schema that says so, because which line is names is a matter of how the
+    /// block is READ.
+    pub header_idx: Option<usize>,
 }
 
 impl From<BindFormSchema> for EditPayload {
