@@ -118,7 +118,12 @@ describe('WorkbookOps.createPivot', () => {
         const types = committed.map((p) => p.type)
         expect(types).toEqual([
             'insertRows',
+            // The label row: three columns of it, outside the block.
+            'cellInput',
+            'cellInput',
+            'cellInput',
             'createBlock',
+            // Then the keys.
             'cellInput',
             'cellInput',
             'cellInput',
@@ -133,11 +138,34 @@ describe('WorkbookOps.createPivot', () => {
         )
     })
 
+    it('writes a label row above the block, outside it', async () => {
+        // The column names are the column dimension's own VALUES, so a sheet
+        // without them shows a grid of numbers that says nothing. They go
+        // above the block rather than in it: every row of a block is a record,
+        // so a header row inside would be a record keyed "region".
+        const {committed} = await create(FRESH)
+        const labels = committed
+            .filter((p) => p.type === 'cellInput' && p.value.row === 6)
+            .map((p) => [p.value.col, p.value.content])
+        expect(labels).toEqual([
+            [0, 'region'],
+            [1, 'Q1'],
+            [2, 'Q2'],
+        ])
+        // And the block starts BELOW it.
+        expect(committed.find((p) => p.type === 'createBlock')!.value).toMatchObject(
+            {masterRow: 7}
+        )
+    })
+
     it('creates the block at the size the plan says, with the recipe on it', async () => {
         const {committed} = await create(FRESH)
-        expect(committed[0].value).toMatchObject({start: 6, count: 3})
-        expect(committed[1].value).toMatchObject({
-            masterRow: 6,
+        // One row more than there are groups — the label row.
+        expect(committed[0].value).toMatchObject({start: 6, count: 4})
+        expect(
+            committed.find((p) => p.type === 'createBlock')!.value
+        ).toMatchObject({
+            masterRow: 7,
             rowCnt: 3,
             // key column + one per column-dimension value
             colCnt: 3,
@@ -148,11 +176,13 @@ describe('WorkbookOps.createPivot', () => {
 
     it('writes each group into the key column, in the plan order', async () => {
         const {committed} = await create(FRESH)
-        const keys = committed.filter((p) => p.type === 'cellInput')
+        const keys = committed.filter(
+            (p) => p.type === 'cellInput' && p.value.col === 0 && p.value.row !== 6
+        )
         expect(keys.map((p) => [p.value.row, p.value.content])).toEqual([
-            [6, 'East'],
-            [7, 'North'],
-            [8, 'South'],
+            [7, 'East'],
+            [8, 'North'],
+            [9, 'South'],
         ])
         expect(keys.every((p) => p.value.col === 0)).toBe(true)
     })
@@ -187,10 +217,11 @@ describe('WorkbookOps.createPivot', () => {
         expect(result.fields).toEqual(['amt'])
         // The key is ABSENT, not present-and-undefined: `colDim` is an
         // `Option` on the wire, which deserializes from a missing field.
+        const created = committed.find((p) => p.type === 'createBlock')!
         expect(
-            'colDim' in (committed[1].value.pivot as Record<string, unknown>)
+            'colDim' in (created.value.pivot as Record<string, unknown>)
         ).toBe(false)
-        expect(committed[1].value).toMatchObject({
+        expect(created.value).toMatchObject({
             colCnt: 2,
         })
     })
@@ -343,12 +374,23 @@ describe('WorkbookOps.refreshPivot', () => {
             isStale: true,
         })
         await ops.refreshPivot({...target, rowStart: 42, colStart: 3})
-        const keys = committed.filter((p) => p.type === 'cellInput')
+        const keys = committed.filter(
+            (p) => p.type === 'cellInput' && p.value.row !== 41
+        )
         expect(
             keys.map((p) => [p.value.row, p.value.col, p.value.content])
         ).toEqual([
             [42, 3, 'a'],
             [43, 3, 'b'],
+        ])
+        // And the labels went to the row directly above the block.
+        expect(
+            committed
+                .filter((p) => p.type === 'cellInput' && p.value.row === 41)
+                .map((p) => [p.value.col, p.value.content])
+        ).toEqual([
+            [3, 'region'],
+            [4, 'Q1'],
         ])
     })
 })
@@ -439,7 +481,9 @@ describe('WorkbookOps.createPivot — beyond a plain cross-tab', () => {
                 filters: [{field: 'quarter', criteria: 'Q1'}],
             },
         })
-        expect(committed[1].value).toMatchObject({
+        expect(
+            committed.find((p) => p.type === 'createBlock')!.value
+        ).toMatchObject({
             pivot: {order: 'custom', filters: [{field: 'quarter'}]},
         })
     })
@@ -761,7 +805,12 @@ describe('COUNTA', () => {
             measure: 'amt',
             func: 'COUNTA',
         })
-        expect((committed[1].value.pivot as {func: string}).func).toBe('COUNTA')
+        expect(
+            (
+                committed.find((p) => p.type === 'createBlock')!.value
+                    .pivot as {func: string}
+            ).func
+        ).toBe('COUNTA')
         expect(
             committed
                 .filter((p) => p.type === 'upsertFieldRenderInfo')

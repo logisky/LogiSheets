@@ -1121,6 +1121,50 @@ export class WorkbookOps {
     // ---- pivots -----------------------------------------------------------
 
     /**
+     * The label row a pivot carries directly above itself, as `cellInput`
+     * payloads.
+     *
+     * A pivot's column names are DATA — they are the column dimension's own
+     * values — but they live on the schema, which means the raw sheet shows a
+     * grid of numbers with nothing to say what the columns are. Everything
+     * that is not our own UI sees it that way: another tool, a person reading
+     * the file, and Excel, whose pivot tables require the labels to be in
+     * cells. So the pivot writes them there.
+     *
+     * The row sits OUTSIDE the block, immediately above it. Inside would break
+     * what a block is: every row of a block is a record addressed by its key,
+     * so a header row would become a record keyed "region" — captured by
+     * `#KEY`, counted by the key-uniqueness guard, and aggregated by anything
+     * reading the block.
+     *
+     * Rewritten in full whenever the column set can have changed, because a
+     * label left behind from a previous shape is worse than no label: it names
+     * a column that is now something else.
+     */
+    private pivotHeaderRow(opts: {
+        sheetIdx: number
+        row: number
+        colStart: number
+        fieldNames: readonly string[]
+        /** Columns the block had before, so a shrink clears what it left. */
+        previousColCnt?: number
+    }): Payload[] {
+        const width = Math.max(
+            opts.fieldNames.length,
+            opts.previousColCnt ?? 0
+        )
+        return Array.from({length: width}, (_, i) => ({
+            type: 'cellInput' as const,
+            value: {
+                sheetIdx: opts.sheetIdx,
+                row: opts.row,
+                col: opts.colStart + i,
+                content: opts.fieldNames[i] ?? '',
+            },
+        }))
+    }
+
+    /**
      * The number format each of a pivot's columns should carry, in the order
      * the columns are declared (`[key, ...value columns]`).
      *
@@ -1241,7 +1285,11 @@ export class WorkbookOps {
             ...(colDim ? plan.fields : [opts.valueColumn ?? measure]),
             ...extra.map((c) => c.name),
         ]
-        const row = source.rowStart + source.rowCnt
+        // The label row goes directly below the source; the block itself
+        // starts one row further down. See `pivotHeaderRow` for why the labels
+        // are not inside the block.
+        const headerRow = source.rowStart + source.rowCnt
+        const row = headerRow + 1
         // The key column is named after the row dimension: it holds that
         // dimension's values, and the name is what a reader sees.
         const fieldNames = [rowDim, ...valueFields]
@@ -1249,15 +1297,22 @@ export class WorkbookOps {
         await this.apply(
             [
                 // Room first, so the pivot does not land on whatever sits
-                // below the table.
+                // below the table. One row more than there are groups: the
+                // label row.
                 {
                     type: 'insertRows',
                     value: {
                         sheetIdx: source.sheetIdx,
-                        start: row,
-                        count: plan.keys.length,
+                        start: headerRow,
+                        count: plan.keys.length + 1,
                     },
                 },
+                ...this.pivotHeaderRow({
+                    sheetIdx: source.sheetIdx,
+                    row: headerRow,
+                    colStart: source.colStart,
+                    fieldNames,
+                }),
                 {
                     type: 'createBlock',
                     value: {
@@ -1439,6 +1494,16 @@ export class WorkbookOps {
             })
         }
         payloads.push(
+            // The labels, in full: a refresh can add or drop columns, and a
+            // label left over from the old shape names a column that is now
+            // something else.
+            ...this.pivotHeaderRow({
+                sheetIdx,
+                row: rowStart - 1,
+                colStart,
+                fieldNames,
+                previousColCnt: plan.currentFields.length + 1,
+            }),
             ...plan.keys.map((key, i) => ({
                 type: 'cellInput' as const,
                 value: {
@@ -1643,6 +1708,14 @@ export class WorkbookOps {
             })
         }
         payloads.push(
+            // The labels, in full — an edit can change the whole column set.
+            ...this.pivotHeaderRow({
+                sheetIdx,
+                row: opts.rowStart - 1,
+                colStart: opts.colStart,
+                fieldNames,
+                previousColCnt: opts.currentColCnt,
+            }),
             // The new recipe, BEFORE the bind that regenerates from it.
             {
                 type: 'setBlockAnalyzes',

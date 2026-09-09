@@ -199,15 +199,18 @@ describe('WorkbookOps pivots against the real engine', () => {
         expect(made.keys).toEqual(['East', 'North', 'South'])
         expect(made.fields).toEqual(['Q1', 'Q2'])
 
-        // Placed directly below the source, sorted, and computing.
-        expect(str(bookId, 6, 0)).toBe('East')
-        expect(num(bookId, 6, 1)).toBe(10) // East Q1
-        expect(num(bookId, 6, 2)).toBe(20) // East Q2
-        expect(str(bookId, 7, 0)).toBe('North')
-        expect(num(bookId, 7, 1)).toBe(7)
-        expect(num(bookId, 7, 2)).toBe(0) // no Q2 records
-        expect(str(bookId, 8, 0)).toBe('South')
-        expect(num(bookId, 8, 1)).toBe(7) // 3 + 4
+        // Row 6 is the label row the pivot writes above itself; the records
+        // start at 7. Sorted, and computing.
+        expect(str(bookId, 6, 0)).toBe('region')
+        expect(str(bookId, 6, 1)).toBe('Q1')
+        expect(str(bookId, 7, 0)).toBe('East')
+        expect(num(bookId, 7, 1)).toBe(10) // East Q1
+        expect(num(bookId, 7, 2)).toBe(20) // East Q2
+        expect(str(bookId, 8, 0)).toBe('North')
+        expect(num(bookId, 8, 1)).toBe(7)
+        expect(num(bookId, 8, 2)).toBe(0) // no Q2 records
+        expect(str(bookId, 9, 0)).toBe('South')
+        expect(num(bookId, 9, 1)).toBe(7) // 3 + 4
 
         // ONE undo removes the whole thing — the property that made
         // `pivotPlanFor` worth adding.
@@ -221,9 +224,9 @@ describe('WorkbookOps pivots against the real engine', () => {
     it('creates a grouped pivot with one value column', async () => {
         const {made} = await create(null)
         expect(made.fields).toEqual(['amt'])
-        expect(num(bookId, 6, 1)).toBe(30) // East = 10 + 20
-        expect(num(bookId, 7, 1)).toBe(7) // North
-        expect(num(bookId, 8, 1)).toBe(12) // South = 3 + 4 + 5
+        expect(num(bookId, 7, 1)).toBe(30) // East = 10 + 20
+        expect(num(bookId, 8, 1)).toBe(7) // North
+        expect(num(bookId, 9, 1)).toBe(12) // South = 3 + 4 + 5
     })
 
     it('refreshes a pivot that has fallen behind, and the new group computes', async () => {
@@ -236,18 +239,18 @@ describe('WorkbookOps pivots against the real engine', () => {
             refName: 'sales_pivot',
             keyField: 'region',
             // The source grew by a row, so the pivot moved down with it.
-            rowStart: 7,
+            rowStart: 8,
             colStart: 0,
         })
         expect(changed).not.toBeNull()
         expect(changed!.addedKeys).toEqual(['Northwest'])
 
         // East / North / Northwest / South, sorted, all computing.
-        expect(num(bookId, 7, 1)).toBe(10)
-        expect(num(bookId, 8, 1)).toBe(7)
-        expect(str(bookId, 9, 0)).toBe('Northwest')
-        expect(num(bookId, 9, 1)).toBe(99)
-        expect(num(bookId, 10, 1)).toBe(7)
+        expect(num(bookId, 8, 1)).toBe(10)
+        expect(num(bookId, 9, 1)).toBe(7)
+        expect(str(bookId, 10, 0)).toBe('Northwest')
+        expect(num(bookId, 10, 1)).toBe(99)
+        expect(num(bookId, 11, 1)).toBe(7)
     })
 
     it('adds a column when a new value of the column dimension appears', async () => {
@@ -259,12 +262,14 @@ describe('WorkbookOps pivots against the real engine', () => {
             blockId: pivotId,
             refName: 'sales_pivot',
             keyField: 'region',
-            rowStart: 7,
+            rowStart: 8,
             colStart: 0,
         })
         expect(changed!.addedFields).toEqual(['Q3'])
-        expect(num(bookId, 7, 3)).toBe(55) // East Q3
-        expect(num(bookId, 8, 3)).toBe(0) // North Q3
+        expect(num(bookId, 8, 3)).toBe(55) // East Q3
+        expect(num(bookId, 9, 3)).toBe(0) // North Q3
+        // The label row gained the new column too.
+        expect(str(bookId, 7, 3)).toBe('Q3')
     })
 
     it('drops a group the source no longer has', async () => {
@@ -299,10 +304,10 @@ describe('WorkbookOps pivots against the real engine', () => {
             blockId: pivotId,
             refName: 'sales_pivot',
             keyField: 'region',
-            // Still 6. `deleteRowsInBlock` shrinks the SOURCE but does not
+            // Still 7. `deleteRowsInBlock` shrinks the SOURCE but does not
             // pull the blocks below it up — only a sheet-level delete does
             // that — so the pivot has not moved.
-            rowStart: 6,
+            rowStart: 7,
             colStart: 0,
         })
         expect(changed!.removedKeys).toEqual(['North'])
@@ -320,15 +325,15 @@ describe('WorkbookOps pivots against the real engine', () => {
             'Q1',
             'Q2',
         ])
-        expect(str(bookId, 6, 0)).toBe('East')
-        expect(str(bookId, 7, 0)).toBe('South')
+        expect(str(bookId, 7, 0)).toBe('East')
+        expect(str(bookId, 8, 0)).toBe('South')
         // And the surviving rows COMPUTE. Keys alone would not have caught it:
         // South slides up into the row North held, so only a VALUE says
         // whether the row was re-aimed or merely relabelled. Q2 is the column
         // that separates them — South is 5 where North was 0.
-        expect(num(bookId, 6, 1)).toBe(10)
-        expect(num(bookId, 7, 1)).toBe(7)
-        expect(num(bookId, 7, 2)).toBe(5)
+        expect(num(bookId, 7, 1)).toBe(10)
+        expect(num(bookId, 8, 1)).toBe(7)
+        expect(num(bookId, 8, 2)).toBe(5)
     })
 
     it('reports doing nothing when the pivot is already current', async () => {
@@ -338,12 +343,12 @@ describe('WorkbookOps pivots against the real engine', () => {
             blockId: pivotId,
             refName: 'sales_pivot',
             keyField: 'region',
-            rowStart: 6,
+            rowStart: 7,
             colStart: 0,
         })
         expect(again).toBeNull()
         // And nothing moved.
-        expect(num(bookId, 6, 1)).toBe(10)
+        expect(num(bookId, 7, 1)).toBe(10)
     })
 })
 
@@ -384,9 +389,9 @@ describe('a pivot beyond a plain cross-tab, against the real engine', () => {
             extraColumns: [{name: 'Total', colValue: null}],
         })
         // East / North / South, columns Q1, Q2, Total.
-        expect(num(bookId, 6, 3)).toBe(30) // East 10 + 20
-        expect(num(bookId, 7, 3)).toBe(7) // North, Q1 only
-        expect(num(bookId, 8, 3)).toBe(12) // South 3 + 4 + 5
+        expect(num(bookId, 7, 3)).toBe(30) // East 10 + 20
+        expect(num(bookId, 8, 3)).toBe(7) // North, Q1 only
+        expect(num(bookId, 9, 3)).toBe(12) // South 3 + 4 + 5
 
         // A new group arrives; the refresh must add its row AND leave the
         // total column meaning what it meant.
@@ -410,8 +415,8 @@ describe('a pivot beyond a plain cross-tab, against the real engine', () => {
         expect(changed!.addedKeys).toEqual(['Northwest'])
         // If the total column had been rewritten as a derived one it would
         // filter on the literal "Total" and read 0 for every row.
-        expect(num(bookId, 7, 3)).toBe(30) // East, moved down a row
-        expect(num(bookId, 9, 3)).toBe(99) // Northwest, the new group
+        expect(num(bookId, 8, 3)).toBe(30) // East, moved down a row
+        expect(num(bookId, 10, 3)).toBe(99) // Northwest, the new group
     })
 
     it('shows a second measure beside the first', async () => {
@@ -432,9 +437,9 @@ describe('a pivot beyond a plain cross-tab, against the real engine', () => {
                 {name: 'Orders', colValue: null, func: 'COUNT', measure: 'amt'},
             ],
         })
-        expect(num(bookId, 6, 1)).toBe(10) // East Q1 amount
-        expect(num(bookId, 6, 3)).toBe(2) // East has two records
-        expect(num(bookId, 8, 3)).toBe(3) // South has three
+        expect(num(bookId, 7, 1)).toBe(10) // East Q1 amount
+        expect(num(bookId, 7, 3)).toBe(2) // East has two records
+        expect(num(bookId, 9, 3)).toBe(3) // South has three
     })
 
     it('counts only the records a filter admits, in the rows and the numbers', async () => {
@@ -455,8 +460,8 @@ describe('a pivot beyond a plain cross-tab, against the real engine', () => {
         // Only East and South have a Q2 record; North gets no row at all rather
         // than a row reading 0 as if that were its Q2 total.
         expect(made.keys).toEqual(['East', 'South'])
-        expect(num(bookId, 6, 1)).toBe(20) // East Q2
-        expect(num(bookId, 7, 1)).toBe(5) // South Q2
+        expect(num(bookId, 7, 1)).toBe(20) // East Q2
+        expect(num(bookId, 8, 1)).toBe(5) // South Q2
     })
 
     it('puts the rows in a declared order, without losing the ones not declared', async () => {
@@ -477,10 +482,10 @@ describe('a pivot beyond a plain cross-tab, against the real engine', () => {
             orderValues: ['North', 'East'],
         })
         expect(made.keys).toEqual(['North', 'East', 'South'])
-        expect(str(bookId, 6, 0)).toBe('North')
-        expect(num(bookId, 6, 1)).toBe(7)
-        expect(str(bookId, 8, 0)).toBe('South')
-        expect(num(bookId, 8, 1)).toBe(12)
+        expect(str(bookId, 7, 0)).toBe('North')
+        expect(num(bookId, 7, 1)).toBe(7)
+        expect(str(bookId, 9, 0)).toBe('South')
+        expect(num(bookId, 9, 1)).toBe(12)
     })
 })
 
@@ -513,7 +518,7 @@ describe('a source field rename, through the real wasm', () => {
             measure: 'amt',
             func: 'SUM',
         })
-        expect(num(bookId, 6, 1)).toBe(10)
+        expect(num(bookId, 7, 1)).toBe(10)
 
         // Rename `region` to `area`, keeping every render id — which is what
         // makes it a rename rather than a drop plus an add.
@@ -552,8 +557,8 @@ describe('a source field rename, through the real wasm', () => {
         )
         expect(eff.status.type, eff.errorMessage).toBe('ok')
 
-        expect(num(bookId, 6, 1)).toBe(10) // still East Q1
-        expect(num(bookId, 8, 1)).toBe(7) // still South Q1 = 3 + 4
+        expect(num(bookId, 7, 1)).toBe(10) // still East Q1
+        expect(num(bookId, 9, 1)).toBe(7) // still South Q1 = 3 + 4
 
         const blocks = rpc('getAllBlocks', {}, bookId) as Array<{
             blockId: number
@@ -661,7 +666,7 @@ describe('a pivot inherits its source number formats, against the real engine', 
         })
 
         // Row 6 is the pivot's first record: East, Q1 = 10.
-        expect(num(bookId, 6, 1)).toBe(10)
+        expect(num(bookId, 7, 1)).toBe(10)
         expect(fmtOf(pivotId, 'sales_pivot__p1')).toBe(MONEY)
         expect(fmtOf(pivotId, 'sales_pivot__p2')).toBe(MONEY)
         // The key column holds region names, which have no format of their own.
@@ -740,8 +745,8 @@ describe('editing a pivot recipe, against the real engine', () => {
             func: 'SUM',
         })
         // East / North / South by row, Q1 / Q2 by column.
-        expect(str(bookId, 6, 0)).toBe('East')
-        expect(num(bookId, 6, 1)).toBe(10)
+        expect(str(bookId, 7, 0)).toBe('East')
+        expect(num(bookId, 7, 1)).toBe(10)
     })
 
     const edit = (recipe: Record<string, unknown>) =>
@@ -750,7 +755,7 @@ describe('editing a pivot recipe, against the real engine', () => {
             blockId: pivotId,
             refName: 'p',
             source: source(),
-            rowStart: 6,
+            rowStart: 7,
             colStart: 0,
             currentRowCnt: 3,
             currentColCnt: 3,
@@ -764,32 +769,32 @@ describe('editing a pivot recipe, against the real engine', () => {
     it('changes the function, and every cell recomputes', async () => {
         await edit({func: 'COUNT'})
         // East has one Q1 record and one Q2 record; South has two in Q1.
-        expect(num(bookId, 6, 1)).toBe(1)
-        expect(num(bookId, 8, 1)).toBe(2)
+        expect(num(bookId, 7, 1)).toBe(1)
+        expect(num(bookId, 9, 1)).toBe(2)
     })
 
     it('re-aims the rows at a different dimension, keys and all', async () => {
         const made = await edit({rowDim: 'quarter', colDim: undefined})
         expect(made.keys).toEqual(['Q1', 'Q2'])
-        expect(str(bookId, 6, 0)).toBe('Q1')
+        expect(str(bookId, 7, 0)).toBe('Q1')
         // Q1 = 10 + 3 + 4 + 7, Q2 = 20 + 5.
-        expect(num(bookId, 6, 1)).toBe(24)
-        expect(num(bookId, 7, 1)).toBe(25)
+        expect(num(bookId, 7, 1)).toBe(24)
+        expect(num(bookId, 8, 1)).toBe(25)
     })
 
     it('narrows to a filtered set of records, and the numbers follow', async () => {
         await edit({filters: [{field: 'region', criteria: 'South'}]})
         // Only South records count now, so it is the only row with a number.
-        expect(str(bookId, 6, 0)).toBe('South')
-        expect(num(bookId, 6, 1)).toBe(7)
+        expect(str(bookId, 7, 0)).toBe('South')
+        expect(num(bookId, 7, 1)).toBe(7)
     })
 
     it('grows the block when the new recipe has more groups', async () => {
         // region has 3 values, id has 6 — one row per record.
         const made = await edit({rowDim: 'id', colDim: undefined})
         expect(made.keys.length).toBe(6)
-        expect(str(bookId, 11, 0)).toBe('o5')
-        expect(num(bookId, 11, 1)).toBe(7)
+        expect(str(bookId, 12, 0)).toBe('o5')
+        expect(num(bookId, 12, 1)).toBe(7)
     })
 
     it('fixes a pivot whose recipe stopped resolving — the reason to edit at all', async () => {
@@ -833,15 +838,15 @@ describe('editing a pivot recipe, against the real engine', () => {
         expect(eff.status.type, eff.errorMessage).toBe('ok')
 
         await edit({measure: 'value'})
-        expect(num(bookId, 6, 1)).toBe(10)
+        expect(num(bookId, 7, 1)).toBe(10)
     })
 
     it('is one undo, whatever it changed', async () => {
         await edit({rowDim: 'quarter', colDim: undefined})
-        expect(str(bookId, 6, 0)).toBe('Q1')
+        expect(str(bookId, 7, 0)).toBe('Q1')
         expect(rpc('undo', undefined, bookId)).toBe(true)
-        expect(str(bookId, 6, 0)).toBe('East')
-        expect(num(bookId, 6, 1)).toBe(10)
+        expect(str(bookId, 7, 0)).toBe('East')
+        expect(num(bookId, 7, 1)).toBe(10)
     })
 })
 
@@ -956,11 +961,13 @@ describe('COUNTA against the real engine', () => {
             ],
         })
 
-        // Row 4 is the pivot's first record: East, then South.
-        expect(str(bookId, 4, 0)).toBe('East')
-        expect(num(bookId, 4, 1)).toBe(1) // one amount, one gap
-        expect(num(bookId, 4, 2)).toBe(2) // but two records
-        expect(num(bookId, 5, 1)).toBe(2) // "n/a" is present, if not numeric
-        expect(num(bookId, 5, 2)).toBe(2)
+        // The 4-record source ends at row 3, so row 4 is the label row and
+        // the pivot's first record is row 5.
+        expect(str(bookId, 4, 1)).toBe('filled')
+        expect(str(bookId, 5, 0)).toBe('East')
+        expect(num(bookId, 5, 1)).toBe(1) // one amount, one gap
+        expect(num(bookId, 5, 2)).toBe(2) // but two records
+        expect(num(bookId, 6, 1)).toBe(2) // "n/a" is present, if not numeric
+        expect(num(bookId, 6, 2)).toBe(2)
     })
 })

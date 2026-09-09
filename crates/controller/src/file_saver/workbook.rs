@@ -76,6 +76,17 @@ pub fn save_workbook<S: SaverTrait>(
     // taken-set live out here.
     let mut table_names: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut table_id_counter: u32 = 0;
+    // Pivot tables generated from our own pivot blocks, accumulated across
+    // sheets because the CACHES they point at live on the workbook. Cache ids
+    // continue past any that arrived with the file, whose `<pivotCache>`
+    // entries keep the ids they came in with.
+    let mut generated_caches: Vec<(u32, logisheets_workbook::workbook::PivotCache)> = vec![];
+    let mut next_cache_id: u32 = settings
+        .preserved_workbook
+        .pivot_caches
+        .as_ref()
+        .and_then(|pcs| pcs.pivot_caches.iter().map(|pc| pc.cache_id).max())
+        .map_or(1, |m| m + 1);
 
     // In sheet ORDER, not hash order. `get_all_ids` walks a hash map, so which
     // sheet was handed `rId1` changed from one save to the next — the file stayed
@@ -222,6 +233,91 @@ pub fn save_workbook<S: SaverTrait>(
                             table: block_to_table(table_id_counter, &display_name, &a1, &fields),
                         });
                 }
+                // Now the pivot tables. A pivot block already has a table
+                // (synthesised just above) and so does its source; this adds
+                // the pivot DECLARATION on top, which is what makes Excel show
+                // a pivot instead of a grid of numbers whose formulas it
+                // cannot evaluate. A block whose recipe Excel cannot express
+                // faithfully simply gets none — see `pivot_ooxml`.
+                let mut used_pivot_rids: std::collections::HashSet<String> = worksheet
+                    .pivot_tables
+                    .iter()
+                    .map(|t| t.rel_id.clone())
+                    .collect();
+                for range in block_ranges.iter() {
+                    let geometry = super::pivot_ooxml::PivotGeometry {
+                        start_row: range.start_row,
+                        start_col: range.start_col,
+                        row_cnt: range.row_cnt,
+                        col_cnt: range.col_cnt,
+                    };
+                    let Some((cache, table)) = super::pivot_ooxml::generate_for_block(
+                        sheet_id,
+                        range.block_id,
+                        &geometry,
+                        navigator,
+                        block_schema_manager,
+                        next_cache_id,
+                    ) else {
+                        continue;
+                    };
+                    let mut n = 1;
+                    let table_rid = loop {
+                        let candidate = format!("rIdPivot{}", n);
+                        if used_pivot_rids.insert(candidate.clone()) {
+                            break candidate;
+                        }
+                        n += 1;
+                    };
+                    generated_caches.push((
+                        next_cache_id,
+                        logisheets_workbook::workbook::PivotCache {
+                            rel_id: format!("rIdPivotCache{}", next_cache_id),
+                            definition: cache,
+                            // No records part: the cache refreshes from the
+                            // source table when Excel opens the file.
+                            records: None,
+                        },
+                    ));
+                    worksheet
+                        .pivot_tables
+                        .push(logisheets_workbook::workbook::PivotTablePart {
+                            rel_id: table_rid,
+                            definition: table,
+                            cache_rel_id: "rId1".to_string(),
+                        });
+                    next_cache_id += 1;
+
+                    // A native pivot table OWNS its output range: Excel's own
+                    // files hold values there and no formulas. Ours would hold
+                    // `SUMIFS(BLOCKREFSB(..))`, which is both a contradiction
+                    // and unevaluable there — so the cells go out as the
+                    // values they last computed. Nothing is lost on our side:
+                    // a pivot's cells are GENERATED, and the loader
+                    // re-materializes every one of them from the recipe
+                    // (`materialize_loaded_schema_rules`), which is the same
+                    // reason editing a pivot cell has never been meaningful.
+                    let last_row = range.start_row + range.row_cnt;
+                    let last_col = range.start_col + range.col_cnt;
+                    for row in worksheet.worksheet_part.sheet_data.rows.iter_mut() {
+                        for cell in row.cells.iter_mut() {
+                            let Some(r) = cell.r.as_deref() else {
+                                continue;
+                            };
+                            let Some((ri, ci)) = crate::sqref::a1_to_row_col(r) else {
+                                continue;
+                            };
+                            if ri >= range.start_row
+                                && ri < last_row
+                                && ci >= range.start_col
+                                && ci < last_col
+                            {
+                                cell.f = None;
+                            }
+                        }
+                    }
+                }
+
                 // The sheet's `<tableParts>` has to list every one of them, the
                 // preserved and the synthesised alike, or the parts are orphaned.
                 if worksheet.tables.is_empty() {
@@ -532,10 +628,30 @@ pub fn save_workbook<S: SaverTrait>(
         None
     };
     let persons = save_persons(attachment_manager);
+    // The workbook's `<pivotCaches>` has to name every cache, preserved and
+    // generated alike: the writer maps a table's `cacheId` to a cache part
+    // THROUGH this list, so a cache missing from it is a cache no pivot table
+    // can reach.
+    let mut all_caches = settings.pivot_caches.clone();
+    let mut cache_entries: Vec<logisheets_workbook::prelude::CtPivotCache> = settings
+        .preserved_workbook
+        .pivot_caches
+        .as_ref()
+        .map(|pcs| pcs.pivot_caches.clone())
+        .unwrap_or_default();
+    for (cache_id, cache) in generated_caches.into_iter() {
+        cache_entries.push(logisheets_workbook::prelude::CtPivotCache {
+            // The same id the generated pivot table names in `cacheId`.
+            cache_id,
+            id: cache.rel_id.clone(),
+        });
+        all_caches.push(cache);
+    }
+
     let workbook = Wb {
         unknown_parts: settings.unknown_package_parts.clone(),
         xl: Xl {
-            workbook_part: get_workbook(ct_sheets, ct_references, settings),
+            workbook_part: get_workbook(ct_sheets, ct_references, settings, cache_entries),
             styles: (style_id, styles),
             sst,
             worksheets,
@@ -543,8 +659,9 @@ pub fn save_workbook<S: SaverTrait>(
             theme,
             persons,
             medias,
-            // The engine does not yet model pivot caches; none emitted on save.
-            pivot_caches: settings.pivot_caches.clone(),
+            // Preserved caches plus the ones generated from our own pivot
+            // blocks.
+            pivot_caches: all_caches,
             unknown_parts: settings.unknown_workbook_parts.clone(),
         },
         // As they arrived, not `default()`: overwriting a file should not strip
@@ -585,6 +702,7 @@ fn get_workbook(
     ct_sheets: CtSheets,
     ext_references: Vec<CtExternalReference>,
     settings: &Settings,
+    pivot_cache_entries: Vec<logisheets_workbook::prelude::CtPivotCache>,
 ) -> WorkbookPart {
     let external_references = if ext_references.is_empty() {
         None
@@ -608,7 +726,13 @@ fn get_workbook(
         calc_pr: None,
         ole_size: kept.ole_size.clone(),
         custom_workbook_views: kept.custom_workbook_views.clone(),
-        pivot_caches: kept.pivot_caches.clone(),
+        pivot_caches: if pivot_cache_entries.is_empty() {
+            None
+        } else {
+            Some(logisheets_workbook::prelude::CtPivotCaches {
+                pivot_caches: pivot_cache_entries,
+            })
+        },
         smart_tag_pr: kept.smart_tag_pr.clone(),
         smart_tag_types: kept.smart_tag_types.clone(),
         web_publishing: kept.web_publishing.clone(),
@@ -652,7 +776,7 @@ fn conditional_formatting_manager_to_xml(
 /// and never something that could be read as a cell reference. Agent-chosen ref
 /// names are none of those things by construction, so they are transliterated
 /// rather than rejected.
-fn excel_table_name(ref_name: &str) -> String {
+pub(super) fn excel_table_name(ref_name: &str) -> String {
     let mut out = String::with_capacity(ref_name.len());
     for ch in ref_name.chars() {
         if ch.is_alphanumeric() || ch == '_' {

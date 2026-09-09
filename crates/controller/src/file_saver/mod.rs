@@ -24,6 +24,7 @@ type Result<T> = std::result::Result<T, BasicError>;
 
 mod error;
 mod external_links;
+mod pivot_ooxml;
 mod sst;
 mod styles;
 mod utils;

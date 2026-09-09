@@ -186,7 +186,12 @@ describe('build__create_pivot', () => {
         // One transaction: the shape was known before anything was created.
         expect(committed.map((p) => p.type)).toEqual([
             'insertRows',
+            // The label row, outside the block, above it.
+            'cellInput',
+            'cellInput',
+            'cellInput',
             'createBlock',
+            // Then one key per group.
             'cellInput',
             'cellInput',
             'bindFormSchema',
@@ -539,7 +544,9 @@ describe('build__create_pivot — beyond a plain cross-tab', () => {
             },
             ctxFor(client)
         )
-        expect(committed[1].value).toMatchObject({
+        expect(
+            committed.find((p) => p.type === 'createBlock')!.value
+        ).toMatchObject({
             pivot: {
                 order: 'custom',
                 orderValues: ['North', 'East'],

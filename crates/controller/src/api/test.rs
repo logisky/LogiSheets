@@ -10255,6 +10255,198 @@ fn a_filter_naming_a_field_the_source_lacks_is_an_error() {
 }
 
 #[test]
+fn a_pivots_inherited_number_formats_survive_a_round_trip() {
+    // The formats are the newest part of a pivot and the easiest to lose,
+    // because they do not live on the recipe or the schema — they hang off the
+    // fields' RENDER ids. A pivot that reopens as bare numbers beside a
+    // currency source is the kind of wrongness a reader blames on the data.
+    use crate::edit_action::UpsertFieldRenderInfo;
+    let money = "\"$\"#,##0.00";
+    let (mut wb, _src, pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Total", "p2").with_pivot_total(),
+        ],
+        &["East", "South"],
+    );
+    // What every host sends after creating a pivot: the measure's format onto
+    // each value column, and nothing onto the key.
+    let effect = apply(
+        &mut wb,
+        vec![
+            EditPayload::UpsertFieldRenderInfo(UpsertFieldRenderInfo {
+                render_id: "p1".to_string(),
+                diy_render: false,
+                style_update: crate::edit_action::StyleUpdateType {
+                    set_num_fmt: Some(money.to_string()),
+                    ..Default::default()
+                },
+            }),
+            EditPayload::UpsertFieldRenderInfo(UpsertFieldRenderInfo {
+                render_id: "p2".to_string(),
+                diy_render: false,
+                style_update: crate::edit_action::StyleUpdateType {
+                    set_num_fmt: Some(money.to_string()),
+                    ..Default::default()
+                },
+            }),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let bytes = wb.save().expect("save");
+    let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
+    let ws = restored.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+
+    let fmt_of = |render_id: &str| {
+        p.field_renders
+            .iter()
+            .find(|r| r.render_id == render_id)
+            .and_then(|r| r.style.as_ref())
+            .map(|s| s.formatter.clone())
+            .unwrap_or_default()
+    };
+    assert_eq!(fmt_of("p1"), money, "the derived column");
+    assert_eq!(fmt_of("p2"), money, "and the declared total");
+    // The values are still there and still right, which is the other half of
+    // "nothing was lost": a format on an empty cell is no use.
+    assert_eq!(cell_num(&restored, 10, 1), Some(10.0), "East Q1");
+    assert_eq!(cell_num(&restored, 11, 1), Some(7.0), "South Q1");
+}
+
+/// The OOXML pivot parts the save generates, or `None` when none were.
+fn saved_pivot_parts(
+    wb: &Workbook,
+) -> Option<(
+    logisheets_workbook::workbook::PivotCache,
+    logisheets_workbook::workbook::PivotTablePart,
+)> {
+    let saved = crate::file_saver::save_file(&wb.controller, false).expect("save");
+    let cache = saved.xl.pivot_caches.first()?.clone();
+    let table = saved
+        .xl
+        .worksheets
+        .values()
+        .flat_map(|w| w.pivot_tables.iter())
+        .next()?
+        .clone();
+    Some((cache, table))
+}
+
+#[test]
+fn a_plain_pivot_is_also_written_as_a_real_ooxml_pivot_table() {
+    // Our pivot's cells are `SUMIFS(BLOCKREFSB(..))`, and `BLOCKREFSB` is
+    // ours: Excel shows the cached numbers and then `#NAME?` the moment it
+    // recalculates. Declaring the pivot in Excel's own vocabulary is what
+    // makes the file mean the same thing in both places.
+    let (wb, _src, _pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Q2", "p2"),
+        ],
+        &["East", "South"],
+    );
+    let (cache, table) = saved_pivot_parts(&wb).expect("a pivot part was generated");
+
+    // The cache names the source's TABLE — which the same save emits from the
+    // source block — instead of copying its rows.
+    assert_eq!(
+        cache
+            .definition
+            .cache_source
+            .worksheet_source
+            .as_ref()
+            .unwrap()
+            .name
+            .as_deref(),
+        Some("sales")
+    );
+    assert!(cache.definition.refresh_on_load, "Excel builds the records");
+    assert!(cache.records.is_none(), "so we ship none");
+
+    // Axes point at the SOURCE's field indices: id, region, quarter, amt.
+    assert_eq!(table.definition.row_fields.as_ref().unwrap().field[0].x, 1);
+    assert_eq!(table.definition.col_fields.as_ref().unwrap().field[0].x, 2);
+    assert_eq!(
+        table.definition.data_fields.as_ref().unwrap().data_field[0].fld,
+        3
+    );
+    // The label row plus the block's two rows: the pivot block starts at row
+    // 10 (0-based), so the labels are on row 9 — A10:C12 in A1 terms.
+    assert_eq!(table.definition.location.reference, "A10:C12");
+}
+
+#[test]
+fn a_pivot_excel_cannot_express_gets_no_pivot_part() {
+    // A filter is the clearest case: ours is a condition evaluated per record,
+    // Excel's selects items from a list. A pivot table Excel would render with
+    // different numbers than the sheet it sits in is worse than none, so we
+    // emit none — the block is still saved, as our own values and recipe.
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "quarter".into(),
+            criteria: "Q1".into(),
+        }]),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, _pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South"],
+    );
+    assert!(
+        saved_pivot_parts(&wb).is_none(),
+        "a filtered pivot is not expressible as an OOXML pivot table"
+    );
+}
+
+#[test]
+fn a_generated_pivot_part_leaves_no_formulas_in_its_own_range() {
+    // A native pivot table OWNS its range: Excel's files hold values there and
+    // no formulas, and ours would hold a formula Excel cannot evaluate. So the
+    // cells go out as values — which loses nothing, because a pivot's cells
+    // are generated and the LOADER re-materializes every one of them.
+    let (wb, _src, _pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South"],
+    );
+    let saved = crate::file_saver::save_file(&wb.controller, false).expect("save");
+    let ws = saved.xl.worksheets.values().next().unwrap();
+    for row in ws.worksheet_part.sheet_data.rows.iter() {
+        for cell in row.cells.iter() {
+            let Some(r) = cell.r.as_deref() else { continue };
+            let Some((ri, ci)) = crate::sqref::a1_to_row_col(r) else {
+                continue;
+            };
+            // The pivot block is rows 10..11, columns 0..1.
+            if (10..12).contains(&ri) && ci < 2 {
+                assert!(
+                    cell.f.is_none(),
+                    "{r} still carries a formula inside the pivot's range"
+                );
+            }
+        }
+    }
+    // And the numbers are there, so Excel has something to show before it
+    // refreshes the cache.
+    let has_values = ws.worksheet_part.sheet_data.rows.iter().any(|row| {
+        row.cells
+            .iter()
+            .any(|c| c.r.as_deref() == Some("B11") && c.v.is_some())
+    });
+    assert!(has_values, "the computed values are still written");
+}
+
+#[test]
 fn everything_in_section_nine_survives_a_real_xlsx_round_trip() {
     // Three lists and a per-field override, all of which have to persist or
     // the pivot silently reverts to a plain cross-tab on reopen.

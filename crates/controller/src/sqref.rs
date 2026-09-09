@@ -60,6 +60,21 @@ fn parse_range_token(tok: &str) -> Option<SqrefRange> {
 
 /// Parse an A1 ref into (row, col), 0-based. A missing dimension defaults to 0
 /// (`upper=false`) or [`UNBOUNDED`] (`upper=true`), so `A:A` / `1:1` work.
+/// A single `A1` cell reference as 0-based `(row, col)`, or `None` when it is
+/// not one — a column-only or row-only token, or anything malformed.
+pub fn a1_to_row_col(s: &str) -> Option<(usize, usize)> {
+    let cleaned = s.replace('$', "");
+    let has_letters = cleaned
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic());
+    let has_digits = cleaned.chars().any(|c| c.is_ascii_digit());
+    if !has_letters || !has_digits {
+        return None;
+    }
+    Some(parse_a1(s, false))
+}
+
 fn parse_a1(s: &str, upper: bool) -> (usize, usize) {
     let s = s.replace('$', "");
     let letters: String = s.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
