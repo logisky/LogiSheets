@@ -68,7 +68,7 @@ export interface FontStyle {
     color?: string
     size?: number
     strike?: boolean
-    /** Font family name, e.g. "Arial", "Times New Roman", "微软雅黑". */
+    /** Font family name, e.g. "Arial", "Times New Roman", "Microsoft YaHei". */
     name?: string
 }
 

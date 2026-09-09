@@ -172,6 +172,20 @@ impl Workbook {
     }
 }
 
+/// Compare two DISPLAY strings with the same typed ordering the sort uses:
+/// numerically when both parse as numbers, else case-insensitively as text.
+///
+/// Shared with `pivot_plan`, which orders a pivot's dimension values, so that
+/// "ascending" means one thing across the product rather than two subtly
+/// different things in two modules.
+pub(super) fn cmp_display_strings(a: &str, b: &str) -> Ordering {
+    let key = |s: &str| match s.parse::<f64>() {
+        Ok(n) => SortKey::Number(n),
+        Err(_) => SortKey::Text(s.to_lowercase()),
+    };
+    cmp_keys(&key(a), &key(b), true)
+}
+
 fn to_sort_key<F>(value: CellValue, text_fetcher: &F) -> SortKey
 where
     F: Fn(logisheets_base::TextId) -> String,

@@ -1,6 +1,6 @@
 pub mod calc_vertex;
 pub mod calculator;
 mod compare;
-mod funcs;
+pub(crate) mod funcs;
 pub mod infix;
 mod math;

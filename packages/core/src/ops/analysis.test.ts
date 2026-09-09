@@ -128,12 +128,12 @@ describe('WorkbookOps.createAnalysisBlock', () => {
             source: {...ORDERS, keyIdx: 1},
             blockId: 9,
             refName: 'orders_analysis',
-            label: '合计',
+            label: 'Total',
         })
         expect(committed[3].value).toMatchObject({
             row: 0,
             col: 1,
-            input: '合计',
+            input: 'Total',
         })
         expect(committed[2].value).toMatchObject({keyIdx: 1})
     })

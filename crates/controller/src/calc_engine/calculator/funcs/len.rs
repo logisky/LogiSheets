@@ -78,7 +78,7 @@ mod tests {
 
     #[test]
     fn len_test() {
-        assert_eq!(len("逻辑汇"), 3);
+        assert_eq!(len("逻辑"), 2);
         assert_eq!(len("abcdefg"), 7);
         assert_eq!(len("こんにちは"), 5);
     }

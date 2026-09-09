@@ -30,14 +30,19 @@ pub struct ContainerConnector<'a> {
     pub block_schema_manager: &'a crate::block_manager::schema_manager::SchemaManager,
 }
 
-/// Which block this block analyses, if any. `None` for an ordinary block, and
-/// for a block that has gone missing — a marker pointing at nothing yields no
-/// generated formula rather than a broken one.
-fn analyzes_of(navigator: &Navigator, sheet_id: SheetId, block_id: BlockId) -> Option<BlockId> {
-    navigator
-        .get_block_place(&sheet_id, &block_id)
-        .ok()
-        .and_then(|bp| bp.analyzes)
+/// What this block analyses and how, if anything. `None` for an ordinary
+/// block, and for a block that has gone missing — a marker pointing at nothing
+/// yields no generated formula rather than a broken one.
+fn analysis_of(
+    navigator: &Navigator,
+    sheet_id: SheetId,
+    block_id: BlockId,
+) -> Option<crate::block_manager::analysis::AnalysisTarget<'_>> {
+    let bp = navigator.get_block_place(&sheet_id, &block_id).ok()?;
+    Some(crate::block_manager::analysis::AnalysisTarget {
+        source: bp.analyzes?,
+        pivot: bp.pivot.as_ref(),
+    })
 }
 
 impl<'a> IdFetcherTrait for ContainerConnector<'a> {
@@ -298,7 +303,7 @@ impl<'a> ContainerExecCtx for ContainerConnector<'a> {
             .formula_for_block_cell(
                 sheet_id,
                 cell,
-                analyzes_of(self.navigator, sheet_id, cell.block_id),
+                analysis_of(self.navigator, sheet_id, cell.block_id),
             )
             .is_some()
     }

@@ -1,6 +1,6 @@
 use logisheets_base::{BlockCellId, BlockFieldId, BlockId, ColId, RowId};
 
-use super::field_type::{FieldAggregate, FieldType, FieldWritePolicy};
+use super::field_type::{FieldAggregate, FieldType, FieldWritePolicy, PivotColumn};
 use crate::navigator::BlockPlace;
 
 /// Position of a single block-cell within a schema. Used by the dependency
@@ -80,6 +80,15 @@ pub struct FieldEntry<F> {
     /// that is what the label column of a total row is, and what a user can
     /// type into. See `design/block-analysis.md`.
     pub aggregate: Option<FieldAggregate>,
+    /// When the block is a PIVOT and this column was hand-declared rather than
+    /// derived from the column dimension's values: what it filters on, and
+    /// optionally its own measure and function.
+    ///
+    /// `None` is the ordinary derived column — the field's name is the
+    /// dimension value and the block's recipe supplies the rest. A column with
+    /// an override is left alone by a refresh, because it was not derived from
+    /// the data in the first place. See `design/block-pivot.md` §9.
+    pub pivot_column: Option<PivotColumn>,
 }
 
 impl<F> FieldEntry<F> {
@@ -97,6 +106,7 @@ impl<F> FieldEntry<F> {
             default_value: None,
             write_policy: FieldWritePolicy::Inherit,
             aggregate: None,
+            pivot_column: None,
         }
     }
 
@@ -132,6 +142,11 @@ impl<F> FieldEntry<F> {
 
     pub fn with_aggregate(mut self, a: Option<FieldAggregate>) -> Self {
         self.aggregate = a;
+        self
+    }
+
+    pub fn with_pivot_column(mut self, c: Option<PivotColumn>) -> Self {
+        self.pivot_column = c;
         self
     }
 

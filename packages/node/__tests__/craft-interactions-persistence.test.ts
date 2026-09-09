@@ -64,8 +64,9 @@ describe('craft-interactions persistence (xlsx round-trip)', () => {
             bookId
         ) as SaveResult
         expect(saved.code).toBe(0)
-        expect(Array.isArray(saved.data) || saved.data instanceof Uint8Array)
-            .toBe(true)
+        expect(
+            Array.isArray(saved.data) || saved.data instanceof Uint8Array
+        ).toBe(true)
 
         const bytes = Array.isArray(saved.data)
             ? saved.data

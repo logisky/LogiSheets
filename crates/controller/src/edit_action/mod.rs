@@ -657,6 +657,10 @@ pub struct CreateBlock {
     /// between two payloads never sees a total row it would mistake for a
     /// record. See `design/block-analysis.md`.
     pub analyzes: Option<usize>,
+    /// When the block is a PIVOT, the recipe its cells and its shape derive
+    /// from. Requires `analyzes`: a pivot with no source is refused, because
+    /// every cell of it would aggregate nothing. See `design/block-pivot.md`.
+    pub pivot: Option<crate::block_manager::schema_manager::field_type::PivotSpecParts>,
 }
 
 /// Rewrite a block's prose description, or clear it with an empty string.
@@ -676,7 +680,13 @@ pub struct SetBlockDescription {
     pub description: String,
 }
 
-/// Declare (or clear) which block a block analyses.
+/// Declare (or clear) a block's whole analysis declaration: what it analyses,
+/// and — when it is a pivot — the recipe.
+///
+/// Both at once, deliberately. A pivot without a source is meaningless, so two
+/// payloads that could disagree would only create states to defend against.
+/// Sending this always states both: omitting `pivot` makes the block a plain
+/// analysis (a total row), and omitting `analyzes` makes it an ordinary block.
 ///
 /// Governed by `BlockOp::ModifySchema`: what a block analyses is as much a
 /// structural fact about it as its fields are, and pointing an existing block
@@ -689,6 +699,9 @@ pub struct SetBlockAnalyzes {
     /// The block being analysed, or `None` to make this an ordinary block
     /// again. Must be on the same sheet, and must not be the block itself.
     pub analyzes: Option<usize>,
+    /// The pivot recipe, or `None` for a plain analysis block. Requires
+    /// `analyzes`.
+    pub pivot: Option<crate::block_manager::schema_manager::field_type::PivotSpecParts>,
 }
 
 impl From<SetBlockAnalyzes> for EditPayload {
@@ -1219,6 +1232,18 @@ pub struct SchemaFieldSpec {
     /// The value formula is generated from this; do not also send one.
     pub agg_func: Option<String>,
     pub agg_field: Option<String>,
+    /// When the block is a PIVOT and this column is hand-declared rather than
+    /// derived from the column dimension's values.
+    ///
+    /// `pivot_col_value` is the value it filters on; `*` means EVERY value,
+    /// which is a row total. `pivot_measure` / `pivot_func` override the
+    /// block's recipe for this column alone, which is how a pivot carries a
+    /// second measure. All omitted is an ordinary derived column — the
+    /// field's own name is the value — and that is every column of a plain
+    /// cross-tab. See `design/block-pivot.md` §9.
+    pub pivot_col_value: Option<String>,
+    pub pivot_measure: Option<String>,
+    pub pivot_func: Option<String>,
 }
 
 /// One option of an enum set.
@@ -1291,6 +1316,9 @@ impl SchemaFieldSpec {
             default_value: None,
             write_policy: None,
             agg_func: None,
+            pivot_col_value: None,
+            pivot_measure: None,
+            pivot_func: None,
             agg_field: None,
         }
     }
@@ -1343,6 +1371,33 @@ impl SchemaFieldSpec {
         p: crate::block_manager::schema_manager::field_type::FieldWritePolicy,
     ) -> Self {
         self.write_policy = Some(p.as_str().to_string());
+        self
+    }
+
+    /// Declare this column a pivot ROW TOTAL: it spans every value of the
+    /// column dimension instead of one of them.
+    pub fn with_pivot_total(mut self) -> Self {
+        self.pivot_col_value =
+            Some(crate::block_manager::schema_manager::field_type::PIVOT_COL_ALL.to_string());
+        self
+    }
+
+    /// Declare this pivot column's own measure and function, so one pivot can
+    /// show `SUM of amt` beside `COUNT of orders`. `col_value` is the column
+    /// dimension value it belongs to, or `None` for a total across all of them.
+    pub fn with_pivot_column(
+        mut self,
+        col_value: Option<&str>,
+        func: crate::block_manager::schema_manager::field_type::AggFunc,
+        measure: impl Into<String>,
+    ) -> Self {
+        self.pivot_col_value = Some(
+            col_value
+                .unwrap_or(crate::block_manager::schema_manager::field_type::PIVOT_COL_ALL)
+                .to_string(),
+        );
+        self.pivot_func = Some(func.as_str().to_string());
+        self.pivot_measure = Some(measure.into());
         self
     }
 

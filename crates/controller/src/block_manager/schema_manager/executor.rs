@@ -191,6 +191,13 @@ impl BlockSchemaExecutor {
                         // aggregate, or a field with no function, is not a
                         // declaration — and a function this build does not know
                         // yields no aggregate rather than a guess.
+                        .with_pivot_column(
+                            crate::block_manager::schema_manager::field_type::PivotColumn::from_parts(
+                                spec.pivot_col_value.as_deref(),
+                                spec.pivot_measure.as_deref(),
+                                spec.pivot_func.as_deref(),
+                            ),
+                        )
                         .with_aggregate(match (spec.agg_func.as_deref(), spec.agg_field) {
                             (Some(func), Some(source_field)) => AggFunc::from_str(func)
                                 .map(|func| FieldAggregate { func, source_field }),

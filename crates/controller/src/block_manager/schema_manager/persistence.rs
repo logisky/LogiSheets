@@ -15,7 +15,7 @@ use logisheets_workbook::logisheets::{
 };
 
 use super::SchemaManager;
-use super::field_type::{AggFunc, FieldAggregate, FieldType, FieldWritePolicy};
+use super::field_type::{AggFunc, FieldAggregate, FieldType, FieldWritePolicy, PivotColumn};
 use super::schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema};
 
 /// Project a field entry into its on-disk attributes. Shared by the row and
@@ -53,6 +53,14 @@ fn field_to_xml<F: Copy + Into<u32>>(name: &str, entry: &FieldEntry<F>) -> Schem
             .as_ref()
             .map(|a| a.func.as_str().to_string()),
         agg_field: entry.aggregate.as_ref().map(|a| a.source_field.clone()),
+        // A hand-declared pivot column. Absent for the derived ones, which is
+        // every column of a plain cross-tab.
+        pivot_col_value: entry.pivot_column.as_ref().map(|c| c.col_value_str()),
+        pivot_measure: entry.pivot_column.as_ref().and_then(|c| c.measure.clone()),
+        pivot_func: entry
+            .pivot_column
+            .as_ref()
+            .and_then(|c| c.func.map(|f| f.as_str().to_string())),
     }
 }
 
@@ -86,7 +94,12 @@ fn field_from_xml<F: From<u32>>(f: SchemaFieldXml) -> (String, FieldEntry<F>) {
                     AggFunc::from_str(func).map(|func| FieldAggregate { func, source_field })
                 }
                 _ => None,
-            }),
+            })
+            .with_pivot_column(PivotColumn::from_parts(
+                f.pivot_col_value.as_deref(),
+                f.pivot_measure.as_deref(),
+                f.pivot_func.as_deref(),
+            )),
     )
 }
 

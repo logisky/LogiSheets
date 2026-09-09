@@ -26,7 +26,9 @@ const OVERRIDES: Record<string, readonly string[]> = {
 }
 
 /** The default multi-level category for a tool (used when it has no `category`). */
-export function defaultCategory(t: Pick<Tool, 'namespace' | 'name'>): readonly string[] {
+export function defaultCategory(
+    t: Pick<Tool, 'namespace' | 'name'>
+): readonly string[] {
     const id = `${t.namespace}__${t.name}`
     if (OVERRIDES[id]) return OVERRIDES[id]
     switch (t.namespace) {
@@ -36,7 +38,10 @@ export function defaultCategory(t: Pick<Tool, 'namespace' | 'name'>): readonly s
             return ['Format']
         case 'sheet':
             // Whole-sheet ops contain "sheet" in the name; the rest are row/col.
-            return ['Structure', t.name.includes('sheet') ? 'Sheets' : 'Rows & Columns']
+            return [
+                'Structure',
+                t.name.includes('sheet') ? 'Sheets' : 'Rows & Columns',
+            ]
         case 'build':
         case 'edit':
             return ['Blocks']
@@ -89,7 +94,11 @@ export function buildToolTree(tools: readonly Tool[]): ToolTreeNode[] {
             }
             node = child
         }
-        node.tools.push({id: toolId(t), name: t.name, description: t.description})
+        node.tools.push({
+            id: toolId(t),
+            name: t.name,
+            description: t.description,
+        })
     }
     sortTree(root)
     return root.children
@@ -102,13 +111,17 @@ function sortTree(node: ToolTreeNode): void {
 }
 
 /** Render the tree as an indented outline (for logs / a picker / debugging). */
-export function formatToolTree(nodes: readonly ToolTreeNode[], indent = 0): string {
+export function formatToolTree(
+    nodes: readonly ToolTreeNode[],
+    indent = 0
+): string {
     const pad = '  '.repeat(indent)
     const lines: string[] = []
     for (const n of nodes) {
         lines.push(`${pad}${n.name}/`)
         for (const t of n.tools) lines.push(`${pad}  ${t.id}`)
-        if (n.children.length) lines.push(formatToolTree(n.children, indent + 1))
+        if (n.children.length)
+            lines.push(formatToolTree(n.children, indent + 1))
     }
     return lines.join('\n')
 }

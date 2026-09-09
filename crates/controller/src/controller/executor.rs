@@ -112,6 +112,10 @@ impl<'a> Executor<'a> {
                 &result.status,
                 &result.updated_cells,
             )?;
+            // Same place, same reason: a pivot recipe and a field's own
+            // aggregate can each arrive in a payload that is fine on its own
+            // and only conflict once both have landed.
+            super::pivot_guard::check_pivot_field_conflicts(&result.status)?;
         }
 
         let result = result.calc()?;
@@ -132,6 +136,26 @@ impl<'a> Executor<'a> {
 
     fn execute_payload(self, payload: EditPayload) -> Result<Self, Error> {
         let mut result = self;
+
+        // Before anything runs, while the OLD field names are still in place:
+        // carry a source field's rename into the declarations that name it.
+        //
+        // An analysis block's `SUM of "amt"` and a pivot's `rows = "region"`
+        // reach a source field by NAME. Renaming it on the source would leave
+        // them naming nothing, and a `BLOCKREFS` that matches nothing yields
+        // an empty matrix — so every dependent cell would read 0, with no
+        // error anywhere. The re-materialization this same payload triggers
+        // then regenerates their formulas from the updated declarations.
+        if let EditPayload::BindFormSchema(ref p) = payload {
+            if let Some(sheet_id) = result.status.sheet_info_manager.get_sheet_id(p.sheet_idx) {
+                super::rename_propagation::propagate_field_renames(
+                    &mut result.status,
+                    sheet_id,
+                    p.block_id,
+                    &p.fields,
+                );
+            }
+        }
 
         // RestoreCheckpoint replaces the entire Status with a previously-
         // saved snapshot. Bypasses the per-manager pipeline because

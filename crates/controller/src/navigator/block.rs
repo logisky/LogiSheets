@@ -1,6 +1,7 @@
 use imbl::Vector;
 use logisheets_base::{BlockId, ColId, NormalCellId, RowId};
 
+use crate::block_manager::schema_manager::field_type::PivotSpec;
 use crate::edit_action::{BlockPermissions, ModifyPolicy};
 
 #[derive(Debug, Clone)]
@@ -39,6 +40,16 @@ pub struct BlockPlace {
     /// two unrelated tables — and cannot mistake a total for a record. See
     /// `design/block-analysis.md`.
     pub analyzes: Option<BlockId>,
+    /// When this analysis block is a PIVOT: the recipe its cells and its shape
+    /// are both derived from. `None` — the ordinary case, and every analysis
+    /// block that exists today — is a total row: fields declare their own
+    /// aggregates and the shape is fixed.
+    ///
+    /// Beside `analyzes` rather than inside it because the two answer different
+    /// questions: `analyzes` says WHICH block, `pivot` says what shape of
+    /// analysis. A pivot without `analyzes` is meaningless and refused at
+    /// bind time. See `design/block-pivot.md`.
+    pub pivot: Option<PivotSpec>,
 }
 
 impl BlockPlace {
@@ -64,6 +75,7 @@ impl BlockPlace {
             description: String::new(),
             permissions: BlockPermissions::default(),
             analyzes: None,
+            pivot: None,
         }
     }
 
@@ -72,6 +84,14 @@ impl BlockPlace {
     /// then told what it is for.
     pub fn with_analyzes(mut self, source: Option<BlockId>) -> Self {
         self.analyzes = source;
+        self
+    }
+
+    /// Declare the pivot recipe. Separate from [`Self::with_analyzes`] because
+    /// a pivot is first an analysis block and only then a pivot — and because
+    /// the recipe can be changed later without touching what it analyses.
+    pub fn with_pivot(mut self, pivot: Option<PivotSpec>) -> Self {
+        self.pivot = pivot;
         self
     }
 
@@ -123,6 +143,7 @@ impl BlockPlace {
             description: result.description,
             permissions: result.permissions,
             analyzes: result.analyzes,
+            pivot: result.pivot,
         }
     }
 
@@ -145,6 +166,7 @@ impl BlockPlace {
             description: self.description,
             permissions: self.permissions,
             analyzes: self.analyzes,
+            pivot: self.pivot,
         }
     }
 
@@ -167,6 +189,7 @@ impl BlockPlace {
             description: self.description,
             permissions: self.permissions,
             analyzes: self.analyzes,
+            pivot: self.pivot,
         }
     }
 
@@ -185,6 +208,7 @@ impl BlockPlace {
             description: self.description,
             permissions: self.permissions,
             analyzes: self.analyzes,
+            pivot: self.pivot,
         }
     }
 
@@ -203,6 +227,7 @@ impl BlockPlace {
             description: self.description,
             permissions: self.permissions,
             analyzes: self.analyzes,
+            pivot: self.pivot,
         }
     }
 
@@ -264,6 +289,7 @@ mod tests {
             description: String::new(),
             permissions: BlockPermissions::default(),
             analyzes: None,
+            pivot: None,
         }
     }
 

@@ -23,6 +23,8 @@ use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId};
 use logisheets_workbook::logisheets::AppData;
 use logisheets_workbook::prelude::{read, write};
 pub mod block_key_guard;
+mod pivot_guard;
+mod rename_propagation;
 pub mod display;
 mod executor;
 pub mod status;
@@ -991,7 +993,7 @@ mod tests {
         // reserved in sheet_id_manager (delete never cleaned it up), so the
         // re-create failed with SheetNameAlreadyExists (ActionEffect version 0).
         let mut wb = Controller::default();
-        let name = "拼豆板".to_string();
+        let name = "Beads board".to_string();
         let create = || {
             EditAction::Payloads(PayloadsAction {
                 payloads: vec![EditPayload::CreateSheet(CreateSheet {
@@ -1038,6 +1040,7 @@ mod tests {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 }),
                 EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
                     sheet_idx,
@@ -1074,6 +1077,7 @@ mod tests {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 }),
                 EditPayload::BlockLineStyleUpdate(BlockLineStyleUpdate {
                     sheet_idx,
@@ -1451,6 +1455,7 @@ mod tests {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             })],
             undoable: true,
             init: false,
@@ -1557,6 +1562,7 @@ mod tests {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             })],
             undoable: true,
             init: false,

@@ -1,8 +1,9 @@
 use crate::{
     ActionEffect, AppData, BasicError, BlockDataRow, BlockField, BlockId, BlockSortOrder,
     CellCoordinateWithSheet, CellInfo, ColId, DisplayWindow, EditAction, Error, ErrorMessage,
-    FormulaDisplayInfo, PayloadsAction, RowId, RowInfo, SaveFileResult, ShadowCellInfo,
-    SheetCellId, SheetId, SheetInfo, TempStatusDiff, Workbook, lex_and_fmt, lex_success,
+    FormulaDisplayInfo, PayloadsAction, PivotPlan, PivotSpecParts, RowId, RowInfo, SaveFileResult,
+    ShadowCellInfo, SheetCellId, SheetId, SheetInfo, TempStatusDiff, Workbook, lex_and_fmt,
+    lex_success,
 };
 
 use super::{Manager, Transaction};
@@ -278,6 +279,38 @@ pub fn get_block_sort_order(
         .map_err(ErrorMessage::from)
 }
 
+/// The shape a pivot block should have, and whether it currently has it.
+///
+/// Read-only, like [`get_block_sort_order`]: it computes, the caller applies.
+/// The caller sends the reshape as ONE transaction in the order
+/// `design/block-pivot.md` §6 pins — grow, write the keys, bind, shrink —
+/// because `#KEY` is captured when the bind materializes each row.
+pub fn pivot_plan(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+) -> Result<PivotPlan, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.pivot_plan(sheet_idx, block_id)
+        .map_err(ErrorMessage::from)
+}
+
+/// The shape a pivot over `source_block` WOULD have for a recipe no block
+/// carries yet — so a host can create a pivot at its right size in ONE
+/// transaction, and therefore one undo.
+pub fn pivot_plan_for(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    source_block: BlockId,
+    spec: PivotSpecParts,
+) -> Result<PivotPlan, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.pivot_plan_for(sheet_idx, source_block, &spec)
+        .map_err(ErrorMessage::from)
+}
+
 /// Whether `actor` may perform `op` on this block — see
 /// [`MayModifyBlockParams`]. Read-only: it decides nothing, it only answers,
 /// and the host is what actually refuses the edit.
@@ -470,10 +503,7 @@ pub fn get_block_op_policies(
 /// this a host can read the declaration and still not know what is allowed —
 /// which is the state every headless host was in while the sets lived in the
 /// browser's AppData blob.
-pub fn get_enum_sets(
-    mgr: &Manager,
-    id: usize,
-) -> Result<Vec<crate::EnumSetInfo>, ErrorMessage> {
+pub fn get_enum_sets(mgr: &Manager, id: usize) -> Result<Vec<crate::EnumSetInfo>, ErrorMessage> {
     let wb = mgr.get_workbook(&id).unwrap();
     Ok(wb.get_enum_sets())
 }

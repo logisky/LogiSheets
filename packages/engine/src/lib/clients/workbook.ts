@@ -724,6 +724,16 @@ export class WorkbookClient implements Client {
             Client['getBlockSortOrder']
         >
 
+    pivotPlan: Client['pivotPlan'] = (params) =>
+        this._call(MethodName.PivotPlan, params) as ReturnType<
+            Client['pivotPlan']
+        >
+
+    pivotPlanFor: Client['pivotPlanFor'] = (params) =>
+        this._call(MethodName.PivotPlanFor, params) as ReturnType<
+            Client['pivotPlanFor']
+        >
+
     getBlockModifyInfo: Client['getBlockModifyInfo'] = (params) =>
         this._call(MethodName.GetBlockModifyInfo, params) as ReturnType<
             Client['getBlockModifyInfo']

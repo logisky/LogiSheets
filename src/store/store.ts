@@ -113,7 +113,8 @@ export class GlobalStore {
     }
 
     // ─── Formula auditing: trace precedents / dependents ────────────────────
-    // A one-shot request raised by the right-click "追踪引用/追踪从属" items,
+    // A one-shot request raised by the right-click "Trace precedents" and
+    // "Trace dependents" items,
     // fulfilled by TraceLayer (which has workbook access): it calls the engine's
     // get_precedents / get_dependents, then publishes `traceResult` for the
     // overlay to highlight. Mirrors the pendingCommentCell one-shot pattern.

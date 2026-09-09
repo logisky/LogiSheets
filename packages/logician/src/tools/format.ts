@@ -27,8 +27,7 @@ async function commit(
     const tx: Transaction = {payloads, undoable: true, temp: false}
     const r = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(r)) throw new Error(`${label}: ${r.msg}`)
-    if (r.status.type === 'err')
-        throw transactionFailure(label, r)
+    if (r.status.type === 'err') throw transactionFailure(label, r)
 }
 
 /** "#RRGGBB" / "RRGGBB" / "AARRGGBB" → {red,green,blue} (fills). */
@@ -122,7 +121,10 @@ export const formatCells: Tool<FormatInput, {formatted: number}> = {
             italic: {type: 'boolean'},
             fontColor: {type: 'string', description: 'Hex, e.g. "#1976D2".'},
             fontSize: {type: 'number'},
-            fill: {type: 'string', description: 'Hex background, e.g. "#FFF3CD".'},
+            fill: {
+                type: 'string',
+                description: 'Hex background, e.g. "#FFF3CD".',
+            },
             align: {type: 'string', enum: ['left', 'center', 'right']},
             valign: {type: 'string', enum: ['top', 'center', 'bottom']},
             numberFormat: {type: 'string'},
@@ -153,7 +155,13 @@ export const formatCells: Tool<FormatInput, {formatted: number}> = {
 }
 
 export const mergeCells: Tool<
-    {sheetIdx: number; startRow: number; startCol: number; endRow: number; endCol: number},
+    {
+        sheetIdx: number
+        startRow: number
+        startCol: number
+        endRow: number
+        endCol: number
+    },
     {merged: boolean}
 > = {
     namespace: 'format',

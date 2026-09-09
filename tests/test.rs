@@ -133,12 +133,12 @@ mod funcs {
     /// its value after save→reload→edit. The bug was in the grammar: the
     /// top-level `"(" ~ expression ~ ")"` alternative dropped the bracket flag,
     /// so unparse saved `(1+E1)^E2` as `1+E1^E2`; on reload that re-parsed as
-    /// `1+(E1^E2)` and silently changed the result. (This is douyoushu's 房贷
+    /// `1+(E1^E2)` and silently changed the result. (This is douyoushu's mortgage
     /// `(1+r)^n` staleness — a save/unparse bug, not a recompute one.)
     #[test]
     fn test_blockref_chain_recomputes_after_reload() {
         use logisheets::Workbook;
-        // Mirror the douyoushu 房贷 layout: TWO blocks on a hidden sheet, each a
+        // Mirror the douyoushu mortgage layout: TWO blocks on a hidden sheet, each a
         // separate input; the visible sheet pulls both via BLOCKREF, feeds them
         // through helper cells, and combines them with `^` (the shape that went
         // stale). On reload BOTH inputs are written in ONE transaction (as the
@@ -160,6 +160,7 @@ mod funcs {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             })
             .add_payload(CellInput {
                 sheet_idx: 1,
@@ -184,7 +185,7 @@ mod funcs {
             })
         };
         // Phase 1: sellers's sheet before baking. A1/A2/A3 hold plain values;
-        // helpers E1..E4 and the output C1 exactly mirror the 房贷 calculator.
+        // helpers E1..E4 and the output C1 exactly mirror the mortgage calculator.
         wb.handle_action(EditAction::Payloads(
             PayloadsAction::new()
                 .add_payload(CellInput {
@@ -493,6 +494,7 @@ mod funcs {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 })
                 .add_payload(BindFormSchema {
                     ref_name: "people".to_string(),
@@ -601,6 +603,7 @@ mod funcs {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 })
                 // Header rows aren't needed for the schema (RowSchema reads
                 // values, not headers); just stuff numbers + keys.
@@ -693,6 +696,7 @@ mod funcs {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -835,6 +839,7 @@ mod funcs {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -906,6 +911,7 @@ mod funcs {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1000,9 +1006,9 @@ mod funcs {
     /// PL → L1/L2 templated-formula shape:
     ///   - L1 block: keys "1", "2", "3"; one numeric column "v".
     ///   - L2 block: same shape, different values.
-    ///   - PL block: keys "一", "二"; LEVEL column (literal "1"),
+    ///   - PL block: keys "R1", "R2"; LEVEL column (literal "1"),
     ///     and a templated formula
-    ///       =IF(#KEY="一",
+    ///       =IF(#KEY="R1",
     ///           BLOCKREF("L1", #FIELD("LEVEL"), "v"),
     ///           BLOCKREF("L2", #FIELD("LEVEL"), "v"))
     ///
@@ -1016,9 +1022,9 @@ mod funcs {
         let mut wb = Workbook::default();
 
         // L1, L2 — keyed by level string ("1"); one "v" column.
-        // PL — keyed by line ("一" / "二"); LEVEL stored ("1"),
+        // PL — keyed by line ("R1" / "R2"); LEVEL stored ("1"),
         // VALUE templated:
-        //   =IF(#KEY="一",
+        //   =IF(#KEY="R1",
         //       BLOCKREF("L1", #FIELD("LEVEL"), "v"),
         //       BLOCKREF("L2", #FIELD("LEVEL"), "v"))
         wb.handle_action(EditAction::Payloads(
@@ -1036,6 +1042,7 @@ mod funcs {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1074,6 +1081,7 @@ mod funcs {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1099,7 +1107,7 @@ mod funcs {
                     ],
                     row: true,
                 })
-                // PL block at A5:C6 (two rows, keys "一"/"二").
+                // PL block at A5:C6 (two rows, keys "R1"/"R2").
                 // Keys first (so #KEY substitutes at BindFormSchema).
                 .add_payload(CreateBlock {
                     sheet_idx: 0,
@@ -1113,18 +1121,19 @@ mod funcs {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
                     row: 4,
                     col: 0,
-                    content: "一".into(),
+                    content: "R1".into(),
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
                     row: 5,
                     col: 0,
-                    content: "二".into(),
+                    content: "R2".into(),
                 })
                 .add_payload(BindFormSchema {
                     ref_name: "PL".to_string(),
@@ -1136,7 +1145,7 @@ mod funcs {
                         SchemaFieldSpec::new("key", "PL-key"),
                         SchemaFieldSpec::new("LEVEL", "PL-LEVEL"),
                         SchemaFieldSpec::new("VALUE", "PL-VALUE").with_value_formula(Some(
-                            r#"=IF(#KEY="一",BLOCKREF("L1",#FIELD("LEVEL"),"v"),BLOCKREF("L2",#FIELD("LEVEL"),"v"))"#
+                            r#"=IF(#KEY="R1",BLOCKREF("L1",#FIELD("LEVEL"),"v"),BLOCKREF("L2",#FIELD("LEVEL"),"v"))"#
                                 .to_string(),
                         )),
                     ],
@@ -1161,15 +1170,15 @@ mod funcs {
         let sheet = wb.get_sheet_by_idx(0).unwrap();
         let r0 = sheet.get_value(4, 2);
         let r1 = sheet.get_value(5, 2);
-        println!("PL row0 (一) VALUE = {:?}", r0);
-        println!("PL row1 (二) VALUE = {:?}", r1);
+        println!("PL row0 (R1) VALUE = {:?}", r0);
+        println!("PL row1 (R2) VALUE = {:?}", r1);
         match r0.unwrap() {
-            logisheets::Value::Number(n) => assert_eq!(n, 111.0, "PL row0 (一)"),
-            other => panic!("PL row0 (一) bad: {:?}", other),
+            logisheets::Value::Number(n) => assert_eq!(n, 111.0, "PL row0 (R1)"),
+            other => panic!("PL row0 (R1) bad: {:?}", other),
         }
         match r1.unwrap() {
-            logisheets::Value::Number(n) => assert_eq!(n, 222.0, "PL row1 (二)"),
-            other => panic!("PL row1 (二) bad: {:?}", other),
+            logisheets::Value::Number(n) => assert_eq!(n, 222.0, "PL row1 (R2)"),
+            other => panic!("PL row1 (R2) bad: {:?}", other),
         }
     }
 
@@ -1212,6 +1221,7 @@ mod funcs {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1237,6 +1247,7 @@ mod funcs {
                     permissions: None,
                     description: None,
                     analyzes: None,
+                    pivot: None,
                 })
                 .add_payload(CellInput {
                     sheet_idx: 0,
@@ -1641,6 +1652,7 @@ fn test_block_is_saved_as_an_excel_table() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "sales".into(),
@@ -1742,6 +1754,7 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: name.into(),

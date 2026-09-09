@@ -22,7 +22,7 @@
 pub use logisheets_controller::api::{
     BlockOpForPayload, BlockOpPolicy, BlockSortOrder, CellInfo, CellRefRange, CfRuleInfo,
     DependentCell, DuplicateBlockKey, EnumSetInfo, EnumVariantInfo, FieldValidationVerdict,
-    FillRange, ReproducibleCell, SaveFileResult, SheetCoordinate,
+    FillRange, PivotPlan, PivotSpecParts, ReproducibleCell, SaveFileResult, SheetCoordinate,
     SheetDimension, Workbook, Worksheet,
 };
 

@@ -21,6 +21,8 @@ import {
     ArrowDownward as ArrowDownwardIcon,
     Functions as FunctionsIcon,
     RuleOutlined as RuleIcon,
+    Refresh as RefreshIcon,
+    ErrorOutline as ErrorOutlineIcon,
 } from '@mui/icons-material'
 import {
     Grid,
@@ -42,9 +44,17 @@ import {
     BlockDisplayInfo,
     BlockInfo,
     BlockSchemaFieldEntry,
+    PivotSpecParts,
 } from 'logisheets-engine'
-import type {AnalysisSource, WorkbookOps} from 'logisheets-core'
+import type {
+    AggFunc,
+    AnalysisSource,
+    DimOrder,
+    PivotSource,
+    WorkbookOps,
+} from 'logisheets-core'
 import {FieldRuleDialog} from './field-rule-dialog'
+import {PivotDialog, type PivotSpecChoice} from './pivot-dialog'
 import type {FieldRuleKind} from '@/components/block-composer/field-formula'
 import {LeftTop} from '@/core/settings'
 import {BlockCellProps, RenderedCellSpec, buildRenderedCells} from './cell'
@@ -69,6 +79,18 @@ export interface BlockInterfaceProps {
      * selection setter, and the navigation items simply don't appear.
      */
     navigateToCell?: (row: number, col: number) => void
+}
+
+/**
+ * A block's number format per field name — what a pivot of it inherits, so a
+ * SUM of a currency column reads as currency rather than as a bare number.
+ */
+function numFmtsOf(
+    source: AnalysisSource | undefined
+): Record<string, string | undefined> {
+    return Object.fromEntries(
+        (source?.fields ?? []).map((f) => [f.name, f.numFmt])
+    )
 }
 
 /** Inclusive sheet-index rectangle. */
@@ -169,6 +191,66 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
     // drives lands on a DIFFERENT block — a block and its analysis are
     // siblings in this list, so neither can light the other up on its own.
     const [hoveredBlock, setHoveredBlock] = useState<number | null>(null)
+    // Which pivots have fallen behind their source, by block id.
+    //
+    // Asked for rather than derived, because a pivot's SHAPE is data: nothing
+    // in the grid says a whole group is missing, and the numbers on screen
+    // stay correct while it is. Costs one worker call per pivot per grid
+    // update, and nothing at all in a workbook with no pivots.
+    // Per pivot block: how many groups it is missing, or why its recipe
+    // cannot be evaluated at all. The second is the worse of the two and used
+    // to be discarded — a broken recipe makes every cell read 0 rather than
+    // error, so with no badge the block looks like a table of real zeroes.
+    const [pivotHealth, setPivotHealth] = useState<
+        Map<number, {missing: number} | {broken: string}>
+    >(new Map())
+    const dataService = useDataService()
+    useEffect(() => {
+        const pivots = (grid.blockInfos ?? [])
+            .map((b: BlockDisplayInfo) => b.info)
+            .filter((i: BlockInfo) => i.pivot)
+        if (pivots.length === 0) {
+            setPivotHealth((prev) => (prev.size === 0 ? prev : new Map()))
+            return
+        }
+        let cancelled = false
+        void Promise.all(
+            pivots.map(async (i: BlockInfo) => {
+                const plan = await dataService
+                    .getWorkbook()
+                    .pivotPlan({sheetIdx: i.sheetIdx, blockId: i.blockId})
+                if (isErrorMessage(plan))
+                    return [i.blockId, {broken: plan.msg}] as const
+                if (!plan.isStale) return null
+                return [
+                    i.blockId,
+                    {
+                        missing:
+                            plan.missingKeys.length + plan.missingFields.length,
+                    },
+                ] as const
+            })
+        ).then((rows) => {
+            if (cancelled) return
+            const next = new Map<number, {missing: number} | {broken: string}>()
+            for (const r of rows) if (r) next.set(r[0], r[1])
+            // Replace only on a real change, or every grid update would
+            // re-render every block for nothing.
+            const same = (
+                a: {missing: number} | {broken: string} | undefined,
+                b: {missing: number} | {broken: string}
+            ) => JSON.stringify(a) === JSON.stringify(b)
+            setPivotHealth((prev) =>
+                prev.size === next.size &&
+                [...next].every(([k, v]) => same(prev.get(k), v))
+                    ? prev
+                    : next
+            )
+        })
+        return () => {
+            cancelled = true
+        }
+    }, [grid, dataService])
 
     if (!grid.blockInfos || grid.blockInfos.length === 0) {
         return null
@@ -179,6 +261,33 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
     )
     const nameOf = (blockId: number) =>
         infos.find((i: BlockInfo) => i.blockId === blockId)?.schema?.name
+    /**
+     * What a pivot needs to format a column a refresh adds: the number formats
+     * of the block it analyses, plus its own recipe.
+     *
+     * The formats live on the SOURCE — a pivot cell aggregates a source column
+     * — so this is only available from here, where every block's info is in
+     * hand.
+     */
+    const pivotContextOf = (info: BlockInfo) => {
+        if (!info.pivot || info.analyzes === undefined) return undefined
+        const src = infos.find((i: BlockInfo) => i.blockId === info.analyzes)
+        if (!src?.schema) return undefined
+        return {
+            source: {
+                sheetIdx: src.sheetIdx,
+                blockId: src.blockId,
+                refName: src.schema.name,
+                rowStart: src.rowStart,
+                rowCnt: src.rowCnt,
+                colStart: src.colStart,
+                numFmts: numFmtsOf(analysisSourceOf(src)),
+            },
+            fields: src.schema.fields,
+            keyIdx: src.schema.keys[0]?.idx,
+            spec: info.pivot,
+        }
+    }
     /** A block's partners: what it analyses, and what analyses it. */
     const partnersOf = (blockId: number): number[] => {
         const info = infos.find((i: BlockInfo) => i.blockId === blockId)
@@ -250,6 +359,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         title={info.schema.name}
                         schemaFields={info.schema.fields}
                         analysisSource={analysisSourceOf(info)}
+                        pivotContext={pivotContextOf(info)}
                         analyzes={
                             info.analyzes === undefined
                                 ? undefined
@@ -267,6 +377,14 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                             })
                         )}
                         isPaired={paired.has(info.blockId)}
+                        pivotSource={
+                            info.pivot
+                                ? undefined
+                                : info.schema?.fields ?? undefined
+                        }
+                        pivotHealth={pivotHealth.get(info.blockId)}
+                        isPivot={!!info.pivot}
+                        pivotKeyIdx={info.schema?.keys?.[0]?.idx}
                         onHoverChange={(hovered) =>
                             setHoveredBlock((prev) =>
                                 hovered
@@ -324,11 +442,44 @@ interface BlockInterfaceInternalProps {
     schemaFields: readonly BlockSchemaFieldEntry[]
     /** This block, projected for `createAnalysisBlock`. */
     analysisSource?: AnalysisSource
+    /**
+     * Everything about this pivot that lives on its SOURCE rather than on it:
+     * where the source is, what fields it has, and their number formats.
+     *
+     * A pivot's recipe names source fields, so both editing the recipe and
+     * formatting a refreshed column need the source, not the pivot. Present
+     * only on a pivot whose source is still there.
+     */
+    pivotContext?: {
+        source: PivotSource
+        fields: readonly BlockSchemaFieldEntry[]
+        keyIdx?: number
+        spec: PivotSpecParts
+    }
     /** The block this one analyses, and the blocks that analyse it. */
     analyzes?: {blockId: number; name: string}
     analyzedBy: ReadonlyArray<{blockId: number; name: string}>
     /** True while the pointer is on this block's partner. */
     isPaired: boolean
+    /**
+     * This block's schema fields, when it is a candidate to be PIVOTED —
+     * absent for a pivot itself, since pivoting a pivot is not the offer.
+     */
+    pivotSource?: readonly BlockSchemaFieldEntry[]
+    /** True when this block IS a pivot. */
+    isPivot: boolean
+    /** Column index of the key field, so the dialog can avoid defaulting to it. */
+    pivotKeyIdx?: number
+    /**
+     * What is wrong with this pivot, if anything. Absent when it is current.
+     *
+     * `missing` is how many groups the source has that it does not show — a
+     * number, because "stale" alone does not tell a user whether it matters.
+     * `broken` is worse: the recipe cannot be evaluated (normally it names a
+     * source field that is gone), and the cells then read 0 rather than
+     * erroring, so the block looks like a table of real zeroes.
+     */
+    pivotHealth?: {missing: number} | {broken: string}
     onHoverChange: (hovered: boolean) => void
     onGoToBlock?: (blockId: number) => void
 }
@@ -355,9 +506,14 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         grid,
         schemaFields,
         analysisSource,
+        pivotContext,
         analyzes,
         analyzedBy,
         isPaired,
+        pivotSource,
+        isPivot,
+        pivotKeyIdx,
+        pivotHealth,
         onHoverChange,
         onGoToBlock,
     } = props
@@ -428,16 +584,189 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                 source: analysisSource,
                 blockId: newId,
                 refName,
-                label: '合计',
+                label: 'Total',
             })
             toast.success(
-                `已创建分析块 "${refName}"：` +
-                    aggregated.map((a) => `${a.func}(${a.field})`).join('、') +
-                    `。用 BLOCKREF("${refName}", "合计", "<字段>") 引用结果。`
+                `Created analysis block "${refName}": ` +
+                    aggregated.map((a) => `${a.func}(${a.field})`).join(', ') +
+                    `. Reference a result with BLOCKREF("${refName}", "Total", "<field>").`
             )
         } catch (e) {
             toast.error(
-                `无法创建分析块：${e instanceof Error ? e.message : String(e)}`
+                `Could not create the analysis block: ${
+                    e instanceof Error ? e.message : String(e)
+                }`
+            )
+        }
+    }
+
+    // Pivot creation asks three questions that have no safe default, so it
+    // opens a dialog rather than acting on a menu click.
+    const [pivotDialog, setPivotDialog] = useState(false)
+    // Editing reuses the same dialog, prefilled. `undefined` means creating.
+    const [pivotEdit, setPivotEdit] = useState<PivotSpecChoice | undefined>()
+
+    const handleCreatePivot = async (spec: PivotSpecChoice) => {
+        setPivotDialog(false)
+        try {
+            const newId = await dataService.getAvailableBlockId(sheetIdx)
+            if (isErrorMessage(newId)) {
+                toast.error(newId.msg)
+                return
+            }
+            const made = await ops.createPivot({
+                source: {
+                    sheetIdx,
+                    blockId,
+                    refName: title,
+                    rowStart,
+                    rowCnt,
+                    colStart,
+                    // So a pivot of a currency column reads as currency.
+                    numFmts: numFmtsOf(analysisSource),
+                },
+                blockId: newId,
+                ...spec,
+            })
+            toast.success(
+                `Created pivot “${spec.refName}”: ` +
+                    `${made.keys.length} rows × ${made.fields.length} columns. ` +
+                    `Reference a cell with BLOCKREF("${spec.refName}", "<${spec.rowDim}>", "<column>"). ` +
+                    // Both of these say the pivot is showing LESS than the
+                    // source holds, which nothing on the sheet reveals.
+                    (spec.filters?.length
+                        ? `Only records matching ${spec.filters
+                              .map((f) => `${f.field} ${f.criteria}`)
+                              .join(', ')} were counted. `
+                        : '') +
+                    (made.unassignedRecords > 0
+                        ? `Note: ${made.unassignedRecords} record(s) have an empty ${spec.rowDim} and are in no cell.`
+                        : '')
+            )
+        } catch (e) {
+            toast.error(
+                `Could not create the pivot: ${
+                    e instanceof Error ? e.message : String(e)
+                }`
+            )
+        }
+    }
+
+    /**
+     * Re-open the dialog over this pivot's own recipe.
+     *
+     * The declared columns come back apart into the two things they read as: a
+     * column with no measure of its own is the row total, one with a measure
+     * is a second number.
+     */
+    const openPivotEdit = () => {
+        if (!pivotContext) return
+        const spec = pivotContext.spec
+        setPivotEdit({
+            refName: title,
+            rowDim: spec.rowDim,
+            colDim: spec.colDim,
+            measure: spec.measure,
+            func: spec.func as AggFunc,
+            order: spec.order as DimOrder | undefined,
+            orderValues: spec.orderValues ? [...spec.orderValues] : undefined,
+            filters: spec.filters ? [...spec.filters] : undefined,
+            extraColumns: schemaFields
+                .filter((f) => f.pivotColValue !== undefined)
+                .map((f) => ({
+                    name: f.field,
+                    colValue:
+                        f.pivotColValue === '*'
+                            ? null
+                            : f.pivotColValue ?? null,
+                    func: f.pivotFunc as AggFunc | undefined,
+                    measure: f.pivotMeasure,
+                })),
+        })
+    }
+
+    const handleEditPivot = async (spec: PivotSpecChoice) => {
+        setPivotEdit(undefined)
+        if (!pivotContext) return
+        try {
+            const made = await ops.editPivot({
+                sheetIdx,
+                blockId,
+                source: pivotContext.source,
+                rowStart,
+                colStart,
+                currentRowCnt: rowCnt,
+                currentColCnt: colCnt,
+                ...spec,
+                // The block keeps its name: an edit that renamed it would
+                // break every formula pointing at it, which is the whole
+                // reason to edit instead of rebuilding.
+                refName: title,
+            })
+            toast.success(
+                `Re-cut “${title}”: rows = ${spec.rowDim}` +
+                    (spec.colDim ? `, columns = ${spec.colDim}` : '') +
+                    `, ${spec.func} of ${spec.measure}. ` +
+                    `Now ${made.keys.length} rows × ${made.fields.length} columns.` +
+                    (made.unassignedRecords > 0
+                        ? ` ${made.unassignedRecords} record(s) have an empty ${spec.rowDim} and are in no cell.`
+                        : '')
+            )
+        } catch (e) {
+            toast.error(
+                `Could not change the recipe: ${
+                    e instanceof Error ? e.message : String(e)
+                }`
+            )
+        }
+    }
+
+    const handleRefreshPivot = async () => {
+        try {
+            const changed = await ops.refreshPivot({
+                sheetIdx,
+                blockId,
+                refName: title,
+                // The key column holds the row dimension; its FIELD name is
+                // what the re-bind has to restate.
+                keyField: schemaFields[0]?.field ?? '',
+                rowStart,
+                colStart,
+                // So a row total or a second measure is restated rather than
+                // rewritten as an ordinary derived column.
+                currentFields: schemaFields,
+                // So a column the refresh ADDS is formatted like the ones
+                // beside it instead of arriving as a bare number.
+                formats: pivotContext
+                    ? {
+                          numFmts: pivotContext.source.numFmts ?? {},
+                          measure: pivotContext.spec.measure,
+                          func: pivotContext.spec.func as AggFunc,
+                      }
+                    : undefined,
+            })
+            if (!changed) {
+                toast.info(`“${title}” is already up to date.`)
+                return
+            }
+            const bits: string[] = []
+            if (changed.addedKeys.length)
+                bits.push(`added rows ${changed.addedKeys.join(', ')}`)
+            if (changed.removedKeys.length)
+                bits.push(`removed rows ${changed.removedKeys.join(', ')}`)
+            if (changed.addedFields.length)
+                bits.push(`added columns ${changed.addedFields.join(', ')}`)
+            if (changed.removedFields.length)
+                bits.push(`removed columns ${changed.removedFields.join(', ')}`)
+            toast.success(
+                `Refreshed “${title}”: ${bits.join('; ')}. ` +
+                    (changed.unassignedRecords > 0
+                        ? `${changed.unassignedRecords} record(s) still have an empty group value and are in no cell — a refresh cannot fix that, the data has to.`
+                        : '')
+            )
+        } catch (e) {
+            toast.error(
+                `Refresh failed: ${e instanceof Error ? e.message : String(e)}`
             )
         }
     }
@@ -1044,6 +1373,69 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     </Box>
                 )}
 
+                {/* A stale pivot is the one thing on this sheet that looks
+                    right and is not: every number in it is correct, and whole
+                    groups are missing. So it says so on the block, without
+                    waiting for anyone to open a menu. */}
+                {pivotHealth && (
+                    <Tooltip
+                        title={
+                            'broken' in pivotHealth
+                                ? `This pivot's recipe no longer resolves: ${pivotHealth.broken}. Every cell therefore reads 0 instead of erroring — do not use these numbers. Fix the recipe or rebuild it.`
+                                : `The source has ${pivotHealth.missing} group(s) that are not shown here. Every number in the table is right, but the table is incomplete — click to refresh.`
+                        }
+                        arrow
+                    >
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                top: '-12px',
+                                left: '6px',
+                                height: 20,
+                                px: 0.75,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                background: 'rgb(211, 47, 47)',
+                                color: '#fff',
+                                borderRadius: '10px',
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                boxShadow: 2,
+                                whiteSpace: 'nowrap',
+                                pointerEvents: 'auto',
+                                cursor:
+                                    'broken' in pivotHealth
+                                        ? 'help'
+                                        : 'pointer',
+                            }}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                // A refresh cannot fix a broken recipe — it
+                                // fails the same way — so the badge only
+                                // offers it when it would help.
+                                if (!('broken' in pivotHealth))
+                                    void handleRefreshPivot()
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            {'broken' in pivotHealth ? (
+                                <>
+                                    <ErrorOutlineIcon sx={{fontSize: 13}} />
+                                    Recipe broken
+                                </>
+                            ) : (
+                                <>
+                                    <RefreshIcon sx={{fontSize: 13}} />
+                                    {pivotHealth.missing} group
+                                    {pivotHealth.missing === 1 ? '' : 's'}{' '}
+                                    missing
+                                </>
+                            )}
+                        </Box>
+                    </Tooltip>
+                )}
+
                 {/* Field headers (top) */}
                 {showInfo && fieldInfo.length > 0 && (
                     <Box
@@ -1343,6 +1735,20 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     analyzedBy={analyzedBy}
                     onGoToBlock={onGoToBlock}
                     onCreateAnalysis={handleCreateAnalysis}
+                    onCreatePivot={
+                        pivotSource && pivotSource.length > 1
+                            ? () => setPivotDialog(true)
+                            : undefined
+                    }
+                    onEditPivot={
+                        isPivot && pivotContext ? openPivotEdit : undefined
+                    }
+                    onRefreshPivot={isPivot ? handleRefreshPivot : undefined}
+                    pivotStaleCount={
+                        pivotHealth && !('broken' in pivotHealth)
+                            ? pivotHealth.missing
+                            : undefined
+                    }
                     onDelete={() =>
                         analyzedBy.length > 0
                             ? setDeleteConfirm(true)
@@ -1363,23 +1769,48 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
             {/* Deleting a block deletes its analyses with it — an analysis of
                 a block that no longer exists would sit there reading empty
                 with nothing to say why. Named, so the user knows what goes. */}
+            {pivotDialog && pivotSource && (
+                <PivotDialog
+                    sourceName={title}
+                    fields={pivotSource}
+                    keyIdx={pivotKeyIdx}
+                    onCancel={() => setPivotDialog(false)}
+                    onConfirm={handleCreatePivot}
+                />
+            )}
+
+            {/* The same dialog over an existing recipe. Its fields are the
+                SOURCE's, because that is what a recipe names. */}
+            {pivotEdit && pivotContext && (
+                <PivotDialog
+                    sourceName={pivotContext.source.refName}
+                    fields={pivotContext.fields}
+                    keyIdx={pivotContext.keyIdx}
+                    initial={pivotEdit}
+                    onCancel={() => setPivotEdit(undefined)}
+                    onConfirm={handleEditPivot}
+                />
+            )}
+
             {deleteConfirm && (
                 <Dialog open onClose={() => setDeleteConfirm(false)}>
-                    <DialogTitle>删除 “{title}”？</DialogTitle>
+                    <DialogTitle>Delete “{title}”?</DialogTitle>
                     <DialogContent>
                         <Typography variant="body2">
-                            它的 {analyzedBy.length} 个分析块（
-                            {analyzedBy.map((a) => a.name).join('、')}
-                            ）会一起删除 —— 分析块的每一列都在汇总这个
-                            block，源块不在了就没有意义了。一次撤销可以全部恢复。
+                            Its {analyzedBy.length} analysis block
+                            {analyzedBy.length === 1 ? '' : 's'} (
+                            {analyzedBy.map((a) => a.name).join(', ')}) will go
+                            with it — every column of an analysis block
+                            summarises this one, so none of them mean anything
+                            without it. A single undo brings them all back.
                         </Typography>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setDeleteConfirm(false)}>
-                            取消
+                            Cancel
                         </Button>
                         <Button color="error" onClick={handleDelete}>
-                            全部删除
+                            Delete all
                         </Button>
                     </DialogActions>
                 </Dialog>

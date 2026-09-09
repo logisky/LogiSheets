@@ -88,6 +88,7 @@ fn fresh_block_with_data(
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             // Keys first (matches the factory-simulator pattern — see
             // `BindFormSchema` arm's comment in
@@ -529,6 +530,7 @@ fn test_validation_field_ref_unknown_field_errors() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "T".into(),
@@ -577,6 +579,7 @@ fn test_field_rule_coordinate_into_own_block_errors() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "T".into(),
@@ -630,6 +633,7 @@ fn test_field_rule_coordinate_outside_block_is_fine() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "T".into(),

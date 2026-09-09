@@ -25,19 +25,21 @@ export class ScrollImpl implements Scroll {
 }
 export class StandardSheet {
     /**
-     * sheet的实际高度
+     * The sheet's actual height.
      */
     height = 0
     /**
-     * sheet在视图中展示的高度。在滚动时，该视图高度会大于this.sheet
+     * The height the sheet is shown with in the view. While scrolling this is
+     * larger than the actual height.
      */
     viewHeight = 0
     /**
-     * sheet的实际宽度
+     * The sheet's actual width.
      */
     width = 0
     /**
-     * sheet在视图中展示的宽度。在滚动时，该视图宽度会大于this.sheet
+     * The width the sheet is shown with in the view. While scrolling this is
+     * larger than the actual width.
      */
     viewWidth = 0
     name = ''

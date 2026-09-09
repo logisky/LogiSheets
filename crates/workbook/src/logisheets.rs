@@ -132,10 +132,58 @@ pub struct BlockRange {
     /// Same sheet, so the id alone identifies it.
     #[xmlserde(name = b"analyzes", ty = "attr")]
     pub analyzes: Option<usize>,
+    /// When the analysis block is a PIVOT, the recipe its cells and its shape
+    /// derive from: the source fields whose distinct values become this
+    /// block's rows and columns, and what is aggregated over them. Absent for
+    /// a plain analysis block (a total row).
+    ///
+    /// Flat attributes rather than a child element, to match how the pivot
+    /// crosses the wasm boundary — one shape to reason about, not two. Any of
+    /// them missing, or a `pivotFunc` this build does not know, drops the
+    /// pivot: the block opens as a plain analysis block rather than inventing
+    /// an aggregate. See `design/block-pivot.md`.
+    #[xmlserde(name = b"pivotRowDim", ty = "attr")]
+    pub pivot_row_dim: Option<String>,
+    #[xmlserde(name = b"pivotColDim", ty = "attr")]
+    pub pivot_col_dim: Option<String>,
+    #[xmlserde(name = b"pivotMeasure", ty = "attr")]
+    pub pivot_measure: Option<String>,
+    /// `SUM` | `COUNT` | `AVERAGE` | `MIN` | `MAX`.
+    #[xmlserde(name = b"pivotFunc", ty = "attr")]
+    pub pivot_func: Option<String>,
+    /// `ascending` (default) | `firstSeen` | `custom`.
+    #[xmlserde(name = b"pivotOrder", ty = "attr")]
+    pub pivot_order: Option<String>,
+    /// The sequence for `custom` order. A child element rather than a joined
+    /// attribute because a dimension value can contain any character,
+    /// including whatever separator a joined form would pick.
+    #[xmlserde(name = b"pivotOrderValue", ty = "child")]
+    pub pivot_order_values: Vec<PivotOrderValueXml>,
+    /// Which source records the pivot counts. Same reasoning: the criteria is
+    /// free text.
+    #[xmlserde(name = b"pivotFilter", ty = "child")]
+    pub pivot_filters: Vec<PivotFilterXml>,
     #[xmlserde(name = b"rowInfos", ty = "child")]
     pub row_infos: Vec<BlockLineInfo>,
     #[xmlserde(name = b"colInfos", ty = "child")]
     pub col_infos: Vec<BlockLineInfo>,
+}
+
+/// One value of a pivot's custom dimension order.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct PivotOrderValueXml {
+    #[xmlserde(name = b"v", ty = "attr")]
+    pub value: String,
+}
+
+/// One condition a source record must meet to be counted by a pivot.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct PivotFilterXml {
+    #[xmlserde(name = b"field", ty = "attr")]
+    pub field: String,
+    /// Spreadsheet condition syntax, e.g. `>100` or `East`.
+    #[xmlserde(name = b"criteria", ty = "attr")]
+    pub criteria: String,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -351,6 +399,18 @@ pub struct SchemaFieldXml {
     pub agg_func: Option<String>,
     #[xmlserde(name = b"aggField", ty = "attr")]
     pub agg_field: Option<String>,
+    /// When the block is a PIVOT and this column is hand-declared rather than
+    /// derived: which column-dimension value it filters on (`*` = every value,
+    /// i.e. a row total), and optionally its own measure and function.
+    ///
+    /// All absent for an ordinary derived column, which is every column of a
+    /// plain cross-tab.
+    #[xmlserde(name = b"pivotColValue", ty = "attr")]
+    pub pivot_col_value: Option<String>,
+    #[xmlserde(name = b"pivotMeasure", ty = "attr")]
+    pub pivot_measure: Option<String>,
+    #[xmlserde(name = b"pivotFunc", ty = "attr")]
+    pub pivot_func: Option<String>,
 }
 
 /// A free-form schema: explicit `(key, row, col, renderId)` tuples with no

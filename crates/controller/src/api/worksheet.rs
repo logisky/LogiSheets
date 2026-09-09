@@ -2047,6 +2047,7 @@ impl<'a> Worksheet<'a> {
                 }
                 BlockInfo {
                     analyzes: block_place.analyzes,
+                    pivot: block_place.pivot.as_ref().map(|p| p.to_parts()),
                     analyzed_by: self.controller.status.navigator.analyzed_by(&self.sheet_id, id),
                     sheet_idx,
                     sheet_id: self.sheet_id,
@@ -2807,6 +2808,7 @@ impl<'a> Worksheet<'a> {
         }
         Ok(BlockInfo {
             analyzes: block_place.analyzes,
+            pivot: block_place.pivot.as_ref().map(|p| p.to_parts()),
             analyzed_by: self
                 .controller
                 .status

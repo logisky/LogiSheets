@@ -326,6 +326,19 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.field,
             params.asc,
         )),
+        Message::PivotPlan(params) => res_to_js(controller::pivot_plan(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.block_id,
+        )),
+        Message::PivotPlanFor(params) => res_to_js(controller::pivot_plan_for(
+            &mgr,
+            id,
+            params.sheet_idx,
+            params.source_block,
+            params.spec,
+        )),
         Message::MayModifyBlock(params) => res_to_js(controller::may_modify_block(
             &mgr,
             id,

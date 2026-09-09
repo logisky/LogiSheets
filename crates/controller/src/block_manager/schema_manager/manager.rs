@@ -18,6 +18,8 @@ pub struct BlockFieldView<'a> {
     pub validation_formula: Option<&'a str>,
     /// How this field aggregates the block its own block analyses, if it does.
     pub aggregate: Option<&'a super::field_type::FieldAggregate>,
+    /// When the block is a pivot and this column was hand-declared.
+    pub pivot_column: Option<&'a super::field_type::PivotColumn>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -181,7 +183,7 @@ impl SchemaManager {
     /// the body.
     /// The value-formula template governing a cell.
     ///
-    /// `analyzes` is the block this cell's block analyses, when it is an
+    /// `analysis` is what this cell's block analyses and how, when it is an
     /// analysis block. It is passed in rather than looked up because it lives
     /// on the navigator's `BlockPlace` alongside the block's other metadata,
     /// not on the schema — and every caller already holds the navigator.
@@ -190,17 +192,44 @@ impl SchemaManager {
     /// than stored (see `block_manager::analysis`), and it wins over any
     /// authored template: a field cannot both aggregate a source and compute
     /// something else per record.
+    ///
+    /// Two kinds of generation, and a block is only ever one of them (the
+    /// combination is refused by `controller::pivot_guard`):
+    ///
+    /// - a **pivot** generates every cell from the block-level recipe, using
+    ///   the cell's own field name as the column filter and `#KEY` as the row
+    ///   filter, so its key column alone stays an ordinary cell;
+    /// - a **total row** generates from each field's own `aggregate`.
     pub fn formula_for_block_cell(
         &self,
         sheet_id: SheetId,
         cell: &BlockCellId,
-        analyzes: Option<BlockId>,
+        analysis: Option<crate::block_manager::analysis::AnalysisTarget<'_>>,
     ) -> Option<String> {
-        if let Some(source) = analyzes {
+        if let Some(target) = analysis {
+            if let Some(pivot) = target.pivot {
+                // A pivot's cells are generated wholesale from the recipe, so
+                // an authored template on one of them cannot apply — the
+                // column means what the recipe says it means.
+                if self.is_key_cell(sheet_id, cell) {
+                    return None;
+                }
+                let field = self.field_name_for_block_cell(sheet_id, cell)?;
+                let column = self
+                    .field_view_for_block_cell(sheet_id, cell)
+                    .and_then(|v| v.pivot_column);
+                return Some(crate::block_manager::analysis::pivot_formula(
+                    sheet_id,
+                    target.source,
+                    pivot,
+                    &field,
+                    column,
+                ));
+            }
             if let Some(view) = self.field_view_for_block_cell(sheet_id, cell) {
                 if let Some(generated) = crate::block_manager::analysis::aggregate_formula(
                     sheet_id,
-                    source,
+                    target.source,
                     view.aggregate,
                 ) {
                     return Some(generated);
@@ -236,6 +265,7 @@ impl SchemaManager {
                 unique: e.unique,
                 validation_formula: e.validation_formula.as_deref(),
                 aggregate: e.aggregate.as_ref(),
+                pivot_column: e.pivot_column.as_ref(),
             }
         }
         match schema {
@@ -325,6 +355,42 @@ impl SchemaManager {
                 .collect(),
             Schema::RandomSchema(_) => return None,
         })
+    }
+
+    /// Whether this cell sits on the schema's KEY axis — the column of a row
+    /// schema (or the row of a column schema) that holds each record's key.
+    ///
+    /// By axis id rather than by field name, so a schema that declares no
+    /// field at the key axis still answers correctly.
+    pub fn is_key_cell(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
+        match self.schemas.get(&(sheet_id, cell.block_id)) {
+            Some(Schema::RowSchema(s)) => s.key == cell.col,
+            Some(Schema::ColSchema(s)) => s.key == cell.row,
+            _ => false,
+        }
+    }
+
+    /// The name of the field this cell belongs to. For a pivot that is also
+    /// the column-dimension value the cell filters on.
+    pub fn field_name_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<String> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        match schema {
+            Schema::RowSchema(s) => s
+                .fields
+                .iter()
+                .find(|(_, e)| e.field_axis_id == cell.col)
+                .map(|(n, _)| n.clone()),
+            Schema::ColSchema(s) => s
+                .fields
+                .iter()
+                .find(|(_, e)| e.field_axis_id == cell.row)
+                .map(|(n, _)| n.clone()),
+            Schema::RandomSchema(_) => None,
+        }
     }
 
     /// `BlockCellId` of the key cell that shares this cell's row (Row

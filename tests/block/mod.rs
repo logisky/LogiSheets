@@ -82,6 +82,7 @@ fn test_form_block_rowcnt1_two_fields() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "".to_string(),
@@ -156,6 +157,7 @@ fn test_factory_simulator_round_wipe_loop() {
             permissions: None,
             description: None,
             analyzes: None,
+            pivot: None,
         })],
         undoable: true,
         init: false,
@@ -327,7 +329,8 @@ fn test_factory_simulator_round_wipe_loop() {
 ///       orders 1..N each emit insertRowsInBlock(start=i, cnt=1) then
 ///       blockInput(row=i, col=0..colCnt) with the new content
 ///
-/// This matches the live craft's "第三轮开始点不动" report: rounds 1-2
+/// This matches the live craft's "clicks stop working from round three"
+/// report: rounds 1-2
 /// land cleanly, round 3 silently fails. If the engine handles the full
 /// payload sequence correctly across rounds this test passes; if it
 /// doesn't, the assertion in round 3 will fire.
@@ -364,6 +367,7 @@ fn test_factory_simulator_single_tx_round() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::CreateBlock(CreateBlock {
                 sheet_idx: MAIN_SHEET,
@@ -377,6 +381,7 @@ fn test_factory_simulator_single_tx_round() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::CreateBlock(CreateBlock {
                 sheet_idx: ENGINE_SHEET,
@@ -390,6 +395,7 @@ fn test_factory_simulator_single_tx_round() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: ENGINE_SHEET,
@@ -570,6 +576,7 @@ fn test_block_input_after_deleterows_cross_sheet_same_blockid() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::CreateBlock(CreateBlock {
                 sheet_idx: ENGINE_SHEET,
@@ -583,6 +590,7 @@ fn test_block_input_after_deleterows_cross_sheet_same_blockid() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: ENGINE_SHEET,
@@ -730,6 +738,7 @@ fn test_block_cell_formula_survives_reload() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -819,6 +828,7 @@ fn test_out_of_range_payloads_are_rejected() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             })],
             init: false,
             undoable: false,
@@ -901,6 +911,7 @@ fn test_create_block_rejects_absurd_dimensions() {
             permissions: None,
             description: None,
             analyzes: None,
+            pivot: None,
         })],
         init: false,
         undoable: false,
@@ -941,6 +952,7 @@ fn test_blockref_readers_recompute_after_reload() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -1053,6 +1065,7 @@ fn test_save_can_resolve_block_refs_to_coordinates() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -1173,6 +1186,7 @@ fn test_block_row_removal_dirties_readers() {
         permissions: None,
         description: None,
         analyzes: None,
+        pivot: None,
     })];
     for (i, (k, v)) in [("k1", "10"), ("k2", "20"), ("k3", "30")]
         .into_iter()
@@ -1283,6 +1297,7 @@ fn test_save_resolves_a_block_join_to_index_match() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,
@@ -1398,6 +1413,7 @@ fn build_pct_block(pct_rule: &str, rows: &[(&str, f64)]) -> (Workbook, StatusCod
         permissions: None,
         description: None,
         analyzes: None,
+        pivot: None,
     })];
     for (i, (key, amt)) in rows.iter().enumerate() {
         payloads.push(EditPayload::BlockInput(BlockInput {

@@ -6,6 +6,9 @@ import {
     BlockInfo,
     BlockSortOrder,
     GetBlockSortOrderParams,
+    PivotPlan,
+    PivotPlanParams,
+    PivotPlanForParams,
     MayModifyBlockParams,
     CheckFieldValidationParams,
     FieldValidationVerdict,
@@ -650,6 +653,45 @@ export class Workbook {
     ): Result<BlockSortOrder> {
         return rpc(
             'getBlockSortOrder',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Read-only: the shape a PIVOT block should have, what it has now, and the
+     * difference.
+     *
+     * A pivot's rows and columns are the source's distinct dimension values,
+     * so its shape is data and no formula can produce it. The engine computes
+     * the plan; a host applies it as one transaction in the order
+     * `design/block-pivot.md` §6 pins.
+     *
+     * Read `isStale` before trusting a pivot's totals: a stale pivot's numbers
+     * are each correct while a whole group is absent, which is the one way a
+     * block can mislead without being wrong. `missingKeys` /
+     * `unassignedRecords` say what is not being shown.
+     */
+    public pivotPlan(params: PivotPlanParams): Result<PivotPlan> {
+        return rpc(
+            'pivotPlan',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Read-only: the shape a pivot over `sourceBlock` WOULD have, for a recipe
+     * no block carries yet.
+     *
+     * This is what lets a host create a pivot at its right size in ONE
+     * transaction — and therefore one undo. Without it, creating would mean
+     * making the block, asking what shape it should be, and reshaping it,
+     * leaving an empty declared pivot as an intermediate state.
+     */
+    public pivotPlanFor(params: PivotPlanForParams): Result<PivotPlan> {
+        return rpc(
+            'pivotPlanFor',
             params as unknown as Record<string, unknown>,
             this._id
         )

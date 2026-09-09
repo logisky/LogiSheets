@@ -29,6 +29,10 @@ import {
     isErrorMessage,
 } from 'logisheets-web/pure'
 import type {CraftCalc, Value} from 'logisheets-web/pure'
+// The single home for the pivot payload sequences, shared with the browser
+// app — the order they send is load-bearing and must not exist twice.
+import {WorkbookOps, aggregateKeepsFormat} from 'logisheets-core'
+import type {AggFunc, DimOrder} from 'logisheets-core'
 import type {
     ActionEffect,
     BlockActor,
@@ -2111,6 +2115,39 @@ interface DescribeBlockOutput {
      */
     analyzed_by?: string[]
     /**
+     * When this block is a PIVOT, the recipe every one of its cells is
+     * generated from, in words — e.g.
+     * `rows = region, columns = quarter, SUM of amt (of "sales")`.
+     *
+     * Its cells are engine-computed; do not write to them.
+     */
+    pivot?: string
+    /**
+     * Present ONLY when this pivot's shape is out of date, and then it is the
+     * most important thing on this block.
+     *
+     * A stale pivot is the one way a block can mislead without being wrong:
+     * every number in it is correct, and whole groups are simply absent, so a
+     * total taken from it is short and nothing on the sheet says so. Call
+     * `build__refresh_pivot` before reading or reporting its numbers.
+     */
+    pivot_is_stale?: string
+    /**
+     * Present when this pivot's recipe cannot be evaluated at all — normally
+     * because it names a source field that no longer exists.
+     *
+     * Louder than staleness and for a worse reason: its cells do not error,
+     * they read **0**, so the block looks like a table of real zeroes. Do not
+     * report any number from it.
+     */
+    pivot_is_broken?: string
+    /**
+     * Source records that belong to no cell of this pivot, because their
+     * grouping value is blank. A refresh cannot fix it — the data has to be
+     * filled in — so say so rather than quietly totalling without them.
+     */
+    pivot_unassigned_records?: number
+    /**
      * What the block is for, in prose, as whoever built it wrote it. The
      * schema says what shape the records are; this is the only thing that says
      * what they mean or how they are meant to be used. `null` when nobody said.
@@ -2284,6 +2321,112 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
                 (b) => b.blockId === id && b.sheetIdx === block.sheetIdx
             )?.schema?.name
 
+        // A pivot's SHAPE is data, so it can fall behind its source while every
+        // number in it stays correct. That is worth a round trip: an agent
+        // that reads a stale pivot under-reports and has no way to tell.
+        const pivotReport: {
+            pivot?: string
+            pivot_is_stale?: string
+            pivot_is_broken?: string
+            pivot_unassigned_records?: number
+        } = {}
+        if (block.pivot) {
+            const p = block.pivot
+            const src = block.analyzes
+                ? nameOfBlock(block.analyzes) ?? `block#${block.analyzes}`
+                : '?'
+            // Everything the recipe says. A reader who cannot see the filters
+            // cannot tell that records are being excluded — the same "correct
+            // numbers, incomplete picture" failure staleness is.
+            const declared = (block.schema?.fields ?? []).filter(
+                (f) => f.pivotColValue !== undefined
+            )
+            const says = (f: {
+                field: string
+                pivotColValue?: string
+                pivotFunc?: string
+                pivotMeasure?: string
+            }) =>
+                `"${f.field}" is ` +
+                (f.pivotColValue === '*'
+                    ? 'a total across every column'
+                    : `for ${p.colDim} = ${f.pivotColValue}`) +
+                (f.pivotFunc ? ` (${f.pivotFunc} of ${f.pivotMeasure})` : '')
+            pivotReport.pivot =
+                `rows = ${p.rowDim}` +
+                (p.colDim ? `, columns = ${p.colDim}` : '') +
+                `, ${p.func} of ${p.measure} (of "${src}")` +
+                (p.filters?.length
+                    ? `; counting ONLY records where ${p.filters
+                          .map((f) => `${f.field} ${f.criteria}`)
+                          .join(' and ')} — every number here excludes the rest`
+                    : '') +
+                (p.order === 'custom'
+                    ? `; rows in a fixed order (${(p.orderValues ?? []).join(
+                          ', '
+                      )}), any others after`
+                    : p.order === 'firstSeen'
+                    ? "; rows in the source's own order"
+                    : '') +
+                (declared.length ? `; ${declared.map(says).join('; ')}` : '')
+
+            const plan = await client.pivotPlan({
+                sheetIdx: block.sheetIdx,
+                blockId: block.blockId,
+            })
+            if (isErrorMessage(plan)) {
+                // Never swallowed. This is the ONE signal that a pivot's
+                // recipe has come unstuck from its source, and the cells give
+                // no hint: they read 0, not an error.
+                pivotReport.pivot_is_broken =
+                    `${plan.msg}. Every cell of this pivot is therefore reading 0 ` +
+                    'rather than failing — do NOT report any number from it. Fix ' +
+                    'the recipe (a field it names may have been renamed or removed) ' +
+                    'or rebuild the pivot.'
+            } else {
+                if (plan.isStale) {
+                    const parts: string[] = []
+                    if (plan.missingKeys.length)
+                        parts.push(
+                            `${plan.missingKeys.length} group(s) of ${
+                                p.rowDim
+                            } are NOT shown here (${plan.missingKeys.join(
+                                ', '
+                            )})`
+                        )
+                    if (plan.missingFields.length)
+                        parts.push(
+                            `${plan.missingFields.length} value(s) of ${
+                                p.colDim
+                            } have no column (${plan.missingFields.join(', ')})`
+                        )
+                    if (plan.extraKeys.length)
+                        parts.push(
+                            `${
+                                plan.extraKeys.length
+                            } row(s) no longer exist in the source (${plan.extraKeys.join(
+                                ', '
+                            )})`
+                        )
+                    if (plan.extraFields.length)
+                        parts.push(
+                            `${
+                                plan.extraFields.length
+                            } column(s) no longer exist in the source (${plan.extraFields.join(
+                                ', '
+                            )})`
+                        )
+                    pivotReport.pivot_is_stale =
+                        parts.join('; ') +
+                        '. The numbers shown are each correct but INCOMPLETE — ' +
+                        'call build__refresh_pivot before reading or reporting them.'
+                }
+                if (plan.unassignedRecords > 0)
+                    pivotReport.pivot_unassigned_records =
+                        plan.unassignedRecords
+            }
+        }
+
         const out: DescribeBlockOutput = {
             block: input.name,
             analyzes:
@@ -2296,6 +2439,7 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
             analyzed_by: (block.analyzedBy ?? []).length
                 ? block.analyzedBy.map((id) => nameOfBlock(id) ?? `block#${id}`)
                 : undefined,
+            ...pivotReport,
             description: nonEmpty(block.description),
             owner: nonEmpty(block.owner),
             block_id: block.blockId,
@@ -2430,7 +2574,7 @@ export const evalFormula: Tool<EvalFormulaInput, EvalFormulaOutput> = {
         '  - "empty"   — value is null (formula returned an empty cell)',
         '',
         'Use for:',
-        '  - Quick checks: "=SUMIFS(OrderStatus, \\"金额\\", \\"*\\")" → total',
+        '  - Quick checks: "=SUMIFS(OrderStatus, \\"amount\\", \\"*\\")" → total',
         '  - Sanity-test a candidate template before set_field_rule',
         '  - BLOCKREF / BLOCKREFS lookups against any block in the workbook',
         '',
@@ -2444,7 +2588,7 @@ export const evalFormula: Tool<EvalFormulaInput, EvalFormulaOutput> = {
             expr: {
                 type: 'string',
                 description:
-                    'Formula, with or without leading "=". E.g. "SUM(A1:A10)" or "=BLOCKREF(\\"orders\\", \\"O001\\", \\"金额\\")".',
+                    'Formula, with or without leading "=". E.g. "SUM(A1:A10)" or "=BLOCKREF(\\"orders\\", \\"O001\\", \\"amount\\")".',
             },
         },
         required: ['expr'],
@@ -3490,7 +3634,7 @@ async function assertMayModify(
 // create_analysis_block — a table's totals, as their own block
 // ---------------------------------------------------------------------------
 
-const AGG_FUNCS = ['SUM', 'COUNT', 'AVERAGE', 'MIN', 'MAX'] as const
+const AGG_FUNCS = ['SUM', 'COUNT', 'COUNTA', 'AVERAGE', 'MIN', 'MAX'] as const
 
 interface CreateAnalysisBlockInput {
     source: string
@@ -3500,6 +3644,21 @@ interface CreateAnalysisBlockInput {
         field: string
         func: (typeof AGG_FUNCS)[number]
     }>
+}
+
+/**
+ * A block's number format per FIELD name, read off its render entries.
+ *
+ * This is what an analysis block or a pivot of it inherits: both aggregate a
+ * source column, so both are measured in that column's units.
+ */
+function numFmtsOf(block: BlockInfo): Record<string, string | undefined> {
+    const entries = (block.schema?.fields ?? []).map((f) => [
+        f.field,
+        block.fieldRenders?.find((r) => r.renderId === f.renderId)?.style
+            ?.formatter || undefined,
+    ])
+    return Object.fromEntries(entries)
 }
 
 export const createAnalysisBlock: Tool<
@@ -3673,6 +3832,27 @@ export const createAnalysisBlock: Tool<
                         input: label,
                     },
                 },
+                // Carry each source column's number format across, so a total
+                // of a currency column reads as currency. The counts are the
+                // exception: they count records, not money.
+                ...ordered.map((f, i) => {
+                    const func = chosen.get(f.field)
+                    const keep =
+                        func === undefined || aggregateKeepsFormat(func)
+                    const numFmt = source.fieldRenders?.find(
+                        (r) => r.renderId === f.renderId
+                    )?.style?.formatter
+                    return {
+                        type: 'upsertFieldRenderInfo' as const,
+                        value: {
+                            renderId: `${name}__f${i}`,
+                            diyRender: false,
+                            styleUpdate: {
+                                setNumFmt: (keep ? numFmt : undefined) ?? '',
+                            },
+                        },
+                    }
+                }),
             ],
             `create_analysis_block("${input.source}")`
         )
@@ -3686,6 +3866,636 @@ export const createAnalysisBlock: Tool<
                 `Created "${name}" below "${input.source}": ` +
                 `${aggregated.join(', ')}. ` +
                 `Reference a result with BLOCKREF("${name}", "${label}", "<field>").`,
+        }
+    },
+}
+
+// ---------------------------------------------------------------------------
+// create_pivot / refresh_pivot — a cross-tab as an analysis block
+// ---------------------------------------------------------------------------
+
+interface CreatePivotInput {
+    source: string
+    rows: string
+    columns?: string
+    measure: string
+    func?: (typeof AGG_FUNCS)[number]
+    name?: string
+    order?: 'ascending' | 'firstSeen' | 'custom'
+    order_values?: string[]
+    filters?: Array<{field: string; criteria: string}>
+    row_total?: string
+    extra_measures?: Array<{
+        name: string
+        func: (typeof AGG_FUNCS)[number]
+        measure: string
+        column?: string
+    }>
+}
+
+export const createPivot: Tool<
+    CreatePivotInput,
+    {
+        block: string
+        block_id: number
+        rows: string[]
+        columns: string[]
+        unassigned_records: number
+    }
+> = {
+    namespace: 'build',
+    name: 'create_pivot',
+    description: [
+        'Cross-tabulate a table: one row per distinct value of `rows`, one column per distinct value of `columns`, each cell aggregating `measure`.',
+        '',
+        'The result is an ordinary block, so every cell is addressable: `BLOCKREF("<name>", "<a rows value>", "<a columns value>")`. That is what lets you put one number from it in a sentence or feed it to another calculation.',
+        '',
+        'You declare the recipe; the engine generates every cell from it. Do not write formulas, and do not write into the block — renaming a field of the source rebuilds the pivot rather than breaking it, which is only true because nothing is hand-written.',
+        '',
+        '`rows` and `columns` must be fields whose values REPEAT (a region, a quarter, a status). Pointing either at an id gives one row per record, which is the source table again, not a pivot.',
+        '',
+        "IMPORTANT: a pivot's numbers are live but its SHAPE is not. When new values appear in the source, its rows and columns fall behind while every number in it stays correct — call build__refresh_pivot. describe_block reports when that has happened.",
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            source: {
+                type: 'string',
+                description: 'Ref name of the table to pivot.',
+            },
+            rows: {
+                type: 'string',
+                description:
+                    'Field of the source whose distinct values become the ROWS. Its values must repeat.',
+            },
+            columns: {
+                type: 'string',
+                description:
+                    'Field whose distinct values become the COLUMNS. Omit for a simple group-by with one value column.',
+            },
+            measure: {
+                type: 'string',
+                description: 'Field being aggregated. Normally a number field.',
+            },
+            func: {
+                type: 'string',
+                enum: [...AGG_FUNCS],
+                description:
+                    'How to aggregate. Defaults to SUM. COUNT counts matching RECORDS and ignores `measure`; COUNTA counts the records whose `measure` is filled in, which is how you ask how complete a column is.',
+            },
+            name: {
+                type: 'string',
+                description:
+                    'Ref name for the new block. Defaults to "<source>_pivot".',
+            },
+            order: {
+                type: 'string',
+                enum: ['ascending', 'firstSeen', 'custom'],
+                description:
+                    "Order of the rows. `ascending` (default) sorts; `firstSeen` keeps the source's own sequence; `custom` uses `order_values`.",
+            },
+            order_values: {
+                type: 'array',
+                items: {type: 'string'},
+                description:
+                    'The row sequence for `order: custom`. A value you omit is placed after the listed ones, never hidden.',
+            },
+            filters: {
+                type: 'array',
+                description:
+                    'Which source records count at all. Omit to count every one. Applied to the rows AND the numbers, so a group left with no records gets no row rather than a row reading 0.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        field: {
+                            type: 'string',
+                            description: 'Field of the SOURCE block.',
+                        },
+                        criteria: {
+                            type: 'string',
+                            description:
+                                'Spreadsheet condition syntax: `>100`, `East`, `<>closed`.',
+                        },
+                    },
+                    required: ['field', 'criteria'],
+                },
+            },
+            row_total: {
+                type: 'string',
+                description:
+                    'Name for a column totalling each row across EVERY value of `columns` — e.g. "Total". Omit for no total column.',
+            },
+            extra_measures: {
+                type: 'array',
+                description:
+                    'Extra columns with their own function and measure, for showing more than one number per group.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        name: {
+                            type: 'string',
+                            description: 'Column name in the pivot.',
+                        },
+                        func: {type: 'string', enum: [...AGG_FUNCS]},
+                        measure: {
+                            type: 'string',
+                            description: 'Field of the SOURCE block.',
+                        },
+                        column: {
+                            type: 'string',
+                            description:
+                                'Restrict it to one value of `columns`. Omit to span every value.',
+                        },
+                    },
+                    required: ['name', 'func', 'measure'],
+                },
+            },
+        },
+        required: ['source', 'rows', 'measure'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const source = all.find((b) => b.schema?.name === input.source)
+        if (!source) {
+            throw new Error(`no block with ref name "${input.source}"`)
+        }
+        const schema = source.schema
+        if (!schema) {
+            throw new Error(
+                `block "${input.source}" has no schema, so it has no fields to group by`
+            )
+        }
+        const has = (f: string) => schema.fields.some((x) => x.field === f)
+        for (const [what, f] of [
+            ['rows', input.rows],
+            ['measure', input.measure],
+            ...(input.columns ? [['columns', input.columns] as const] : []),
+        ] as ReadonlyArray<readonly [string, string]>) {
+            if (!has(f)) {
+                throw new Error(
+                    `\`${what}\`: block "${input.source}" has no field named "${f}". ` +
+                        `It has: ${schema.fields
+                            .map((x) => x.field)
+                            .join(', ')}`
+                )
+            }
+        }
+        const name = input.name ?? `${input.source}_pivot`
+        if (all.some((b) => b.schema?.name === name)) {
+            throw new Error(
+                `a block named "${name}" already exists — ref names are how formulas reach a block, so pick another`
+            )
+        }
+
+        for (const f of input.filters ?? []) {
+            if (!has(f.field)) {
+                throw new Error(
+                    `\`filters\`: block "${input.source}" has no field named "${f.field}". ` +
+                        `It has: ${schema.fields
+                            .map((x) => x.field)
+                            .join(', ')}`
+                )
+            }
+        }
+        for (const m of input.extra_measures ?? []) {
+            if (!has(m.measure)) {
+                throw new Error(
+                    `\`extra_measures\`: block "${input.source}" has no field named "${m.measure}".`
+                )
+            }
+        }
+        if (input.order === 'custom' && !input.order_values?.length) {
+            throw new Error(
+                '`order: custom` needs `order_values` — the sequence to put the rows in.'
+            )
+        }
+        if (input.row_total && !input.columns) {
+            throw new Error(
+                'A row total spans the values of `columns`, and this pivot has none — ' +
+                    'without `columns` every column already totals the whole row.'
+            )
+        }
+
+        const idRes = await client.getAvailableBlockId({
+            sheetIdx: source.sheetIdx,
+        })
+        if (isErrorMessage(idRes)) {
+            throw new Error(`getAvailableBlockId failed: ${idRes.msg}`)
+        }
+
+        // A row total first, then the extra measures — the order a reader
+        // expects, and the order the engine preserves across a refresh.
+        const extraColumns = [
+            ...(input.row_total
+                ? [{name: input.row_total, colValue: null}]
+                : []),
+            ...(input.extra_measures ?? []).map((m) => ({
+                name: m.name,
+                colValue: m.column ?? null,
+                func: m.func,
+                measure: m.measure,
+            })),
+        ]
+
+        const ops = new WorkbookOps(client)
+        const made = await ops.createPivot({
+            source: {
+                sheetIdx: source.sheetIdx,
+                blockId: source.blockId,
+                refName: input.source,
+                rowStart: source.rowStart,
+                rowCnt: source.rowCnt,
+                colStart: source.colStart,
+                // So a pivot of a currency column reads as currency.
+                numFmts: numFmtsOf(source),
+            },
+            blockId: idRes,
+            refName: name,
+            rowDim: input.rows,
+            colDim: input.columns,
+            measure: input.measure,
+            func: input.func ?? 'SUM',
+            order: input.order,
+            orderValues: input.order_values,
+            filters: input.filters,
+            extraColumns,
+        })
+
+        const func = input.func ?? 'SUM'
+        const shape = input.columns
+            ? `${made.keys.length} x ${made.fields.length}`
+            : `${made.keys.length} row(s)`
+        return {
+            data: {
+                block: name,
+                block_id: idRes,
+                rows: made.keys,
+                columns: made.fields,
+                unassigned_records: made.unassignedRecords,
+            },
+            display:
+                `Created pivot "${name}" (${shape}): ${func} of ${input.measure} ` +
+                `by ${input.rows}${
+                    input.columns ? ` x ${input.columns}` : ''
+                }. ` +
+                `Reference a cell with BLOCKREF("${name}", "<${
+                    input.rows
+                }>", "<${input.columns ?? made.fields[0]}>").` +
+                (made.unassignedRecords > 0
+                    ? ` NOTE: ${made.unassignedRecords} record(s) have no ${input.rows} and are in no cell of it.`
+                    : ''),
+        }
+    },
+}
+
+export const editPivot: Tool<
+    {
+        name: string
+        rows?: string
+        columns?: string | null
+        measure?: string
+        func?: AggFunc
+        order?: DimOrder
+        order_values?: string[]
+        filters?: Array<{field: string; criteria: string}>
+        row_total?: string
+        extra_measures?: Array<{
+            name: string
+            func: AggFunc
+            measure: string
+            column?: string
+        }>
+    },
+    {
+        block: string
+        rows: string[]
+        columns: string[]
+        unassigned_records: number
+    }
+> = {
+    namespace: 'build',
+    name: 'edit_pivot',
+    description: [
+        "Change an existing pivot's recipe — what it groups by, what it measures, how, in what order, over which records — and reshape it to match.",
+        '',
+        'Use this rather than deleting and recreating: the block keeps its ref name, so every formula pointing at it keeps working, and the whole change is one undo.',
+        '',
+        'This is also the way to REPAIR a pivot whose recipe stopped resolving (describe_block reports `pivot_is_broken`) — for instance after a source field was renamed. A broken pivot reads 0 in every cell rather than erroring, so it must be fixed, not refreshed: a refresh fails the same way.',
+        '',
+        'Everything you omit is UNCHANGED. What you pass replaces that part outright — `filters: []` clears the filters, `columns: null` turns a cross-tab into a simple group-by.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            name: {type: 'string', description: 'Ref name of the pivot block.'},
+            rows: {
+                type: 'string',
+                description:
+                    'New row dimension. Its values must repeat. Omit to keep the current one.',
+            },
+            columns: {
+                type: 'string',
+                description:
+                    'New column dimension. Pass null to drop the columns and make it a simple group-by. Omit to keep the current one.',
+            },
+            measure: {
+                type: 'string',
+                description:
+                    'New field to aggregate. Omit to keep the current one.',
+            },
+            func: {
+                type: 'string',
+                enum: [...AGG_FUNCS],
+                description: 'New aggregate. Omit to keep the current one.',
+            },
+            order: {
+                type: 'string',
+                enum: ['ascending', 'firstSeen', 'custom'],
+                description: 'New row order. Omit to keep the current one.',
+            },
+            order_values: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'The row sequence for `order: custom`.',
+            },
+            filters: {
+                type: 'array',
+                description:
+                    'Replaces the current filters outright. Pass an empty array to count every record again.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        field: {type: 'string'},
+                        criteria: {
+                            type: 'string',
+                            description:
+                                'Spreadsheet condition syntax: `>100`, `East`, `<>closed`.',
+                        },
+                    },
+                    required: ['field', 'criteria'],
+                },
+            },
+            row_total: {
+                type: 'string',
+                description:
+                    'Name for a column totalling each row across every column value. Replaces the declared columns along with `extra_measures`.',
+            },
+            extra_measures: {
+                type: 'array',
+                description:
+                    'Replaces the declared extra columns outright, together with `row_total`. Omit BOTH to keep the ones the pivot has.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        name: {type: 'string'},
+                        func: {type: 'string', enum: [...AGG_FUNCS]},
+                        measure: {type: 'string'},
+                        column: {type: 'string'},
+                    },
+                    required: ['name', 'func', 'measure'],
+                },
+            },
+        },
+        required: ['name'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const block = await blockByName(client, input.name)
+        const was = block.pivot
+        if (!was) {
+            throw new Error(
+                `block "${input.name}" is not a pivot, so it has no recipe to edit`
+            )
+        }
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const source = all.find((b) => b.blockId === block.analyzes)
+        if (!source) {
+            throw new Error(
+                `pivot "${input.name}" no longer has a source block, so there is nothing to plan against`
+            )
+        }
+
+        // Omitted means unchanged. `columns` is the one that needs a third
+        // state: absent keeps it, null drops it.
+        const rowDim = input.rows ?? was.rowDim
+        const colDim =
+            input.columns === undefined
+                ? was.colDim ?? undefined
+                : input.columns ?? undefined
+        const measure = input.measure ?? was.measure
+        const func = (input.func ?? was.func) as AggFunc
+
+        const fields = source.schema?.fields ?? []
+        const has = (f: string) => fields.some((x) => x.field === f)
+        for (const [what, f] of [
+            ['rows', rowDim],
+            ['measure', measure],
+            ...(colDim ? [['columns', colDim] as const] : []),
+            ...(input.filters ?? []).map((x) => ['filters', x.field] as const),
+        ] as ReadonlyArray<readonly [string, string]>) {
+            if (!has(f)) {
+                throw new Error(
+                    `\`${what}\`: block "${source.schema?.name}" has no field named "${f}". ` +
+                        `It has: ${fields.map((x) => x.field).join(', ')}`
+                )
+            }
+        }
+
+        // The declared columns are replaced as a set, or kept as a set — a
+        // half-replaced set would be a shape nobody asked for.
+        const restating =
+            input.row_total !== undefined || input.extra_measures !== undefined
+        const extraColumns = restating
+            ? [
+                  ...(input.row_total
+                      ? [{name: input.row_total, colValue: null}]
+                      : []),
+                  ...(input.extra_measures ?? []).map((m) => ({
+                      name: m.name,
+                      colValue: m.column ?? null,
+                      func: m.func,
+                      measure: m.measure,
+                  })),
+              ]
+            : (block.schema?.fields ?? [])
+                  .filter((f) => f.pivotColValue !== undefined)
+                  .map((f) => ({
+                      name: f.field,
+                      colValue:
+                          f.pivotColValue === '*'
+                              ? null
+                              : f.pivotColValue ?? null,
+                      func: f.pivotFunc as AggFunc | undefined,
+                      measure: f.pivotMeasure,
+                  }))
+
+        const ops = new WorkbookOps(client)
+        const made = await ops.editPivot({
+            sheetIdx: block.sheetIdx,
+            blockId: block.blockId,
+            refName: input.name,
+            source: {
+                sheetIdx: source.sheetIdx,
+                blockId: source.blockId,
+                refName: source.schema?.name ?? '',
+                rowStart: source.rowStart,
+                rowCnt: source.rowCnt,
+                colStart: source.colStart,
+                numFmts: numFmtsOf(source),
+            },
+            rowStart: block.rowStart,
+            colStart: block.colStart,
+            currentRowCnt: block.rowCnt,
+            currentColCnt: block.colCnt,
+            rowDim,
+            colDim,
+            measure,
+            func,
+            order: (input.order ?? was.order) as DimOrder | undefined,
+            orderValues: input.order_values ?? was.orderValues ?? undefined,
+            filters: input.filters ?? was.filters ?? undefined,
+            extraColumns,
+        })
+
+        return {
+            data: {
+                block: input.name,
+                rows: made.keys,
+                columns: made.fields,
+                unassigned_records: made.unassignedRecords,
+            },
+            display:
+                `Re-cut "${input.name}": rows = ${rowDim}` +
+                (colDim ? `, columns = ${colDim}` : '') +
+                `, ${func} of ${measure}. ` +
+                `Now ${made.keys.length} row(s) x ${made.fields.length} column(s).` +
+                (made.unassignedRecords > 0
+                    ? ` ${made.unassignedRecords} record(s) have an empty ${rowDim} and are in no cell.`
+                    : ''),
+        }
+    },
+}
+
+export const refreshPivot: Tool<
+    {name: string},
+    {
+        changed: boolean
+        added_rows: string[]
+        removed_rows: string[]
+        added_columns: string[]
+        removed_columns: string[]
+        unassigned_records: number
+    }
+> = {
+    namespace: 'build',
+    name: 'refresh_pivot',
+    description: [
+        "Bring a pivot's rows and columns back in line with its source.",
+        '',
+        'Its NUMBERS were never stale — they are live formulas. Only the set of rows and columns falls behind, because no formula can add a row. That is exactly why this matters: a stale pivot shows correct numbers with whole groups missing, and totals taken from it are short with nothing to say so.',
+        '',
+        'Call it before reading or reporting a pivot that describe_block flagged. Safe and cheap to call when nothing has changed — it reports that it did nothing.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            name: {type: 'string', description: 'Ref name of the pivot block.'},
+        },
+        required: ['name'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const block = await blockByName(client, input.name)
+        if (!block.pivot) {
+            throw new Error(
+                `block "${input.name}" is not a pivot, so there is no shape to refresh`
+            )
+        }
+        const keyField = block.schema?.keys?.length
+            ? // The key column holds the row dimension; its FIELD name is what
+              // the re-bind has to restate.
+              block.schema.fields.find(
+                  (f) => f.idx === block.schema!.keys[0].idx
+              )?.field ?? block.pivot.rowDim
+            : block.pivot.rowDim
+
+        // The source carries the number formats a refreshed column inherits.
+        // Absent (a pivot whose source was removed) the refresh still runs and
+        // simply leaves formats alone.
+        const all = await client.getAllBlocks({})
+        const source = isErrorMessage(all)
+            ? undefined
+            : all.find((b) => b.blockId === block.analyzes)
+
+        const ops = new WorkbookOps(client)
+        const changed = await ops.refreshPivot({
+            sheetIdx: block.sheetIdx,
+            blockId: block.blockId,
+            refName: input.name,
+            keyField,
+            rowStart: block.rowStart,
+            colStart: block.colStart,
+            // So a row total or a second measure is restated rather than
+            // rewritten as an ordinary derived column.
+            currentFields: block.schema?.fields,
+            // So a column the refresh ADDS is formatted like the ones beside
+            // it. The formats live on the SOURCE, which is the block this
+            // pivot analyses.
+            formats: source
+                ? {
+                      numFmts: numFmtsOf(source),
+                      measure: block.pivot.measure,
+                      func: block.pivot.func as AggFunc,
+                  }
+                : undefined,
+        })
+
+        if (!changed) {
+            return {
+                data: {
+                    changed: false,
+                    added_rows: [],
+                    removed_rows: [],
+                    added_columns: [],
+                    removed_columns: [],
+                    unassigned_records: 0,
+                },
+                display: `"${input.name}" was already current — nothing to refresh.`,
+            }
+        }
+
+        const bits: string[] = []
+        const say = (label: string, xs: string[]) => {
+            if (xs.length) bits.push(`${label} ${xs.join(', ')}`)
+        }
+        say('added rows', changed.addedKeys)
+        say('removed rows', changed.removedKeys)
+        say('added columns', changed.addedFields)
+        say('removed columns', changed.removedFields)
+        return {
+            data: {
+                changed: true,
+                added_rows: changed.addedKeys,
+                removed_rows: changed.removedKeys,
+                added_columns: changed.addedFields,
+                removed_columns: changed.removedFields,
+                unassigned_records: changed.unassignedRecords,
+            },
+            display:
+                `Refreshed "${input.name}": ${bits.join('; ')}.` +
+                (changed.unassignedRecords > 0
+                    ? ` ${changed.unassignedRecords} record(s) still belong to no group (their grouping value is blank) and are in no cell — a refresh cannot fix that.`
+                    : ''),
         }
     },
 }
@@ -3704,6 +4514,9 @@ export const BUILDER_TOOLS: Tool[] = [
     listBlocks,
     describeBlock,
     createAnalysisBlock as Tool,
+    createPivot as Tool,
+    editPivot as Tool,
+    refreshPivot as Tool,
     setBlockDescription as Tool,
     setBlockPermissions as Tool,
     evalFormula,

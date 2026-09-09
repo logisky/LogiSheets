@@ -141,31 +141,50 @@ where
         pair.push(criteria);
     }
 
-    let mut sum = 0.;
+    // `None` until the first matching row, rather than 0. MIN/MAX fold with
+    // `min`/`max`, so a zero seed made MINIFS never exceed 0 (and MAXIFS never
+    // go below it): over all-positive data MINIFS returned 0 for every query.
+    // SUM and COUNT are unaffected — the seed becomes 0 again below when
+    // nothing matched, which is what SUM of an empty set is.
+    let mut acc: Option<f64> = None;
     let mut cnt = 0.;
     let mut calc_range = calc_range.into_iter();
     let mut curr_value = calc_range.next();
     while curr_value.is_some() {
         let mut all_true = true;
+        // EVERY criteria iterator advances for EVERY row, even once the row is
+        // known not to match. They are positional cursors walked in lockstep
+        // with the sum range, not predicates to short-circuit: skipping
+        // `next()` on the later ones leaves them a row behind for the rest of
+        // the range, so from the first non-matching row onward each criterion
+        // is tested against a different record than the one being summed.
+        //
+        // With two criteria over six records that silently produced 8 where
+        // the answer was 7 — no error, just a wrong number
+        // (`multi_criteria_sumifs_keeps_its_criteria_in_step`).
         for i in pair.iter_mut() {
-            if let Some(b) = i.next() {
-                if !b {
-                    all_true = b;
-                    break;
+            match i.next() {
+                Some(b) => {
+                    if !b {
+                        all_true = false;
+                    }
                 }
-            } else {
-                all_true = false;
-                break;
+                // A criteria range shorter than the sum range: nothing left to
+                // test against, so the row cannot match.
+                None => all_true = false,
             }
         }
         if all_true {
-            let v = curr_value.unwrap();
-            sum = sum_func(sum, get_num_from_value(v));
+            let v = get_num_from_value(curr_value.unwrap());
+            acc = Some(match acc {
+                Some(prev) => sum_func(prev, v),
+                None => v,
+            });
             cnt += 1.;
         }
         curr_value = calc_range.next();
     }
-    f(sum, cnt)
+    f(acc.unwrap_or(0.), cnt)
 }
 
 struct Criteria<T: Iterator<Item = bool>> {

@@ -153,12 +153,34 @@ pub fn derived_rules(
 ///
 /// `None` when there is nothing to check — no shadow is installed and no marker
 /// can appear, which is what a plain free-form column means.
+/// `analysis` is what the cell's block analyses and how, when it is an
+/// analysis block — the same value `formula_for_block_cell` takes, and needed
+/// for the same reason: it lives on the navigator, not on the schema.
 pub fn effective_validation(
     schema: &SchemaManager,
     enums: &EnumSetManager,
     sheet_id: SheetId,
     cell: &BlockCellId,
+    analysis: Option<crate::block_manager::analysis::AnalysisTarget<'_>>,
 ) -> Option<String> {
+    // A pivot's KEY cell is the one cell of the block a person can type into
+    // (every other cell is generated, and the engine already drops writes to
+    // templated cells). It holds a row-dimension value, so it has to name a
+    // group that occurs in the source — and it gets a marker the moment it
+    // does not, because editing it does NOT re-aim the row: `#KEY` was
+    // captured when the row materialized, so the row goes on reporting the old
+    // group under the new label. See `design/block-pivot.md` §4.3.
+    if let Some(target) = analysis {
+        if let Some(pivot) = target.pivot {
+            if schema.is_key_cell(sheet_id, cell) {
+                return Some(crate::block_manager::analysis::pivot_key_validation(
+                    sheet_id,
+                    target.source,
+                    pivot,
+                ));
+            }
+        }
+    }
     let field = schema.field_view_for_block_cell(sheet_id, cell)?;
     let mut parts = derived_rules(enums, sheet_id, cell.block_id, &field);
     if let Some(own) = field.validation_formula {
@@ -204,6 +226,7 @@ mod tests {
         unique: bool,
     ) -> BlockFieldView<'a> {
         BlockFieldView {
+            pivot_column: None,
             name,
             field_type: ty,
             required,

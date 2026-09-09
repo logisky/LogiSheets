@@ -402,9 +402,16 @@ mod write_policy_tests {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AggFunc {
     Sum,
-    /// Numeric count. `COUNTA` (non-empty of any type) is a real distinction
-    /// and an easy addition on this same shape; it is just not the common case.
+    /// Numeric count — blanks and text are not counted.
     Count,
+    /// Non-empty count, of any type. Genuinely different from [`AggFunc::Count`]
+    /// wherever a column holds text or gaps: over `10, 20, "n/a", <blank>`
+    /// COUNT says 2 and COUNTA says 3.
+    ///
+    /// It is the one aggregate with no `*IFS` form — there is no `COUNTAIFS` —
+    /// so a pivot lowers it to `COUNTIFS` with the measure tested for
+    /// non-blankness as a criteria pair. See `analysis::pivot_formula`.
+    CountA,
     Average,
     Min,
     Max,
@@ -417,6 +424,7 @@ impl AggFunc {
         match self {
             AggFunc::Sum => "SUM",
             AggFunc::Count => "COUNT",
+            AggFunc::CountA => "COUNTA",
             AggFunc::Average => "AVERAGE",
             AggFunc::Min => "MIN",
             AggFunc::Max => "MAX",
@@ -431,6 +439,7 @@ impl AggFunc {
         match s {
             "SUM" => Some(AggFunc::Sum),
             "COUNT" => Some(AggFunc::Count),
+            "COUNTA" => Some(AggFunc::CountA),
             "AVERAGE" => Some(AggFunc::Average),
             "MIN" => Some(AggFunc::Min),
             "MAX" => Some(AggFunc::Max),
@@ -450,6 +459,384 @@ impl AggFunc {
 pub struct FieldAggregate {
     pub func: AggFunc,
     pub source_field: String,
+}
+
+/// How a pivot orders the distinct values it turns into rows and columns.
+///
+/// It has to be deterministic, or every refresh reshuffles the sheet and its
+/// diffs become noise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DimOrder {
+    /// Sorted with the same typed comparison as `sort_block` — numbers
+    /// numerically, text lexicographically, blanks last — so "sorted" means one
+    /// thing across the product. The default.
+    Ascending,
+    /// The order the values first occur in the source. For dimensions where
+    /// sorting is wrong (month names, size ladders). Stable only while the
+    /// source is not reordered, which is why it is not the default.
+    FirstSeen,
+    /// A caller-given sequence, in `PivotSpec::order_values`. For the case
+    /// neither of the others can express — month names, size ladders, a
+    /// reporting order the business just has.
+    ///
+    /// Values NOT in the list are not dropped: they follow, in ascending
+    /// order. A custom order that silently hid a new group would be the
+    /// staleness bug this whole design exists to prevent.
+    Custom,
+}
+
+impl DimOrder {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DimOrder::Ascending => "ascending",
+            DimOrder::FirstSeen => "firstSeen",
+            DimOrder::Custom => "custom",
+        }
+    }
+
+    /// Unrecognized reads as the default, for the same reason `AggFunc` reads
+    /// as `None`: an order a newer build introduces must not stop this one from
+    /// opening the file. Falling back to a deterministic order is safe here —
+    /// unlike an aggregate function, where guessing would invent a number.
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "firstSeen" => DimOrder::FirstSeen,
+            "custom" => DimOrder::Custom,
+            _ => DimOrder::Ascending,
+        }
+    }
+}
+
+impl Default for DimOrder {
+    fn default() -> Self {
+        DimOrder::Ascending
+    }
+}
+
+/// A pivot: the recipe that a block's cells AND its shape are both derived
+/// from. Lives beside `analyzes` on the block, not on its fields, because
+/// every value cell of a pivot computes the same thing — only the two
+/// dimension values differ, and those come from the cell's own row and column.
+///
+/// The block's KEYS are `distinct(source[row_dim])` and its FIELDS are
+/// `distinct(source[col_dim])`, which is why the shape cannot be a formula:
+/// no formula adds a row. The engine computes the shape (`pivot_plan`) and a
+/// host applies it. See `design/block-pivot.md`.
+///
+/// Field names are dimension VALUES, so nothing per-field is stored: a cell's
+/// column filter is its field's name and its row filter is `#KEY`. Renaming a
+/// pivot column therefore changes what it filters on, coherently.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PivotSpec {
+    /// Source field whose distinct values become this block's keys (rows).
+    pub row_dim: String,
+    /// Source field whose distinct values become this block's fields
+    /// (columns). `None` is the degenerate pivot: a plain group-by with a
+    /// single value column and no column filter.
+    pub col_dim: Option<String>,
+    /// The source field being aggregated.
+    pub measure: String,
+    pub func: AggFunc,
+    pub order: DimOrder,
+    /// The sequence for [`DimOrder::Custom`]; ignored otherwise.
+    pub order_values: Vec<String>,
+    /// Which source records this pivot counts at all. Empty means every one.
+    ///
+    /// Applied in BOTH places or the pivot lies: as extra criteria pairs in
+    /// each cell's formula, AND when the plan collects distinct values — or a
+    /// filtered-out group would still get a row, showing a confident 0.
+    pub filters: Vec<PivotFilter>,
+}
+
+/// One condition a source record must meet to be counted by a pivot.
+///
+/// `criteria` is the spreadsheet's own condition syntax — `">100"`, `"East"`,
+/// `"<>closed"` — because that is what `SUMIFS` takes and what
+/// `match_condition` evaluates. Using one syntax for the formula and for the
+/// plan is what keeps the rows a pivot shows and the numbers in them agreeing.
+#[derive(Debug, Clone, Default, PartialEq, Eq, TS)]
+#[ts(file_name = "pivot_filter.ts", rename_all = "camelCase")]
+pub struct PivotFilter {
+    pub field: String,
+    /// Spreadsheet condition syntax: `">100"`, `"East"`, `"<>closed"`.
+    pub criteria: String,
+}
+
+impl PivotSpec {
+    /// Every source field this pivot reads, for callers that need to know
+    /// whether a rename or a re-bind of the source affects it.
+    pub fn source_fields(&self) -> Vec<&str> {
+        let mut out = vec![self.row_dim.as_str(), self.measure.as_str()];
+        if let Some(c) = &self.col_dim {
+            out.push(c.as_str());
+        }
+        out.extend(self.filters.iter().map(|f| f.field.as_str()));
+        out
+    }
+
+    /// The measure and function a given column computes with: its own
+    /// override when it has one, the block's otherwise.
+    pub fn effective<'a>(&'a self, column: Option<&'a PivotColumn>) -> (&'a str, AggFunc) {
+        match column {
+            Some(c) => (
+                c.measure.as_deref().unwrap_or(&self.measure),
+                c.func.unwrap_or(self.func),
+            ),
+            None => (&self.measure, self.func),
+        }
+    }
+}
+
+/// One pivot COLUMN's own declaration, overriding the block-level recipe.
+///
+/// A pivot's columns are normally derived: the field's name is the column
+/// dimension's value, and the measure and function come from the block. That
+/// covers a plain cross-tab and needs nothing stored per field.
+///
+/// Two things it cannot express, and this is what they need:
+///
+/// - a **row total** — a column that spans every value of the column
+///   dimension rather than one of them (`col_value: None`);
+/// - a **second measure** — `SUM of amt` beside `COUNT of orders`, both
+///   against the same rows (`measure` / `func` set).
+///
+/// Every field is `None` by default, which is exactly today's behaviour, so a
+/// pivot built before this existed keeps deriving everything.
+///
+/// **A column carrying any of these is hand-declared, so a refresh leaves it
+/// alone** — the plan manages only the columns it derives. That is what stops
+/// a total column being dropped as "a value the source no longer has".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PivotColumn {
+    /// The column-dimension value this column filters on. `None` spans every
+    /// value — a row total.
+    pub col_value: Option<String>,
+    /// Aggregate this source field instead of the block's `measure`.
+    pub measure: Option<String>,
+    /// Aggregate with this function instead of the block's `func`.
+    pub func: Option<AggFunc>,
+}
+
+/// The wildcard that means "every value of the column dimension" on the wire
+/// and on disk, since a flat `Option<String>` cannot distinguish "no override"
+/// from "override with no value".
+///
+/// Deliberately the same `*` the `BLOCKREF` family already uses for "any key"
+/// / "any field", so it reads the same everywhere. A dimension whose value is
+/// literally `*` cannot be addressed this way — the same limitation
+/// `BLOCKREFS` has had all along.
+pub const PIVOT_COL_ALL: &str = "*";
+
+impl PivotColumn {
+    /// Read a column override from its three flat parts. `None` when none of
+    /// them is set, which is the ordinary derived column.
+    pub fn from_parts(
+        col_value: Option<&str>,
+        measure: Option<&str>,
+        func: Option<&str>,
+    ) -> Option<Self> {
+        if col_value.is_none() && measure.is_none() && func.is_none() {
+            return None;
+        }
+        Some(PivotColumn {
+            col_value: match col_value {
+                Some(PIVOT_COL_ALL) => None,
+                Some(v) if !v.is_empty() => Some(v.to_string()),
+                _ => None,
+            },
+            measure: measure.filter(|m| !m.is_empty()).map(String::from),
+            // An unrecognized function drops to the block's own, rather than
+            // inventing one — the same trade `AggFunc::from_str` makes.
+            func: func.and_then(AggFunc::from_str),
+        })
+    }
+
+    /// The `col_value` as it goes on the wire: `*` for "every value".
+    pub fn col_value_str(&self) -> String {
+        self.col_value
+            .clone()
+            .unwrap_or_else(|| PIVOT_COL_ALL.to_string())
+    }
+}
+
+/// [`PivotSpec`] flattened for transport — the wire and on-disk form, in one
+/// shape, the way [`FieldTypeParts`] is for a field type.
+///
+/// `func` and `order` are free strings for the same reason: a function or an
+/// ordering a newer build introduces must not stop this one from opening the
+/// file. An unrecognized `func` drops the pivot entirely (a guessed aggregate
+/// would invent a number); an unrecognized `order` falls back to the default
+/// (a different sequence of the right numbers is harmless).
+#[derive(Debug, Clone, Default, PartialEq, Eq, TS)]
+#[ts(file_name = "pivot_spec.ts", rename_all = "camelCase")]
+pub struct PivotSpecParts {
+    pub row_dim: String,
+    pub col_dim: Option<String>,
+    pub measure: String,
+    /// `SUM` | `COUNT` | `AVERAGE` | `MIN` | `MAX`.
+    pub func: String,
+    /// `ascending` (default) | `firstSeen` | `custom`.
+    pub order: Option<String>,
+    /// The sequence for `custom`. Values missing from it are not dropped —
+    /// they follow in ascending order.
+    ///
+    /// `Option` rather than a bare `Vec` so that a caller which omits it — a
+    /// host built before this existed, or any of the many pivots that need
+    /// neither — still deserializes. An absent list is an empty one.
+    pub order_values: Option<Vec<String>>,
+    /// Which source records the pivot counts at all. Absent or empty means
+    /// every one.
+    pub filters: Option<Vec<PivotFilter>>,
+}
+
+impl PivotSpec {
+    pub fn to_parts(&self) -> PivotSpecParts {
+        PivotSpecParts {
+            row_dim: self.row_dim.clone(),
+            col_dim: self.col_dim.clone(),
+            measure: self.measure.clone(),
+            func: self.func.as_str().to_string(),
+            order: Some(self.order.as_str().to_string()),
+            order_values: Some(self.order_values.clone()),
+            filters: Some(self.filters.clone()),
+        }
+    }
+
+    /// `None` when the parts do not describe a usable pivot: no row dimension,
+    /// no measure, or a function this build does not know. Refusing beats
+    /// guessing — a pivot with a wrong aggregate reads as data, not as an error.
+    pub fn from_parts(p: &PivotSpecParts) -> Option<Self> {
+        if p.row_dim.is_empty() || p.measure.is_empty() {
+            return None;
+        }
+        Some(PivotSpec {
+            row_dim: p.row_dim.clone(),
+            col_dim: p.col_dim.clone().filter(|c| !c.is_empty()),
+            measure: p.measure.clone(),
+            func: AggFunc::from_str(&p.func)?,
+            order: p
+                .order
+                .as_deref()
+                .map(DimOrder::from_str)
+                .unwrap_or_default(),
+            order_values: p.order_values.clone().unwrap_or_default(),
+            filters: p
+                .filters
+                .as_deref()
+                .unwrap_or_default()
+                .iter()
+                // A filter naming no field, or with no criteria, would either
+                // do nothing or match nothing; dropping it beats guessing.
+                .filter(|f| !f.field.is_empty() && !f.criteria.is_empty())
+                .cloned()
+                .collect(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod pivot_tests {
+    use super::*;
+
+    #[test]
+    fn an_unknown_order_reads_as_the_deterministic_default() {
+        // A file written by a newer build must still open, and falling back to
+        // a deterministic order cannot invent a wrong number — it can only
+        // present the right ones in an unexpected sequence.
+        assert_eq!(DimOrder::from_str("ascending"), DimOrder::Ascending);
+        assert_eq!(DimOrder::from_str("firstSeen"), DimOrder::FirstSeen);
+        assert_eq!(DimOrder::from_str("byMonthName"), DimOrder::Ascending);
+        assert_eq!(DimOrder::from_str(""), DimOrder::Ascending);
+    }
+
+    #[test]
+    fn every_order_round_trips_through_its_wire_name() {
+        for o in [DimOrder::Ascending, DimOrder::FirstSeen] {
+            assert_eq!(DimOrder::from_str(o.as_str()), o);
+        }
+    }
+
+    fn sample() -> PivotSpec {
+        PivotSpec {
+            row_dim: "region".into(),
+            col_dim: Some("quarter".into()),
+            measure: "amt".into(),
+            func: AggFunc::Sum,
+            order: DimOrder::FirstSeen,
+            order_values: vec![],
+            filters: vec![],
+        }
+    }
+
+    #[test]
+    fn a_pivot_round_trips_through_its_flat_form() {
+        let parts = sample().to_parts();
+        assert_eq!(PivotSpec::from_parts(&parts), Some(sample()));
+    }
+
+    #[test]
+    fn a_grouped_pivot_round_trips_with_no_column_dimension() {
+        let spec = PivotSpec {
+            col_dim: None,
+            ..sample()
+        };
+        assert_eq!(PivotSpec::from_parts(&spec.to_parts()), Some(spec));
+        // An empty string reads the same as absent, so a host that sends "" is
+        // not silently given a column dimension named "".
+        let parts = PivotSpecParts {
+            col_dim: Some(String::new()),
+            ..sample().to_parts()
+        };
+        assert_eq!(PivotSpec::from_parts(&parts).unwrap().col_dim, None);
+    }
+
+    #[test]
+    fn an_unknown_function_drops_the_pivot_rather_than_guessing() {
+        // The asymmetry with `order` is deliberate: a wrong aggregate produces
+        // a number that looks right, an unexpected order does not.
+        let parts = PivotSpecParts {
+            func: "MEDIAN".into(),
+            ..sample().to_parts()
+        };
+        assert_eq!(PivotSpec::from_parts(&parts), None);
+    }
+
+    #[test]
+    fn an_incomplete_pivot_is_not_a_pivot() {
+        for parts in [
+            PivotSpecParts {
+                row_dim: String::new(),
+                ..sample().to_parts()
+            },
+            PivotSpecParts {
+                measure: String::new(),
+                ..sample().to_parts()
+            },
+        ] {
+            assert_eq!(PivotSpec::from_parts(&parts), None);
+        }
+    }
+
+    #[test]
+    fn a_pivot_names_every_source_field_it_reads() {
+        // What a re-bind of the source has to check against.
+        let two_dim = PivotSpec {
+            row_dim: "region".into(),
+            col_dim: Some("quarter".into()),
+            measure: "amt".into(),
+            func: AggFunc::Sum,
+            order: DimOrder::Ascending,
+            order_values: vec![],
+            filters: vec![],
+        };
+        assert_eq!(two_dim.source_fields(), vec!["region", "amt", "quarter"]);
+
+        let grouped = PivotSpec {
+            col_dim: None,
+            ..two_dim
+        };
+        assert_eq!(grouped.source_fields(), vec!["region", "amt"]);
+    }
 }
 
 #[cfg(test)]

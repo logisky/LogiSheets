@@ -153,6 +153,11 @@ describe('build__create_analysis_block', () => {
             'createBlock',
             'bindFormSchema',
             'blockInput',
+            // One per source column, carrying its number format across so a
+            // total of currency reads as currency.
+            'upsertFieldRenderInfo',
+            'upsertFieldRenderInfo',
+            'upsertFieldRenderInfo',
         ])
         expect(committed[0].value).toMatchObject({start: 3, count: 1})
         expect(committed[1].value).toMatchObject({masterRow: 3, rowCnt: 1})
@@ -161,14 +166,14 @@ describe('build__create_analysis_block', () => {
     it('writes the label, because that is the key the result is addressed by', async () => {
         const {client, committed} = blockClient()
         const r = await createAnalysisBlock.handler(
-            {source: 'orders', label: '合计'},
+            {source: 'orders', label: 'Total'},
             ctxFor(client)
         )
         const label = committed.find((p) => p.type === 'blockInput')!
-        expect(label.value).toMatchObject({input: '合计', row: 0, col: 0})
+        expect(label.value).toMatchObject({input: 'Total', row: 0, col: 0})
         // The tool says how to reference the result, since that is the whole
         // reason it is a block of its own.
-        expect(r.display).toContain('BLOCKREF("orders_analysis", "合计"')
+        expect(r.display).toContain('BLOCKREF("orders_analysis", "Total"')
     })
 
     it('honours an explicit choice of functions', async () => {

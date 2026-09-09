@@ -30,8 +30,7 @@ async function commit(
     const tx: Transaction = {payloads: [payload], undoable: true, temp: false}
     const r = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(r)) throw new Error(`${label}: ${r.msg}`)
-    if (r.status.type === 'err')
-        throw transactionFailure(label, r)
+    if (r.status.type === 'err') throw transactionFailure(label, r)
 }
 
 const DEFAULT_AUTHOR = 'Watson (AI)'
@@ -60,7 +59,10 @@ function a1(row: number, col: number): string {
     return `${colToA1(col)}${row + 1}`
 }
 
-async function readComments(client: Client, sheetIdx: number): Promise<readonly Comment[]> {
+async function readComments(
+    client: Client,
+    sheetIdx: number
+): Promise<readonly Comment[]> {
     const res = await client.getComments({sheetIdx})
     if (isErrorMessage(res)) throw new Error(`comments: ${res.msg}`)
     return res as readonly Comment[]
@@ -76,7 +78,9 @@ export const listComments: Tool<{sheetIdx: number}, unknown> = {
     mutates: false,
     confirmation: 'never',
     inputSchema: {
-        properties: {sheetIdx: {type: 'integer', description: 'Zero-based sheet index.'}},
+        properties: {
+            sheetIdx: {type: 'integer', description: 'Zero-based sheet index.'},
+        },
         required: ['sheetIdx'],
     },
     handler: async (input, ctx) => {
@@ -99,7 +103,13 @@ export const listComments: Tool<{sheetIdx: number}, unknown> = {
 }
 
 export const addComment: Tool<
-    {sheetIdx: number; row: number; col: number; content: string; authorName?: string},
+    {
+        sheetIdx: number
+        row: number
+        col: number
+        content: string
+        authorName?: string
+    },
     {commentId: string; cell: string}
 > = {
     namespace: 'comment',
@@ -114,7 +124,10 @@ export const addComment: Tool<
             row: {type: 'integer'},
             col: {type: 'integer'},
             content: {type: 'string'},
-            authorName: {type: 'string', description: 'Override the comment author name.'},
+            authorName: {
+                type: 'string',
+                description: 'Override the comment author name.',
+            },
         },
         required: ['sheetIdx', 'row', 'col', 'content'],
     },
@@ -157,7 +170,10 @@ export const replyComment: Tool<
     inputSchema: {
         properties: {
             sheetIdx: {type: 'integer'},
-            parentId: {type: 'string', description: 'Id of a note in the target thread.'},
+            parentId: {
+                type: 'string',
+                description: 'Id of a note in the target thread.',
+            },
             content: {type: 'string'},
             authorName: {type: 'string'},
         },
@@ -170,7 +186,9 @@ export const replyComment: Tool<
             c.notes.some((n) => n.id === input.parentId)
         )
         if (!thread)
-            throw new Error(`reply_comment: no thread contains "${input.parentId}"`)
+            throw new Error(
+                `reply_comment: no thread contains "${input.parentId}"`
+            )
         const commentId = newGuid()
         await commit(
             client,
@@ -190,7 +208,10 @@ export const replyComment: Tool<
             },
             'reply_comment'
         )
-        return {data: {commentId, cell: a1(thread.row, thread.col)}, display: 'Replied'}
+        return {
+            data: {commentId, cell: a1(thread.row, thread.col)},
+            display: 'Replied',
+        }
     },
 }
 
@@ -266,7 +287,7 @@ export const deleteComment: Tool<
     namespace: 'comment',
     name: 'delete_comment',
     description:
-        'Delete a comment note by its id. Deleting a thread\'s root note removes the whole thread.',
+        "Delete a comment note by its id. Deleting a thread's root note removes the whole thread.",
     mutates: true,
     confirmation: 'destructive',
     inputSchema: {

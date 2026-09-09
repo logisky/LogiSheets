@@ -121,6 +121,7 @@ fn authored() -> Workbook {
                         .into(),
                 ),
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "orders".into(),
@@ -212,6 +213,7 @@ fn authored() -> Workbook {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "specs".into(),
@@ -240,6 +242,7 @@ fn authored() -> Workbook {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindRandomSchema(BindRandomSchema {
                 ref_name: "dial".into(),
@@ -278,6 +281,7 @@ fn authored() -> Workbook {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
         ],
     );
@@ -1078,6 +1082,7 @@ fn an_appendix_follows_its_block_cell_when_the_block_moves() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             EditPayload::CreateAppendix(CreateAppendix {
                 sheet_id: None,
@@ -1151,6 +1156,7 @@ fn sparse_block_line_info_returns_to_its_own_line() {
                 permissions: None,
                 description: None,
                 analyzes: None,
+                pivot: None,
             }),
             // Only the LAST column, and only the LAST row.
             EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
@@ -1234,6 +1240,7 @@ fn set_description_and_permissions_survive_a_trip() {
             permissions: None,
             description: None,
             analyzes: None,
+            pivot: None,
         })],
     );
     // Created bare, so this is also a check that "no metadata" is a real state
@@ -1356,6 +1363,7 @@ fn a_block_with_no_metadata_writes_no_attributes() {
             permissions: None,
             description: None,
             analyzes: None,
+            pivot: None,
         })],
     );
     let xml = data_xml(&wb.save().unwrap());

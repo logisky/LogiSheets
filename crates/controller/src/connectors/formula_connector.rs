@@ -54,18 +54,22 @@ pub struct FormulaConnector<'a> {
 }
 
 impl<'a> FormulaConnector<'a> {
-    /// Which block this block analyses, if any. `None` for an ordinary block,
-    /// and for a block that has gone missing — a marker pointing at nothing
-    /// yields no generated formula rather than a broken one.
-    fn analyzes_of(
+    /// What this block analyses and how, if anything. `None` for an ordinary
+    /// block, and for a block that has gone missing — a marker pointing at
+    /// nothing yields no generated formula rather than a broken one.
+    fn analysis_of(
         &self,
         sheet_id: SheetId,
         block_id: logisheets_base::BlockId,
-    ) -> Option<logisheets_base::BlockId> {
-        self.id_navigator
+    ) -> Option<crate::block_manager::analysis::AnalysisTarget<'_>> {
+        let bp = self
+            .id_navigator
             .get_block_place(&sheet_id, &block_id)
-            .ok()
-            .and_then(|bp| bp.analyzes)
+            .ok()?;
+        Some(crate::block_manager::analysis::AnalysisTarget {
+            source: bp.analyzes?,
+            pivot: bp.pivot.as_ref(),
+        })
     }
 
     fn get_id_fetcher(&mut self) -> IdFetcher<'_> {
@@ -409,7 +413,7 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
 
     fn is_block_cell_templated(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
         self.block_schema_manager
-            .formula_for_block_cell(sheet_id, cell, self.analyzes_of(sheet_id, cell.block_id))
+            .formula_for_block_cell(sheet_id, cell, self.analysis_of(sheet_id, cell.block_id))
             .is_some()
     }
 
@@ -421,7 +425,7 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         let template = self.block_schema_manager.formula_for_block_cell(
             sheet_id,
             cell,
-            self.analyzes_of(sheet_id, cell.block_id),
+            self.analysis_of(sheet_id, cell.block_id),
         )?;
         let ctx = self.block_cell_row_substitutes(sheet_id, cell)?;
         Some(crate::formula_manager::ctx::BlockCellTemplate {
@@ -485,6 +489,7 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
                     self.enum_set_manager,
                     sheet_id,
                     cell,
+                    self.analysis_of(sheet_id, cell.block_id),
                 )
             }
             crate::sid_assigner::ShadowKind::UserEditable => self

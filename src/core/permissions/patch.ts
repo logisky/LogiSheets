@@ -378,7 +378,7 @@ async function mayWriteHere(
 
     // Dynamic editability formula takes precedence over the static
     // flag — the formula lets the schema author express conditions
-    // like "editable only while 等级<3". Only consult the shadow when
+    // like "editable only while level<3". Only consult the shadow when
     // the schema actually declares an editability formula for this
     // field (post-Phase-1+2 authoritative source); otherwise we skip
     // the extra RPC and avoid allocating a wasteful shadow id.

@@ -40,6 +40,9 @@ import type {
     LinkInfo,
     BlockSortOrder,
     GetBlockSortOrderParams,
+    PivotPlan,
+    PivotPlanParams,
+    PivotPlanForParams,
     MayModifyBlockParams,
     CheckFieldValidationParams,
     FieldValidationVerdict,
@@ -407,6 +410,21 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         params: GetBlockSortOrderParams
     ): Result<BlockSortOrder> {
         return this.workbook.getBlockSortOrder(params)
+    }
+
+    /**
+     * The shape a pivot should have, and whether it has it. Read-only: a
+     * pivot's numbers are live formulas, but its rows and columns are the
+     * source's distinct values, which no formula can produce.
+     */
+    public pivotPlan(params: PivotPlanParams): Result<PivotPlan> {
+        return this.workbook.pivotPlan(params)
+    }
+
+    /** The same, for a recipe no block carries yet — so creating a pivot at
+     *  its right size is one transaction. */
+    public pivotPlanFor(params: PivotPlanForParams): Result<PivotPlan> {
+        return this.workbook.pivotPlanFor(params)
     }
 
     /**
@@ -836,6 +854,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetBlockSortOrder:
                     result = this.getBlockSortOrder(args)
+                    break
+                case MethodName.PivotPlan:
+                    result = this.pivotPlan(args)
+                    break
+                case MethodName.PivotPlanFor:
+                    result = this.pivotPlanFor(args)
                     break
                 case MethodName.GetBlockModifyInfo:
                     result = this.getBlockModifyInfo(args)

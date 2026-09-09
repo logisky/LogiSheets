@@ -132,6 +132,14 @@ pub struct BlockInfo {
     pub analyzes: Option<BlockId>,
     /// The blocks that analyse THIS one. Empty for a block nobody summarises.
     pub analyzed_by: Vec<BlockId>,
+    /// When this analysis block is a PIVOT, the recipe it derives from.
+    /// `None` for a total row and for an ordinary block.
+    ///
+    /// Reported because a pivot's SHAPE is data, so a reader has to know it is
+    /// looking at one: a stale pivot's numbers are each correct while a whole
+    /// group is simply absent, which is the one way a block can mislead
+    /// without being wrong. See `design/block-pivot.md` §8.
+    pub pivot: Option<crate::block_manager::schema_manager::field_type::PivotSpecParts>,
 }
 
 /// A range that is linked to a backing block: the *source* range (the cells the
@@ -218,6 +226,13 @@ pub struct BlockSchemaFieldEntry {
     /// it is a number — and so an agent knows not to write to it.
     pub agg_func: Option<String>,
     pub agg_field: Option<String>,
+    /// When the block is a PIVOT and this column is hand-declared: the column
+    /// dimension value it filters on (`*` = every value, a row total), and
+    /// optionally its own measure and function. All absent for the derived
+    /// columns of a plain cross-tab.
+    pub pivot_col_value: Option<String>,
+    pub pivot_measure: Option<String>,
+    pub pivot_func: Option<String>,
 }
 
 impl BlockSchemaFieldEntry {
@@ -249,6 +264,12 @@ impl BlockSchemaFieldEntry {
                 .as_ref()
                 .map(|a| a.func.as_str().to_string()),
             agg_field: entry.aggregate.as_ref().map(|a| a.source_field.clone()),
+            pivot_col_value: entry.pivot_column.as_ref().map(|c| c.col_value_str()),
+            pivot_measure: entry.pivot_column.as_ref().and_then(|c| c.measure.clone()),
+            pivot_func: entry
+                .pivot_column
+                .as_ref()
+                .and_then(|c| c.func.map(|f| f.as_str().to_string())),
         }
     }
 }

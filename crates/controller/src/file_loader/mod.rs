@@ -229,7 +229,40 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     )
                     .with_description(block_range.description.clone().unwrap_or_default())
                     .with_permissions(permissions)
-                    .with_analyzes(block_range.analyzes);
+                    .with_analyzes(block_range.analyzes)
+                    .with_pivot(
+                        crate::block_manager::schema_manager::field_type::PivotSpec::from_parts(
+                            &crate::block_manager::schema_manager::field_type::PivotSpecParts {
+                                row_dim: block_range.pivot_row_dim.clone().unwrap_or_default(),
+                                col_dim: block_range.pivot_col_dim.clone(),
+                                measure: block_range.pivot_measure.clone().unwrap_or_default(),
+                                func: block_range.pivot_func.clone().unwrap_or_default(),
+                                order: block_range.pivot_order.clone(),
+                                order_values: Some(
+                                    block_range
+                                        .pivot_order_values
+                                        .iter()
+                                        .map(|v| v.value.clone())
+                                        .collect(),
+                                ),
+                                filters: Some(
+                                    block_range
+                                        .pivot_filters
+                                        .iter()
+                                        .map(|f| {
+                                            crate::block_manager::schema_manager::field_type::PivotFilter {
+                                                field: f.field.clone(),
+                                                criteria: f.criteria.clone(),
+                                            }
+                                        })
+                                        .collect(),
+                                ),
+                            },
+                        )
+                        // A pivot marker on a block that analyses nothing is
+                        // not a pivot, the same refusal the payload path makes.
+                        .filter(|_| block_range.analyzes.is_some()),
+                    );
                     let sheet_container = container.get_sheet_container_mut(sheet_id);
                     restore_line_infos(block_range.row_infos, &block_place.rows, |id, info| {
                         sheet_container

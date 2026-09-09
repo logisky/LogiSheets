@@ -1,6 +1,6 @@
 /**
  * Built-in formula function metadata (names, arg signatures, descriptions),
- * bundled so autocomplete + signature help (智能提示) work out-of-the-box with
+ * bundled so autocomplete + signature help work out-of-the-box with
  * no host wiring. Generated from the LogiSheets function set.
  *
  * Descriptions are i18n keys (e.g. "functions.abs.description"); a host with
