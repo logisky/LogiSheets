@@ -245,11 +245,18 @@ export const listViolations: Tool<
             // reference existence are DERIVED from the declaration and
             // installed as shadows by the engine. Probing only the stored ones
             // would miss exactly the constraints an agent could not see before.
+            //
+            // Unwrapped once per block rather than per field: the wire type
+            // is a struct only because a nested list generates invalid
+            // TypeScript, and the rule logic below reads better over names.
+            const uniqueGroups = (schema.uniqueTogether ?? []).map(
+                (g) => g.fields
+            )
             const ruled = schema.fields.filter(
                 (f) =>
                     (typeof f.validationFormula === 'string' &&
                         f.validationFormula.trim() !== '') ||
-                    derivesARule(f)
+                    derivesARule(f, uniqueGroups)
             )
             if (ruled.length === 0) continue
 
@@ -265,7 +272,7 @@ export const listViolations: Tool<
                     list.push({
                         block,
                         fieldName: f.field,
-                        fieldRule: explainRule(f),
+                        fieldRule: explainRule(f, uniqueGroups),
                         keyValue: keyByRow.get(r) ?? '',
                         blockRow: r,
                         blockCol: f.idx,
@@ -397,11 +404,19 @@ export const listViolations: Tool<
 }
 
 /** Whether the field's declaration makes the engine generate a rule. */
-function derivesARule(f: BlockSchemaFieldEntry): boolean {
+function derivesARule(
+    f: BlockSchemaFieldEntry,
+    // A field can carry a rule it does not declare itself: naming it in one of
+    // the BLOCK's `unique_together` groups gives it one. Leaving that out here
+    // would not mislabel the violation — it would mean the cell is never
+    // probed and the violation is never found at all.
+    uniqueTogether: readonly (readonly string[])[] = []
+): boolean {
     const kind = f.fieldType?.kind
     return (
         !!f.required ||
         !!f.unique ||
+        uniqueTogether.some((g) => g.includes(f.field)) ||
         kind === 'enum' ||
         kind === 'multiSelect' ||
         kind === 'fieldRef' ||
@@ -419,10 +434,23 @@ function derivesARule(f: BlockSchemaFieldEntry): boolean {
  * constraint came from. The author's own rule is quoted verbatim, because that
  * one they did type.
  */
-function explainRule(f: BlockSchemaFieldEntry): string {
+function explainRule(
+    f: BlockSchemaFieldEntry,
+    // The block's own rules, which land on a field's shadow as well: the
+    // shadow is ONE boolean over every clause ANDed together, so a label that
+    // named only the per-field declarations would confidently blame the wrong
+    // one. A composite-uniqueness violation was being reported as "one of enum
+    // set …" — a reason that is not merely unhelpful but untrue.
+    uniqueTogether: readonly (readonly string[])[] = []
+): string {
     const parts: string[] = []
     if (f.required) parts.push('required')
     if (f.unique) parts.push('unique')
+    for (const g of uniqueTogether) {
+        if (g.includes(f.field)) {
+            parts.push(`unique together with (${g.join(', ')})`)
+        }
+    }
     const kind = f.fieldType?.kind
     if (kind === 'enum' || kind === 'multiSelect') {
         parts.push(`one of enum set "${f.fieldType?.enumSetId ?? '?'}"`)

@@ -823,6 +823,7 @@ fn convert_tables_to_blocks(controller: &mut Controller, specs: Vec<TableConvert
                 // handling: the loader reads `headerRowCount` into the block's
                 // geometry, so what arrives here is records only.
                 header_idx: None,
+                unique_together: None,
             }),
         ];
         controller.handle_action(EditAction::Payloads(PayloadsAction {

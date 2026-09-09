@@ -304,6 +304,20 @@ pub struct LinkRangeXml {
 /// A form schema where data records run along rows. `key` is the column id
 /// holding the record-identifying field; `fields` lists the per-column
 /// field definitions in declared order.
+/// One `uniqueTogether` group: the field names that must not repeat together.
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
+pub struct UniqueTogetherXml {
+    #[xmlserde(name = b"field", ty = "child")]
+    pub fields: Vec<UniqueTogetherFieldXml>,
+}
+
+/// One field name inside a `uniqueTogether` group.
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
+pub struct UniqueTogetherFieldXml {
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: String,
+}
+
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct RowSchemaXml {
     #[xmlserde(name = b"blockId", ty = "attr")]
@@ -323,6 +337,11 @@ pub struct RowSchemaXml {
     pub header: Option<u32>,
     #[xmlserde(name = b"field", ty = "child")]
     pub fields: Vec<SchemaFieldXml>,
+    /// Field groups that must be unique in COMBINATION. A child element rather
+    /// than an attribute because it is a list of lists; absent in every file
+    /// written before this existed, which reads as "no such rule".
+    #[xmlserde(name = b"uniqueTogether", ty = "child")]
+    pub unique_together: Vec<UniqueTogetherXml>,
 }
 
 /// Mirror of `RowSchemaXml` for column-oriented schemas. Identical wire
@@ -344,6 +363,11 @@ pub struct ColSchemaXml {
     pub header: Option<u32>,
     #[xmlserde(name = b"field", ty = "child")]
     pub fields: Vec<SchemaFieldXml>,
+    /// Field groups that must be unique in COMBINATION. A child element rather
+    /// than an attribute because it is a list of lists; absent in every file
+    /// written before this existed, which reads as "no such rule".
+    #[xmlserde(name = b"uniqueTogether", ty = "child")]
+    pub unique_together: Vec<UniqueTogetherXml>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]

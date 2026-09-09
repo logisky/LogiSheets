@@ -130,6 +130,7 @@ fn fresh_block_with_data(
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             // Value cells last — so #PLACEHOLDER references the cell
             // that already exists with these literals.
@@ -546,6 +547,7 @@ fn test_validation_field_ref_unknown_field_errors() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
         ],
         undoable: true,
@@ -597,6 +599,7 @@ fn test_field_rule_coordinate_into_own_block_errors() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
         ],
         undoable: true,
@@ -652,6 +655,7 @@ fn test_field_rule_coordinate_outside_block_is_fine() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,

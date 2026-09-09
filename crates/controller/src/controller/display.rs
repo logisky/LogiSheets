@@ -171,6 +171,9 @@ pub struct BlockSchema {
     /// counts lines from the block's corner and has no business knowing line
     /// ids. Absent for the blocks that have no header line, which is most.
     pub header_idx: Option<usize>,
+    /// Field groups whose values must not repeat in COMBINATION — the block's
+    /// own rule, as opposed to the per-field ones on each entry.
+    pub unique_together: Vec<crate::edit_action::UniqueTogetherGroup>,
 }
 
 #[derive(Debug, Clone, TS)]

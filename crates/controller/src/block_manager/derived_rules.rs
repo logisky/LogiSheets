@@ -31,6 +31,7 @@ use super::enum_manager::EnumSetManager;
 use super::schema_manager::SchemaManager;
 use super::schema_manager::field_type::FieldType;
 use super::schema_manager::manager::BlockFieldView;
+use super::schema_manager::schema::SchemaTrait;
 
 /// Escape a value for use inside an Excel string literal, where `"` doubles.
 fn lit(v: &str) -> String {
@@ -69,6 +70,48 @@ fn unique_rule(sheet_id: SheetId, block_id: usize, field: &str) -> String {
     )
 }
 
+/// No other record repeats this record's COMBINATION of the group's values.
+///
+/// The single-field `unique` counts one column; this counts the group's
+/// columns together, which is the case nothing could express. The field being
+/// judged contributes `#PLACEHOLDER`; every other field of the group
+/// contributes `#FIELD("name")` — the same row's cell, which the shadow
+/// substitution resolves per record.
+///
+/// Exempt while ANY of the group is blank, not just this field: a half-filled
+/// new row is incomplete, not a duplicate of the other half-filled row. That
+/// is the same reason `unique` exempts empty, applied to a group.
+fn unique_together_rule(
+    sheet_id: SheetId,
+    block_id: usize,
+    this_field: &str,
+    group: &[String],
+) -> Option<String> {
+    if group.len() < 2 || !group.iter().any(|f| f == this_field) {
+        return None;
+    }
+    let col = |f: &str| format!("BLOCKREFSB({sheet_id},{block_id},\"*\",\"{}\")", lit(f));
+    // How this row's value for `f` is written inside the rule.
+    let value_of = |f: &str| {
+        if f == this_field {
+            "#PLACEHOLDER".to_string()
+        } else {
+            format!("#FIELD(\"{}\")", lit(f))
+        }
+    };
+    let pairs = group
+        .iter()
+        .map(|f| format!("{},{}", col(f), value_of(f)))
+        .collect::<Vec<_>>()
+        .join(",");
+    let blanks = group
+        .iter()
+        .map(|f| format!("ISBLANK({})", value_of(f)))
+        .collect::<Vec<_>>()
+        .join(",");
+    Some(format!("OR({blanks},COUNTIFS({pairs})=1)"))
+}
+
 /// The value is one of the set's options. Empty is exempt — clearing a
 /// selection is not a violation.
 ///
@@ -105,6 +148,10 @@ pub fn derived_rules(
     sheet_id: SheetId,
     block_id: usize,
     field: &BlockFieldView<'_>,
+    // Groups this block declares. Only the ones naming this field produce a
+    // rule for it — every member of a group carries the same check, so the
+    // marker lands on whichever cell of the row the reader is looking at.
+    unique_together: &[Vec<String>],
 ) -> Vec<String> {
     let mut out = Vec::new();
     if field.required {
@@ -113,6 +160,12 @@ pub fn derived_rules(
     if field.unique {
         out.push(unique_rule(sheet_id, block_id, field.name));
     }
+    for group in unique_together {
+        if let Some(rule) = unique_together_rule(sheet_id, block_id, field.name, group) {
+            out.push(rule);
+        }
+    }
+
     match field.field_type {
         FieldType::Enum { set_id } | FieldType::MultiSelect { set_id } => {
             // MultiSelect stores a comma-separated list in one cell, so a
@@ -182,7 +235,12 @@ pub fn effective_validation(
         }
     }
     let field = schema.field_view_for_block_cell(sheet_id, cell)?;
-    let mut parts = derived_rules(enums, sheet_id, cell.block_id, &field);
+    let groups = schema
+        .schemas
+        .get(&(sheet_id, cell.block_id))
+        .map(|s| s.unique_together().to_vec())
+        .unwrap_or_default();
+    let mut parts = derived_rules(enums, sheet_id, cell.block_id, &field, &groups);
     if let Some(own) = field.validation_formula {
         let own = own.trim();
         if !own.is_empty() {
@@ -239,14 +297,26 @@ mod tests {
     #[test]
     fn a_field_that_declares_nothing_derives_nothing() {
         let ty = FieldType::Text;
-        let rules = derived_rules(&EnumSetManager::new(), 0, 1, &field("a", &ty, false, false));
+        let rules = derived_rules(
+            &EnumSetManager::new(),
+            0,
+            1,
+            &field("a", &ty, false, false),
+            &[],
+        );
         assert!(rules.is_empty());
     }
 
     #[test]
     fn required_is_the_only_rule_that_is_about_emptiness() {
         let ty = FieldType::Text;
-        let rules = derived_rules(&EnumSetManager::new(), 0, 1, &field("a", &ty, true, false));
+        let rules = derived_rules(
+            &EnumSetManager::new(),
+            0,
+            1,
+            &field("a", &ty, true, false),
+            &[],
+        );
         assert_eq!(rules, vec!["NOT(ISBLANK(#PLACEHOLDER))"]);
     }
 
@@ -261,6 +331,7 @@ mod tests {
             7,
             3,
             &field("email", &ty, false, true),
+            &[],
         );
         assert_eq!(
             rules,
@@ -278,6 +349,7 @@ mod tests {
             0,
             1,
             &field("say \"hi\"", &ty, false, true),
+            &[],
         );
         assert!(
             rules[0].contains("\"say \"\"hi\"\"\""),
@@ -296,6 +368,7 @@ mod tests {
             0,
             1,
             &field("s", &ty, false, false),
+            &[],
         );
         assert_eq!(
             rules,
@@ -313,7 +386,13 @@ mod tests {
         let ty = FieldType::Enum {
             set_id: "status".into(),
         };
-        let rules = derived_rules(&EnumSetManager::new(), 0, 1, &field("s", &ty, false, false));
+        let rules = derived_rules(
+            &EnumSetManager::new(),
+            0,
+            1,
+            &field("s", &ty, false, false),
+            &[],
+        );
         assert!(rules.is_empty());
     }
 
@@ -324,7 +403,13 @@ mod tests {
             block_id: 9,
             field_name: "code".into(),
         };
-        let rules = derived_rules(&EnumSetManager::new(), 0, 1, &field("c", &ty, false, false));
+        let rules = derived_rules(
+            &EnumSetManager::new(),
+            0,
+            1,
+            &field("c", &ty, false, false),
+            &[],
+        );
         assert_eq!(
             rules,
             vec![
@@ -352,6 +437,7 @@ mod tests {
                 0,
                 1,
                 &field("s", &ty, false, false),
+                &[],
             );
             assert!(rules.is_empty(), "{:?} should derive nothing yet", ty);
         }
@@ -364,7 +450,7 @@ mod tests {
         };
         let mut f = field("s", &ty, true, true);
         f.validation_formula = Some("LEN(#PLACEHOLDER)<10");
-        let mut parts = derived_rules(&enums_with("status", &["open"]), 0, 1, &f);
+        let mut parts = derived_rules(&enums_with("status", &["open"]), 0, 1, &f, &[]);
         parts.push("LEN(#PLACEHOLDER)<10".into());
         let composed = format!("AND({})", parts.join(","));
         assert!(composed.starts_with("AND(NOT(ISBLANK(#PLACEHOLDER)),OR("));

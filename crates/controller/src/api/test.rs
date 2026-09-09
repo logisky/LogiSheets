@@ -1108,6 +1108,7 @@ fn range_link_redirects_to_block_and_tracks_growth() {
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1249,6 +1250,7 @@ fn clearing_field_rule_purges_stale_shadow_value() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1365,6 +1367,7 @@ fn a_templated_field_refuses_every_user_write() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1501,6 +1504,7 @@ fn a_proposed_value_is_judged_without_touching_the_workbook() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1608,6 +1612,7 @@ fn create_link_payload_redirects_existing_formula() {
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1914,6 +1919,7 @@ fn cross_sheet_linked_column_tracks_block_and_survives_save_load() {
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 1,
@@ -2050,6 +2056,7 @@ fn link_survives_save_load() {
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -2164,6 +2171,7 @@ fn linked_column_tracks_tail_append() {
                 fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -2807,6 +2815,7 @@ fn a_declared_header_line_is_not_a_record() {
         ],
         row: true,
         header_idx: Some(0),
+        unique_together: None,
     }));
     let effect = apply(&mut wb, payloads);
     assert!(matches!(
@@ -2858,6 +2867,113 @@ fn a_declared_header_line_is_not_a_record() {
 /// declaration the host may interpret; the per-record editability rule is the
 /// half that bites, because it becomes the cell's `UserEditable` shadow and
 /// the host permission layer refuses an edit whose shadow reads false.
+/// A block can state a rule about ITSELF, not just about one of its cells.
+///
+/// Everything else a schema declares judges one value (`required`, `unique`,
+/// an enum) or one record's values against each other (a validation formula
+/// with `#FIELD`). None of it can say anything about the table as a whole —
+/// which is the shape of mistake an agent makes: not a wrong value, a wrong
+/// structure, with every cell individually legal.
+///
+/// `unique_together` is the first of those. It matters most for a fact table
+/// feeding a pivot: a repeated (region, quarter) is an error nowhere, it just
+/// makes every total quietly count twice.
+#[test]
+fn a_repeated_combination_is_flagged_where_neither_column_alone_is() {
+    use crate::edit_action::{BindFormSchema, CellInput, UniqueTogetherGroup};
+    use crate::sid_assigner::ShadowKind;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    // region repeats, quarter repeats — neither column alone is unique, and
+    // neither should be. Rows 1 and 2 repeat the COMBINATION.
+    // An `id` key column, because a fact table's dimensions repeat by nature
+    // and the row-key guard would refuse `region` as a key. That is exactly
+    // the gap: single-column uniqueness is enforced, the composite one had no
+    // way to be stated at all.
+    let rows = [
+        ("f0", "East", "Q1"),
+        ("f1", "South", "Q1"),
+        ("f2", "South", "Q1"),
+        ("f3", "South", "Q2"),
+    ];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 3,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (id, region, quarter)) in rows.iter().enumerate() {
+        for (c, v) in [id, region, quarter].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "facts".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("id", "u0"),
+            SchemaFieldSpec::new("region", "u1"),
+            SchemaFieldSpec::new("quarter", "u2"),
+        ],
+        row: true,
+        header_idx: None,
+        unique_together: Some(vec![UniqueTogetherGroup {
+            fields: vec!["region".into(), "quarter".into()],
+        }]),
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let valid = |wb: &mut Workbook, row: usize, col: usize| -> bool {
+        let scid = wb
+            .get_shadow_cell_id(0, row, col, ShadowKind::Validation)
+            .unwrap();
+        let id = match scid.cell_id {
+            crate::CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        !matches!(
+            wb.get_shadow_info_by_id(id).unwrap().value,
+            crate::controller::display::Value::Bool(false)
+        )
+    };
+
+    // The two rows that repeat (South, Q1) are flagged — in BOTH of their
+    // columns, so the marker is on whichever cell the reader is looking at.
+    assert!(!valid(&mut wb, 1, 1), "row 1 repeats (South, Q1)");
+    assert!(!valid(&mut wb, 1, 2), "and its quarter cell says so too");
+    assert!(!valid(&mut wb, 2, 1), "row 2 is the other half of the pair");
+
+    // The rows that do not repeat are untouched — including row 3, which
+    // shares `region` with both flagged rows, and row 0, which shares
+    // `quarter`. Neither column alone is unique and neither is being asked to
+    // be.
+    assert!(valid(&mut wb, 0, 1), "(East, Q1) occurs once");
+    assert!(valid(&mut wb, 3, 1), "(South, Q2) occurs once");
+    // And the key column, which the group does not name, is left alone.
+    assert!(valid(&mut wb, 1, 0), "`id` is not part of the group");
+}
+
 #[test]
 fn a_header_cell_is_not_editable() {
     use crate::controller::display::Value;
@@ -2904,6 +3020,7 @@ fn a_header_cell_is_not_editable() {
         ],
         row: true,
         header_idx: Some(0),
+        unique_together: None,
     }));
     let effect = apply(&mut wb, payloads);
     assert!(matches!(
@@ -2995,6 +3112,7 @@ fn sorting_a_block_leaves_its_header_on_top() {
         ],
         row: true,
         header_idx: Some(0),
+        unique_together: None,
     }));
     let effect = apply(&mut wb, payloads);
     assert!(matches!(
@@ -3082,6 +3200,7 @@ fn sort_block_by_field_end_to_end() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
         ];
         for (r, (name, age)) in records.iter().enumerate() {
@@ -3297,6 +3416,7 @@ fn sort_block_grown_by_insert_rows() {
                 fields: vec![SchemaFieldSpec::new("Customer Status", "r0")],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             // Add two rows (interior insert at index 1), like clicking "add row".
             EditPayload::InsertRowsInBlock(InsertRowsInBlock {
@@ -3418,6 +3538,7 @@ fn sort_block_reference_follows_moved_cell() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             cell(0, 0, "Charlie"),
             cell(0, 1, "30"),
@@ -4770,6 +4891,7 @@ fn block_schema_key_entries_report_record_row() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -4897,6 +5019,7 @@ fn range_straddling_a_block_boundary_does_not_panic() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -6040,6 +6163,7 @@ fn chart_bound_to_block_follows_it() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         }),
     ];
     for (i, (name, qty)) in [("a", "10"), ("b", "20"), ("c", "30")].iter().enumerate() {
@@ -6191,6 +6315,7 @@ fn block_bound_chart_survives_save() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             cell(0, 0, "a"),
             cell(0, 1, "10"),
@@ -6521,6 +6646,7 @@ fn block_with_keys(keys: [&str; 3]) -> (Workbook, logisheets_base::BlockId) {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         }),
     ];
     for (row, key) in keys.iter().enumerate() {
@@ -6759,6 +6885,7 @@ fn block_with_legacy_duplicates() -> (Workbook, logisheets_base::BlockId) {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         })],
         undoable: true,
         init: false,
@@ -6920,6 +7047,7 @@ fn a_blockrefs_naming_a_field_that_does_not_exist_matches_nothing() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         }),
     ];
     for (row, key, amt) in [(0usize, "a", "1"), (1, "b", "2"), (2, "c", "3")] {
@@ -7078,6 +7206,7 @@ fn block_with_declared_field(
             fields: vec![SchemaFieldSpec::new("key", "r0"), spec],
             row: true,
             header_idx: None,
+            unique_together: None,
         }),
     ];
     // Keys matter: the derived `unique` rule counts through
@@ -7252,6 +7381,7 @@ fn an_enum_whitelist_is_derived_from_the_workbooks_own_set() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
         ],
         undoable: true,
@@ -7344,6 +7474,7 @@ fn the_derived_rule_survives_a_field_rename_because_it_is_regenerated() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         })],
         undoable: true,
         init: false,
@@ -7417,6 +7548,7 @@ fn a_fields_write_policy_is_declared_on_the_schema_and_survives_a_round_trip() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
         ],
         undoable: true,
@@ -7607,6 +7739,7 @@ fn orders_with_analysis(
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         }),
     ];
     for (row, amt) in [(0usize, "10"), (1, "20"), (2, "30")] {
@@ -7669,6 +7802,7 @@ fn orders_with_analysis(
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -8034,6 +8168,7 @@ fn renaming_a_source_field_regenerates_the_analysis_formula() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "orders".into(),
@@ -8047,6 +8182,7 @@ fn renaming_a_source_field_regenerates_the_analysis_formula() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
         ],
         undoable: true,
@@ -8158,6 +8294,7 @@ fn bind_t(block_id: logisheets_base::BlockId, fields: &[(&str, Option<&str>)]) -
             .collect(),
         row: true,
         header_idx: None,
+        unique_together: None,
     })
 }
 
@@ -8906,6 +9043,7 @@ fn a_pivot_field_cannot_also_declare_its_own_aggregate() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         })],
     );
     assert!(
@@ -9020,6 +9158,7 @@ fn sales_block(wb: &mut Workbook) -> logisheets_base::BlockId {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         }),
     ];
     for (r, (id, region, quarter, amt)) in rows.iter().enumerate() {
@@ -9107,6 +9246,7 @@ fn sales_with_pivot(
         fields,
         row: true,
         header_idx: None,
+        unique_together: None,
     }));
 
     let effect = apply(&mut wb, payloads);
@@ -9770,6 +9910,7 @@ fn a_dimension_with_too_many_values_is_refused_with_the_count() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         }),
     ];
     for r in 0..N {
@@ -9920,6 +10061,7 @@ fn refreshing_a_pivot_with_a_trailing_no_op_resize_loses_the_new_row() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
         ];
         if trailing {
@@ -10039,6 +10181,7 @@ fn sales_with_columns(
         fields,
         row: true,
         header_idx: None,
+        unique_together: None,
     }));
 
     let effect = apply(&mut wb, payloads);
@@ -10104,6 +10247,7 @@ fn gappy_block(wb: &mut Workbook) -> logisheets_base::BlockId {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         }),
     ];
     for (r, (id, region, amt)) in rows.iter().enumerate() {
@@ -10190,6 +10334,7 @@ fn counta_counts_present_values_where_count_counts_numbers() {
         ],
         row: true,
         header_idx: None,
+        unique_together: None,
     }));
     let effect = apply(&mut wb, payloads);
     assert!(
@@ -10346,6 +10491,7 @@ fn a_declared_column_on_a_block_that_is_not_a_pivot_is_refused() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         })],
     );
     assert!(matches!(
@@ -10438,6 +10584,7 @@ fn a_pivot_whose_measure_is_gone_is_broken_not_merely_zero() {
             key_idx: 0,
             row: true,
             header_idx: None,
+            unique_together: None,
             fields: vec![
                 SchemaFieldSpec::new("id", "s0"),
                 SchemaFieldSpec::new("region", "s1"),
@@ -10953,6 +11100,7 @@ fn rename_region_to_area(wb: &mut Workbook, src: logisheets_base::BlockId) {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         })],
     );
     assert!(
@@ -11017,6 +11165,7 @@ fn renaming_a_measure_carries_into_the_recipe_and_the_declared_columns() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         })],
     );
     assert!(matches!(
@@ -11076,6 +11225,7 @@ fn renaming_a_filtered_field_carries_into_the_filter() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         })],
     );
     assert!(matches!(
@@ -11118,6 +11268,7 @@ fn renaming_a_source_field_carries_into_a_total_rows_aggregate() {
             ],
             row: true,
             header_idx: None,
+            unique_together: None,
         })],
     );
     assert!(matches!(
@@ -11172,6 +11323,7 @@ fn adding_and_reordering_fields_is_not_read_as_a_rename() {
                 ],
                 row: true,
                 header_idx: None,
+                unique_together: None,
             }),
         ],
     );

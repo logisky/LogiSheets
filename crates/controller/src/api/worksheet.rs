@@ -1970,6 +1970,13 @@ impl<'a> Worksheet<'a> {
                             fields,
                             random_entries,
                             header_idx: header_index(s, &block_place),
+                            unique_together: s
+                                .unique_together()
+                                .iter()
+                                .map(|g| crate::edit_action::UniqueTogetherGroup {
+                                    fields: g.clone(),
+                                })
+                                .collect(),
                         }
                     });
 
@@ -2744,6 +2751,11 @@ impl<'a> Worksheet<'a> {
                     fields,
                     random_entries,
                     header_idx: header_index(s, &block_place),
+                    unique_together: s
+                        .unique_together()
+                        .iter()
+                        .map(|g| crate::edit_action::UniqueTogetherGroup { fields: g.clone() })
+                        .collect(),
                 }
             });
 

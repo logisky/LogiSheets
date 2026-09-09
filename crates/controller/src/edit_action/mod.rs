@@ -1412,6 +1412,19 @@ impl SchemaFieldSpec {
     }
 }
 
+/// One `unique_together` group: the field names whose values must not repeat
+/// in combination.
+///
+/// A named type rather than a bare `Vec<Vec<String>>` because the binding
+/// generator renders a nested list as `readonly readonly string[][]`, which is
+/// not valid TypeScript. Wrapping the inner list also gives the concept a name
+/// on both sides of the wire, and matches the shape it is persisted in.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "unique_together_group.ts", rename_all = "camelCase")]
+pub struct UniqueTogetherGroup {
+    pub fields: Vec<String>,
+}
+
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "bind_form_schema.ts", builder, rename_all = "camelCase")]
 pub struct BindFormSchema {
@@ -1435,6 +1448,13 @@ pub struct BindFormSchema {
     /// schema that says so, because which line is names is a matter of how the
     /// block is READ.
     pub header_idx: Option<usize>,
+    /// Field-name groups whose values must not repeat in COMBINATION.
+    ///
+    /// `Option` so a caller that predates this keeps working; absent and empty
+    /// mean the same thing. A group of fewer than two names is ignored —
+    /// single-field uniqueness is `SchemaFieldSpec::unique`, which already
+    /// derives its own rule.
+    pub unique_together: Option<Vec<UniqueTogetherGroup>>,
 }
 
 impl From<BindFormSchema> for EditPayload {

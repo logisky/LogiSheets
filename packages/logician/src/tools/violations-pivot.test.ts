@@ -138,3 +138,134 @@ describe('list_violations reports pivots that cannot be taken at face value', ()
         expect(r.display).toContain('broken')
     })
 })
+
+/**
+ * A block's OWN rule reaches the sweep too.
+ *
+ * `unique_together` is the first rule a block states about itself rather than
+ * about one of its cells, and it lands on the same validation shadows as every
+ * per-field rule — so `list_violations` finds it for free. Two things did NOT
+ * come for free, and both are the reason this test exists:
+ *
+ *   - a field is only PROBED when it derives a rule, and a plain text column
+ *     that merely belongs to a group derives none of its own. Missing that
+ *     meant the cell was never looked at and the violation never found.
+ *   - the shadow is one boolean over every clause ANDed together, so the label
+ *     has to name every declaration that could be responsible. It named only
+ *     the per-field ones, and reported a duplicate combination as "one of enum
+ *     set …" — a reason that is not just unhelpful but untrue.
+ */
+describe('list_violations reports a block-level unique_together', () => {
+    /** Two records repeat (South, Q1); neither column alone is unique. */
+    const ROWS = [
+        ['f0', 'East', 'Q1'],
+        ['f1', 'South', 'Q1'],
+        ['f2', 'South', 'Q1'],
+        ['f3', 'South', 'Q2'],
+    ]
+    /** Which probes came back false — indexed the way the handler asks. */
+    const FAILING = new Set(['1:1', '1:2', '2:1', '2:2'])
+
+    function clientForGroups(uniqueTogether: string[][]) {
+        const blocks = [
+            {
+                sheetIdx: 0,
+                sheetId: 7,
+                blockId: 3,
+                rowStart: 0,
+                colStart: 0,
+                rowCnt: ROWS.length,
+                colCnt: 3,
+                description: '',
+                owner: '',
+                modifyPolicy: 'all',
+                permissions: {},
+                fieldRenders: [],
+                cells: ROWS.flatMap((r) =>
+                    r.map((v) => ({value: {type: 'str', value: v}}))
+                ),
+                analyzedBy: [],
+                schema: {
+                    name: 'facts',
+                    schemaType: 'row',
+                    keys: ROWS.map((r, i) => ({key: r[0], idx: i})),
+                    // Plain text, no per-field rule anywhere: the group is the
+                    // only thing that makes these cells worth looking at.
+                    fields: [
+                        {
+                            field: 'id',
+                            idx: 0,
+                            renderId: 'u0',
+                            writePolicy: 'inherit',
+                        },
+                        {
+                            field: 'region',
+                            idx: 1,
+                            renderId: 'u1',
+                            writePolicy: 'inherit',
+                        },
+                        {
+                            field: 'quarter',
+                            idx: 2,
+                            renderId: 'u2',
+                            writePolicy: 'inherit',
+                        },
+                    ],
+                    randomEntries: [],
+                    uniqueTogether: uniqueTogether.map((g) => ({fields: g})),
+                },
+            },
+        ]
+        return {
+            getAllBlocks: async () => blocks,
+            getAllSheetInfo: async () => [{name: 'Sheet1'}],
+            getAllBlockKeyDuplicates: async () => [],
+            // The engine's shadows, stubbed: false exactly on the duplicated
+            // combination's cells.
+            getShadowCellIds: async (p: {rowIdx: number[]; colIdx: number[]}) =>
+                p.rowIdx.map((r, i) => ({
+                    cellId: {
+                        type: 'ephemeralCell',
+                        value: r * 10 + p.colIdx[i],
+                    },
+                })),
+            batchGetCellInfoById: async (p: {
+                ids: {cellId: {value: number}}[]
+            }) =>
+                p.ids.map((id) => {
+                    const n = id.cellId.value
+                    const key = `${Math.floor(n / 10)}:${n % 10}`
+                    return {
+                        value: {type: 'bool', value: !FAILING.has(key)},
+                    }
+                }),
+        } as unknown as Client
+    }
+
+    it('probes a field that only a GROUP gives a rule to', async () => {
+        const r = await listViolations.handler(
+            {},
+            ctxFor(clientForGroups([['region', 'quarter']]))
+        )
+        expect(r.data.violations).toHaveLength(4)
+        expect(r.data.violations.map((v) => `${v.row_key}!${v.field}`)).toEqual(
+            ['f1!region', 'f1!quarter', 'f2!region', 'f2!quarter']
+        )
+    })
+
+    it('names the group as the reason, not some other declaration', async () => {
+        const r = await listViolations.handler(
+            {},
+            ctxFor(clientForGroups([['region', 'quarter']]))
+        )
+        expect(r.data.violations[0].rule).toBe(
+            'unique together with (region, quarter)'
+        )
+    })
+
+    it('looks at nothing when no group names the field', async () => {
+        const r = await listViolations.handler({}, ctxFor(clientForGroups([])))
+        expect(r.data.violations).toEqual([])
+        expect(r.display).toContain('No validation rules declared in scope')
+    })
+})

@@ -195,6 +195,21 @@ pub struct FormSchema<F, K, const IS_ROW: bool> {
     /// when this is the first line, and otherwise keeps names in the table
     /// definition as before.
     pub header: Option<u32>,
+    /// Field groups whose values, TAKEN TOGETHER, must not repeat across
+    /// records.
+    ///
+    /// The first rule a block can state about itself rather than about one of
+    /// its cells. Everything else here is per-field or per-record: `required`,
+    /// `unique`, a validation formula — all of them judge one value, or one
+    /// record's values against each other. None can say anything about the
+    /// table AS A WHOLE, which is the shape of mistake an agent makes: not a
+    /// wrong value, a wrong structure, with every cell individually legal.
+    ///
+    /// `unique` is the single-field case and stays where it is; this is the
+    /// composite one, which nothing could express. It matters most for a fact
+    /// table feeding a pivot — duplicated (region, quarter) there is not an
+    /// error anywhere, it just makes every total quietly count twice.
+    pub unique_together: Vec<Vec<Field>>,
 }
 
 impl<F: Copy + PartialEq, K, const IS_ROW: bool> FormSchema<F, K, IS_ROW> {
@@ -351,6 +366,14 @@ impl SchemaTrait for Schema {
             Schema::RandomSchema(s) => s.header_line(),
         }
     }
+
+    fn unique_together(&self) -> &[Vec<Field>] {
+        match self {
+            Schema::RowSchema(s) => s.unique_together(),
+            Schema::ColSchema(s) => s.unique_together(),
+            Schema::RandomSchema(s) => s.unique_together(),
+        }
+    }
 }
 
 pub trait SchemaTrait {
@@ -371,6 +394,9 @@ pub trait SchemaTrait {
     /// The record-axis line that holds field names, if the schema declares
     /// one. See [`FormSchema::header`].
     fn header_line(&self) -> Option<u32>;
+    /// Field groups that must be unique in combination. See
+    /// [`FormSchema::unique_together`].
+    fn unique_together(&self) -> &[Vec<Field>];
 }
 
 impl SchemaTrait for RowSchema {
@@ -481,6 +507,10 @@ impl SchemaTrait for RowSchema {
     fn header_line(&self) -> Option<u32> {
         self.header
     }
+
+    fn unique_together(&self) -> &[Vec<Field>] {
+        &self.unique_together
+    }
 }
 
 impl SchemaTrait for ColSchema {
@@ -580,6 +610,10 @@ impl SchemaTrait for ColSchema {
     fn header_line(&self) -> Option<u32> {
         self.header
     }
+
+    fn unique_together(&self) -> &[Vec<Field>] {
+        &self.unique_together
+    }
 }
 
 impl SchemaTrait for RandomSchema {
@@ -650,5 +684,10 @@ impl SchemaTrait for RandomSchema {
     /// names to declare.
     fn header_line(&self) -> Option<u32> {
         None
+    }
+
+    /// Nor records to be unique across.
+    fn unique_together(&self) -> &[Vec<Field>] {
+        &[]
     }
 }

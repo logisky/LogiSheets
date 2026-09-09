@@ -405,6 +405,11 @@ interface CreateBlockInput {
         required?: boolean
         unique?: boolean
     }>
+    /**
+     * Field groups whose values must not repeat in COMBINATION — the block's
+     * own rule, as opposed to the per-field `unique`.
+     */
+    unique_together?: ReadonlyArray<ReadonlyArray<string>>
     initial_rows?: ReadonlyArray<{
         key: string
         values?: Record<string, unknown>
@@ -528,7 +533,7 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
     namespace: 'build',
     name: 'create_block',
     description: [
-        'Create a structured block (table) on a sheet. fields[0] is the row-key column (always read-only). Block ref name (`name`) is used as the first arg to BLOCKREF/BLOCKREFS in formulas.',
+        'Create a structured block (table) on a sheet. fields[0] is the row-key column — the value BLOCKREF matches on, so it has to be unique per record; it is ordinary data you can write. Block ref name (`name`) is used as the first arg to BLOCKREF/BLOCKREFS in formulas.',
         '',
         'Field types supported:',
         "  - 'string' / 'number'   — plain text/numeric cells.",
@@ -567,6 +572,12 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                 items: FIELD_SCHEMA,
                 description:
                     'Column definitions in order. fields[0] is the row-key column.',
+            },
+            unique_together: {
+                type: 'array',
+                description:
+                    'Field groups whose values must not repeat in COMBINATION — a rule about the TABLE, not about one cell. `unique` on a field covers one column; this covers several together, which nothing else can say. Reach for it on a fact table: a repeated (region, quarter) is an error nowhere, it just makes every total over that table quietly count twice. Violations show up in inspect__list_violations like any other rule.',
+                items: {type: 'array', items: {type: 'string'}},
             },
             initial_rows: {
                 type: 'array',
@@ -851,13 +862,18 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                         description: f.description || undefined,
                         required: f.required,
                         unique: f.unique,
-                        // fields[0] is the key column — a row identifier, not
-                        // user data. Everything else inherits the block's own
-                        // rules unless the caller says otherwise.
+                        // Every field inherits the block's rules unless the
+                        // caller says otherwise, the key column included.
+                        //
+                        // The key used to be closed here on the reasoning that
+                        // it is a row identifier rather than user data. True
+                        // of a key the ENGINE writes; false of every table
+                        // someone builds, where the key column is the order
+                        // number or the code — exactly the data they came to
+                        // enter. It left a new block with a column its author
+                        // could not fill in.
                         writePolicy:
-                            i === 0
-                                ? 'ownerOnly'
-                                : f.user_editable === false
+                            f.user_editable === false
                                 ? 'ownerOnly'
                                 : f.user_editable === true
                                 ? 'anyone'
@@ -865,6 +881,9 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                     }))
                 )
                 .row(true)
+                .uniqueTogether(
+                    (input.unique_together ?? []).map((g) => ({fields: [...g]}))
+                )
                 .build(),
         })
 
@@ -2160,6 +2179,15 @@ interface DescribeBlockOutput {
      */
     pivot_excel_note?: string
     /**
+     * Field groups whose values must not repeat in COMBINATION.
+     *
+     * The one rule a block states about ITSELF rather than about one of its
+     * cells — every other rule here judges a single value, or one record's
+     * values against each other. Absent when the block declares none.
+     * Violations reach `inspect__list_violations` like any other rule.
+     */
+    unique_together?: string[][]
+    /**
      * What the block is for, in prose, as whoever built it wrote it. The
      * schema says what shape the records are; this is the only thing that says
      * what they mean or how they are meant to be used. `null` when nobody said.
@@ -2471,6 +2499,11 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
                 ? block.analyzedBy.map((id) => nameOfBlock(id) ?? `block#${id}`)
                 : undefined,
             ...pivotReport,
+            // Only when there is one: an empty list would read as a fact
+            // about the block rather than the absence of a rule.
+            unique_together: schema?.uniqueTogether?.length
+                ? schema.uniqueTogether.map((g) => [...g.fields])
+                : undefined,
             description: nonEmpty(block.description),
             owner: nonEmpty(block.owner),
             block_id: block.blockId,

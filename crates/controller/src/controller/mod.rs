@@ -1465,18 +1465,19 @@ mod tests {
         // Bind a row schema to the block.
         let action = PayloadsAction {
             payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "materials".to_string(),
-                    sheet_idx: 0,
-                    block_id: 1,
-                    field_from: 1,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("qty", "r1"),
-                        SchemaFieldSpec::new("name", "r2"),
-                    ],
-                    row: true,
-                    header_idx: None,
-                })],
+                ref_name: "materials".to_string(),
+                sheet_idx: 0,
+                block_id: 1,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("qty", "r1"),
+                    SchemaFieldSpec::new("name", "r2"),
+                ],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            })],
             undoable: true,
             init: false,
         };
@@ -1571,17 +1572,16 @@ mod tests {
         // Bind a schema so the frontend's BlockInterface would actually render.
         wb.handle_action(EditAction::Payloads(PayloadsAction {
             payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
-                    ref_name: "scenarios".to_string(),
-                    sheet_idx: 0,
-                    block_id: 7,
-                    field_from: 1,
-                    key_idx: 0,
-                    fields: vec![
-                        SchemaFieldSpec::new("amount", "render-amount"),
-                    ],
-                    row: true,
-                    header_idx: None,
-                })],
+                ref_name: "scenarios".to_string(),
+                sheet_idx: 0,
+                block_id: 7,
+                field_from: 1,
+                key_idx: 0,
+                fields: vec![SchemaFieldSpec::new("amount", "render-amount")],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            })],
             undoable: true,
             init: false,
         }));

@@ -130,6 +130,7 @@ pub fn schemas_to_xml(
                     .iter()
                     .map(|(name, entry)| field_to_xml(name, entry))
                     .collect(),
+                unique_together: groups_to_xml(&s.unique_together),
             }),
             Schema::ColSchema(s) => cols.push(ColSchemaXml {
                 block_id: *block_id,
@@ -141,6 +142,7 @@ pub fn schemas_to_xml(
                     .iter()
                     .map(|(name, entry)| field_to_xml(name, entry))
                     .collect(),
+                unique_together: groups_to_xml(&s.unique_together),
             }),
             Schema::RandomSchema(s) => randoms.push(RandomSchemaXml {
                 block_id: *block_id,
@@ -180,6 +182,7 @@ pub fn load_schemas_for_sheet(
             name: resolved.clone(),
             key: x.key as RowId,
             header: x.header,
+            unique_together: groups_from_xml(x.unique_together),
         };
         manager.refs.insert(resolved, (sheet_id, block_id));
         manager
@@ -195,6 +198,7 @@ pub fn load_schemas_for_sheet(
             name: resolved.clone(),
             key: x.key as ColId,
             header: x.header,
+            unique_together: groups_from_xml(x.unique_together),
         };
         manager.refs.insert(resolved, (sheet_id, block_id));
         manager
@@ -248,6 +252,7 @@ mod tests {
             name: "materials".to_string(),
             key: 2,
             header: None,
+            unique_together: vec![],
         }
     }
 
@@ -260,6 +265,7 @@ mod tests {
             name: "transposed".to_string(),
             key: 5,
             header: None,
+            unique_together: vec![],
         }
     }
 
@@ -394,4 +400,36 @@ fn free_ref_name(
         n += 1;
     }
     candidate
+}
+
+/// `unique_together` groups to their XML form and back.
+///
+/// A list of lists needs child elements rather than an attribute, and going
+/// through named helpers keeps the two directions next to each other — the
+/// pair that has to stay in step for a file to mean the same thing twice.
+fn groups_to_xml(
+    groups: &[Vec<String>],
+) -> Vec<logisheets_workbook::logisheets::UniqueTogetherXml> {
+    groups
+        .iter()
+        .map(|g| logisheets_workbook::logisheets::UniqueTogetherXml {
+            fields: g
+                .iter()
+                .map(
+                    |name| logisheets_workbook::logisheets::UniqueTogetherFieldXml {
+                        name: name.clone(),
+                    },
+                )
+                .collect(),
+        })
+        .collect()
+}
+
+fn groups_from_xml(
+    xml: Vec<logisheets_workbook::logisheets::UniqueTogetherXml>,
+) -> Vec<Vec<String>> {
+    xml.into_iter()
+        .map(|g| g.fields.into_iter().map(|f| f.name).collect())
+        .filter(|g: &Vec<String>| g.len() > 1)
+        .collect()
 }

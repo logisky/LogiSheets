@@ -210,6 +210,17 @@ impl BlockSchemaExecutor {
                 // moment a line is inserted above it, and the id is also what
                 // lets `cell_role` classify a header cell without consulting
                 // the navigator.
+                // A group naming fewer than two fields says nothing that
+                // `unique` does not already say, so it is dropped rather than
+                // generating a rule that duplicates one.
+                let unique_together: Vec<Vec<String>> = p
+                    .unique_together
+                    .clone()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|g| g.fields)
+                    .filter(|g: &Vec<String>| g.len() > 1)
+                    .collect();
                 let schema = if p.row {
                     let key = ctx
                         .fetch_block_cell_id(&sheet_id, &block_id, 0, p.key_idx)?
@@ -225,6 +236,7 @@ impl BlockSchemaExecutor {
                         key,
                         name: p.ref_name.clone(),
                         header,
+                        unique_together: unique_together.clone(),
                     })
                 } else {
                     let key = ctx
@@ -241,6 +253,7 @@ impl BlockSchemaExecutor {
                         key,
                         name: p.ref_name.clone(),
                         header,
+                        unique_together: unique_together.clone(),
                     })
                 };
                 // A ref name addresses one block for the whole workbook. Taking
