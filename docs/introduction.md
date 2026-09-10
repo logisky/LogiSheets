@@ -1,5 +1,5 @@
 ---
-description: What LogiSheets is — a Rust + WebAssembly spreadsheet engine that reads, edits and writes real .xlsx (Excel) files natively, on Node.js and in the browser.
+description: What LogiSheets is — a Rust + WebAssembly spreadsheet engine that reads, edits and writes real .xlsx (Excel) files natively, on Node.js and in the browser, and is designed as common ground for people and AI to work in the same document.
 ---
 
 # What is LogiSheets?
@@ -8,7 +8,7 @@ LogiSheets is a web-based spreadsheet engine, written in Rust and compiled to
 WASM, that reads, manipulates and writes real `.xlsx` files. It runs natively
 (Rust), on the server (Node.js) and in the browser.
 
-What sets it apart from "just another spreadsheet library" is three design
+What sets it apart from "just another spreadsheet library" is four design
 goals:
 
 ### Excel compatibility
@@ -63,6 +63,36 @@ identity*, seen from four angles. The payoff: data in LogiSheets can be
 *structured* — tables that know they're tables — while still living in a familiar,
 Excel-compatible spreadsheet. This is the foundation everything else is built on.
 
+### Common ground for people and AI
+
+Structured data is not only good engineering — it is what makes a spreadsheet
+usable by a machine at all, and this is the goal the others serve.
+
+A spreadsheet is the most widely understood interface humans have for
+structured data. It is also one of the worst interfaces you could hand a model,
+for exactly the reasons above: everything that makes a sheet readable to a
+person is a *convention*, held in their head and nowhere else. Where the table
+starts and stops, that the first row is headings, that column D is a
+percentage and not a count — none of that is written down anywhere the machine
+can read. An agent handed a raw grid has no choice but to infer it, and its
+mistakes are the quiet kind: a plausible number in a plausible cell.
+
+LogiSheets puts those conventions in the document, so the same file is legible
+to both readers at once:
+
+- The person sees an ordinary grid, and a real `.xlsx`.
+- The agent sees blocks it can name, fields whose types and meaning it can read
+  back, records addressed by key, rules that tell it when a value is wrong, and
+  policies that tell it which cells are not its to touch.
+
+Neither view is a translation of the other, and there is no synchronised
+"AI copy" of the data. It is one document with enough declared structure that
+both can work in it — which is why the AI story here is not a chat panel bolted
+onto a grid, but the same block model the rest of this page is about.
+
+→ **[AI and humans, same document](/ai)** covers what an agent actually sees,
+how it learns it was wrong, and how the boundaries work in both directions.
+
 ### Easy to extend (built for secondary development)
 
 LogiSheets is designed to be built *on*, not just used. The engine exposes a
@@ -79,7 +109,8 @@ inside the spreadsheet. Whether you're embedding LogiSheets in a product or
 extending it with plugins, the APIs are meant to make that straightforward.
 
 In other words, LogiSheets is a faithful Excel engine, a structured-data model,
-*and* a platform you can develop against.
+a shared surface for people and agents, *and* a platform you can develop
+against.
 
 ## Three ways to use it
 
@@ -234,4 +265,5 @@ plugin model.
 
 - New to the engine? → **[Read & write spreadsheets (SDK)](/usage)**
 - Want an interactive grid in a web app? → **[Embed the spreadsheet UI](/engine)**
+- Putting an agent to work in a sheet? → **[AI and humans, same document](/ai)**
 - Building structured data or plugins? → **[Craft system](/craft/craft)**

@@ -4,13 +4,13 @@ import {defineConfig} from 'vitepress'
 const HOSTNAME = 'https://docs.logisheets.com'
 const OG_TITLE = 'LogiSheets — Rust + WASM spreadsheet engine'
 const OG_DESC =
-    'A web-based spreadsheet engine in Rust + WebAssembly that reads, edits, and writes real .xlsx (Excel) files, usable from Rust, Node.js and the browser.'
+    'A web-based spreadsheet engine in Rust + WebAssembly that reads, edits, and writes real .xlsx (Excel) files, usable from Rust, Node.js and the browser — and built as common ground for people and AI agents to work in the same document.'
 const OG_IMAGE = `${HOSTNAME}/logo/logisheets.jpg`
 
 export default defineConfig({
     title: 'LogiSheets',
     description:
-        'A web-based spreadsheet engine in Rust + WASM that reads, edits, and writes real .xlsx (Excel) files, usable from Rust, Node.js and the browser.',
+        'A web-based spreadsheet engine in Rust + WASM that reads, edits, and writes real .xlsx (Excel) files, usable from Rust, Node.js and the browser — and built as common ground for people and AI agents to work in the same document.',
     // Emit sitemap.xml so search engines can crawl every page.
     sitemap: {hostname: HOSTNAME},
     // Absolute canonical/OG urls need the deploy origin.
@@ -22,7 +22,7 @@ export default defineConfig({
             {
                 name: 'keywords',
                 content:
-                    'spreadsheet, xlsx, excel, rust, wasm, webassembly, spreadsheet engine, formula, ooxml, javascript spreadsheet, nodejs, open source',
+                    'spreadsheet, xlsx, excel, rust, wasm, webassembly, spreadsheet engine, formula, ooxml, javascript spreadsheet, nodejs, open source, ai agent, llm tools, mcp, agent spreadsheet',
             },
         ],
         // Site-wide Open Graph / Twitter tags. The page-varying tags
@@ -61,12 +61,16 @@ export default defineConfig({
         logo: '/logo/logisheets.jpg',
         nav: [
             {text: 'Introduction', link: '/introduction'},
+            {text: 'AI', link: '/ai'},
             {text: 'Guide', link: '/usage'},
         ],
         sidebar: [
             {
                 text: 'Introduction',
-                items: [{text: 'What is LogiSheets?', link: '/introduction'}],
+                items: [
+                    {text: 'What is LogiSheets?', link: '/introduction'},
+                    {text: 'AI and humans, same document', link: '/ai'},
+                ],
             },
             {
                 text: 'Guide',
