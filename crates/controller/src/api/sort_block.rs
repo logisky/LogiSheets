@@ -140,16 +140,31 @@ impl Workbook {
 
         let bp = status.navigator.get_block_place(&sheet_id, &block_id)?;
 
-        // Records in current axis order; index i == index into bp.rows/cols,
-        // which is exactly the index ReorderBlockLines permutes.
+        // Records in current axis order. `get_all_key_cell_ids` no longer
+        // returns one per LINE — a schema that declares a header line has one
+        // fewer record than it has lines — so the index into it is not the
+        // index `ReorderBlockLines` permutes. Map each record back to its own
+        // line, and carry the header separately.
         let key_cells = schema.get_all_key_cell_ids(block_id, bp);
+        let lines: Vec<u32> = if is_row {
+            bp.rows.iter().copied().collect()
+        } else {
+            bp.cols.iter().copied().collect()
+        };
+        let line_of = |cell: &logisheets_base::BlockCellId| -> usize {
+            let id = if is_row { cell.row } else { cell.col };
+            lines.iter().position(|l| *l == id).unwrap_or(0)
+        };
+        let header_line = schema
+            .header_line()
+            .and_then(|h| lines.iter().position(|l| *l == h));
 
         let text_fetcher = |id| status.text_id_manager.get_string(&id).unwrap_or_default();
 
         let mut keyed: Vec<(usize, SortKey)> = key_cells
             .iter()
-            .enumerate()
-            .map(|(idx, key_cell)| {
+            .map(|key_cell| {
+                let idx = line_of(key_cell);
                 let sort_key = schema
                     .partially_resolve_by_field_id(*key_cell, field_id)
                     .and_then(|field_cell| {
@@ -167,9 +182,30 @@ impl Workbook {
         // Stable sort: equal keys keep their original relative order.
         keyed.sort_by(|(_, a), (_, b)| cmp_keys(a, b, asc));
 
-        let new_order = keyed.into_iter().map(|(idx, _)| idx).collect();
+        // The header stays FIRST, whatever the sort did. It is not a record,
+        // so it has no key to sort by — and `headerRowCount="1"` can only mean
+        // the first line of a table, so a header sorted into the middle would
+        // stop being expressible at all.
+        let new_order: Vec<usize> = header_line
+            .into_iter()
+            .chain(keyed.into_iter().map(|(idx, _)| idx))
+            .collect();
         Ok(BlockSortOrder { is_row, new_order })
     }
+}
+
+/// Compare two DISPLAY strings with the same typed ordering the sort uses:
+/// numerically when both parse as numbers, else case-insensitively as text.
+///
+/// Shared with `pivot_plan`, which orders a pivot's dimension values, so that
+/// "ascending" means one thing across the product rather than two subtly
+/// different things in two modules.
+pub(super) fn cmp_display_strings(a: &str, b: &str) -> Ordering {
+    let key = |s: &str| match s.parse::<f64>() {
+        Ok(n) => SortKey::Number(n),
+        Err(_) => SortKey::Text(s.to_lowercase()),
+    };
+    cmp_keys(&key(a), &key(b), true)
 }
 
 fn to_sort_key<F>(value: CellValue, text_fetcher: &F) -> SortKey

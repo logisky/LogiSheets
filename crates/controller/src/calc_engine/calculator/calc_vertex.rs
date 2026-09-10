@@ -111,7 +111,6 @@ impl Value {
             CellValue::FormulaStr(s) => Value::Text(s),
         }
     }
-
 }
 
 #[derive(Debug, Clone)]

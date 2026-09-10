@@ -20,9 +20,10 @@
 
 // Re-export the main Workbook and Worksheet types from controller/api
 pub use logisheets_controller::api::{
-    BlockSortOrder, CellInfo, CellRefRange, CfRuleInfo, DependentCell, FieldValidationVerdict,
-    FillRange, ReproducibleCell,
-    SaveFileResult, SheetCoordinate, SheetDimension, Workbook, Worksheet,
+    BlockOpForPayload, BlockOpPolicy, BlockSortOrder, CellInfo, CellRefRange, CfRuleInfo,
+    DependentCell, DuplicateBlockKey, EnumSetInfo, EnumVariantInfo, FieldValidationVerdict,
+    FillRange, PivotExcelNote, PivotPlan, PivotSpecParts, ReproducibleCell, SaveFileResult,
+    SheetCoordinate, SheetDimension, Workbook, Worksheet,
 };
 
 // Re-export display types

@@ -2,7 +2,8 @@ use crate::edit_action::{
     AddComment, AuthorInput, CellInput, CommentMention, CreateBlock, CreateChart,
     CreateChartSeries, CreateDiyCell, DeleteCellImage, DeleteChart, DeleteComment, EditComment,
     EditPayload, LineStyleUpdate, ModifyPolicy, MoveChart, PayloadsAction, RemoveDiyCell,
-    ResolveComment, SetCellImage, SheetRename, StyleUpdateType, UpdateChart, WorkbookUpdateType,
+    ResolveComment, SchemaFieldSpec, SetCellImage, SheetRename, StyleUpdateType, UpdateChart,
+    WorkbookUpdateType,
 };
 
 #[test]
@@ -689,6 +690,8 @@ fn create_block() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
+            pivot: None,
         })],
         undoable: false,
         init: false,
@@ -778,6 +781,8 @@ fn remove_diy_cell_round_trips_without_panicking() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
+            pivot: None,
         })],
         undoable: false,
         init: false,
@@ -1091,6 +1096,8 @@ fn range_link_redirects_to_block_and_tracks_growth() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1098,12 +1105,10 @@ fn range_link_redirects_to_block_and_tracks_growth() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1229,6 +1234,8 @@ fn clearing_field_rule_purges_stale_shadow_value() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1236,12 +1243,14 @@ fn clearing_field_rule_purges_stale_shadow_value() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
+                fields: vec![
+                    SchemaFieldSpec::new("v", "r0")
+                        .with_validation_formula(Some("#PLACEHOLDER>100".into()))
+                        .with_editability_formula(Some("#PLACEHOLDER>100".into())),
+                ],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![Some("#PLACEHOLDER>100".into())],
-                editability_formulas: vec![Some("#PLACEHOLDER>100".into())],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1342,6 +1351,8 @@ fn a_templated_field_refuses_every_user_write() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1349,12 +1360,14 @@ fn a_templated_field_refuses_every_user_write() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["qty".into(), "total".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
+                fields: vec![
+                    SchemaFieldSpec::new("qty", "r0"),
+                    SchemaFieldSpec::new("total", "r1")
+                        .with_value_formula(Some("=#FIELD(\"qty\")*2".into())),
+                ],
                 row: true,
-                field_formulas: vec![None, Some("=#FIELD(\"qty\")*2".into())],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1475,6 +1488,8 @@ fn a_proposed_value_is_judged_without_touching_the_workbook() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1482,12 +1497,14 @@ fn a_proposed_value_is_judged_without_touching_the_workbook() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["key".into(), "qty".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0"),
+                    SchemaFieldSpec::new("qty", "r1")
+                        .with_validation_formula(Some("#PLACEHOLDER>0".into())),
+                ],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![None, Some("#PLACEHOLDER>0".into())],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1583,6 +1600,8 @@ fn create_link_payload_redirects_existing_formula() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1590,12 +1609,10 @@ fn create_link_payload_redirects_existing_formula() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -1703,6 +1720,8 @@ fn linked_range_size_mismatch_reads_block_both_orders() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
+            pivot: None,
         })];
         for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
             payloads.push(EditPayload::CellInput(CellInput {
@@ -1786,6 +1805,8 @@ fn linked_multicol_subcolumn_reference_reads_block_column() {
         modify_policy: None,
         permissions: None,
         description: None,
+        analyzes: None,
+        pivot: None,
     })];
     for (i, v) in [10, 20, 30, 40, 50, 60].iter().enumerate() {
         payloads.push(EditPayload::CellInput(CellInput {
@@ -1886,6 +1907,8 @@ fn cross_sheet_linked_column_tracks_block_and_survives_save_load() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -1893,12 +1916,10 @@ fn cross_sheet_linked_column_tracks_block_and_survives_save_load() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 1,
@@ -2023,6 +2044,8 @@ fn link_survives_save_load() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -2030,12 +2053,10 @@ fn link_survives_save_load() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -2138,6 +2159,8 @@ fn linked_column_tracks_tail_append() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -2145,12 +2168,10 @@ fn linked_column_tracks_tail_append() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["v".into()],
-                render_ids: vec!["r0".into()],
+                fields: vec![SchemaFieldSpec::new("v", "r0")],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -2259,6 +2280,8 @@ fn linked_record_rejects_non_column_references() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
+            pivot: None,
         })];
         for (i, v) in [1, 3, 4, 5, 6, 7].iter().enumerate() {
             payloads.push(EditPayload::CellInput(CellInput {
@@ -2381,6 +2404,8 @@ fn get_links_reports_linked_source_range_coords() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::CreateLink(CreateLink {
                 sheet_idx: 0,
@@ -2435,6 +2460,8 @@ fn create_block_with_owner_and_policy_roundtrip() {
             modify_policy: Some(ModifyPolicy::OwnerAndUser),
             permissions: None,
             description: None,
+            analyzes: None,
+            pivot: None,
         })],
         undoable: false,
         init: false,
@@ -2733,6 +2760,399 @@ fn dependency_tracking_precedents_and_dependents() {
 // (unknown field, random-schema block). The sort_block unit tests already cover
 // the pure comparator; this exercises field resolution, typed value reads, and
 // the reorder semantics against a live controller.
+/// A schema may declare one of its lines a HEADER: names, not a record.
+///
+/// The block is only "there is a thing here, at this position"; the schema is
+/// how to read it. Which line is names rather than data is a matter of
+/// reading, so it is declared here — and that is what makes a header travel
+/// with the block instead of being a stray row above it.
+#[test]
+fn a_declared_header_line_is_not_a_record() {
+    use crate::edit_action::{BindFormSchema, CellInput};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    // Four lines: a header and three records.
+    let rows = [
+        ("name", "age"),
+        ("Charlie", "30"),
+        ("Alice", "10"),
+        ("Bob", "20"),
+    ];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (name, age)) in rows.iter().enumerate() {
+        for (c, v) in [name, age].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "people".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("name", "r0"),
+            SchemaFieldSpec::new("age", "r1"),
+        ],
+        row: true,
+        header_idx: Some(0),
+        unique_together: None,
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    // The header is excluded from the records, which is what keeps it out of
+    // `BLOCKREFS`, the key-uniqueness guard and everything else downstream —
+    // they all ask this one question.
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let block = ws
+        .get_all_blocks()
+        .into_iter()
+        .find(|b| b.block_id == bid)
+        .unwrap();
+    let keys: Vec<String> = block
+        .schema
+        .as_ref()
+        .unwrap()
+        .keys
+        .iter()
+        .map(|k| k.key.clone())
+        .collect();
+    assert_eq!(
+        keys,
+        vec!["Charlie", "Alice", "Bob"],
+        "\"name\" is the header, not a key"
+    );
+
+    // And a total over the block counts three records, not four — the header
+    // is text, so a fourth key would not even have shown up as a number.
+    let count = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_all_blocks()
+        .into_iter()
+        .find(|b| b.block_id == bid)
+        .unwrap()
+        .row_cnt;
+    assert_eq!(count, 4, "the block still OWNS four lines");
+}
+
+/// A header cell declares itself NOT editable, and that is ENFORCED.
+///
+/// Typing over a heading would not rename the field — it would leave a
+/// heading that disagrees with what the column means, which is the same shape
+/// of trap the pivot key column has. A field's write POLICY is only a
+/// declaration the host may interpret; the per-record editability rule is the
+/// half that bites, because it becomes the cell's `UserEditable` shadow and
+/// the host permission layer refuses an edit whose shadow reads false.
+/// A block can state a rule about ITSELF, not just about one of its cells.
+///
+/// Everything else a schema declares judges one value (`required`, `unique`,
+/// an enum) or one record's values against each other (a validation formula
+/// with `#FIELD`). None of it can say anything about the table as a whole —
+/// which is the shape of mistake an agent makes: not a wrong value, a wrong
+/// structure, with every cell individually legal.
+///
+/// `unique_together` is the first of those. It matters most for a fact table
+/// feeding a pivot: a repeated (region, quarter) is an error nowhere, it just
+/// makes every total quietly count twice.
+#[test]
+fn a_repeated_combination_is_flagged_where_neither_column_alone_is() {
+    use crate::edit_action::{BindFormSchema, CellInput, UniqueTogetherGroup};
+    use crate::sid_assigner::ShadowKind;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    // region repeats, quarter repeats — neither column alone is unique, and
+    // neither should be. Rows 1 and 2 repeat the COMBINATION.
+    // An `id` key column, because a fact table's dimensions repeat by nature
+    // and the row-key guard would refuse `region` as a key. That is exactly
+    // the gap: single-column uniqueness is enforced, the composite one had no
+    // way to be stated at all.
+    let rows = [
+        ("f0", "East", "Q1"),
+        ("f1", "South", "Q1"),
+        ("f2", "South", "Q1"),
+        ("f3", "South", "Q2"),
+    ];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 3,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (id, region, quarter)) in rows.iter().enumerate() {
+        for (c, v) in [id, region, quarter].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "facts".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("id", "u0"),
+            SchemaFieldSpec::new("region", "u1"),
+            SchemaFieldSpec::new("quarter", "u2"),
+        ],
+        row: true,
+        header_idx: None,
+        unique_together: Some(vec![UniqueTogetherGroup {
+            fields: vec!["region".into(), "quarter".into()],
+        }]),
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let valid = |wb: &mut Workbook, row: usize, col: usize| -> bool {
+        let scid = wb
+            .get_shadow_cell_id(0, row, col, ShadowKind::Validation)
+            .unwrap();
+        let id = match scid.cell_id {
+            crate::CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        !matches!(
+            wb.get_shadow_info_by_id(id).unwrap().value,
+            crate::controller::display::Value::Bool(false)
+        )
+    };
+
+    // The two rows that repeat (South, Q1) are flagged — in BOTH of their
+    // columns, so the marker is on whichever cell the reader is looking at.
+    assert!(!valid(&mut wb, 1, 1), "row 1 repeats (South, Q1)");
+    assert!(!valid(&mut wb, 1, 2), "and its quarter cell says so too");
+    assert!(!valid(&mut wb, 2, 1), "row 2 is the other half of the pair");
+
+    // The rows that do not repeat are untouched — including row 3, which
+    // shares `region` with both flagged rows, and row 0, which shares
+    // `quarter`. Neither column alone is unique and neither is being asked to
+    // be.
+    assert!(valid(&mut wb, 0, 1), "(East, Q1) occurs once");
+    assert!(valid(&mut wb, 3, 1), "(South, Q2) occurs once");
+    // And the key column, which the group does not name, is left alone.
+    assert!(valid(&mut wb, 1, 0), "`id` is not part of the group");
+}
+
+#[test]
+fn a_header_cell_is_not_editable() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput};
+    use crate::sid_assigner::ShadowKind;
+    use logisheets_base::CellId;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let rows = [("name", "age"), ("Alice", "10")];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (name, age)) in rows.iter().enumerate() {
+        for (c, v) in [name, age].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "people".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("name", "h0"),
+            SchemaFieldSpec::new("age", "h1"),
+        ],
+        row: true,
+        header_idx: Some(0),
+        unique_together: None,
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let editable = |wb: &mut Workbook, row: usize, col: usize| -> Value {
+        let scid = wb
+            .get_shadow_cell_id(0, row, col, ShadowKind::UserEditable)
+            .unwrap();
+        let id = match scid.cell_id {
+            CellId::EphemeralCell(i) => i,
+            _ => panic!("expected an ephemeral shadow cell"),
+        };
+        wb.get_shadow_info_by_id(id).unwrap().value
+    };
+
+    // Row 0 is the header: false, in both columns — the whole LINE is names.
+    assert!(
+        matches!(editable(&mut wb, 0, 0), Value::Bool(false)),
+        "the header's key column is not editable, got {:?}",
+        editable(&mut wb, 0, 0)
+    );
+    assert!(
+        matches!(editable(&mut wb, 0, 1), Value::Bool(false)),
+        "nor any other column of it, got {:?}",
+        editable(&mut wb, 0, 1)
+    );
+
+    // Row 1 is a record, and nothing here made records read-only: no rule was
+    // declared for them, so the shadow stays empty and the host falls back to
+    // the field's own policy.
+    assert!(
+        matches!(editable(&mut wb, 1, 0), Value::Empty),
+        "a record keeps whatever editability it had, got {:?}",
+        editable(&mut wb, 1, 0)
+    );
+}
+
+#[test]
+fn sorting_a_block_leaves_its_header_on_top() {
+    // A header has no key to sort by, and `headerRowCount="1"` can only mean
+    // the FIRST line of a table — so a sort that buried it would make the
+    // block inexpressible as well as unreadable.
+    use crate::edit_action::{BindFormSchema, CellInput, ReorderBlockLines};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let rows = [
+        ("name", "age"),
+        ("Charlie", "30"),
+        ("Alice", "10"),
+        ("Bob", "20"),
+    ];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (name, age)) in rows.iter().enumerate() {
+        for (c, v) in [name, age].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "people".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("name", "r0"),
+            SchemaFieldSpec::new("age", "r1"),
+        ],
+        row: true,
+        header_idx: Some(0),
+        unique_together: None,
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let order = wb.get_block_sort_order(0, bid, "age", true).unwrap();
+    // Four lines in, four lines out: `ReorderBlockLines` permutes LINES, and
+    // the records are one fewer than the lines now.
+    assert_eq!(order.new_order.len(), 4, "a full permutation of the lines");
+    assert_eq!(order.new_order[0], 0, "the header stays first");
+
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::ReorderBlockLines(ReorderBlockLines {
+            sheet_idx: 0,
+            block_id: bid,
+            is_row: order.is_row,
+            new_order: order.new_order.clone(),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let cell = |r: usize, c: usize| -> String {
+        match wb.get_sheet_by_idx(0).unwrap().get_value(r, c).unwrap() {
+            crate::controller::display::Value::Str(s) => s,
+            crate::controller::display::Value::Number(n) => n.to_string(),
+            other => format!("{other:?}"),
+        }
+    };
+    assert_eq!(cell(0, 0), "name", "the header did not move");
+    assert_eq!(cell(1, 0), "Alice", "10");
+    assert_eq!(cell(2, 0), "Bob", "20");
+    assert_eq!(cell(3, 0), "Charlie", "30");
+}
+
 #[test]
 fn sort_block_by_field_end_to_end() {
     use crate::api::BlockSortOrder;
@@ -2765,6 +3185,8 @@ fn sort_block_by_field_end_to_end() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "people".into(),
@@ -2772,12 +3194,13 @@ fn sort_block_by_field_end_to_end() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["name".into(), "age".into()],
-                render_ids: vec!["r_name".into(), "r_age".into()],
+                fields: vec![
+                    SchemaFieldSpec::new("name", "r_name"),
+                    SchemaFieldSpec::new("age", "r_age"),
+                ],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
         ];
         for (r, (name, age)) in records.iter().enumerate() {
@@ -2894,6 +3317,8 @@ fn sort_block_by_field_end_to_end() {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
+                    pivot: None,
                 }),
                 EditPayload::BindRandomSchema(BindRandomSchema {
                     ref_name: "rnd".into(),
@@ -2979,6 +3404,8 @@ fn sort_block_grown_by_insert_rows() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "people".into(),
@@ -2986,12 +3413,10 @@ fn sort_block_grown_by_insert_rows() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["Customer Status".into()],
-                render_ids: vec!["r0".into()],
+                fields: vec![SchemaFieldSpec::new("Customer Status", "r0")],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             // Add two rows (interior insert at index 1), like clicking "add row".
             EditPayload::InsertRowsInBlock(InsertRowsInBlock {
@@ -3098,6 +3523,8 @@ fn sort_block_reference_follows_moved_cell() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "people".into(),
@@ -3105,12 +3532,13 @@ fn sort_block_reference_follows_moved_cell() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["name".into(), "age".into()],
-                render_ids: vec!["r_name".into(), "r_age".into()],
+                fields: vec![
+                    SchemaFieldSpec::new("name", "r_name"),
+                    SchemaFieldSpec::new("age", "r_age"),
+                ],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             cell(0, 0, "Charlie"),
             cell(0, 1, "30"),
@@ -3520,6 +3948,8 @@ fn conditional_formatting_anchors_on_block_cells() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
+            pivot: None,
         })],
         undoable: false,
         init: false,
@@ -4446,6 +4876,8 @@ fn block_schema_key_entries_report_record_row() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -4453,12 +4885,13 @@ fn block_schema_key_entries_report_record_row() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["year".into(), "amount".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
+                fields: vec![
+                    SchemaFieldSpec::new("year", "r0"),
+                    SchemaFieldSpec::new("amount", "r1"),
+                ],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -4571,6 +5004,8 @@ fn range_straddling_a_block_boundary_does_not_panic() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -4578,12 +5013,13 @@ fn range_straddling_a_block_boundary_does_not_panic() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["id".into(), "qty".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
+                fields: vec![
+                    SchemaFieldSpec::new("id", "r0"),
+                    SchemaFieldSpec::new("qty", "r1"),
+                ],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::CellInput(CellInput {
                 sheet_idx: 0,
@@ -5711,6 +6147,8 @@ fn chart_bound_to_block_follows_it() {
             modify_policy: None,
             permissions: None,
             description: None,
+            analyzes: None,
+            pivot: None,
         }),
         EditPayload::BindFormSchema(BindFormSchema {
             ref_name: "sales".into(),
@@ -5718,12 +6156,14 @@ fn chart_bound_to_block_follows_it() {
             block_id: bid,
             field_from: 0,
             key_idx: 0,
-            fields: vec!["name".into(), "qty".into(), "price".into()],
-            render_ids: vec!["r0".into(), "r1".into(), "r2".into()],
+            fields: vec![
+                SchemaFieldSpec::new("name", "r0"),
+                SchemaFieldSpec::new("qty", "r1"),
+                SchemaFieldSpec::new("price", "r2"),
+            ],
             row: true,
-            field_formulas: vec![],
-            validation_formulas: vec![],
-            editability_formulas: vec![],
+            header_idx: None,
+            unique_together: None,
         }),
     ];
     for (i, (name, qty)) in [("a", "10"), ("b", "20"), ("c", "30")].iter().enumerate() {
@@ -5860,6 +6300,8 @@ fn block_bound_chart_survives_save() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
                 ref_name: "rec".into(),
@@ -5867,12 +6309,13 @@ fn block_bound_chart_survives_save() {
                 block_id: bid,
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["name".into(), "qty".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
+                fields: vec![
+                    SchemaFieldSpec::new("name", "r0"),
+                    SchemaFieldSpec::new("qty", "r1"),
+                ],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             }),
             cell(0, 0, "a"),
             cell(0, 1, "10"),
@@ -6006,6 +6449,8 @@ fn block_description_and_permissions_are_undoable() {
             modify_policy: None,
             permissions: None,
             description: Some("first".to_string()),
+            analyzes: None,
+            pivot: None,
         })],
         undoable: true,
         init: false,
@@ -6154,4 +6599,4742 @@ fn a_moved_chart_range_survives_a_save() {
         c.series[0].values,
         vec![Some(11.0), Some(13.0), Some(15.0), Some(24.0)]
     );
+}
+
+// ---------------------------------------------------------------------------
+// Block row-key uniqueness
+//
+// `(block, key, field)` is how a block addresses a cell: BLOCKREF scans the key
+// column and takes the FIRST match. A repeated key therefore raises nothing —
+// one record just becomes unreachable and every aggregate counts the reachable
+// one twice. The tool layer refused duplicates at two doors; the engine has to
+// refuse them at all of them.
+// ---------------------------------------------------------------------------
+
+/// A 3x2 block at A1 bound as `rec` (key column + an `amt` field), with the
+/// three row keys seeded. Returns the workbook ready to be written into.
+#[cfg(test)]
+fn block_with_keys(keys: [&str; 3]) -> (Workbook, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "r0"),
+                SchemaFieldSpec::new("amt", "r1"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        }),
+    ];
+    for (row, key) in keys.iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: key.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+    (wb, bid)
+}
+
+#[cfg(test)]
+fn key_at(wb: &Workbook, row: usize) -> String {
+    use crate::controller::display::Value;
+    match wb.get_sheet_by_idx(0).unwrap().get_value(row, 0).unwrap() {
+        Value::Str(s) => s,
+        Value::Number(n) => n.to_string(),
+        Value::Empty => String::new(),
+        other => panic!("unexpected key value {:?}", other),
+    }
+}
+
+#[test]
+fn a_write_that_repeats_a_row_key_is_refused() {
+    let (mut wb, _bid) = block_with_keys(["a", "b", "c"]);
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 0,
+            content: "a".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "renaming row 1's key to \"a\" collides with row 0 and must be refused"
+    );
+    let msg = effect.error_message.unwrap_or_default();
+    assert!(
+        msg.contains("rec") && msg.contains('a'),
+        "the refusal should name the block and the key, got {:?}",
+        msg
+    );
+    assert_eq!(
+        key_at(&wb, 1),
+        "b",
+        "a refused transaction must leave the key untouched"
+    );
+}
+
+#[test]
+fn a_repeated_key_inside_one_transaction_is_refused() {
+    // Both writes land in the same transaction, so neither is a collision with
+    // "what was already there" — the guard has to judge the finished state.
+    let (mut wb, _bid) = block_with_keys(["a", "b", "c"]);
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "x".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 2,
+                col: 0,
+                content: "x".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "two records given the same key in one transaction must be refused"
+    );
+    assert_eq!(key_at(&wb, 1), "b", "neither write may have landed");
+    assert_eq!(key_at(&wb, 2), "c", "neither write may have landed");
+}
+
+#[test]
+fn two_records_may_swap_keys_in_one_transaction() {
+    // Judged per-write, the first half of a swap always looks like a
+    // collision. Judging the transaction's end state is what makes this legal.
+    let (mut wb, _bid) = block_with_keys(["a", "b", "c"]);
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "b".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "a".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "swapping two keys leaves them unique: {:?}",
+        effect.error_message
+    );
+    assert_eq!(key_at(&wb, 0), "b");
+    assert_eq!(key_at(&wb, 1), "a");
+}
+
+#[test]
+fn empty_keys_are_not_duplicates_of_each_other() {
+    // Inserting rows mints blank key cells; if blanks collided, the ordinary
+    // insert-then-fill sequence could never get off the ground.
+    use crate::edit_action::InsertRowsInBlock;
+
+    let (mut wb, bid) = block_with_keys(["a", "b", "c"]);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+            sheet_idx: 0,
+            block_id: bid,
+            start: 3,
+            cnt: 2,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "two blank key cells are not a collision: {:?}",
+        effect.error_message
+    );
+    assert_eq!(key_at(&wb, 3), "");
+    assert_eq!(key_at(&wb, 4), "");
+}
+
+#[test]
+fn rewriting_a_key_with_its_own_value_is_not_a_collision() {
+    let (mut wb, _bid) = block_with_keys(["a", "b", "c"]);
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 0,
+            content: "b".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "a key colliding only with itself is fine: {:?}",
+        effect.error_message
+    );
+}
+
+/// Plant duplicate keys the only way that is still possible: write the column
+/// in one transaction, name it the key column in the next. Declaring the key
+/// column over values written in the SAME transaction is itself refused, since
+/// the guard reads the finished state.
+#[cfg(test)]
+fn block_with_legacy_duplicates() -> (Workbook, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: 4,
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    // Rows 0 and 2 share "dup"; row 1 is unique; row 3 is left blank.
+    for (row, key) in [(0usize, "dup"), (1, "solo"), (2, "dup")] {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: key.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "writing two equal values into a column that is not yet a key column \
+         is nobody's collision: {:?}",
+        effect.error_message
+    );
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "r0"),
+                SchemaFieldSpec::new("amt", "r1"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "binding a schema writes no cells, so it has nothing for the guard to \
+         judge: {:?}",
+        effect.error_message
+    );
+    (wb, bid)
+}
+
+#[test]
+fn a_block_that_already_has_duplicates_stays_editable() {
+    // A workbook can arrive with duplicates — from an .xlsx written elsewhere,
+    // or from before this guard existed. Refusing every later write to such a
+    // block would lock out the very edits that repair it, so the guard only
+    // judges the keys THIS transaction wrote.
+    let (mut wb, _bid) = block_with_legacy_duplicates();
+
+    // Writing an unrelated field must not be punished for a collision it did
+    // not cause.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 1,
+            content: "10".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "a non-key write into a block with pre-existing duplicates must still \
+         land: {:?}",
+        effect.error_message
+    );
+
+    // And the repair — giving one of the two rows a distinct key — must be
+    // allowed even though the block is dirty when the write starts.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 2,
+            col: 0,
+            content: "other".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "repairing a duplicate must be allowed: {:?}",
+        effect.error_message
+    );
+    assert_eq!(key_at(&wb, 2), "other");
+}
+
+#[test]
+fn duplicate_block_keys_reports_what_the_guard_could_not_refuse() {
+    // A block can hold duplicates the write-path guard never saw: written
+    // before the column was named a key column here, arriving from an .xlsx in
+    // the field. Nothing surfaces them on its own — BLOCKREF resolves the first
+    // match and stays quiet — so this is the only way anyone finds out.
+    let (mut wb, bid) = block_with_legacy_duplicates();
+
+    let dups = wb.duplicate_block_keys();
+    assert_eq!(
+        dups.len(),
+        1,
+        "one repeated key — \"solo\" is unique and the blank row is exempt, got {:?}",
+        dups
+    );
+    let d = &dups[0];
+    assert_eq!(d.block_name, "rec");
+    assert_eq!(d.sheet_idx, 0);
+    assert_eq!(d.block_id, bid);
+    assert_eq!(d.key, "dup");
+    assert_eq!(
+        d.records,
+        vec![0, 2],
+        "both records holding the key, in block order"
+    );
+
+    // Repairing one of them empties the report — the same read that raised the
+    // problem has to be able to say it is gone.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 2,
+            col: 0,
+            content: "other".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the repair must be allowed: {:?}",
+        effect.error_message
+    );
+    assert!(
+        wb.duplicate_block_keys().is_empty(),
+        "after the repair there is nothing left to report"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Stage 0 evidence: what a BLOCKREFS whose field name no longer exists does.
+//
+// The host composes a `unique` constraint into a field's validation rule as
+// `COUNTIF(BLOCKREFSB(sheet, block, "*", "fieldName"), #PLACEHOLDER) = 1`
+// (src/components/block-composer/index.tsx). The field name lives there as the
+// fourth argument — a runtime string, resolved at evaluation rather than at
+// parse time — so renaming the field leaves the rule parseable and pointing at
+// a name nothing answers to.
+//
+// This pins what happens then, because that decides whether the user sees
+// nothing at all or sees the whole column light up. See
+// design/block-field-semantics.md §2.4.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_blockrefs_naming_a_field_that_does_not_exist_matches_nothing() {
+    use crate::controller::display::Value;
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+
+    // 3x2 block at A1 bound as `rec`: keys a/b/c down column 0, `amt` 1/2/3
+    // down column 1.
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "r0"),
+                SchemaFieldSpec::new("amt", "r1"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        }),
+    ];
+    for (row, key, amt) in [(0usize, "a", "1"), (1, "b", "2"), (2, "c", "3")] {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: key.to_string(),
+        }));
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 1,
+            content: amt.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+
+    let sheet_id = wb
+        .controller
+        .status
+        .sheet_info_manager
+        .get_sheet_id(0)
+        .unwrap();
+
+    // E1 counts through the field that exists, E2 through one that does not,
+    // and E3 is the shape the composed `unique` rule actually takes.
+    let formulas = [
+        (
+            0usize,
+            format!(r#"=COUNTIF(BLOCKREFSB({sheet_id}, {bid}, "*", "amt"), 2)"#),
+        ),
+        (
+            1,
+            format!(r#"=COUNTIF(BLOCKREFSB({sheet_id}, {bid}, "*", "nope"), 2)"#),
+        ),
+        (
+            2,
+            format!(r#"=COUNTIF(BLOCKREFSB({sheet_id}, {bid}, "*", "nope"), 2) = 1"#),
+        ),
+    ];
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: formulas
+            .iter()
+            .map(|(row, f)| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row: *row,
+                    col: 4,
+                    content: f.clone(),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the formulas should be accepted: {:?}",
+        effect.error_message
+    );
+
+    let read = |wb: &Workbook, row: usize| -> Value {
+        wb.get_sheet_by_idx(0).unwrap().get_value(row, 4).unwrap()
+    };
+
+    assert!(
+        matches!(read(&wb, 0), Value::Number(n) if n == 1.0),
+        "sanity: through a field that exists, the value 2 is found once, got {:?}",
+        read(&wb, 0)
+    );
+
+    // The point of the test. A field name nothing answers to is not an error —
+    // the field filter simply matches no column, the matrix comes back with no
+    // values in it, and COUNTIF counts zero.
+    assert!(
+        matches!(read(&wb, 1), Value::Number(n) if n == 0.0),
+        "a BLOCKREFS naming a field that does not exist must match nothing \
+         rather than raise, got {:?}",
+        read(&wb, 1)
+    );
+
+    // So the composed `unique` rule reads FALSE — for every row, forever. After
+    // a field rename the whole column shows a validation warning, and the
+    // engine's `overrideValidation` gate treats every write to it as violating.
+    assert!(
+        matches!(read(&wb, 2), Value::Bool(false)),
+        "`COUNTIF(...) = 1` over a dead field name evaluates FALSE, which is \
+         what a renamed unique field leaves behind, got {:?}",
+        read(&wb, 2)
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Stage 2: the engine derives the rule from the declaration.
+//
+// `required` had no formula form at all before this, so a required-but-empty
+// cell raised no marker and was invisible to `list_violations` and to an agent.
+// `unique` and enum membership were host-composed strings, so they meant
+// nothing in a headless host — and a composed string cannot be regenerated,
+// which is how renaming a unique field left a rule naming a dead field.
+//
+// See design/block-field-semantics.md §5, stage 2.
+// ---------------------------------------------------------------------------
+
+/// A 3-row block whose `amt` field carries the given declaration, plus the
+/// author's own rule. Returns the workbook and the block id.
+#[cfg(test)]
+fn block_with_declared_field(
+    required: bool,
+    unique: bool,
+    field_type: Option<crate::block_manager::schema_manager::field_type::FieldType>,
+    own_rule: Option<&str>,
+) -> (Workbook, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let mut spec = SchemaFieldSpec::new("amt", "r1")
+        .with_required(required)
+        .with_unique(unique)
+        .with_validation_formula(own_rule.map(|s| s.to_string()));
+    if let Some(t) = field_type {
+        spec = spec.with_field_type(t);
+    }
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![SchemaFieldSpec::new("key", "r0"), spec],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        }),
+    ];
+    // Keys matter: the derived `unique` rule counts through
+    // `BLOCKREFSB(…, "*", …)`, whose key filter matches the KEY column's
+    // values. A block with a blank key column matches no records at all, so
+    // the count would be zero for every value and the rule would read FALSE
+    // everywhere — which says nothing about uniqueness.
+    for row in 0..3 {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: format!("k{row}"),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+    (wb, bid)
+}
+
+/// Write into the `amt` column of the block built above.
+#[cfg(test)]
+fn write_amts(wb: &mut Workbook, values: &[&str]) {
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: values
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| !v.is_empty())
+            .map(|(row, v)| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row,
+                    col: 1,
+                    content: v.to_string(),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the writes should land: {:?}",
+        effect.error_message
+    );
+}
+
+/// Whether the validation shadow on (`row`, `amt`) currently reads as a
+/// violation. `None` when the field carries no rule at all.
+#[cfg(test)]
+fn amt_violates(wb: &mut Workbook, row: usize) -> Option<bool> {
+    use crate::controller::display::Value;
+    use crate::sid_assigner::ShadowKind;
+
+    use logisheets_base::CellId;
+
+    let scid = wb
+        .get_shadow_cell_id(0, row, 1, ShadowKind::Validation)
+        .ok()?;
+    let CellId::EphemeralCell(eid) = scid.cell_id else {
+        return None;
+    };
+    let info = wb.get_shadow_info_by_id(eid).ok()?;
+    match info.value {
+        Value::Bool(b) => Some(!b),
+        // An error counts as a violation: a rule nobody can evaluate is not a
+        // rule anybody has met.
+        Value::Error(_) => Some(true),
+        _ => None,
+    }
+}
+
+#[test]
+fn required_now_has_a_formula_form_and_flags_the_empty_cell() {
+    // Before this, `required` lived only in the host's own field store with no
+    // formula behind it — nothing rendered a marker, nothing reached
+    // list_violations, and an agent could not see it at all.
+    let (mut wb, _bid) = block_with_declared_field(true, false, None, None);
+    write_amts(&mut wb, &["5", "", "7"]);
+
+    assert_eq!(amt_violates(&mut wb, 0), Some(false), "5 is present");
+    assert_eq!(
+        amt_violates(&mut wb, 1),
+        Some(true),
+        "a required field left empty is a violation"
+    );
+    assert_eq!(amt_violates(&mut wb, 2), Some(false), "7 is present");
+}
+
+#[test]
+fn unique_is_derived_and_exempts_the_empty_cell() {
+    let (mut wb, _bid) = block_with_declared_field(false, true, None, None);
+    write_amts(&mut wb, &["5", "5", ""]);
+
+    assert_eq!(amt_violates(&mut wb, 0), Some(true), "5 appears twice");
+    assert_eq!(amt_violates(&mut wb, 1), Some(true), "5 appears twice");
+    assert_eq!(
+        amt_violates(&mut wb, 2),
+        Some(false),
+        "unique without required must still allow a blank"
+    );
+}
+
+#[test]
+fn a_field_declaring_nothing_gets_no_rule_at_all() {
+    let (mut wb, _bid) = block_with_declared_field(false, false, None, None);
+    write_amts(&mut wb, &["5", "5", ""]);
+    assert_eq!(
+        amt_violates(&mut wb, 0),
+        None,
+        "no declaration and no author rule means no shadow to read"
+    );
+}
+
+#[test]
+fn an_enum_whitelist_is_derived_from_the_workbooks_own_set() {
+    use crate::edit_action::{EnumVariantSpec, UpsertEnumSet};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::UpsertEnumSet(UpsertEnumSet {
+                id: "status".into(),
+                name: None,
+                variants: vec![
+                    EnumVariantSpec {
+                        id: "open".into(),
+                        label: None,
+                    },
+                    EnumVariantSpec {
+                        id: "done".into(),
+                        label: None,
+                    },
+                ],
+            }),
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 3,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+                analyzes: None,
+                pivot: None,
+            }),
+            EditPayload::BindFormSchema(crate::edit_action::BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0"),
+                    SchemaFieldSpec::new("amt", "r1").with_field_type(
+                        crate::block_manager::schema_manager::field_type::FieldType::Enum {
+                            set_id: "status".into(),
+                        },
+                    ),
+                ],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+
+    // No whitelist formula was written anywhere: the rule comes from the set.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: (0..3)
+            .map(|row| {
+                EditPayload::CellInput(CellInput {
+                    sheet_idx: 0,
+                    row,
+                    col: 0,
+                    content: format!("k{row}"),
+                })
+            })
+            .collect(),
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    write_amts(&mut wb, &["open", "OPEN", "nope"]);
+    assert_eq!(amt_violates(&mut wb, 0), Some(false), "an option");
+    assert_eq!(
+        amt_violates(&mut wb, 1),
+        Some(true),
+        "membership is case-sensitive — variant ids are what cells store"
+    );
+    assert_eq!(amt_violates(&mut wb, 2), Some(true), "not an option");
+}
+
+#[test]
+fn the_authors_own_rule_is_kept_and_anded_with_the_derived_ones() {
+    let (mut wb, _bid) = block_with_declared_field(true, false, None, Some("#PLACEHOLDER<100"));
+    write_amts(&mut wb, &["5", "", "500"]);
+
+    assert_eq!(
+        amt_violates(&mut wb, 0),
+        Some(false),
+        "present and under 100"
+    );
+    assert_eq!(
+        amt_violates(&mut wb, 1),
+        Some(true),
+        "the derived required check still applies"
+    );
+    assert_eq!(
+        amt_violates(&mut wb, 2),
+        Some(true),
+        "the author's own rule still applies"
+    );
+}
+
+#[test]
+fn the_derived_rule_survives_a_field_rename_because_it_is_regenerated() {
+    // The whole point of deriving rather than baking in. The host used to
+    // compose `COUNTIF(BLOCKREFSB(…, "amt"), …)` and store it, and a rename
+    // left that string naming a field the block no longer had — FALSE for
+    // every record, forever. Now the rule is rebuilt from the current name.
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, bid) = block_with_declared_field(false, true, None, None);
+    write_amts(&mut wb, &["5", "6", "7"]);
+    assert_eq!(
+        amt_violates(&mut wb, 0),
+        Some(false),
+        "sanity: all distinct"
+    );
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "rec".into(),
+            sheet_idx: 0,
+            block_id: bid,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "r0"),
+                // Same renderId, new name — exactly what rename_field sends.
+                SchemaFieldSpec::new("amount", "r1").with_unique(true),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the rename should succeed: {:?}",
+        effect.error_message
+    );
+
+    assert_eq!(
+        amt_violates(&mut wb, 0),
+        Some(false),
+        "the unique check still passes after the rename — it names the new field"
+    );
+
+    // And it still catches a real duplicate, so it did not merely stop working.
+    write_amts(&mut wb, &["6", "6", "7"]);
+    assert_eq!(amt_violates(&mut wb, 0), Some(true), "6 now appears twice");
+}
+
+// ---------------------------------------------------------------------------
+// Field-level and block-level write policy: declared in the engine.
+//
+// `userEditable` was a tri-state boolean on the host's own field store — the
+// last field-level rule a headless host could not see. The payload-to-operation
+// mapping and "does this block state a policy at all" were re-implemented in
+// the app, so the same payload could be governed differently in different
+// hosts. All three are the engine's answers now.
+//
+// The engine DECLARES and answers; it does not enforce. It does not know who is
+// writing — the host does, so the host decides with these in hand. See
+// design/block-field-semantics.md.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_fields_write_policy_is_declared_on_the_schema_and_survives_a_round_trip() {
+    use crate::block_manager::schema_manager::field_type::FieldWritePolicy;
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: bid,
+                master_row: 0,
+                master_col: 0,
+                row_cnt: 2,
+                col_cnt: 3,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+                analyzes: None,
+                pivot: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "rec".into(),
+                sheet_idx: 0,
+                block_id: bid,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0")
+                        .with_write_policy(FieldWritePolicy::OwnerOnly),
+                    SchemaFieldSpec::new("note", "r1").with_write_policy(FieldWritePolicy::Anyone),
+                    // Says nothing — inherits the block's own rules.
+                    SchemaFieldSpec::new("amt", "r2"),
+                ],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "setup should succeed: {:?}",
+        effect.error_message
+    );
+
+    let read = |wb: &Workbook| -> Vec<(String, String)> {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        let blocks = ws.get_all_blocks();
+        let schema = blocks[0].schema.as_ref().unwrap();
+        let mut fields = schema.fields.clone();
+        fields.sort_by_key(|f| f.idx);
+        fields
+            .iter()
+            .map(|f| (f.field.clone(), f.write_policy.clone()))
+            .collect()
+    };
+
+    assert_eq!(
+        read(&wb),
+        vec![
+            ("key".to_string(), "ownerOnly".to_string()),
+            ("note".to_string(), "anyone".to_string()),
+            // Always reported, so a reader never has to guess what an absent
+            // value meant.
+            ("amt".to_string(), "inherit".to_string()),
+        ]
+    );
+
+    // It has to survive the file, or it is no better than the host store it
+    // replaced.
+    let saved = wb.save().unwrap();
+    let reopened = Workbook::from_file(&saved, "again".to_string()).unwrap();
+    assert_eq!(read(&reopened), read(&wb));
+}
+
+#[test]
+fn the_engine_says_which_operation_a_payload_counts_as() {
+    // One table, in the thing that defines the operations. Each host keeping
+    // its own is how the same payload comes to be governed differently.
+    let wb = Workbook::default();
+    let table = wb.get_block_op_for_payloads();
+    let lookup = |t: &str| {
+        table
+            .iter()
+            .find(|e| e.payload_type == t)
+            .map(|e| e.op.as_wire_str())
+    };
+
+    assert_eq!(lookup("cellInput"), Some("cellInput"));
+    assert_eq!(lookup("blockInput"), Some("cellInput"));
+    assert_eq!(lookup("removeBlock"), Some("removeBlock"));
+    assert_eq!(lookup("insertRowsInBlock"), Some("insertDeleteLines"));
+    assert_eq!(lookup("reorderBlockLines"), Some("sortByField"));
+    assert_eq!(lookup("setBlockDescription"), Some("modifyDescription"));
+    // Handing the policies over is itself a schema change — otherwise anyone
+    // could unlock a block by asking to.
+    assert_eq!(lookup("setBlockPermissions"), Some("modifySchema"));
+    // Not something a block singles out. Not unguarded either: the caller falls
+    // back to its owner check.
+    assert_eq!(lookup("moveBlock"), None);
+    assert_eq!(lookup("createSheet"), None);
+}
+
+#[test]
+fn a_block_reports_whether_it_states_a_policy_at_all() {
+    use crate::edit_action::{BlockOp, BlockPermissions, ModifyPolicy, SetBlockPermissions};
+
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: bid,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 2,
+            col_cnt: 2,
+            // An owner but no policy — the case that matters. Reading the
+            // unstated policy as "anyone" would make this block LESS protected
+            // than it was before the engine knew about policies, so a host has
+            // to be able to tell "nobody said" from "anyone may".
+            owner: Some("some-craft".to_string()),
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let policies = wb.get_block_op_policies(0, bid).unwrap();
+    assert_eq!(
+        policies.len(),
+        BlockOp::ALL.len(),
+        "every operation is reported, in a fixed order"
+    );
+    assert!(
+        policies.iter().all(|p| p.policy == "all" && !p.stated),
+        "an owner with no policy states nothing: {:?}",
+        policies
+    );
+
+    // Now it says something about one operation, and only that one changes.
+    let mut perms = BlockPermissions::default();
+    perms.set(BlockOp::CellInput, Some(ModifyPolicy::OwnerOnly));
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetBlockPermissions(SetBlockPermissions {
+            sheet_idx: 0,
+            block_id: bid,
+            permissions: perms,
+            modify_policy: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+
+    let policies = wb.get_block_op_policies(0, bid).unwrap();
+    let cell_input = policies
+        .iter()
+        .find(|p| matches!(p.op, BlockOp::CellInput))
+        .unwrap();
+    assert_eq!(cell_input.policy, "ownerOnly");
+    assert!(cell_input.stated);
+    assert!(
+        policies
+            .iter()
+            .filter(|p| !matches!(p.op, BlockOp::CellInput))
+            .all(|p| !p.stated),
+        "the other operations still say nothing"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Analysis blocks.
+//
+// An analysis block is an ordinary block that declares which block it analyses;
+// its fields declare how they aggregate it, and the engine generates the
+// formula from those declarations rather than storing one.
+//
+// The whole point of it being a SEPARATE block is that every row of every block
+// stays a record — so an agent reading the sheet sees a table and its analysis,
+// cannot mistake a total for a record, and can address the total by key. See
+// design/block-analysis.md.
+// ---------------------------------------------------------------------------
+
+/// `orders` (3 records, `amt` 10/20/30) plus a one-row block below it declaring
+/// `analyzes: orders` and a `SUM(amt)` field. Returns (workbook, source, analysis).
+#[cfg(test)]
+fn orders_with_analysis(
+    func: crate::block_manager::schema_manager::field_type::AggFunc,
+) -> (Workbook, logisheets_base::BlockId, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let src = wb.get_available_block_id(0).unwrap();
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: src,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "orders".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "s0"),
+                SchemaFieldSpec::new("amt", "s1"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        }),
+    ];
+    for (row, amt) in [(0usize, "10"), (1, "20"), (2, "30")] {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 0,
+            content: format!("k{row}"),
+        }));
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 1,
+            content: amt.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "source setup should succeed: {:?}",
+        effect.error_message
+    );
+
+    let analysis = wb.get_available_block_id(0).unwrap();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: analysis,
+                master_row: 3,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+                // Declared as the block is made, so it is never briefly a
+                // stray table that a reader would take for records.
+                analyzes: Some(src),
+                pivot: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "orders_analysis".into(),
+                sheet_idx: 0,
+                block_id: analysis,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    // The label column declares no aggregate, so it stays an
+                    // ordinary cell — and it is the key the result is
+                    // addressed by.
+                    SchemaFieldSpec::new("key", "a0"),
+                    // No value formula is sent. The engine generates it.
+                    SchemaFieldSpec::new("amt", "a1").with_aggregate(func, "amt"),
+                ],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 3,
+                col: 0,
+                content: "TOTAL".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "analysis setup should succeed: {:?}",
+        effect.error_message
+    );
+    (wb, src, analysis)
+}
+
+#[cfg(test)]
+fn cell_num(wb: &Workbook, row: usize, col: usize) -> Option<f64> {
+    use crate::controller::display::Value;
+    match wb.get_sheet_by_idx(0).unwrap().get_value(row, col).unwrap() {
+        Value::Number(n) => Some(n),
+        _ => None,
+    }
+}
+
+#[test]
+fn an_analysis_field_computes_from_its_declaration_with_no_formula_sent() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (mut wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(cell_num(&wb, 3, 1), Some(60.0), "10+20+30");
+
+    // It tracks an edit to the source.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 1,
+            col: 1,
+            content: "99".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 3, 1), Some(139.0), "10+99+30");
+}
+
+#[test]
+fn the_total_does_not_count_itself() {
+    // The reason a separate block is the design: the analysis is not a record
+    // of the source, so `BLOCKREFS` over the source cannot reach it. An
+    // in-block summary row would have had to be carved out of the record set
+    // to get this, and every reader would have had to remember.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(
+        cell_num(&wb, 3, 1),
+        Some(60.0),
+        "60, not 120 — the total is outside the set it sums"
+    );
+}
+
+#[test]
+fn every_declared_function_computes() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    for (func, expected) in [
+        (AggFunc::Sum, 60.0),
+        (AggFunc::Count, 3.0),
+        (AggFunc::Average, 20.0),
+        (AggFunc::Min, 10.0),
+        (AggFunc::Max, 30.0),
+    ] {
+        let (wb, _src, _analysis) = orders_with_analysis(func);
+        assert_eq!(
+            cell_num(&wb, 3, 1),
+            Some(expected),
+            "{} over 10/20/30",
+            func.as_str()
+        );
+    }
+}
+
+#[test]
+fn the_analysis_tracks_the_source_growing() {
+    // Why the generated formula goes through BLOCKREFS rather than a resolved
+    // cell range: the dependency is on the whole source block, so a new record
+    // is picked up with nothing rewritten.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::{InsertRows, InsertRowsInBlock};
+
+    let (mut wb, src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            // Room first, or the block would grow into the analysis below it.
+            EditPayload::InsertRows(InsertRows {
+                sheet_idx: 0,
+                start: 3,
+                count: 1,
+            }),
+            EditPayload::InsertRowsInBlock(InsertRowsInBlock {
+                sheet_idx: 0,
+                block_id: src,
+                start: 3,
+                cnt: 1,
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 3,
+                col: 0,
+                content: "k3".to_string(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 3,
+                col: 1,
+                content: "1".to_string(),
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "growing the source should succeed: {:?}",
+        effect.error_message
+    );
+
+    // The analysis was pushed down a row by the sheet insert, and picked the
+    // new record up.
+    assert_eq!(cell_num(&wb, 4, 1), Some(61.0), "10+20+30+1");
+}
+
+#[test]
+fn the_label_column_stays_an_ordinary_cell() {
+    // Which is why the aggregate is declared per FIELD rather than per block:
+    // the label is the key the result is addressed by, and a person has to be
+    // able to type it.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::controller::display::Value;
+
+    let (wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert!(
+        matches!(
+            wb.get_sheet_by_idx(0).unwrap().get_value(3, 0).unwrap(),
+            Value::Str(s) if s == "TOTAL"
+        ),
+        "the label the transaction wrote is still there"
+    );
+}
+
+#[test]
+fn the_result_is_addressable_by_key_from_elsewhere() {
+    // The capability an in-block summary row could not have had: the total has
+    // a key, so anything else can reference it — which is what an agent needs
+    // in order to USE a total rather than merely see it.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (mut wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 5,
+            content: r#"=BLOCKREF("orders_analysis", "TOTAL", "amt") * 2"#.to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "referencing the analysis should succeed: {:?}",
+        effect.error_message
+    );
+    assert_eq!(cell_num(&wb, 0, 5), Some(120.0), "60 * 2");
+}
+
+#[test]
+fn a_block_may_not_analyse_itself() {
+    // Its cells would aggregate a set they belong to — the cycle the separate
+    // block design exists to avoid.
+    use crate::edit_action::SetBlockAnalyzes;
+
+    let (mut wb, src, _analysis) =
+        orders_with_analysis(crate::block_manager::schema_manager::field_type::AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: src,
+            analyzes: Some(src),
+            pivot: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "a self-analysis must be refused"
+    );
+    assert!(
+        effect
+            .error_message
+            .unwrap_or_default()
+            .contains("cannot analyse itself")
+    );
+}
+
+#[test]
+fn analysing_a_block_that_does_not_exist_is_refused() {
+    // A marker pointing at nothing would make every field read empty with no
+    // way for a reader to see why.
+    use crate::edit_action::SetBlockAnalyzes;
+
+    let (mut wb, _src, analysis) =
+        orders_with_analysis(crate::block_manager::schema_manager::field_type::AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: analysis,
+            analyzes: Some(9999),
+            pivot: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "analysing a nonexistent block must be refused"
+    );
+}
+
+#[test]
+fn the_declarations_survive_a_save_and_reload() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    let saved = wb.save().unwrap();
+    let reopened = Workbook::from_file(&saved, "again".to_string()).unwrap();
+
+    // The marker, and the total it produces.
+    let ws = reopened.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let a = blocks.iter().find(|b| b.block_id == analysis).unwrap();
+    assert_eq!(
+        a.analyzes,
+        Some(src),
+        "the analysis marker round-trips: {:?}",
+        a.analyzes
+    );
+    assert_eq!(
+        cell_num(&reopened, 3, 1),
+        Some(60.0),
+        "and the generated formula is rebuilt, so the total still computes"
+    );
+}
+
+#[test]
+fn removing_the_source_removes_its_analyses() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::RemoveBlock;
+
+    let (mut wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(
+        wb.get_sheet_by_idx(0).unwrap().get_all_blocks().len(),
+        2,
+        "sanity: the pair exists"
+    );
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::RemoveBlock(RemoveBlock {
+            sheet_idx: 0,
+            id: src,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "removing the source should succeed: {:?}",
+        effect.error_message
+    );
+
+    // Both gone. An analysis block outliving its source would sit there
+    // aggregating a block that no longer exists, reading empty with nothing to
+    // say why.
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert!(
+        blocks.is_empty(),
+        "the analysis went with its source, got {:?}",
+        blocks.iter().map(|b| b.block_id).collect::<Vec<_>>()
+    );
+
+    // One undo brings the whole set back — which is why the cascade is extra
+    // payloads in the same transaction rather than a special case.
+    assert!(wb.undo());
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 2, "undo restores both");
+    assert!(blocks.iter().any(|b| b.block_id == analysis));
+    assert_eq!(
+        cell_num(&wb, 3, 1),
+        Some(60.0),
+        "and the total still computes"
+    );
+}
+
+#[test]
+fn removing_an_analysis_leaves_its_source_alone() {
+    // Not symmetric: a table means something without its total.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::RemoveBlock;
+
+    let (mut wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::RemoveBlock(RemoveBlock {
+            sheet_idx: 0,
+            id: analysis,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    assert_eq!(blocks.len(), 1);
+    assert_eq!(blocks[0].block_id, src);
+}
+
+#[test]
+fn renaming_a_source_field_regenerates_the_analysis_formula() {
+    // The trigger that has to exist. The generated formula names the source's
+    // FIELD as a runtime string, and nothing else re-materializes a block when
+    // a different block is re-bound — so without this the analysis would keep
+    // naming a field that no longer exists, and a `BLOCKREFS` resolves that to
+    // nothing rather than to an error. The total would silently read 0.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(cell_num(&wb, 3, 1), Some(60.0), "sanity");
+
+    // Rename `amt` to `amount` on the SOURCE, and update the analysis's
+    // declaration to match — the two halves a rename tool would send.
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "orders_analysis".into(),
+                sheet_idx: 0,
+                block_id: _analysis,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "a0"),
+                    SchemaFieldSpec::new("amount", "a1").with_aggregate(AggFunc::Sum, "amount"),
+                ],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "orders".into(),
+                sheet_idx: 0,
+                block_id: src,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "s0"),
+                    SchemaFieldSpec::new("amount", "s1"),
+                ],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            }),
+        ],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the rename should succeed: {:?}",
+        effect.error_message
+    );
+
+    assert_eq!(
+        cell_num(&wb, 3, 1),
+        Some(60.0),
+        "the total still computes after the source field was renamed"
+    );
+}
+
+#[test]
+fn a_block_reports_its_analyses_and_they_report_it() {
+    // Both directions, because an agent reading the sheet has to be able to
+    // tell a table from its analysis from either end — and must not sum an
+    // analysis block's rows alongside the source's.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+
+    let (wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+
+    let source = blocks.iter().find(|b| b.block_id == src).unwrap();
+    assert_eq!(source.analyzes, None, "the table analyses nothing");
+    assert_eq!(source.analyzed_by, vec![analysis]);
+
+    let a = blocks.iter().find(|b| b.block_id == analysis).unwrap();
+    assert_eq!(a.analyzes, Some(src));
+    assert!(a.analyzed_by.is_empty());
+
+    // And the per-field declaration is reported, so a reader can see WHAT the
+    // number is, not just that it is a number.
+    let schema = a.schema.as_ref().unwrap();
+    let amt = schema.fields.iter().find(|f| f.field == "amt").unwrap();
+    assert_eq!(amt.agg_func.as_deref(), Some("SUM"));
+    assert_eq!(amt.agg_field.as_deref(), Some("amt"));
+    let key = schema.fields.iter().find(|f| f.field == "key").unwrap();
+    assert_eq!(key.agg_func, None, "the label column aggregates nothing");
+}
+
+// ---------------------------------------------------------------------------
+// Reshaping a bound block: the mechanism a pivot's refresh is built on.
+//
+// A pivot's shape is DATA — its rows are the source's distinct row-dimension
+// values, its columns the distinct column-dimension values — so a refresh has
+// to grow and shrink a block that already carries a schema, in one
+// transaction. See `design/block-pivot.md` §6.
+//
+// `WorkbookOps.editFormBlock` documents a v1 contract of "fields are never
+// removed", justified by a *tail* resize orphaning schema entries. A pivot
+// cannot honour that: a dimension value that stops occurring must take its
+// column with it. These tests pin what actually happens in each order, since
+// the whole refresh sequence rests on it.
+// ---------------------------------------------------------------------------
+
+/// A one-record block named `t`, `1 x col_cnt`, with no schema yet.
+fn reshapable_block(col_cnt: usize) -> (Workbook, logisheets_base::BlockId) {
+    let mut wb = Workbook::default();
+    let id = wb.get_available_block_id(0).unwrap();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 1,
+            col_cnt,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "block setup: {:?}",
+        effect.error_message
+    );
+    (wb, id)
+}
+
+/// `BindFormSchema` for `t` over `fields`, each `(name, value_formula)`.
+fn bind_t(block_id: logisheets_base::BlockId, fields: &[(&str, Option<&str>)]) -> EditPayload {
+    use crate::edit_action::BindFormSchema;
+    EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "t".into(),
+        sheet_idx: 0,
+        block_id,
+        field_from: 0,
+        key_idx: 0,
+        fields: fields
+            .iter()
+            .enumerate()
+            .map(|(i, (name, formula))| {
+                let spec = SchemaFieldSpec::new(*name, format!("r{i}"));
+                spec.with_value_formula(formula.map(String::from))
+            })
+            .collect(),
+        row: true,
+        header_idx: None,
+        unique_together: None,
+    })
+}
+
+fn resize_t(
+    block_id: logisheets_base::BlockId,
+    rows: Option<usize>,
+    cols: Option<usize>,
+) -> EditPayload {
+    EditPayload::ResizeBlock(crate::edit_action::ResizeBlock {
+        sheet_idx: 0,
+        id: block_id,
+        new_row_cnt: rows,
+        new_col_cnt: cols,
+    })
+}
+
+fn field_names(wb: &Workbook, block_id: logisheets_base::BlockId) -> Vec<String> {
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let b = blocks.iter().find(|b| b.block_id == block_id).unwrap();
+    b.schema
+        .as_ref()
+        .map(|s| s.fields.iter().map(|f| f.field.clone()).collect())
+        .unwrap_or_default()
+}
+
+fn apply(wb: &mut Workbook, payloads: Vec<EditPayload>) -> crate::edit_action::ActionEffect {
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }))
+}
+
+#[test]
+fn growing_a_block_and_rebinding_covers_the_new_column() {
+    // The grow half of a pivot refresh: a new column-dimension value appears,
+    // so the block gains a column and the schema gains the field that names
+    // it. Resize FIRST — binding a field to a column that does not exist yet
+    // has nothing to materialize onto.
+    let (mut wb, id) = reshapable_block(2);
+    let effect = apply(&mut wb, vec![bind_t(id, &[("key", None), ("a", None)])]);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: "k0".into(),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let effect = apply(
+        &mut wb,
+        vec![
+            resize_t(id, None, Some(3)),
+            bind_t(id, &[("key", None), ("a", None), ("b", Some("LEN(#KEY)"))]),
+        ],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "grow then bind: {:?}",
+        effect.error_message
+    );
+
+    assert_eq!(field_names(&wb, id), vec!["key", "a", "b"]);
+    // The bind materializes the WHOLE grid, so the brand-new column computes
+    // immediately — and `#KEY` substituted for the row, which is exactly what
+    // a pivot's per-row filter relies on.
+    assert_eq!(cell_num(&wb, 0, 2), Some(2.0), "LEN(\"k0\")");
+}
+
+#[test]
+fn growing_rows_and_rebinding_materializes_the_new_rows() {
+    // The other grow axis, and the one a pivot needs most: new row-dimension
+    // values mean new RECORDS. `ResizeBlock` alone does not materialize
+    // templates (only InsertRowsInBlock, UpsertFieldFormulas and
+    // BindFormSchema do), so the refresh gets its new rows computed only
+    // because the bind that follows walks the full row x col grid.
+    let (mut wb, id) = reshapable_block(2);
+    let effect = apply(
+        &mut wb,
+        vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "aa".into(),
+            }),
+            bind_t(id, &[("key", None), ("a", Some("LEN(#KEY)"))]),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 0, 1), Some(2.0));
+
+    let effect = apply(
+        &mut wb,
+        vec![
+            resize_t(id, Some(3), None),
+            // The keys go in BEFORE the bind. `#KEY` is captured when the
+            // template is materialized, not when the cell is calculated, and
+            // the bind is what materializes — so a key written after it
+            // substitutes as `""`. See `key_written_after_the_bind_...`.
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 1,
+                col: 0,
+                content: "bbb".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 2,
+                col: 0,
+                content: "cccc".into(),
+            }),
+            bind_t(id, &[("key", None), ("a", Some("LEN(#KEY)"))]),
+        ],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "grow rows then bind: {:?}",
+        effect.error_message
+    );
+
+    assert_eq!(cell_num(&wb, 0, 1), Some(2.0), "the existing row is intact");
+    assert_eq!(cell_num(&wb, 1, 1), Some(3.0), "a new row computes");
+    assert_eq!(cell_num(&wb, 2, 1), Some(4.0), "and so does the next");
+}
+
+#[test]
+fn binding_before_shrinking_drops_a_column_and_leaves_no_orphan() {
+    // The shrink half: a dimension value stops occurring, so its column goes.
+    // Bind FIRST, so the narrower schema is in place before the columns
+    // disappear — the doomed column is simply left unbound and the resize
+    // then removes it.
+    let (mut wb, id) = reshapable_block(3);
+    let effect = apply(
+        &mut wb,
+        vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "k0".into(),
+            }),
+            bind_t(id, &[("key", None), ("a", None), ("b", Some("LEN(#KEY)"))]),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 0, 2), Some(2.0), "sanity: b computes");
+
+    let effect = apply(
+        &mut wb,
+        vec![
+            bind_t(id, &[("key", None), ("a", None)]),
+            resize_t(id, None, Some(2)),
+        ],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "bind then shrink: {:?}",
+        effect.error_message
+    );
+
+    assert_eq!(field_names(&wb, id), vec!["key", "a"]);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let b = blocks.iter().find(|b| b.block_id == id).unwrap();
+    assert_eq!(b.col_cnt, 2, "the block really is narrower");
+    assert_eq!(
+        cell_num(&wb, 0, 2),
+        None,
+        "and the dropped column's value is gone with it"
+    );
+}
+
+#[test]
+fn shrinking_before_binding_reaches_the_same_place() {
+    // The other order, pinned because the refresh in `packages/core` has to
+    // pick one and a future reader will wonder whether the choice mattered.
+    // It does not for the end state — the bind replaces the schema wholesale,
+    // so neither order can orphan an entry — but bind-first is what
+    // `binding_before_shrinking_...` documents and what the host sends,
+    // because it never leaves a live template on a column about to vanish.
+    let (mut wb, id) = reshapable_block(3);
+    let effect = apply(
+        &mut wb,
+        vec![
+            bind_t(id, &[("key", None), ("a", None), ("b", Some("LEN(#KEY)"))]),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "k0".into(),
+            }),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let effect = apply(
+        &mut wb,
+        vec![
+            resize_t(id, None, Some(2)),
+            bind_t(id, &[("key", None), ("a", None)]),
+        ],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "shrink then bind: {:?}",
+        effect.error_message
+    );
+
+    assert_eq!(field_names(&wb, id), vec!["key", "a"]);
+    assert_eq!(cell_num(&wb, 0, 2), None);
+}
+
+#[test]
+fn a_reshape_is_one_undo() {
+    // The refresh is one transaction, so a user who does not like the new
+    // shape gets the old one back in a single step — the same property the
+    // analysis cascade has.
+    let (mut wb, id) = reshapable_block(2);
+    let effect = apply(
+        &mut wb,
+        vec![
+            bind_t(id, &[("key", None), ("a", None)]),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "k0".into(),
+            }),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let effect = apply(
+        &mut wb,
+        vec![
+            resize_t(id, Some(2), Some(3)),
+            bind_t(id, &[("key", None), ("a", None), ("b", Some("LEN(#KEY)"))]),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(field_names(&wb, id), vec!["key", "a", "b"]);
+
+    wb.undo();
+    assert_eq!(field_names(&wb, id), vec!["key", "a"]);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let b = blocks.iter().find(|b| b.block_id == id).unwrap();
+    assert_eq!((b.row_cnt, b.col_cnt), (1, 2), "the old shape is back");
+}
+
+#[test]
+fn a_key_written_after_the_bind_substitutes_as_empty() {
+    // The constraint that fixes the refresh's payload order, pinned because it
+    // is invisible and its failure mode is a silent zero.
+    //
+    // `#KEY` is substituted when the template is MATERIALIZED — the bind walks
+    // the grid and builds an AST node from the key cell's value *at that
+    // moment* (`input_block_cell_template`). Writing the key afterwards does
+    // not re-materialize anything: only InsertRowsInBlock, UpsertFieldFormulas
+    // and BindFormSchema do. So the row keeps a formula built from `""`.
+    //
+    // For a pivot that would mean every refreshed row filtering on the empty
+    // string: a full grid of zeros, no error anywhere. Hence
+    // `design/block-pivot.md` §6 writes the keys BEFORE the bind.
+    let (mut wb, id) = reshapable_block(2);
+    let effect = apply(
+        &mut wb,
+        vec![
+            bind_t(id, &[("key", None), ("a", Some("LEN(#KEY)"))]),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "k0".into(),
+            }),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(
+        cell_num(&wb, 0, 1),
+        Some(0.0),
+        "LEN(\"\") — the key was not there yet when the template materialized"
+    );
+
+    // Re-binding with the key now in place is what repairs it, which is also
+    // why the refresh can be re-run safely at any time.
+    let effect = apply(
+        &mut wb,
+        vec![bind_t(id, &[("key", None), ("a", Some("LEN(#KEY)"))])],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 0, 1), Some(2.0));
+}
+
+#[test]
+fn editing_a_key_does_not_re_aim_the_row_until_a_rebind() {
+    // The same property from the user's side, and the reason a pivot's key
+    // column needs the guards in `design/block-pivot.md` §4.3: someone editing
+    // a pivot's row label does NOT re-aim that row's aggregates — the row goes
+    // on reporting the old group under the new name, which is worse than
+    // either updating or refusing.
+    let (mut wb, id) = reshapable_block(2);
+    let effect = apply(
+        &mut wb,
+        vec![
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: "k0".into(),
+            }),
+            bind_t(id, &[("key", None), ("a", Some("LEN(#KEY)"))]),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 0, 1), Some(2.0));
+
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: "much-longer".into(),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(
+        cell_num(&wb, 0, 1),
+        Some(2.0),
+        "still LEN(\"k0\"): the formula holds the key it was built with"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The pivot DECLARATION: what a host can state, what the engine refuses, and
+// what survives a file. The lowering it drives is a separate step.
+// See `design/block-pivot.md` §4.
+// ---------------------------------------------------------------------------
+
+fn pivot_parts() -> crate::block_manager::schema_manager::field_type::PivotSpecParts {
+    crate::block_manager::schema_manager::field_type::PivotSpecParts {
+        row_dim: "region".into(),
+        col_dim: Some("quarter".into()),
+        measure: "amt".into(),
+        func: "SUM".into(),
+        order: Some("ascending".into()),
+        order_values: None,
+        filters: None,
+    }
+}
+
+/// `orders` (3 records) plus an empty block that pivots it.
+fn orders_with_pivot() -> (Workbook, logisheets_base::BlockId, logisheets_base::BlockId) {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    let (mut wb, src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    let pivot = wb.get_available_block_id(0).unwrap();
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: pivot,
+            master_row: 10,
+            master_col: 0,
+            row_cnt: 1,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: Some(src),
+            pivot: Some(pivot_parts()),
+        })],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "pivot creation: {:?}",
+        effect.error_message
+    );
+    (wb, src, pivot)
+}
+
+fn reported_pivot(
+    wb: &Workbook,
+    block_id: logisheets_base::BlockId,
+) -> Option<crate::block_manager::schema_manager::field_type::PivotSpecParts> {
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    blocks
+        .iter()
+        .find(|b| b.block_id == block_id)
+        .and_then(|b| b.pivot.clone())
+}
+
+#[test]
+fn a_pivot_is_declared_as_the_block_is_created_and_reported_back() {
+    // Declared at creation for the same reason `analyzes` is: between two
+    // payloads a reader would see a stray table and take its cells for records.
+    let (wb, src, pivot) = orders_with_pivot();
+
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+    assert_eq!(p.analyzes, Some(src), "a pivot is an analysis block");
+
+    let spec = p.pivot.as_ref().expect("the recipe is reported");
+    assert_eq!(spec.row_dim, "region");
+    assert_eq!(spec.col_dim.as_deref(), Some("quarter"));
+    assert_eq!(spec.measure, "amt");
+    assert_eq!(spec.func, "SUM");
+
+    // And a plain analysis block is still not a pivot — the total row created
+    // by the shared helper reports no recipe.
+    let total = blocks
+        .iter()
+        .find(|b| b.analyzes == Some(src) && b.block_id != pivot)
+        .unwrap();
+    assert_eq!(total.pivot, None);
+}
+
+#[test]
+fn a_pivot_that_analyses_nothing_is_refused() {
+    // Every cell of it would aggregate a block that was never named: a grid of
+    // zeros with nothing to say why. Better to refuse the declaration.
+    let mut wb = Workbook::default();
+    let id = wb.get_available_block_id(0).unwrap();
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 1,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: Some(pivot_parts()),
+        })],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "a pivot with no source should be refused"
+    );
+    assert!(
+        effect
+            .error_message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("needs a source block to aggregate"),
+        "the refusal should say why: {:?}",
+        effect.error_message
+    );
+}
+
+#[test]
+fn a_pivot_over_itself_is_refused() {
+    // The cycle the separate-block design exists to avoid, reachable through
+    // the recipe as well as through `analyzes`.
+    let mut wb = Workbook::default();
+    let id = wb.get_available_block_id(0).unwrap();
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: 1,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: Some(id),
+            pivot: Some(pivot_parts()),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Err(_)
+    ));
+}
+
+#[test]
+fn an_uninterpretable_recipe_leaves_a_plain_analysis_block() {
+    // An aggregate this build does not know is DROPPED, not guessed: a wrong
+    // function produces a number that looks right. The block stays an analysis
+    // block, which is the honest degraded state.
+    let (mut wb, src, _analysis) =
+        orders_with_analysis(crate::block_manager::schema_manager::field_type::AggFunc::Sum);
+    let id = wb.get_available_block_id(0).unwrap();
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id,
+            master_row: 10,
+            master_col: 0,
+            row_cnt: 1,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: Some(src),
+            pivot: Some(
+                crate::block_manager::schema_manager::field_type::PivotSpecParts {
+                    func: "MEDIAN".into(),
+                    ..pivot_parts()
+                },
+            ),
+        })],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "the block should still open: {:?}",
+        effect.error_message
+    );
+    assert_eq!(reported_pivot(&wb, id), None);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let b = blocks.iter().find(|b| b.block_id == id).unwrap();
+    assert_eq!(b.analyzes, Some(src), "but it is still an analysis block");
+}
+
+#[test]
+fn the_recipe_can_be_changed_and_cleared_after_the_fact() {
+    use crate::edit_action::SetBlockAnalyzes;
+    let (mut wb, src, pivot) = orders_with_pivot();
+
+    // Change it: one payload states the WHOLE declaration, so the source and
+    // the recipe cannot drift apart.
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: pivot,
+            analyzes: Some(src),
+            pivot: Some(
+                crate::block_manager::schema_manager::field_type::PivotSpecParts {
+                    col_dim: None,
+                    func: "AVERAGE".into(),
+                    ..pivot_parts()
+                },
+            ),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    let spec = reported_pivot(&wb, pivot).unwrap();
+    assert_eq!(
+        spec.col_dim, None,
+        "a grouped pivot has no column dimension"
+    );
+    assert_eq!(spec.func, "AVERAGE");
+
+    // Clear it back to a plain analysis block by stating no recipe.
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: pivot,
+            analyzes: Some(src),
+            pivot: None,
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(reported_pivot(&wb, pivot), None);
+
+    // And clearing the source clears the recipe with it, because the payload
+    // states both — there is no state where a pivot has lost its source.
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: pivot,
+            analyzes: None,
+            pivot: None,
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let b = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+    assert_eq!(b.analyzes, None);
+    assert_eq!(b.pivot, None);
+}
+
+#[test]
+fn setting_a_recipe_without_a_source_is_refused() {
+    let (mut wb, _src, pivot) = orders_with_pivot();
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(
+            crate::edit_action::SetBlockAnalyzes {
+                sheet_idx: 0,
+                block_id: pivot,
+                analyzes: None,
+                pivot: Some(pivot_parts()),
+            },
+        )],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Err(_)
+    ));
+}
+
+#[test]
+fn a_pivot_recipe_survives_a_real_xlsx_round_trip() {
+    // The recipe is the only record of what a pivot IS — its cells are
+    // generated from it and its shape is refreshed from it — so a file that
+    // loses it loses the pivot, leaving a grid of numbers nobody can rebuild.
+    let (wb, src, pivot) = orders_with_pivot();
+    let bytes = wb.save().expect("save");
+    let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
+
+    let ws = restored.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks
+        .iter()
+        .find(|b| b.block_id == pivot)
+        .expect("the pivot block is back");
+    assert_eq!(p.analyzes, Some(src));
+    let spec = p.pivot.as_ref().expect("and so is its recipe");
+    assert_eq!(spec.row_dim, "region");
+    assert_eq!(spec.col_dim.as_deref(), Some("quarter"));
+    assert_eq!(spec.measure, "amt");
+    assert_eq!(spec.func, "SUM");
+    assert_eq!(spec.order.as_deref(), Some("ascending"));
+
+    // The total row beside it is still a plain analysis block, so the two
+    // kinds stay distinguishable across a file.
+    let total = blocks
+        .iter()
+        .find(|b| b.analyzes == Some(src) && b.block_id != pivot)
+        .unwrap();
+    assert_eq!(total.pivot, None);
+}
+
+#[test]
+fn a_grouped_pivot_survives_without_gaining_a_column_dimension() {
+    // `col_dim: None` is the degenerate pivot, and it must not come back as
+    // `Some("")` — that would be a column dimension named empty string, and
+    // every cell would filter on it.
+    use crate::edit_action::SetBlockAnalyzes;
+    let (mut wb, src, pivot) = orders_with_pivot();
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: pivot,
+            analyzes: Some(src),
+            pivot: Some(
+                crate::block_manager::schema_manager::field_type::PivotSpecParts {
+                    col_dim: None,
+                    ..pivot_parts()
+                },
+            ),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let bytes = wb.save().expect("save");
+    let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
+    let ws = restored.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+    assert_eq!(p.pivot.as_ref().unwrap().col_dim, None);
+}
+
+#[test]
+fn a_pivot_field_cannot_also_declare_its_own_aggregate() {
+    // The two mean different things for the same column — "SUM of amt for
+    // THIS row's group" versus "SUM of amt over everything" — and whichever
+    // silently won would be a precedence rule invisible from the sheet.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, _src, pivot) = orders_with_pivot();
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "orders_pivot".into(),
+            sheet_idx: 0,
+            block_id: pivot,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("region", "p0"),
+                SchemaFieldSpec::new("Q1", "p1").with_aggregate(AggFunc::Sum, "amt"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        })],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Err(_)),
+        "a pivot column carrying its own aggregate should be refused"
+    );
+    assert!(
+        effect
+            .error_message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("cannot also declare its own aggregate"),
+        "the refusal should say which field and why: {:?}",
+        effect.error_message
+    );
+}
+
+#[test]
+fn a_field_aggregate_is_still_fine_on_a_block_that_is_not_a_pivot() {
+    // The guard must not touch the total row, which is exactly a block whose
+    // fields declare their own aggregates.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    let (wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(cell_num(&wb, 3, 1), Some(60.0));
+}
+
+#[test]
+fn declaring_a_pivot_over_a_block_whose_fields_aggregate_is_refused_too() {
+    // The other order of arrival: the field aggregates first, the recipe
+    // second. Same conflict, so the same refusal — which is why the check
+    // runs on the finished state rather than per payload.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::SetBlockAnalyzes;
+
+    let (mut wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: analysis,
+            analyzes: Some(src),
+            pivot: Some(pivot_parts()),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Err(_)
+    ));
+    // And the refusal is atomic: the block is still the total row it was.
+    assert_eq!(reported_pivot(&wb, analysis), None);
+    assert_eq!(cell_num(&wb, 3, 1), Some(60.0));
+}
+
+// ---------------------------------------------------------------------------
+// A pivot that actually computes. `design/block-pivot.md` §4.1.
+// ---------------------------------------------------------------------------
+
+/// A `sales` fact table: an id key plus region x quarter x amt, six records.
+///
+/// ```text
+///   id  region  quarter  amt
+///   o0  East     Q1       10
+///   o1  East     Q2       20
+///   o2  South     Q1        3
+///   o3  South     Q1        4     <- two rows in one cell of the pivot
+///   o4  South     Q2        5
+///   o5  North     Q1        7
+/// ```
+///
+/// The id column exists because a pivot's source is a FACT table: its
+/// dimension columns repeat by definition, so a dimension cannot be the
+/// block's key — the key-uniqueness guard refuses that, correctly. A pivot's
+/// `row_dim` is therefore an ordinary field, which is also why the lowering
+/// reaches it through `BLOCKREFSB`'s field filter rather than through a key.
+fn sales_block(wb: &mut Workbook) -> logisheets_base::BlockId {
+    use crate::edit_action::BindFormSchema;
+    let src = wb.get_available_block_id(0).unwrap();
+    let rows = [
+        ("o0", "East", "Q1", "10"),
+        ("o1", "East", "Q2", "20"),
+        ("o2", "South", "Q1", "3"),
+        ("o3", "South", "Q1", "4"),
+        ("o4", "South", "Q2", "5"),
+        ("o5", "North", "Q1", "7"),
+    ];
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: src,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: rows.len(),
+            col_cnt: 4,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "sales".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("id", "s0"),
+                SchemaFieldSpec::new("region", "s1"),
+                SchemaFieldSpec::new("quarter", "s2"),
+                SchemaFieldSpec::new("amt", "s3"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        }),
+    ];
+    for (r, (id, region, quarter, amt)) in rows.iter().enumerate() {
+        for (c, v) in [id, region, quarter, amt].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    let effect = apply(wb, payloads);
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "sales setup: {:?}",
+        effect.error_message
+    );
+    src
+}
+
+/// `sales` plus a pivot of it at row 10: rows East/South/North, columns Q1/Q2.
+///
+/// Built the way §6 says a refresh builds one — **keys before the bind** —
+/// because `#KEY` is captured at materialization.
+fn sales_with_pivot(
+    func: &str,
+    col_dim: Option<&str>,
+) -> (Workbook, logisheets_base::BlockId, logisheets_base::BlockId) {
+    use crate::block_manager::schema_manager::field_type::PivotSpecParts;
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let src = sales_block(&mut wb);
+    let pivot = wb.get_available_block_id(0).unwrap();
+
+    let keys = ["East", "South", "North"];
+    let value_fields: Vec<&str> = match col_dim {
+        Some(_) => vec!["Q1", "Q2"],
+        None => vec!["total"],
+    };
+
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: pivot,
+        master_row: 10,
+        master_col: 0,
+        row_cnt: keys.len(),
+        col_cnt: 1 + value_fields.len(),
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: Some(src),
+        pivot: Some(PivotSpecParts {
+            row_dim: "region".into(),
+            col_dim: col_dim.map(String::from),
+            measure: "amt".into(),
+            func: func.into(),
+            order: Some("ascending".into()),
+            order_values: None,
+            filters: None,
+        }),
+    })];
+    // Keys first.
+    for (i, k) in keys.iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 10 + i,
+            col: 0,
+            content: k.to_string(),
+        }));
+    }
+    // Then the bind, which materializes the whole grid from the recipe.
+    let mut fields = vec![SchemaFieldSpec::new("region", "p0")];
+    for (i, f) in value_fields.iter().enumerate() {
+        fields.push(SchemaFieldSpec::new(*f, format!("p{}", i + 1)));
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "sales_pivot".into(),
+        sheet_idx: 0,
+        block_id: pivot,
+        field_from: 0,
+        key_idx: 0,
+        fields,
+        row: true,
+        header_idx: None,
+        unique_together: None,
+    }));
+
+    let effect = apply(&mut wb, payloads);
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "pivot setup: {:?}",
+        effect.error_message
+    );
+    (wb, src, pivot)
+}
+
+#[test]
+fn a_pivot_cross_tabulates_from_the_recipe_alone() {
+    // No host sent a formula. Every cell below was generated from
+    // `row_dim x col_dim -> SUM(measure)` plus the cell's own row key and
+    // field name.
+    let (wb, _src, _pivot) = sales_with_pivot("SUM", Some("quarter"));
+
+    //            Q1              Q2
+    // East       10               20
+    // South       3 + 4 = 7        5
+    // North       7                (none)
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "East Q1");
+    assert_eq!(cell_num(&wb, 10, 2), Some(20.0), "East Q2");
+    assert_eq!(
+        cell_num(&wb, 11, 1),
+        Some(7.0),
+        "South Q1 sums BOTH records"
+    );
+    assert_eq!(cell_num(&wb, 11, 2), Some(5.0), "South Q2");
+    assert_eq!(cell_num(&wb, 12, 1), Some(7.0), "North Q1");
+}
+
+#[test]
+fn a_cell_with_no_matching_records_reads_zero_rather_than_erroring() {
+    // North has no Q2 row. An empty intersection is a real answer in a
+    // cross-tab — the group exists, it just has nothing in that column — so
+    // it must not poison the grid with an error.
+    let (wb, _src, _pivot) = sales_with_pivot("SUM", Some("quarter"));
+    assert_eq!(cell_num(&wb, 12, 2), Some(0.0), "North Q2");
+}
+
+#[test]
+fn the_key_column_of_a_pivot_stays_an_ordinary_cell() {
+    // It holds the row's dimension value, which is both the key the result is
+    // addressed by and the filter `#KEY` resolves to. Generating a formula
+    // into it would leave the pivot with no rows to name.
+    let (wb, _src, _pivot) = sales_with_pivot("SUM", Some("quarter"));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(
+        matches!(
+            ws.get_value(10, 0).unwrap(),
+            crate::controller::display::Value::Str(ref s) if s == "East"
+        ),
+        "the key cell still holds the typed dimension value"
+    );
+}
+
+#[test]
+fn a_pivot_tracks_an_edit_to_the_source() {
+    // Values are live: only the SHAPE needs a refresh.
+    let (mut wb, src, _pivot) = sales_with_pivot("SUM", Some("quarter"));
+    assert_eq!(cell_num(&wb, 11, 1), Some(7.0));
+
+    // South Q1's second record: 4 -> 40.
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::BlockInput(crate::edit_action::BlockInput {
+            sheet_idx: 0,
+            block_id: src,
+            row: 3,
+            col: 3,
+            input: "40".into(),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 11, 1), Some(43.0), "3 + 40");
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "other cells untouched");
+}
+
+#[test]
+fn a_pivot_tracks_a_record_added_to_a_group_it_already_shows() {
+    // The case where the shape does NOT change: a new row in an existing
+    // (region, quarter) intersection. This needs no refresh at all, which is
+    // the half of the feature that is genuinely live.
+    let (mut wb, src, _pivot) = sales_with_pivot("SUM", Some("quarter"));
+    let effect = apply(
+        &mut wb,
+        vec![
+            EditPayload::InsertRowsInBlock(crate::edit_action::InsertRowsInBlock {
+                sheet_idx: 0,
+                block_id: src,
+                start: 6,
+                cnt: 1,
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 6,
+                col: 0,
+                content: "o6".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 6,
+                col: 1,
+                content: "East".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 6,
+                col: 2,
+                content: "Q1".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 6,
+                col: 3,
+                content: "100".into(),
+            }),
+        ],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "{:?}",
+        effect.error_message
+    );
+    assert_eq!(cell_num(&wb, 11, 1), Some(7.0), "South Q1 unchanged");
+    assert_eq!(cell_num(&wb, 10, 1), Some(110.0), "East Q1 picked it up");
+}
+
+#[test]
+fn a_grouped_pivot_totals_each_group_over_every_column() {
+    // `col_dim: None`: one value column, filtered on the row alone.
+    let (wb, _src, _pivot) = sales_with_pivot("SUM", None);
+    assert_eq!(cell_num(&wb, 10, 1), Some(30.0), "East = 10 + 20");
+    assert_eq!(cell_num(&wb, 11, 1), Some(12.0), "South = 3 + 4 + 5");
+    assert_eq!(cell_num(&wb, 12, 1), Some(7.0), "North = 7");
+}
+
+#[test]
+fn a_pivot_can_average_and_count_as_well_as_sum() {
+    let (wb, _src, _pivot) = sales_with_pivot("AVERAGE", Some("quarter"));
+    assert_eq!(cell_num(&wb, 11, 1), Some(3.5), "South Q1 = (3 + 4) / 2");
+
+    let (wb, _src, _pivot) = sales_with_pivot("COUNT", Some("quarter"));
+    assert_eq!(cell_num(&wb, 11, 1), Some(2.0), "South Q1 has two records");
+    assert_eq!(cell_num(&wb, 12, 2), Some(0.0), "North Q2 has none");
+}
+
+#[test]
+fn a_pivot_result_is_addressable_by_key_and_field() {
+    // The reason a pivot is a block: `BLOCKREF(name, key, field)` reaches one
+    // cell of it, so an agent can put a cross-tab number in a sentence or feed
+    // it to another calculation.
+    let (mut wb, _src, _pivot) = sales_with_pivot("SUM", Some("quarter"));
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 20,
+            col: 5,
+            content: "=BLOCKREF(\"sales_pivot\",\"South\",\"Q1\")*2".into(),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 20, 5), Some(14.0), "7 * 2");
+}
+
+#[test]
+fn a_pivot_does_not_count_itself() {
+    // The cycle question, for a pivot: its cells aggregate the SOURCE, and
+    // `BlockAll(pivot)` depends on those cells. Two independent barriers.
+    let (wb, _src, _pivot) = sales_with_pivot("SUM", None);
+    // East = 30. If the pivot were somehow in its own source the numbers
+    // would compound; the grand total across groups is 10+20+3+4+5+7 = 49.
+    assert_eq!(
+        cell_num(&wb, 10, 1).unwrap()
+            + cell_num(&wb, 11, 1).unwrap()
+            + cell_num(&wb, 12, 1).unwrap(),
+        49.0
+    );
+}
+
+#[test]
+fn multi_criteria_sumifs_keeps_its_criteria_in_step() {
+    // A plain-cell regression test for a bug the pivot work surfaced, and one
+    // that had nothing to do with blocks: `calc_ifs` stopped advancing the
+    // later criteria iterators as soon as an earlier one said no. They are
+    // positional cursors, so from the first non-matching row onward every
+    // later criterion was compared against the wrong record — a silently
+    // wrong number, never an error.
+    //
+    //   A     B    C
+    //   East  Q1   10
+    //   East  Q2   20
+    //   South  Q1    3
+    //   South  Q1    4
+    //   South  Q2    5
+    //   North  Q1    7
+    //
+    // South AND Q1 is 3 + 4 = 7. The bug gave 8 (rows 3 and 5), because the
+    // quarter cursor lagged by the two leading East rows.
+    let mut wb = Workbook::default();
+    let rows = [
+        ("East", "Q1", "10"),
+        ("East", "Q2", "20"),
+        ("South", "Q1", "3"),
+        ("South", "Q1", "4"),
+        ("South", "Q2", "5"),
+        ("North", "Q1", "7"),
+    ];
+    let mut payloads = vec![];
+    for (r, (region, quarter, amt)) in rows.iter().enumerate() {
+        for (c, v) in [region, quarter, amt].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    for (row, formula) in [
+        (10, "=SUMIFS(C1:C6,A1:A6,\"South\",B1:B6,\"Q1\")"),
+        (11, "=COUNTIFS(A1:A6,\"South\",B1:B6,\"Q1\")"),
+        (12, "=AVERAGEIFS(C1:C6,A1:A6,\"South\",B1:B6,\"Q1\")"),
+        (13, "=MAXIFS(C1:C6,A1:A6,\"South\",B1:B6,\"Q1\")"),
+        (14, "=MINIFS(C1:C6,A1:A6,\"South\",B1:B6,\"Q1\")"),
+        // Three criteria, so a middle cursor has to stay in step too.
+        (
+            15,
+            "=SUMIFS(C1:C6,A1:A6,\"South\",B1:B6,\"Q1\",C1:C6,\">3\")",
+        ),
+        // And one criterion still works — the path that was already correct.
+        (16, "=SUMIFS(C1:C6,A1:A6,\"South\")"),
+    ] {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 5,
+            content: formula.to_string(),
+        }));
+    }
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    assert_eq!(cell_num(&wb, 10, 5), Some(7.0), "SUMIFS South x Q1 = 3 + 4");
+    assert_eq!(cell_num(&wb, 11, 5), Some(2.0), "COUNTIFS");
+    assert_eq!(cell_num(&wb, 12, 5), Some(3.5), "AVERAGEIFS");
+    assert_eq!(cell_num(&wb, 13, 5), Some(4.0), "MAXIFS");
+    assert_eq!(cell_num(&wb, 14, 5), Some(3.0), "MINIFS");
+    assert_eq!(
+        cell_num(&wb, 15, 5),
+        Some(4.0),
+        "three criteria: only the 4"
+    );
+    assert_eq!(cell_num(&wb, 16, 5), Some(12.0), "one criterion: 3 + 4 + 5");
+}
+
+#[test]
+fn minifs_and_maxifs_do_not_fold_from_zero() {
+    // A second bug the same work surfaced, also nothing to do with blocks:
+    // `calc_ifs` seeded its accumulator at 0 and folded with min/max, so
+    // MINIFS over all-positive data always returned 0 and MAXIFS over
+    // all-negative data always returned 0 — the answer was never even in the
+    // input. It matters here because MIN and MAX are two of the five
+    // functions a pivot can declare.
+    let mut wb = Workbook::default();
+    let mut payloads = vec![];
+    for (r, (tag, v)) in [("a", "3"), ("a", "5"), ("b", "-9"), ("a", "-2")]
+        .iter()
+        .enumerate()
+    {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: r,
+            col: 0,
+            content: tag.to_string(),
+        }));
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: r,
+            col: 1,
+            content: v.to_string(),
+        }));
+    }
+    for (row, formula) in [
+        // All positive: the minimum is 3, and 0 is not in the data at all.
+        (10, "=MINIFS(B1:B2,A1:A2,\"a\")"),
+        // All negative: the maximum is -9.
+        (11, "=MAXIFS(B3:B3,A3:A3,\"b\")"),
+        // Straddling zero still works, which is why this went unnoticed.
+        (12, "=MINIFS(B1:B4,A1:A4,\"a\")"),
+        // Nothing matches: 0 is the honest answer for an empty fold here,
+        // and it is what the function returned before.
+        (13, "=MINIFS(B1:B4,A1:A4,\"zzz\")"),
+    ] {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col: 5,
+            content: formula.to_string(),
+        }));
+    }
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 10, 5), Some(3.0), "MINIFS over 3 and 5");
+    assert_eq!(cell_num(&wb, 11, 5), Some(-9.0), "MAXIFS over -9");
+    assert_eq!(cell_num(&wb, 12, 5), Some(-2.0), "MINIFS over 3, 5, -2");
+    assert_eq!(cell_num(&wb, 13, 5), Some(0.0), "no matches");
+}
+
+#[test]
+fn a_pivots_key_column_must_name_a_group_that_occurs_in_the_source() {
+    // The pivot's key column is the ONE cell of the block a person can type
+    // into — everything else is generated, and the engine already drops writes
+    // to templated cells. And editing it does not re-aim the row (`#KEY` was
+    // captured at materialization), so the row would go on reporting the old
+    // group under the new label. The derived rule puts a marker on it the
+    // moment it stops naming a real group. See `design/block-pivot.md` §4.3.
+    let (mut wb, _src, _pivot) = sales_with_pivot("SUM", Some("quarter"));
+
+    // Row 10 is the pivot's first record; column 0 is its key.
+    let real = wb
+        .check_field_validation(0, 10, 0, "North".to_string())
+        .unwrap();
+    assert!(real.has_rule, "a pivot's key column carries a derived rule");
+    assert!(!real.violates, "North occurs in the source");
+    assert!(
+        real.rule.contains("COUNTIFS(") && real.rule.contains("region"),
+        "the rule asks the source's own column: {}",
+        real.rule
+    );
+
+    let typo = wb
+        .check_field_validation(0, 10, 0, "Norht".to_string())
+        .unwrap();
+    assert!(
+        typo.violates,
+        "a group that does not occur in the source is flagged"
+    );
+
+    // A value column is generated, so it is not the thing being guarded here.
+    let value_col = wb
+        .check_field_validation(0, 10, 1, "123".to_string())
+        .unwrap();
+    assert!(
+        !value_col.has_rule,
+        "only the key column gets the membership rule"
+    );
+}
+
+#[test]
+fn a_total_rows_key_column_gets_no_membership_rule() {
+    // The rule is a pivot's, not every analysis block's: a total row's label
+    // ("Total") is a caption, not a group, and flagging it would be noise.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    let (mut wb, _src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    let v = wb
+        .check_field_validation(0, 3, 0, "Total".to_string())
+        .unwrap();
+    assert!(!v.has_rule);
+}
+
+// ---------------------------------------------------------------------------
+// `pivot_plan`: the shape a pivot SHOULD have, and whether it has it.
+// `design/block-pivot.md` §6 and §8.
+// ---------------------------------------------------------------------------
+
+/// Append a record to `sales`. Returns nothing; the block grows by one row.
+fn add_sale(
+    wb: &mut Workbook,
+    src: logisheets_base::BlockId,
+    at: usize,
+    id: &str,
+    region: &str,
+    quarter: &str,
+    amt: &str,
+) {
+    let mut payloads = vec![EditPayload::InsertRowsInBlock(
+        crate::edit_action::InsertRowsInBlock {
+            sheet_idx: 0,
+            block_id: src,
+            start: at,
+            cnt: 1,
+        },
+    )];
+    for (c, v) in [id, region, quarter, amt].iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: at,
+            col: c,
+            content: v.to_string(),
+        }));
+    }
+    let effect = apply(wb, payloads);
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "add_sale: {:?}",
+        effect.error_message
+    );
+}
+
+#[test]
+fn a_fresh_pivot_is_not_stale() {
+    let (wb, _src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+
+    assert_eq!(plan.keys, vec!["East", "North", "South"]);
+    assert_eq!(plan.fields, vec!["Q1", "Q2"]);
+    assert!(!plan.is_stale, "it shows exactly what the source justifies");
+    assert!(plan.missing_keys.is_empty());
+    assert!(plan.extra_keys.is_empty());
+    assert_eq!(plan.unassigned_records, 0);
+}
+
+#[test]
+fn a_reorder_alone_is_not_staleness() {
+    // The pivot was built with East/South/North; the plan sorts to
+    // East/North/South. Every group is present and every number is right, so
+    // flagging it would train a reader to ignore the flag.
+    let (wb, _src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert_ne!(plan.keys, plan.current_keys, "the order does differ");
+    assert!(!plan.is_stale);
+}
+
+#[test]
+fn a_new_group_in_the_source_makes_the_pivot_stale_and_says_which() {
+    // The failure this whole reporting story exists for: every number in the
+    // pivot stays correct and a whole region is simply absent.
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    add_sale(&mut wb, src, 6, "o6", "Northwest", "Q1", "99");
+
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert!(plan.is_stale);
+    assert_eq!(plan.missing_keys, vec!["Northwest"]);
+    assert!(plan.extra_keys.is_empty());
+    assert!(plan.keys.contains(&"Northwest".to_string()));
+    // And the pivot's own numbers are still individually correct — which is
+    // exactly why this needs reporting rather than trust.
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0));
+}
+
+#[test]
+fn a_new_column_value_is_reported_as_a_missing_field() {
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    add_sale(&mut wb, src, 6, "o6", "East", "Q3", "99");
+
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert!(plan.is_stale);
+    assert_eq!(plan.missing_fields, vec!["Q3"]);
+    assert!(plan.missing_keys.is_empty(), "East is already shown");
+}
+
+#[test]
+fn a_group_that_vanishes_from_the_source_is_reported_as_extra() {
+    // The other direction. Harmless to read — the row computes 0 — but it is a
+    // group that no longer exists, and a refresh would drop it.
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    // North has exactly one record (o5, the last one).
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::DeleteRowsInBlock(
+            crate::edit_action::DeleteRowsInBlock {
+                sheet_idx: 0,
+                block_id: src,
+                start: 5,
+                cnt: 1,
+            },
+        )],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "{:?}",
+        effect.error_message
+    );
+
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert!(plan.is_stale);
+    assert_eq!(plan.extra_keys, vec!["North"]);
+    assert!(plan.missing_keys.is_empty());
+    assert_eq!(cell_num(&wb, 12, 1), Some(0.0), "and its row now reads 0");
+}
+
+#[test]
+fn records_with_a_blank_dimension_are_counted_rather_than_dropped_silently() {
+    // A blank is not a group: an empty key is not addressable and a row whose
+    // `#KEY` is "" would filter on the empty string. So those records are in
+    // NO cell of the pivot and its grand total is short by their measure —
+    // which is worth saying out loud, since nothing else in the sheet shows it.
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    add_sale(&mut wb, src, 6, "o6", "", "Q1", "99");
+
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert_eq!(plan.unassigned_records, 1);
+    assert!(
+        !plan.keys.iter().any(|k| k.is_empty()),
+        "a blank does not become a group of its own"
+    );
+    assert!(
+        !plan.is_stale,
+        "no group is missing — the record is nowhere"
+    );
+}
+
+#[test]
+fn the_plan_orders_dimensions_deterministically() {
+    // Ascending by default, with the same typed comparison `sort_block` uses,
+    // so a refresh does not reshuffle rows every time it runs.
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    add_sale(&mut wb, src, 6, "o6", "Northwest", "Q3", "1");
+
+    let a = wb.pivot_plan(0, pivot).unwrap();
+    let b = wb.pivot_plan(0, pivot).unwrap();
+    assert_eq!(a.keys, b.keys, "twice in a row gives the same order");
+    assert_eq!(a.fields, vec!["Q1", "Q2", "Q3"], "sorted, not first-seen");
+}
+
+#[test]
+fn first_seen_order_keeps_the_sources_own_sequence() {
+    use crate::block_manager::schema_manager::field_type::PivotSpecParts;
+    use crate::edit_action::SetBlockAnalyzes;
+
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: pivot,
+            analyzes: Some(src),
+            pivot: Some(PivotSpecParts {
+                row_dim: "region".into(),
+                col_dim: Some("quarter".into()),
+                measure: "amt".into(),
+                func: "SUM".into(),
+                order: Some("firstSeen".into()),
+                order_values: None,
+                filters: None,
+            }),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    // Source order is East, East, South, South, South, North.
+    assert_eq!(plan.keys, vec!["East", "South", "North"]);
+}
+
+#[test]
+fn a_grouped_pivot_plans_rows_only() {
+    // `col_dim: None` has one value column whose name means nothing, so there
+    // is nothing to plan for it — and no way for it to be reported stale.
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", None);
+    assert!(wb.pivot_plan(0, pivot).unwrap().fields.is_empty());
+
+    add_sale(&mut wb, src, 6, "o6", "Northwest", "Q9", "1");
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert_eq!(plan.missing_keys, vec!["Northwest"], "rows still track");
+    assert!(plan.missing_fields.is_empty(), "columns do not");
+}
+
+#[test]
+fn planning_a_block_that_is_not_a_pivot_says_so() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    let (wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    for id in [src, analysis] {
+        let err = wb.pivot_plan(0, id).unwrap_err();
+        assert!(format!("{err:?}").contains("is not a pivot"), "got {err:?}");
+    }
+}
+
+#[test]
+fn a_recipe_naming_a_field_the_source_lost_is_an_error_not_an_empty_plan() {
+    // An empty plan would read as "this pivot should have no rows", and a
+    // refresh acting on it would delete the whole thing.
+    use crate::block_manager::schema_manager::field_type::PivotSpecParts;
+    use crate::edit_action::SetBlockAnalyzes;
+
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: pivot,
+            analyzes: Some(src),
+            pivot: Some(PivotSpecParts {
+                row_dim: "nope".into(),
+                col_dim: Some("quarter".into()),
+                measure: "amt".into(),
+                func: "SUM".into(),
+                order: None,
+                order_values: None,
+                filters: None,
+            }),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    let err = wb.pivot_plan(0, pivot).unwrap_err();
+    assert!(
+        format!("{err:?}").contains("which block") && format!("{err:?}").contains("nope"),
+        "the error should name the field: {err:?}"
+    );
+}
+
+#[test]
+fn a_dimension_with_too_many_values_is_refused_with_the_count() {
+    // A pivot over a column with hundreds of distinct values is not a pivot,
+    // it is an unreadable wall — and a block that wide is slow to materialize.
+    // Returning a plan nobody can apply would be worse than saying so, and the
+    // message has to name the field and the limit or the user cannot act.
+    use crate::block_manager::schema_manager::field_type::PivotSpecParts;
+    use crate::edit_action::{BindFormSchema, SetBlockAnalyzes};
+
+    let mut wb = Workbook::default();
+    let src = wb.get_available_block_id(0).unwrap();
+    const N: usize = 250;
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: src,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: N,
+            col_cnt: 3,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "wide".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("id", "w0"),
+                SchemaFieldSpec::new("tag", "w1"),
+                SchemaFieldSpec::new("amt", "w2"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        }),
+    ];
+    for r in 0..N {
+        for (c, v) in [format!("k{r}"), format!("t{r}"), "1".to_string()]
+            .iter()
+            .enumerate()
+        {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.clone(),
+            }));
+        }
+    }
+    let effect = apply(&mut wb, payloads);
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "wide setup: {:?}",
+        effect.error_message
+    );
+
+    let pivot = wb.get_available_block_id(0).unwrap();
+    let effect = apply(
+        &mut wb,
+        vec![
+            EditPayload::CreateBlock(CreateBlock {
+                sheet_idx: 0,
+                id: pivot,
+                master_row: 300,
+                master_col: 0,
+                row_cnt: 1,
+                col_cnt: 2,
+                owner: None,
+                modify_policy: None,
+                permissions: None,
+                description: None,
+                analyzes: Some(src),
+                pivot: None,
+            }),
+            EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+                sheet_idx: 0,
+                block_id: pivot,
+                analyzes: Some(src),
+                pivot: Some(PivotSpecParts {
+                    // 250 distinct tags as COLUMNS, past the 200 cap.
+                    row_dim: "amt".into(),
+                    col_dim: Some("tag".into()),
+                    measure: "amt".into(),
+                    func: "SUM".into(),
+                    order: None,
+                    order_values: None,
+                    filters: None,
+                }),
+            }),
+        ],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "pivot setup: {:?}",
+        effect.error_message
+    );
+
+    let err = wb.pivot_plan(0, pivot).unwrap_err();
+    let msg = format!("{err:?}");
+    assert!(msg.contains("tag"), "names the field: {msg}");
+    assert!(msg.contains("200"), "names the limit: {msg}");
+    assert!(msg.contains("columns"), "says which axis: {msg}");
+
+    // The row dimension is fine (every record has amt = 1), so the refusal is
+    // about the column dimension specifically, not about the block's size.
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::SetBlockAnalyzes(SetBlockAnalyzes {
+            sheet_idx: 0,
+            block_id: pivot,
+            analyzes: Some(src),
+            pivot: Some(PivotSpecParts {
+                row_dim: "amt".into(),
+                col_dim: None,
+                measure: "amt".into(),
+                func: "SUM".into(),
+                order: None,
+                order_values: None,
+                filters: None,
+            }),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(wb.pivot_plan(0, pivot).unwrap().keys, vec!["1"]);
+}
+
+#[test]
+fn refreshing_a_pivot_with_a_trailing_no_op_resize_loses_the_new_row() {
+    // Found while wiring `WorkbookOps.refreshPivot` and pinned here because it
+    // is silent: after the refresh sequence (grow, write keys, bind), a
+    // TRAILING resize to the size the block already has leaves the newly added
+    // row's generated cells empty. The row is there, the key is there, the
+    // schema is right — only the numbers are missing, so a refreshed pivot
+    // looks like its newest group has no data.
+    //
+    // The host-side rule this forces: send the trailing resize only when the
+    // block is actually SHRINKING, which is what `design/block-pivot.md` §6
+    // says anyway ("shrink, if shrinking").
+    use crate::edit_action::BindFormSchema;
+
+    let refresh = |wb: &mut Workbook, pivot, trailing: bool| {
+        let mut payloads = vec![
+            resize_t(pivot, Some(4), Some(3)),
+            // The plan's order: East, North, South, Northwest.
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 11,
+                col: 0,
+                content: "East".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 12,
+                col: 0,
+                content: "North".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 13,
+                col: 0,
+                content: "South".into(),
+            }),
+            EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 14,
+                col: 0,
+                content: "Northwest".into(),
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "sales_pivot".into(),
+                sheet_idx: 0,
+                block_id: pivot,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("region", "p0"),
+                    SchemaFieldSpec::new("Q1", "p1"),
+                    SchemaFieldSpec::new("Q2", "p2"),
+                ],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            }),
+        ];
+        if trailing {
+            payloads.push(resize_t(pivot, Some(4), Some(3)));
+        }
+        let effect = apply(wb, payloads);
+        assert!(
+            matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+            "refresh: {:?}",
+            effect.error_message
+        );
+    };
+
+    let grow_source = |wb: &mut Workbook, src| {
+        let mut payloads = vec![
+            EditPayload::InsertRows(crate::edit_action::InsertRows {
+                sheet_idx: 0,
+                start: 6,
+                count: 1,
+            }),
+            EditPayload::InsertRowsInBlock(crate::edit_action::InsertRowsInBlock {
+                sheet_idx: 0,
+                block_id: src,
+                start: 6,
+                cnt: 1,
+            }),
+        ];
+        for (c, v) in ["o6", "Northwest", "Q1", "99"].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 6,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+        let effect = apply(wb, payloads);
+        assert!(matches!(
+            effect.status,
+            crate::edit_action::StatusCode::Ok(_)
+        ));
+    };
+
+    // Without the trailing resize: the new group computes.
+    let (mut a, src_a, pivot_a) = sales_with_pivot("SUM", Some("quarter"));
+    grow_source(&mut a, src_a);
+    refresh(&mut a, pivot_a, false);
+    assert_eq!(cell_num(&a, 14, 1), Some(99.0), "Northwest Q1");
+
+    // With it: the row is present and keyed, but its numbers are gone.
+    let (mut b, src_b, pivot_b) = sales_with_pivot("SUM", Some("quarter"));
+    grow_source(&mut b, src_b);
+    refresh(&mut b, pivot_b, true);
+    assert_eq!(cell_num(&b, 11, 1), Some(10.0), "existing rows survive");
+    assert_eq!(
+        cell_num(&b, 14, 1),
+        None,
+        "but the row the bind just materialized lost its numbers"
+    );
+
+    // Note the asymmetry, which is why this is characterised rather than
+    // explained: the same trailing resize does NOT lose an AUTHORED template's
+    // value (`growing_rows_and_rebinding_materializes_the_new_rows` plus a
+    // no-op resize still computes). Only a GENERATED formula — the pivot's —
+    // is affected. The cause is not established here; the behaviour is, so a
+    // host cannot walk into it again.
+}
+
+// ---------------------------------------------------------------------------
+// §9 of `design/block-pivot.md`: what a pivot can say beyond one measure over
+// one cross-tab — a row total, a second measure, a custom order, and a filter
+// on which source records count at all.
+// ---------------------------------------------------------------------------
+
+/// `sales` plus a pivot whose columns are given explicitly, so a test can add
+/// a total column or a second measure. `columns` is `(field name, spec)`.
+fn sales_with_columns(
+    spec: crate::block_manager::schema_manager::field_type::PivotSpecParts,
+    columns: &[SchemaFieldSpec],
+    keys: &[&str],
+) -> (Workbook, logisheets_base::BlockId, logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let src = sales_block(&mut wb);
+    let pivot = wb.get_available_block_id(0).unwrap();
+
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: pivot,
+        master_row: 10,
+        master_col: 0,
+        row_cnt: keys.len(),
+        col_cnt: 1 + columns.len(),
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: Some(src),
+        pivot: Some(spec),
+    })];
+    for (i, k) in keys.iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 10 + i,
+            col: 0,
+            content: k.to_string(),
+        }));
+    }
+    let mut fields = vec![SchemaFieldSpec::new("region", "p0")];
+    fields.extend(columns.iter().cloned());
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "sales_pivot".into(),
+        sheet_idx: 0,
+        block_id: pivot,
+        field_from: 0,
+        key_idx: 0,
+        fields,
+        row: true,
+        header_idx: None,
+        unique_together: None,
+    }));
+
+    let effect = apply(&mut wb, payloads);
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "pivot setup: {:?}",
+        effect.error_message
+    );
+    (wb, src, pivot)
+}
+
+fn cross_tab_spec() -> crate::block_manager::schema_manager::field_type::PivotSpecParts {
+    crate::block_manager::schema_manager::field_type::PivotSpecParts {
+        row_dim: "region".into(),
+        col_dim: Some("quarter".into()),
+        measure: "amt".into(),
+        func: "SUM".into(),
+        order: Some("ascending".into()),
+        order_values: None,
+        filters: None,
+    }
+}
+
+/// A source whose measure column has GAPS and a non-numeric entry — the only
+/// shape in which COUNT and COUNTA can be told apart.
+fn gappy_block(wb: &mut Workbook) -> logisheets_base::BlockId {
+    use crate::edit_action::BindFormSchema;
+    let src = wb.get_available_block_id(0).unwrap();
+    // East: 10 and a blank. South: "n/a" and 5. So for East COUNT=1 COUNTA=1
+    // (the blank is neither), and for South COUNT=1 COUNTA=2 — the text counts
+    // as present but is not a number.
+    let rows = [
+        ("o0", "East", "10"),
+        ("o1", "East", ""),
+        ("o2", "South", "n/a"),
+        ("o3", "South", "5"),
+    ];
+    let mut payloads = vec![
+        EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: src,
+            master_row: 0,
+            master_col: 0,
+            row_cnt: rows.len(),
+            col_cnt: 3,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        }),
+        EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "gappy".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("id", "g0"),
+                SchemaFieldSpec::new("region", "g1"),
+                SchemaFieldSpec::new("amt", "g2"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        }),
+    ];
+    for (r, (id, region, amt)) in rows.iter().enumerate() {
+        for (c, v) in [id, region, amt].iter().enumerate() {
+            if v.is_empty() {
+                continue; // the gap is the point
+            }
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    let effect = apply(wb, payloads);
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "gappy setup: {:?}",
+        effect.error_message
+    );
+    src
+}
+
+#[test]
+fn counta_counts_present_values_where_count_counts_numbers() {
+    // The distinction COUNTA exists for. A pivot COUNT counts matching
+    // RECORDS; COUNTA counts the ones whose measure is actually there — which
+    // is the question "how many of these did we fill in?", and it is not
+    // answerable with any other aggregate.
+    use crate::block_manager::schema_manager::field_type::PivotSpecParts;
+    use crate::edit_action::BindFormSchema;
+
+    let mut wb = Workbook::default();
+    let src = gappy_block(&mut wb);
+    let pivot = wb.get_available_block_id(0).unwrap();
+
+    let spec = PivotSpecParts {
+        row_dim: "region".into(),
+        col_dim: None,
+        measure: "amt".into(),
+        func: "COUNTA".into(),
+        order: Some("ascending".into()),
+        order_values: None,
+        filters: None,
+    };
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: pivot,
+        master_row: 10,
+        master_col: 0,
+        row_cnt: 2,
+        col_cnt: 3,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: Some(src),
+        pivot: Some(spec),
+    })];
+    for (i, k) in ["East", "South"].iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 10 + i,
+            col: 0,
+            content: k.to_string(),
+        }));
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "gappy_pivot".into(),
+        sheet_idx: 0,
+        block_id: pivot,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("region", "p0"),
+            SchemaFieldSpec::new("filled", "p1"),
+            // Beside it, the same groups counted the other two ways.
+            SchemaFieldSpec::new("records", "p2").with_pivot_column(
+                None,
+                crate::block_manager::schema_manager::field_type::AggFunc::Count,
+                "amt",
+            ),
+        ],
+        row: true,
+        header_idx: None,
+        unique_together: None,
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "pivot setup: {:?}",
+        effect.error_message
+    );
+
+    // East has one filled amt and one blank; South has "n/a" and 5.
+    assert_eq!(cell_num(&wb, 10, 1), Some(1.0), "East: one amt present");
+    assert_eq!(
+        cell_num(&wb, 11, 1),
+        Some(2.0),
+        "South: \"n/a\" is present even though it is not a number"
+    );
+    // COUNT counts matching RECORDS, so it does not notice the gap at all.
+    assert_eq!(cell_num(&wb, 10, 2), Some(2.0), "East: two records");
+    assert_eq!(cell_num(&wb, 11, 2), Some(2.0), "South: two records");
+}
+
+#[test]
+fn a_counta_recipe_survives_a_real_xlsx_round_trip() {
+    // `func` is a free string on the wire precisely so a newer aggregate does
+    // not stop an older build opening the file; this is the other half of that
+    // — a build that KNOWS it must read it back.
+    use crate::block_manager::schema_manager::field_type::{AggFunc, PivotSpecParts};
+    let spec = PivotSpecParts {
+        func: "COUNTA".into(),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South"],
+    );
+    let bytes = wb.save().expect("save");
+    let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
+    let ws = restored.get_sheet_by_idx(0).unwrap();
+    let p = ws
+        .get_all_blocks()
+        .into_iter()
+        .find(|b| b.block_id == pivot)
+        .expect("the pivot survived");
+    assert_eq!(
+        p.pivot.as_ref().unwrap().func,
+        AggFunc::CountA.as_str(),
+        "the aggregate came back as COUNTA, not as a guess"
+    );
+}
+
+#[test]
+fn a_row_total_column_spans_every_value_of_the_column_dimension() {
+    // The in-pivot total. A column declaring `col_value: *` drops the column
+    // criteria pair entirely, which is exactly the grouped lowering — so the
+    // same generator produces both, and there is no second code path to keep
+    // in step.
+    let (wb, _src, _pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Q2", "p2"),
+            SchemaFieldSpec::new("Total", "p3").with_pivot_total(),
+        ],
+        &["East", "South", "North"],
+    );
+
+    // East: Q1 10, Q2 20, total 30.
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0));
+    assert_eq!(cell_num(&wb, 10, 2), Some(20.0));
+    assert_eq!(cell_num(&wb, 10, 3), Some(30.0), "East total");
+    // South: 3 + 4 in Q1, 5 in Q2, total 12.
+    assert_eq!(cell_num(&wb, 11, 3), Some(12.0), "South total");
+    // North: only Q1 = 7.
+    assert_eq!(cell_num(&wb, 12, 3), Some(7.0), "North total");
+}
+
+#[test]
+fn a_pivot_can_carry_a_second_measure() {
+    // `SUM of amt` beside `COUNT` of the same rows. The block-level recipe
+    // becomes a default; a column that says otherwise wins.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    let (wb, _src, _pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Q1 Orders", "p2").with_pivot_column(
+                Some("Q1"),
+                AggFunc::Count,
+                "amt",
+            ),
+            SchemaFieldSpec::new("Mean", "p3").with_pivot_column(None, AggFunc::Average, "amt"),
+        ],
+        &["East", "South"],
+    );
+
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "East Q1 amount");
+    assert_eq!(cell_num(&wb, 10, 2), Some(1.0), "East has one Q1 record");
+    assert_eq!(cell_num(&wb, 11, 1), Some(7.0), "South Q1 = 3 + 4");
+    assert_eq!(cell_num(&wb, 11, 2), Some(2.0), "South has two Q1 records");
+    // The average column spans every quarter: South is (3+4+5)/3 = 4.
+    assert_eq!(cell_num(&wb, 11, 3), Some(4.0), "South average over all");
+}
+
+#[test]
+fn a_refresh_keeps_the_columns_a_person_declared() {
+    // The rule that makes totals and second measures survive: the plan owns
+    // the DERIVED columns and nothing else. A total column is not a value the
+    // source has, so "the source no longer justifies it" must not apply to it.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    let (wb, _src, pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Q2", "p2"),
+            SchemaFieldSpec::new("Total", "p3").with_pivot_total(),
+            SchemaFieldSpec::new("Orders", "p4").with_pivot_column(None, AggFunc::Count, "amt"),
+        ],
+        &["East", "South", "North"],
+    );
+
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert_eq!(
+        plan.fields,
+        vec!["Q1", "Q2", "Total", "Orders"],
+        "derived columns first, hand-declared ones after"
+    );
+    assert!(
+        plan.extra_fields.is_empty(),
+        "a declared column is never 'extra': {:?}",
+        plan.extra_fields
+    );
+    assert!(!plan.is_stale);
+}
+
+#[test]
+fn a_declared_column_on_a_block_that_is_not_a_pivot_is_refused() {
+    // It would be silently inert, and a declaration that does nothing is worse
+    // than a refusal: its author believes it took effect.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, src, _analysis) = orders_with_analysis(AggFunc::Sum);
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "orders".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "s0"),
+                SchemaFieldSpec::new("amt", "s1").with_pivot_total(),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Err(_)
+    ));
+    assert!(
+        effect
+            .error_message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("is not a pivot"),
+        "{:?}",
+        effect.error_message
+    );
+}
+
+#[test]
+fn a_custom_order_puts_the_dimensions_where_the_business_wants_them() {
+    // Neither ascending nor first-seen can express a month ladder or a
+    // reporting sequence, and both are wrong for them.
+    use crate::block_manager::schema_manager::field_type::PivotSpecParts;
+    let spec = PivotSpecParts {
+        order: Some("custom".into()),
+        order_values: Some(vec!["North".into(), "East".into(), "South".into()]),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South", "North"],
+    );
+    assert_eq!(
+        wb.pivot_plan(0, pivot).unwrap().keys,
+        vec!["North", "East", "South"]
+    );
+}
+
+#[test]
+fn a_value_the_custom_order_does_not_mention_still_gets_a_row() {
+    // The trap a custom order invites: listing three regions and silently
+    // losing the fourth. A hidden group is the exact failure this design
+    // reports rather than commits, so unlisted values follow the list in
+    // ascending order instead of vanishing.
+    use crate::block_manager::schema_manager::field_type::PivotSpecParts;
+    let spec = PivotSpecParts {
+        order: Some("custom".into()),
+        // South deliberately unlisted.
+        order_values: Some(vec!["North".into(), "East".into()]),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South", "North"],
+    );
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert_eq!(plan.keys, vec!["North", "East", "South"]);
+    assert!(
+        plan.keys.contains(&"South".to_string()),
+        "an unlisted value is ordered last, never dropped"
+    );
+}
+
+/// A recipe whose MEASURE names nothing must be reported broken.
+///
+/// Nothing about the plan needs the measure — rows and columns are distinct
+/// values of the DIMENSIONS — so this used to plan perfectly: `is_stale:
+/// false`, no error, and every cell reading 0, because a `BLOCKREFS` that
+/// matches nothing yields an empty matrix rather than a failure. An agent
+/// reading that pivot reports zeros as fact, which is the one thing the whole
+/// design is built to prevent.
+#[test]
+fn a_pivot_whose_measure_is_gone_is_broken_not_merely_zero() {
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    assert!(wb.pivot_plan(0, pivot).is_ok(), "healthy to begin with");
+
+    // Re-bind the source with the measure gone. A different render id, so it
+    // reads as "field removed, field added" rather than a rename — the one
+    // shape rename-propagation cannot follow.
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "sales".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            row: true,
+            header_idx: None,
+            unique_together: None,
+            fields: vec![
+                SchemaFieldSpec::new("id", "s0"),
+                SchemaFieldSpec::new("region", "s1"),
+                SchemaFieldSpec::new("quarter", "s2"),
+                SchemaFieldSpec::new("gone", "s9").with_field_type(
+                    crate::block_manager::schema_manager::field_type::FieldType::Number,
+                ),
+            ],
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    // Every cell reads 0 — which is exactly why the plan has to object.
+    assert_eq!(cell_num(&wb, 10, 1), Some(0.0));
+
+    let err = wb
+        .pivot_plan(0, pivot)
+        .expect_err("a recipe measuring a field that is gone is broken");
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("measures") && msg.contains("amt"),
+        "the reason names the measure the RECIPE wants — which is the field a \
+         reader has to go and restore or rename: {msg}"
+    );
+}
+
+#[test]
+fn a_key_excluded_by_a_filter_is_flagged_even_though_it_occurs_in_the_source() {
+    // "Occurs in the source" and "belongs in this pivot" stop being the same
+    // question once a filter exists, and the CELLS answer the second one. The
+    // key rule used to answer the first, so a region every filter excluded was
+    // accepted into the key column and its row then read 0 in every cell — an
+    // unmarked empty row, which is exactly what this rule exists to prevent.
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "region".into(),
+            criteria: "<>North".into(),
+        }]),
+        col_dim: None,
+        ..cross_tab_spec()
+    };
+    let (mut wb, _src, _pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("amt", "p1")],
+        // North is deliberately absent: the filter excludes it.
+        &["East", "South"],
+    );
+
+    // Row 10 is the pivot's first record; column 0 is its key.
+    let included = wb
+        .check_field_validation(0, 10, 0, "South".to_string())
+        .unwrap();
+    assert!(
+        !included.violates,
+        "South survives the filter, so it is a group this pivot has"
+    );
+
+    let excluded = wb
+        .check_field_validation(0, 10, 0, "North".to_string())
+        .unwrap();
+    assert!(
+        excluded.violates,
+        "North is a real region the filter excludes — its row would read 0 in \
+         every cell, so the key must be flagged: {}",
+        excluded.rule
+    );
+    assert!(
+        excluded.rule.contains("<>North"),
+        "the rule carries the pivot's own filters: {}",
+        excluded.rule
+    );
+
+    let unreal = wb
+        .check_field_validation(0, 10, 0, "Atlantis".to_string())
+        .unwrap();
+    assert!(
+        unreal.violates,
+        "and a value that never occurs is still flagged"
+    );
+}
+
+#[test]
+fn a_source_filter_narrows_the_numbers_and_the_rows_together() {
+    // The property that makes a filter honest: it is applied to the cells AND
+    // to the plan. Applied to only the cells, a filtered-out group would keep
+    // its row and show a confident 0; applied to only the plan, its numbers
+    // would still be inside someone else's total.
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "quarter".into(),
+            criteria: "Q1".into(),
+        }]),
+        col_dim: None,
+        ..cross_tab_spec()
+    };
+    // North only has a Q1 record, so it survives; every region does here.
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("amt", "p1")],
+        &["East", "South", "North"],
+    );
+
+    // Only Q1 amounts: East 10, South 3 + 4, North 7 — the Q2 rows are gone.
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "East without its Q2 20");
+    assert_eq!(cell_num(&wb, 11, 1), Some(7.0), "South without its Q2 5");
+    assert_eq!(cell_num(&wb, 12, 1), Some(7.0), "North");
+
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert_eq!(plan.keys, vec!["East", "North", "South"], "ascending");
+    assert!(!plan.is_stale);
+}
+
+#[test]
+fn a_filter_that_excludes_a_group_entirely_removes_its_row() {
+    // The half that only works because the plan filters too.
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "quarter".into(),
+            criteria: "Q2".into(),
+        }]),
+        col_dim: None,
+        ..cross_tab_spec()
+    };
+    // North has no Q2 record at all, so the filtered pivot must not offer it a
+    // row that would read 0 as if that were its Q2 total.
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("amt", "p1")],
+        &["East", "South", "North"],
+    );
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert_eq!(plan.keys, vec!["East", "South"], "North is filtered out");
+    assert_eq!(plan.extra_keys, vec!["North"]);
+    assert!(plan.is_stale, "and the pivot is told to drop that row");
+}
+
+#[test]
+fn a_numeric_filter_uses_the_same_condition_syntax_as_the_formula() {
+    // `>5` means one thing, and it means it in both places, because both go
+    // through the calc engine's own `parse_condition` / `match_condition`.
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "amt".into(),
+            criteria: ">5".into(),
+        }]),
+        col_dim: None,
+        ..cross_tab_spec()
+    };
+    // Records over 5: East 10, East 20, North 7. South's 3/4/5 all fall out.
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("amt", "p1")],
+        &["East", "North"],
+    );
+    assert_eq!(cell_num(&wb, 10, 1), Some(30.0), "East 10 + 20");
+    assert_eq!(cell_num(&wb, 11, 1), Some(7.0), "North");
+    let plan = wb.pivot_plan(0, pivot).unwrap();
+    assert_eq!(
+        plan.keys,
+        vec!["East", "North"],
+        "South has no record over 5"
+    );
+}
+
+#[test]
+fn a_filter_naming_a_field_the_source_lacks_is_an_error() {
+    // Not a no-op: the CELLS would still filter on it and read 0, so a plan
+    // that quietly ignored the filter would disagree with the numbers.
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "nope".into(),
+            criteria: "x".into(),
+        }]),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, pivot) =
+        sales_with_columns(spec, &[SchemaFieldSpec::new("Q1", "p1")], &["East"]);
+    let err = wb.pivot_plan(0, pivot).unwrap_err();
+    assert!(
+        format!("{err:?}").contains("filters on") && format!("{err:?}").contains("nope"),
+        "{err:?}"
+    );
+}
+
+#[test]
+fn a_pivots_inherited_number_formats_survive_a_round_trip() {
+    // The formats are the newest part of a pivot and the easiest to lose,
+    // because they do not live on the recipe or the schema — they hang off the
+    // fields' RENDER ids. A pivot that reopens as bare numbers beside a
+    // currency source is the kind of wrongness a reader blames on the data.
+    use crate::edit_action::UpsertFieldRenderInfo;
+    let money = "\"$\"#,##0.00";
+    let (mut wb, _src, pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Total", "p2").with_pivot_total(),
+        ],
+        &["East", "South"],
+    );
+    // What every host sends after creating a pivot: the measure's format onto
+    // each value column, and nothing onto the key.
+    let effect = apply(
+        &mut wb,
+        vec![
+            EditPayload::UpsertFieldRenderInfo(UpsertFieldRenderInfo {
+                render_id: "p1".to_string(),
+                diy_render: false,
+                style_update: crate::edit_action::StyleUpdateType {
+                    set_num_fmt: Some(money.to_string()),
+                    ..Default::default()
+                },
+            }),
+            EditPayload::UpsertFieldRenderInfo(UpsertFieldRenderInfo {
+                render_id: "p2".to_string(),
+                diy_render: false,
+                style_update: crate::edit_action::StyleUpdateType {
+                    set_num_fmt: Some(money.to_string()),
+                    ..Default::default()
+                },
+            }),
+        ],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let bytes = wb.save().expect("save");
+    let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
+    let ws = restored.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+
+    let fmt_of = |render_id: &str| {
+        p.field_renders
+            .iter()
+            .find(|r| r.render_id == render_id)
+            .and_then(|r| r.style.as_ref())
+            .map(|s| s.formatter.clone())
+            .unwrap_or_default()
+    };
+    assert_eq!(fmt_of("p1"), money, "the derived column");
+    assert_eq!(fmt_of("p2"), money, "and the declared total");
+    // The values are still there and still right, which is the other half of
+    // "nothing was lost": a format on an empty cell is no use.
+    assert_eq!(cell_num(&restored, 10, 1), Some(10.0), "East Q1");
+    assert_eq!(cell_num(&restored, 11, 1), Some(7.0), "South Q1");
+}
+
+/// The OOXML pivot parts the save generates, or `None` when none were.
+fn saved_pivot_parts(
+    wb: &Workbook,
+) -> Option<(
+    logisheets_workbook::workbook::PivotCache,
+    logisheets_workbook::workbook::PivotTablePart,
+)> {
+    let saved = crate::file_saver::save_file(&wb.controller, false).expect("save");
+    let cache = saved.xl.pivot_caches.first()?.clone();
+    let table = saved
+        .xl
+        .worksheets
+        .values()
+        .flat_map(|w| w.pivot_tables.iter())
+        .next()?
+        .clone();
+    Some((cache, table))
+}
+
+#[test]
+fn a_plain_pivot_is_also_written_as_a_real_ooxml_pivot_table() {
+    // Our pivot's cells are `SUMIFS(BLOCKREFSB(..))`, and `BLOCKREFSB` is
+    // ours: Excel shows the cached numbers and then `#NAME?` the moment it
+    // recalculates. Declaring the pivot in Excel's own vocabulary is what
+    // makes the file mean the same thing in both places.
+    let (wb, _src, _pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Q2", "p2"),
+        ],
+        &["East", "South"],
+    );
+    let (cache, table) = saved_pivot_parts(&wb).expect("a pivot part was generated");
+
+    // The cache names the source's TABLE — which the same save emits from the
+    // source block — instead of copying its rows.
+    assert_eq!(
+        cache
+            .definition
+            .cache_source
+            .worksheet_source
+            .as_ref()
+            .unwrap()
+            .name
+            .as_deref(),
+        Some("sales")
+    );
+    assert!(cache.definition.refresh_on_load, "Excel builds the records");
+    assert!(cache.records.is_none(), "so we ship none");
+
+    // Axes point at the SOURCE's field indices: id, region, quarter, amt.
+    assert_eq!(table.definition.row_fields.as_ref().unwrap().field[0].x, 1);
+    assert_eq!(table.definition.col_fields.as_ref().unwrap().field[0].x, 2);
+    assert_eq!(
+        table.definition.data_fields.as_ref().unwrap().data_field[0].fld,
+        3
+    );
+    // Exactly the block: it starts at row 10 (0-based) and owns two rows, so
+    // A11:C12. The header line, when a schema declares one, is one of the
+    // block's own lines rather than a row above it.
+    assert_eq!(table.definition.location.reference, "A11:C12");
+}
+
+/// A host can ask whether a pivot will survive a trip to Excel, BEFORE it
+/// builds one.
+///
+/// The saver already decides this on every write. Answering only there means
+/// the choice is made by whoever wrote the recipe without being told there was
+/// one — and the degradation is silent: the file still opens, it just holds a
+/// grid of numbers Excel cannot recompute.
+#[test]
+fn a_host_can_ask_why_a_pivot_would_not_survive_excel() {
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+
+    // A plain cross-tab maps exactly, so there is nothing to warn about.
+    let (wb, _src, pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Q2", "p2"),
+        ],
+        &["East", "South"],
+    );
+    assert!(wb.pivot_excel_note(0, pivot).unwrap().expressible);
+
+    // A filtered one does not, and the reason says what to do about it.
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "quarter".into(),
+            criteria: "Q1".into(),
+        }]),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South"],
+    );
+    let note = wb.pivot_excel_note(0, pivot).unwrap();
+    assert!(!note.expressible, "a filtered pivot cannot be expressed");
+    let why = note.reason.expect("and it says why");
+    assert!(
+        why.contains("filters"),
+        "the reason names the part that does not map: {why}"
+    );
+
+    // And an ordinary block is not a pivot, so there is nothing to say.
+    let (wb, src, _pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East"],
+    );
+    let note = wb.pivot_excel_note(0, src).unwrap();
+    assert!(note.expressible && note.reason.is_none());
+}
+
+#[test]
+fn a_pivot_excel_cannot_express_gets_no_pivot_part() {
+    // A filter is the clearest case: ours is a condition evaluated per record,
+    // Excel's selects items from a list. A pivot table Excel would render with
+    // different numbers than the sheet it sits in is worse than none, so we
+    // emit none — the block is still saved, as our own values and recipe.
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        filters: Some(vec![PivotFilter {
+            field: "quarter".into(),
+            criteria: "Q1".into(),
+        }]),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, _pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South"],
+    );
+    assert!(
+        saved_pivot_parts(&wb).is_none(),
+        "a filtered pivot is not expressible as an OOXML pivot table"
+    );
+}
+
+#[test]
+fn a_generated_pivot_part_leaves_no_formulas_in_its_own_range() {
+    // A native pivot table OWNS its range: Excel's files hold values there and
+    // no formulas, and ours would hold a formula Excel cannot evaluate. So the
+    // cells go out as values — which loses nothing, because a pivot's cells
+    // are generated and the LOADER re-materializes every one of them.
+    let (wb, _src, _pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[SchemaFieldSpec::new("Q1", "p1")],
+        &["East", "South"],
+    );
+    let saved = crate::file_saver::save_file(&wb.controller, false).expect("save");
+    let ws = saved.xl.worksheets.values().next().unwrap();
+    for row in ws.worksheet_part.sheet_data.rows.iter() {
+        for cell in row.cells.iter() {
+            let Some(r) = cell.r.as_deref() else { continue };
+            let Some((ri, ci)) = crate::sqref::a1_to_row_col(r) else {
+                continue;
+            };
+            // The pivot block is rows 10..11, columns 0..1.
+            if (10..12).contains(&ri) && ci < 2 {
+                assert!(
+                    cell.f.is_none(),
+                    "{r} still carries a formula inside the pivot's range"
+                );
+            }
+        }
+    }
+    // And the numbers are there, so Excel has something to show before it
+    // refreshes the cache.
+    let has_values = ws.worksheet_part.sheet_data.rows.iter().any(|row| {
+        row.cells
+            .iter()
+            .any(|c| c.r.as_deref() == Some("B11") && c.v.is_some())
+    });
+    assert!(has_values, "the computed values are still written");
+}
+
+#[test]
+fn everything_in_section_nine_survives_a_real_xlsx_round_trip() {
+    // Three lists and a per-field override, all of which have to persist or
+    // the pivot silently reverts to a plain cross-tab on reopen.
+    use crate::block_manager::schema_manager::field_type::{AggFunc, PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        order: Some("custom".into()),
+        order_values: Some(vec!["North".into(), "East".into()]),
+        filters: Some(vec![PivotFilter {
+            field: "quarter".into(),
+            criteria: "Q1".into(),
+        }]),
+        ..cross_tab_spec()
+    };
+    let (wb, _src, pivot) = sales_with_columns(
+        spec,
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            SchemaFieldSpec::new("Total", "p2").with_pivot_total(),
+            SchemaFieldSpec::new("Orders", "p3").with_pivot_column(None, AggFunc::Count, "amt"),
+        ],
+        &["North", "East", "South"],
+    );
+
+    let bytes = wb.save().expect("save");
+    let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
+
+    let ws = restored.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+    let s = p.pivot.as_ref().expect("the recipe survived");
+    assert_eq!(s.order.as_deref(), Some("custom"));
+    assert_eq!(s.order_values.as_deref().unwrap(), ["North", "East"]);
+    let filters = s.filters.as_deref().unwrap();
+    assert_eq!(filters.len(), 1);
+    assert_eq!(filters[0].field, "quarter");
+    assert_eq!(filters[0].criteria, "Q1");
+
+    let fields = &p.schema.as_ref().unwrap().fields;
+    let total = fields.iter().find(|f| f.field == "Total").unwrap();
+    assert_eq!(total.pivot_col_value.as_deref(), Some("*"));
+    let count = fields.iter().find(|f| f.field == "Orders").unwrap();
+    assert_eq!(count.pivot_col_value.as_deref(), Some("*"));
+    assert_eq!(count.pivot_func.as_deref(), Some("COUNT"));
+    assert_eq!(count.pivot_measure.as_deref(), Some("amt"));
+    // A derived column keeps saying nothing.
+    let q1 = fields.iter().find(|f| f.field == "Q1").unwrap();
+    assert_eq!(q1.pivot_col_value, None);
+
+    // And it still computes from the restored declaration.
+    assert_eq!(cell_num(&restored, 10, 1), Some(7.0), "North Q1");
+}
+
+// ---------------------------------------------------------------------------
+// Renaming a source field must not leave its dependents reading 0.
+// ---------------------------------------------------------------------------
+
+/// Re-bind `sales` with `region` renamed to `area`, keeping every render id —
+/// which is what makes it a RENAME rather than a drop plus an add.
+fn rename_region_to_area(wb: &mut Workbook, src: logisheets_base::BlockId) {
+    use crate::edit_action::BindFormSchema;
+    let effect = apply(
+        wb,
+        vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "sales".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("id", "s0"),
+                SchemaFieldSpec::new("area", "s1"),
+                SchemaFieldSpec::new("quarter", "s2"),
+                SchemaFieldSpec::new("amt", "s3"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        })],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "rename: {:?}",
+        effect.error_message
+    );
+}
+
+#[test]
+fn renaming_a_source_field_carries_into_a_pivots_recipe() {
+    // Before this, the pivot kept saying `rows = region`, `BLOCKREFS` matched
+    // nothing, and every cell read 0 — with no error anywhere on the sheet.
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "sanity");
+
+    rename_region_to_area(&mut wb, src);
+
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "East Q1 still computes");
+    assert_eq!(cell_num(&wb, 11, 1), Some(7.0), "South Q1 = 3 + 4");
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+    assert_eq!(
+        p.pivot.as_ref().unwrap().row_dim,
+        "area",
+        "the recipe followed the rename"
+    );
+    // And the plan agrees, rather than erroring on a field that is gone.
+    assert_eq!(wb.pivot_plan(0, pivot).unwrap().keys.len(), 3);
+}
+
+#[test]
+fn renaming_a_measure_carries_into_the_recipe_and_the_declared_columns() {
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, src, pivot) = sales_with_columns(
+        cross_tab_spec(),
+        &[
+            SchemaFieldSpec::new("Q1", "p1"),
+            // A hand-declared column names the measure a SECOND time.
+            SchemaFieldSpec::new("Mean", "p2").with_pivot_column(None, AggFunc::Average, "amt"),
+        ],
+        &["East", "South"],
+    );
+    assert_eq!(cell_num(&wb, 10, 2), Some(15.0), "East average of 10, 20");
+
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "sales".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("id", "s0"),
+                SchemaFieldSpec::new("region", "s1"),
+                SchemaFieldSpec::new("quarter", "s2"),
+                SchemaFieldSpec::new("amount", "s3"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "the derived column");
+    assert_eq!(cell_num(&wb, 10, 2), Some(15.0), "and the declared one");
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+    assert_eq!(p.pivot.as_ref().unwrap().measure, "amount");
+    let declared = p
+        .schema
+        .as_ref()
+        .unwrap()
+        .fields
+        .iter()
+        .find(|f| f.field == "Mean")
+        .unwrap();
+    assert_eq!(declared.pivot_measure.as_deref(), Some("amount"));
+}
+
+#[test]
+fn renaming_a_filtered_field_carries_into_the_filter() {
+    use crate::block_manager::schema_manager::field_type::{PivotFilter, PivotSpecParts};
+    let spec = PivotSpecParts {
+        col_dim: None,
+        filters: Some(vec![PivotFilter {
+            field: "quarter".into(),
+            criteria: "Q1".into(),
+        }]),
+        ..cross_tab_spec()
+    };
+    let (mut wb, src, pivot) = sales_with_columns(
+        spec,
+        &[SchemaFieldSpec::new("amt", "p1")],
+        &["East", "South", "North"],
+    );
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "East Q1 only");
+
+    use crate::edit_action::BindFormSchema;
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "sales".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("id", "s0"),
+                SchemaFieldSpec::new("region", "s1"),
+                SchemaFieldSpec::new("quarter", "s2"),
+                SchemaFieldSpec::new("amt", "s3"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    // A filter left naming the old field would match nothing, and every row
+    // would collapse to 0 — while still looking like a filtered pivot.
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+    assert_eq!(
+        p.pivot.as_ref().unwrap().filters.as_ref().unwrap()[0].field,
+        "quarter"
+    );
+}
+
+#[test]
+fn renaming_a_source_field_carries_into_a_total_rows_aggregate() {
+    // The same hazard, on the feature that had it first: an analysis block's
+    // `SUM of "amt"` named the field by string too.
+    use crate::block_manager::schema_manager::field_type::AggFunc;
+    use crate::edit_action::BindFormSchema;
+
+    let (mut wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
+    assert_eq!(cell_num(&wb, 3, 1), Some(60.0), "sanity");
+
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::BindFormSchema(BindFormSchema {
+            ref_name: "orders".into(),
+            sheet_idx: 0,
+            block_id: src,
+            field_from: 0,
+            key_idx: 0,
+            fields: vec![
+                SchemaFieldSpec::new("key", "s0"),
+                SchemaFieldSpec::new("amount", "s1"),
+            ],
+            row: true,
+            header_idx: None,
+            unique_together: None,
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert_eq!(cell_num(&wb, 3, 1), Some(60.0), "the total still totals");
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let a = blocks.iter().find(|b| b.block_id == analysis).unwrap();
+    let amt = a
+        .schema
+        .as_ref()
+        .unwrap()
+        .fields
+        .iter()
+        .find(|f| f.agg_field.is_some())
+        .unwrap();
+    assert_eq!(amt.agg_field.as_deref(), Some("amount"));
+}
+
+#[test]
+fn adding_and_reordering_fields_is_not_read_as_a_rename() {
+    // The detection is by RENDER ID, so a new field (new id) and a reorder
+    // (same ids, same names) both leave declarations alone. Position matching
+    // would have read a reorder as a mass rename and rewritten every recipe.
+    use crate::edit_action::BindFormSchema;
+    let (mut wb, src, pivot) = sales_with_pivot("SUM", Some("quarter"));
+
+    let effect = apply(
+        &mut wb,
+        vec![
+            EditPayload::InsertColsInBlock(crate::edit_action::InsertColsInBlock {
+                sheet_idx: 0,
+                block_id: src,
+                start: 4,
+                cnt: 1,
+            }),
+            EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "sales".into(),
+                sheet_idx: 0,
+                block_id: src,
+                field_from: 0,
+                key_idx: 0,
+                fields: vec![
+                    SchemaFieldSpec::new("id", "s0"),
+                    SchemaFieldSpec::new("region", "s1"),
+                    SchemaFieldSpec::new("quarter", "s2"),
+                    SchemaFieldSpec::new("amt", "s3"),
+                    // Brand new, with a render id nothing has seen.
+                    SchemaFieldSpec::new("note", "s4"),
+                ],
+                row: true,
+                header_idx: None,
+                unique_together: None,
+            }),
+        ],
+    );
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "{:?}",
+        effect.error_message
+    );
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let blocks = ws.get_all_blocks();
+    let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
+    assert_eq!(p.pivot.as_ref().unwrap().row_dim, "region", "untouched");
+    assert_eq!(cell_num(&wb, 10, 1), Some(10.0));
 }

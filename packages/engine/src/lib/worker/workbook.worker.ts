@@ -27,6 +27,10 @@ import type {
     SheetCellId,
     ShadowCellInfo,
     BlockField,
+    DuplicateBlockKey,
+    EnumSetInfo,
+    BlockOpForPayload,
+    BlockOpPolicy,
     AppData,
     CellCoordinateWithSheet,
     BlockDataRow,
@@ -36,6 +40,9 @@ import type {
     LinkInfo,
     BlockSortOrder,
     GetBlockSortOrderParams,
+    PivotPlan,
+    PivotPlanParams,
+    PivotPlanForParams,
     MayModifyBlockParams,
     CheckFieldValidationParams,
     FieldValidationVerdict,
@@ -406,6 +413,25 @@ export class WorkbookWorkerService implements IWorkbookWorker {
     }
 
     /**
+     * The shape a pivot should have, and whether it has it. Read-only: a
+     * pivot's numbers are live formulas, but its rows and columns are the
+     * source's distinct values, which no formula can produce.
+     */
+    public pivotExcelNote(params: PivotPlanParams) {
+        return this.workbook.pivotExcelNote(params)
+    }
+
+    public pivotPlan(params: PivotPlanParams): Result<PivotPlan> {
+        return this.workbook.pivotPlan(params)
+    }
+
+    /** The same, for a recipe no block carries yet — so creating a pivot at
+     *  its right size is one transaction. */
+    public pivotPlanFor(params: PivotPlanForParams): Result<PivotPlan> {
+        return this.workbook.pivotPlanFor(params)
+    }
+
+    /**
      * Whether an actor may perform one operation on a block. Read-only: the
      * core decides, the caller is what refuses the edit.
      */
@@ -468,6 +494,25 @@ export class WorkbookWorkerService implements IWorkbookWorker {
 
     public getAllBlockFields(): Result<readonly BlockField[]> {
         return this.workbook.getAllBlockFields()
+    }
+
+    public duplicateBlockKeys(): Result<readonly DuplicateBlockKey[]> {
+        return this.workbook.duplicateBlockKeys()
+    }
+
+    public getEnumSets(): Result<readonly EnumSetInfo[]> {
+        return this.workbook.getEnumSets()
+    }
+
+    public getBlockOpForPayloads(): Result<readonly BlockOpForPayload[]> {
+        return this.workbook.getBlockOpForPayloads()
+    }
+
+    public getBlockOpPolicies(params: {
+        sheetIdx: number
+        blockId: number
+    }): Result<readonly BlockOpPolicy[]> {
+        return this.workbook.getBlockOpPolicies(params)
     }
 
     public getFullyCoveredBlocks(params: {
@@ -814,6 +859,15 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                 case MethodName.GetBlockSortOrder:
                     result = this.getBlockSortOrder(args)
                     break
+                case MethodName.PivotPlan:
+                    result = this.pivotPlan(args)
+                    break
+                case MethodName.PivotExcelNote:
+                    result = this.pivotExcelNote(args)
+                    break
+                case MethodName.PivotPlanFor:
+                    result = this.pivotPlanFor(args)
+                    break
                 case MethodName.GetBlockModifyInfo:
                     result = this.getBlockModifyInfo(args)
                     break
@@ -873,6 +927,18 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetAllBlockFields:
                     result = this.getAllBlockFields()
+                    break
+                case MethodName.DuplicateBlockKeys:
+                    result = this.duplicateBlockKeys()
+                    break
+                case MethodName.GetEnumSets:
+                    result = this.getEnumSets()
+                    break
+                case MethodName.GetBlockOpForPayloads:
+                    result = this.getBlockOpForPayloads()
+                    break
+                case MethodName.GetBlockOpPolicies:
+                    result = this.getBlockOpPolicies(args)
                     break
                 case MethodName.GetFullyCoveredBlocks:
                     result = this.getFullyCoveredBlocks(args)

@@ -39,6 +39,13 @@ export class StandardBlock implements BlockInfo {
     owner = ''
     modifyPolicy: ModifyPolicy = 'all'
     permissions: BlockPermissions = {}
+    /**
+     * Which block this one analyses, and which blocks analyse it. Defaults to
+     * an ordinary table — no analysis either way — which is what
+     * `shallowCopy` in `from` then overwrites.
+     */
+    analyzes?: number
+    analyzedBy: readonly number[] = []
     static from(block: BlockInfo) {
         const newBlock = new StandardBlock()
         shallowCopy(block, newBlock)

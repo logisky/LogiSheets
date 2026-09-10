@@ -20,8 +20,7 @@ async function commit(
     const tx: Transaction = {payloads: [payload], undoable: true, temp: false}
     const r = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(r)) throw new Error(`${label}: ${r.msg}`)
-    if (r.status.type === 'err')
-        throw transactionFailure(label, r)
+    if (r.status.type === 'err') throw transactionFailure(label, r)
 }
 
 interface LineRange {
@@ -40,11 +39,7 @@ const LINE_RANGE_SCHEMA = {
 
 function lineTool(
     name: string,
-    payloadType:
-        | 'insertRows'
-        | 'deleteRows'
-        | 'insertCols'
-        | 'deleteCols',
+    payloadType: 'insertRows' | 'deleteRows' | 'insertCols' | 'deleteCols',
     desc: string
 ): Tool<LineRange, {ok: true}> {
     return {
@@ -52,7 +47,9 @@ function lineTool(
         name,
         description: desc,
         mutates: true,
-        confirmation: payloadType.startsWith('delete') ? 'destructive' : 'always',
+        confirmation: payloadType.startsWith('delete')
+            ? 'destructive'
+            : 'always',
         inputSchema: LINE_RANGE_SCHEMA,
         handler: async (input, ctx) => {
             await commit(
@@ -92,7 +89,7 @@ export const setColWidth: Tool<
 > = {
     namespace: 'sheet',
     name: 'set_col_width',
-    description: 'Set a column\'s width (in pixels), zero-based column index.',
+    description: "Set a column's width (in pixels), zero-based column index.",
     mutates: true,
     confirmation: 'never',
     inputSchema: {
@@ -109,7 +106,10 @@ export const setColWidth: Tool<
             {type: 'setColWidth', value: input},
             'set_col_width'
         )
-        return {data: {ok: true}, display: `col ${input.col} → ${input.width}px`}
+        return {
+            data: {ok: true},
+            display: `col ${input.col} → ${input.width}px`,
+        }
     },
 }
 
@@ -136,7 +136,10 @@ export const setRowHeight: Tool<
             {type: 'setRowHeight', value: input},
             'set_row_height'
         )
-        return {data: {ok: true}, display: `row ${input.row} → ${input.height}px`}
+        return {
+            data: {ok: true},
+            display: `row ${input.row} → ${input.height}px`,
+        }
     },
 }
 
@@ -148,7 +151,9 @@ export const deleteSheet: Tool<{idx: number}, {ok: true}> = {
     mutates: true,
     confirmation: 'destructive',
     inputSchema: {
-        properties: {idx: {type: 'integer', description: 'Zero-based sheet index.'}},
+        properties: {
+            idx: {type: 'integer', description: 'Zero-based sheet index.'},
+        },
         required: ['idx'],
     },
     handler: async (input, ctx) => {
@@ -172,7 +177,8 @@ function hexToArgb(hex: string): string {
 export const setSheetColor: Tool<{idx: number; color: string}, {ok: true}> = {
     namespace: 'sheet',
     name: 'set_sheet_color',
-    description: "Set a sheet's tab color (hex, e.g. \"#1976D2\"), by zero-based index.",
+    description:
+        'Set a sheet\'s tab color (hex, e.g. "#1976D2"), by zero-based index.',
     mutates: true,
     confirmation: 'never',
     inputSchema: {
@@ -185,7 +191,10 @@ export const setSheetColor: Tool<{idx: number; color: string}, {ok: true}> = {
     handler: async (input, ctx) => {
         await commit(
             asClient(ctx),
-            {type: 'setSheetColor', value: {idx: input.idx, color: hexToArgb(input.color)}},
+            {
+                type: 'setSheetColor',
+                value: {idx: input.idx, color: hexToArgb(input.color)},
+            },
             'set_sheet_color'
         )
         return {data: {ok: true}, display: `tab color set`}
@@ -222,10 +231,7 @@ export const setSheetVisible: Tool<
     },
 }
 
-export const renameSheet: Tool<
-    {idx: number; newName: string},
-    {ok: true}
-> = {
+export const renameSheet: Tool<{idx: number; newName: string}, {ok: true}> = {
     namespace: 'sheet',
     name: 'rename_sheet',
     description: 'Rename a sheet (by zero-based index) to `newName`.',
@@ -241,7 +247,10 @@ export const renameSheet: Tool<
     handler: async (input, ctx) => {
         await commit(
             asClient(ctx),
-            {type: 'sheetRename', value: {idx: input.idx, newName: input.newName}},
+            {
+                type: 'sheetRename',
+                value: {idx: input.idx, newName: input.newName},
+            },
             'rename_sheet'
         )
         return {data: {ok: true}, display: `renamed to ${input.newName}`}

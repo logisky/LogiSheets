@@ -476,7 +476,7 @@ mod tests {
     /// The OLD assembly (reverse-each-chunk-then-concat) produced
     /// `rev([A]) ++ rev([C,B]) = [A] ++ [B,C] = [A, B, C]` — B
     /// scheduled BEFORE C, even though C is a dep of B. That's the
-    /// shape that caused the factory-simulator "PL row 二 #VALUE on
+    /// shape that caused the factory-simulator "PL row R2 #VALUE on
     /// newGame": downstream FIN/PLC consumers were scheduled before
     /// some PL-row formulas because their respective DFS roots fell
     /// into different chunks.

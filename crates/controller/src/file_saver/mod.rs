@@ -24,6 +24,7 @@ type Result<T> = std::result::Result<T, BasicError>;
 
 mod error;
 mod external_links;
+pub(crate) mod pivot_ooxml;
 mod sst;
 mod styles;
 mod utils;
@@ -124,6 +125,7 @@ pub fn save_file(
         controller.app_data.clone(),
         block_schema_manager,
         field_render_manager,
+        &controller.status.enum_set_manager,
         &controller.status.image_manager,
         &controller.status.chart_manager,
         &controller.status.data_validation_manager,

@@ -46,6 +46,9 @@ function blockClient(
                 permissions: {},
                 fieldRenders: [],
                 cells: [],
+                // Always sent by the engine (a Vec, empty for an ordinary
+                // table), so the fixture sends it too.
+                analyzedBy: [],
                 schema: {
                     name,
                     schemaType: 'row',

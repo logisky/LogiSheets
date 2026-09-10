@@ -1,4 +1,5 @@
 use crate::CellInfo;
+use crate::block_manager::schema_manager::field_type::FieldTypeParts;
 
 use super::style::Style;
 use gents_derives::TS;
@@ -121,6 +122,24 @@ pub struct BlockInfo {
     /// whether an edit is allowed — ask `Workbook::may_modify_block`, so
     /// every host answers the question the same way.
     pub permissions: crate::edit_action::BlockPermissions,
+    /// Which block this one ANALYSES, when it is an analysis block — a total
+    /// row, a set of statistics, later a pivot. `None` for an ordinary block.
+    ///
+    /// Reported in both directions on purpose. An agent reading the sheet has
+    /// to be able to tell a table from its analysis: the rows of an analysis
+    /// block are its own records, not the source's, and summing them alongside
+    /// the source would double-count. See `design/block-analysis.md`.
+    pub analyzes: Option<BlockId>,
+    /// The blocks that analyse THIS one. Empty for a block nobody summarises.
+    pub analyzed_by: Vec<BlockId>,
+    /// When this analysis block is a PIVOT, the recipe it derives from.
+    /// `None` for a total row and for an ordinary block.
+    ///
+    /// Reported because a pivot's SHAPE is data, so a reader has to know it is
+    /// looking at one: a stale pivot's numbers are each correct while a whole
+    /// group is simply absent, which is the one way a block can mislead
+    /// without being wrong. See `design/block-pivot.md` §8.
+    pub pivot: Option<crate::block_manager::schema_manager::field_type::PivotSpecParts>,
 }
 
 /// A range that is linked to a backing block: the *source* range (the cells the
@@ -145,6 +164,16 @@ pub struct BlockSchema {
     pub keys: Vec<BlockSchemaKeyEntry>,
     pub fields: Vec<BlockSchemaFieldEntry>,
     pub random_entries: Vec<BlockSchemaRandomEntry>,
+    /// Block-relative index of the line holding field NAMES rather than a
+    /// record, when the schema declares one.
+    ///
+    /// An INDEX rather than the line id the schema stores, because a host
+    /// counts lines from the block's corner and has no business knowing line
+    /// ids. Absent for the blocks that have no header line, which is most.
+    pub header_idx: Option<usize>,
+    /// Field groups whose values must not repeat in COMBINATION — the block's
+    /// own rule, as opposed to the per-field ones on each entry.
+    pub unique_together: Vec<crate::edit_action::UniqueTogetherGroup>,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -180,6 +209,79 @@ pub struct BlockSchemaFieldEntry {
     /// `ShadowKind::UserEditable` shadow per row at bind / insert time;
     /// host permission layer reads the shadow to gate writes.
     pub editability_formula: Option<String>,
+    /// The field's declaration — what it is, what it is for, and the two
+    /// non-formula constraints. Absent means nobody said: a block bound before
+    /// the declaration existed, or converted from plain cells.
+    ///
+    /// This is the half that used to live only in the host, keyed by
+    /// `render_id` and persisted as opaque JSON, so no headless host could read
+    /// it and `describe_block` could not report a type in any host. See
+    /// `design/block-field-semantics.md`.
+    pub field_type: Option<FieldTypeParts>,
+    pub description: Option<String>,
+    pub required: bool,
+    pub unique: bool,
+    pub default_value: Option<String>,
+    /// Who may write to this field's cells: `inherit` | `ownerOnly` |
+    /// `anyone`. A declaration for the host to decide with — the engine does
+    /// not know who is writing. Always reported, so a reader never has to
+    /// guess what an absent value meant.
+    pub write_policy: String,
+    /// When the block analyses another one: how this field aggregates it —
+    /// `SUM` | `COUNT` | `AVERAGE` | `MIN` | `MAX`, over `agg_field` of the
+    /// analysed block. Both absent for an ordinary field, which is what the
+    /// label column of a total row is.
+    ///
+    /// Reported so a reader can see WHAT the number is rather than only that
+    /// it is a number — and so an agent knows not to write to it.
+    pub agg_func: Option<String>,
+    pub agg_field: Option<String>,
+    /// When the block is a PIVOT and this column is hand-declared: the column
+    /// dimension value it filters on (`*` = every value, a row total), and
+    /// optionally its own measure and function. All absent for the derived
+    /// columns of a plain cross-tab.
+    pub pivot_col_value: Option<String>,
+    pub pivot_measure: Option<String>,
+    pub pivot_func: Option<String>,
+}
+
+impl BlockSchemaFieldEntry {
+    /// Project one schema field for a reader. Four call sites in
+    /// `api/worksheet.rs` built this by hand and differed only in how they
+    /// found `idx`; going through one constructor is what keeps a newly-added
+    /// declaration field from reaching two of them and not the other two.
+    pub fn from_entry<F>(
+        name: &str,
+        idx: usize,
+        entry: &crate::block_manager::schema_manager::schema::FieldEntry<F>,
+    ) -> Self {
+        let parts = entry.field_type.to_parts();
+        Self {
+            field: name.to_string(),
+            idx,
+            render_id: entry.render_id.clone(),
+            value_formula: entry.value_formula.clone(),
+            validation_formula: entry.validation_formula.clone(),
+            editability_formula: entry.editability_formula.clone(),
+            field_type: parts.kind.is_some().then_some(parts),
+            description: entry.description.clone(),
+            required: entry.required,
+            unique: entry.unique,
+            default_value: entry.default_value.clone(),
+            write_policy: entry.write_policy.as_str().to_string(),
+            agg_func: entry
+                .aggregate
+                .as_ref()
+                .map(|a| a.func.as_str().to_string()),
+            agg_field: entry.aggregate.as_ref().map(|a| a.source_field.clone()),
+            pivot_col_value: entry.pivot_column.as_ref().map(|c| c.col_value_str()),
+            pivot_measure: entry.pivot_column.as_ref().and_then(|c| c.measure.clone()),
+            pivot_func: entry
+                .pivot_column
+                .as_ref()
+                .and_then(|c| c.func.map(|f| f.as_str().to_string())),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, TS)]

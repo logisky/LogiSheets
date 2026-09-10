@@ -20,7 +20,7 @@ use logisheets::Workbook;
 use logisheets_base::CellId;
 use logisheets_controller::edit_action::{
     BindFormSchema, BlockInput, CellInput, ConvertBlock, CreateBlock, EditPayload,
-    InsertRowsInBlock, PayloadsAction, StatusCode, UpsertFieldFormulas,
+    InsertRowsInBlock, PayloadsAction, SchemaFieldSpec, StatusCode, UpsertFieldFormulas,
 };
 use logisheets_controller::sid_assigner::ShadowKind;
 
@@ -87,6 +87,8 @@ fn fresh_block_with_data(
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             // Keys first (matches the factory-simulator pattern — see
             // `BindFormSchema` arm's comment in
@@ -118,12 +120,17 @@ fn fresh_block_with_data(
                 ref_name: "T".into(),
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["key".into(), "value".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
-                field_formulas: vec![None, None],
-                validation_formulas,
-                editability_formulas,
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0")
+                        .with_validation_formula(validation_formulas.first().cloned().flatten())
+                        .with_editability_formula(editability_formulas.first().cloned().flatten()),
+                    SchemaFieldSpec::new("value", "r1")
+                        .with_validation_formula(validation_formulas.get(1).cloned().flatten())
+                        .with_editability_formula(editability_formulas.get(1).cloned().flatten()),
+                ],
                 row: true,
+                header_idx: None,
+                unique_together: None,
             }),
             // Value cells last — so #PLACEHOLDER references the cell
             // that already exists with these literals.
@@ -524,23 +531,23 @@ fn test_validation_field_ref_unknown_field_errors() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "T".into(),
                 sheet_idx: 0,
                 block_id: 1,
-                ref_name: "T".into(),
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["key".into(), "value".into()],
-                render_ids: vec!["r0".into(), "r1".into()],
-                field_formulas: vec![],
-                validation_formulas: vec![
-                    None,
-                    // typo: "nope" isn't a field
-                    Some(r#"#FIELD("nope")>0"#.into()),
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0"),
+                    SchemaFieldSpec::new("value", "r1")
+                        .with_validation_formula(Some(r#"#FIELD("nope")>0"#.into())),
                 ],
-                editability_formulas: vec![],
                 row: true,
+                header_idx: None,
+                unique_together: None,
             }),
         ],
         undoable: true,
@@ -575,20 +582,24 @@ fn test_field_rule_coordinate_into_own_block_errors() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "T".into(),
                 sheet_idx: 0,
                 block_id: 1,
-                ref_name: "T".into(),
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["key".into(), "amt".into(), "cum".into()],
-                render_ids: vec!["r0".into(), "r1".into(), "r2".into()],
-                // The running-total mistake: C1 is `cum` of the first row.
-                field_formulas: vec![None, None, Some(r#"=C1+#FIELD("amt")"#.into())],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0"),
+                    SchemaFieldSpec::new("amt", "r1"),
+                    SchemaFieldSpec::new("cum", "r2")
+                        .with_value_formula(Some(r#"=C1+#FIELD("amt")"#.into())),
+                ],
                 row: true,
+                header_idx: None,
+                unique_together: None,
             }),
         ],
         undoable: true,
@@ -627,19 +638,24 @@ fn test_field_rule_coordinate_outside_block_is_fine() {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             }),
             EditPayload::BindFormSchema(BindFormSchema {
+                ref_name: "T".into(),
                 sheet_idx: 0,
                 block_id: 1,
-                ref_name: "T".into(),
                 field_from: 0,
                 key_idx: 0,
-                fields: vec!["key".into(), "amt".into(), "net".into()],
-                render_ids: vec!["r0".into(), "r1".into(), "r2".into()],
-                field_formulas: vec![None, None, Some(r#"=#FIELD("amt")*(1-$A$21)"#.into())],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                fields: vec![
+                    SchemaFieldSpec::new("key", "r0"),
+                    SchemaFieldSpec::new("amt", "r1"),
+                    SchemaFieldSpec::new("net", "r2")
+                        .with_value_formula(Some(r#"=#FIELD("amt")*(1-$A$21)"#.into())),
+                ],
                 row: true,
+                header_idx: None,
+                unique_together: None,
             }),
             EditPayload::BlockInput(BlockInput {
                 sheet_idx: 0,

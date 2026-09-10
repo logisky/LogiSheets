@@ -30,8 +30,7 @@ async function commit(
     const tx: Transaction = {payloads, undoable: true, temp: false}
     const result = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(result)) throw new Error(`${label}: ${result.msg}`)
-    if (result.status.type === 'err')
-        throw transactionFailure(label, result)
+    if (result.status.type === 'err') throw transactionFailure(label, result)
 }
 
 /** A cell value in a form the model reads directly (null = empty). */
@@ -92,7 +91,10 @@ const RANGE_SCHEMA: JSONSchema['properties'] = {
     startRow: {type: 'integer', description: 'Zero-based first row.'},
     startCol: {type: 'integer', description: 'Zero-based first column.'},
     endRow: {type: 'integer', description: 'Zero-based last row (inclusive).'},
-    endCol: {type: 'integer', description: 'Zero-based last column (inclusive).'},
+    endCol: {
+        type: 'integer',
+        description: 'Zero-based last column (inclusive).',
+    },
 }
 
 function normalizeRange(i: RangeInput): RangeInput {
@@ -123,10 +125,14 @@ export const getCells: Tool<RangeInput, {range: string; cells: CellReadout[]}> =
         ].join('\n'),
         mutates: false,
         confirmation: 'never',
-        inputSchema: {properties: RANGE_SCHEMA, required: Object.keys(RANGE_SCHEMA)},
+        inputSchema: {
+            properties: RANGE_SCHEMA,
+            required: Object.keys(RANGE_SCHEMA),
+        },
         handler: async (input, ctx) => {
             const r = normalizeRange(input)
-            const count = (r.endRow - r.startRow + 1) * (r.endCol - r.startCol + 1)
+            const count =
+                (r.endRow - r.startRow + 1) * (r.endCol - r.startCol + 1)
             if (count > MAX_RANGE)
                 throw new Error(
                     `range covers ${count} cells (max ${MAX_RANGE}); narrow it`
@@ -156,8 +162,17 @@ export const getCells: Tool<RangeInput, {range: string; cells: CellReadout[]}> =
                 cells.push(out)
             })
             return {
-                data: {range: `${a1(r.startRow, r.startCol)}:${a1(r.endRow, r.endCol)}`, cells},
-                display: `Read ${cells.length} non-empty cell(s) in ${a1(r.startRow, r.startCol)}:${a1(r.endRow, r.endCol)}`,
+                data: {
+                    range: `${a1(r.startRow, r.startCol)}:${a1(
+                        r.endRow,
+                        r.endCol
+                    )}`,
+                    cells,
+                },
+                display: `Read ${cells.length} non-empty cell(s) in ${a1(
+                    r.startRow,
+                    r.startCol
+                )}:${a1(r.endRow, r.endCol)}`,
             }
         },
     }
@@ -204,7 +219,10 @@ export const setCells: Tool<SetCellsInput, {written: number}> = {
                     type: 'object',
                     properties: {
                         row: {type: 'integer', description: 'Zero-based row.'},
-                        col: {type: 'integer', description: 'Zero-based column.'},
+                        col: {
+                            type: 'integer',
+                            description: 'Zero-based column.',
+                        },
                         content: {
                             type: ['string', 'number', 'boolean', 'null'],
                             description:
@@ -252,7 +270,10 @@ export const clearCells: Tool<RangeInput, {cleared: number}> = {
     ].join('\n'),
     mutates: true,
     confirmation: 'always',
-    inputSchema: {properties: RANGE_SCHEMA, required: Object.keys(RANGE_SCHEMA)},
+    inputSchema: {
+        properties: RANGE_SCHEMA,
+        required: Object.keys(RANGE_SCHEMA),
+    },
     handler: async (input, ctx) => {
         const r = normalizeRange(input)
         const count = (r.endRow - r.startRow + 1) * (r.endCol - r.startCol + 1)
@@ -270,7 +291,10 @@ export const clearCells: Tool<RangeInput, {cleared: number}> = {
         await commit(asClient(ctx), payloads, 'clear_cells')
         return {
             data: {cleared: count},
-            display: `Cleared ${a1(r.startRow, r.startCol)}:${a1(r.endRow, r.endCol)}`,
+            display: `Cleared ${a1(r.startRow, r.startCol)}:${a1(
+                r.endRow,
+                r.endCol
+            )}`,
         }
     },
 }
@@ -329,15 +353,17 @@ export const fillCells: Tool<FillInput, {filled: number}> = {
         // The engine predicts the filled cells (series continuation, relative
         // formula shifting), then we commit them as ordinary cell inputs.
         const predicted = await client.predictFill(input)
-        if (isErrorMessage(predicted))
-            throw new Error(`fill: ${predicted.msg}`)
+        if (isErrorMessage(predicted)) throw new Error(`fill: ${predicted.msg}`)
         const inputs = predicted as readonly CellInput[]
         const payloads: EditPayload[] = inputs.map((ci) => ({
             type: 'cellInput',
             value: ci,
         }))
         await commit(client, payloads, 'fill')
-        return {data: {filled: payloads.length}, display: `Filled ${payloads.length} cell(s)`}
+        return {
+            data: {filled: payloads.length},
+            display: `Filled ${payloads.length} cell(s)`,
+        }
     },
 }
 

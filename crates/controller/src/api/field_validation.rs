@@ -116,12 +116,30 @@ impl Workbook {
             return Ok(FieldValidationVerdict::default());
         };
 
-        let Some(rule) = self
+        // The EFFECTIVE rule — what the field's declaration implies ANDed with
+        // what its author wrote — because that is what the shadow evaluates.
+        // Reporting the stored template alone would let a refusal cite a
+        // narrower rule than the one it enforced, and a required-only field
+        // would report no rule at all while still refusing the write.
+        let place = self
             .controller
             .status
-            .block_schema_manager
-            .validation_for_block_cell(sheet_id, &bcid)
-        else {
+            .navigator
+            .get_block_place(&sheet_id, &bcid.block_id)
+            .ok();
+        let analysis = place.and_then(|bp| {
+            Some(crate::block_manager::analysis::AnalysisTarget {
+                source: bp.analyzes?,
+                pivot: bp.pivot.as_ref(),
+            })
+        });
+        let Some(rule) = crate::block_manager::derived_rules::effective_validation(
+            &self.controller.status.block_schema_manager,
+            &self.controller.status.enum_set_manager,
+            sheet_id,
+            &bcid,
+            analysis,
+        ) else {
             return Ok(FieldValidationVerdict::default());
         };
 

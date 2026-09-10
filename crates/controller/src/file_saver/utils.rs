@@ -20,8 +20,8 @@ pub fn unparse_cell(row: usize, col: usize) -> String {
 /// to `"".repeat(n)`, which is the empty string for every n, so the marker said
 /// nothing. A string with a leading space did not survive being saved.
 pub fn convert_string_to_plain_text_string(raw_string: String) -> PlainTextString {
-    let needs_preserve = raw_string.starts_with(char::is_whitespace)
-        || raw_string.ends_with(char::is_whitespace);
+    let needs_preserve =
+        raw_string.starts_with(char::is_whitespace) || raw_string.ends_with(char::is_whitespace);
     PlainTextString {
         space: needs_preserve.then(|| String::from("preserve")),
         value: raw_string,

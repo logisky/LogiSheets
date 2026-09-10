@@ -37,6 +37,37 @@ pub struct LogiSheetsData {
     /// keyed by `RenderId` alone, which is sheet-agnostic.
     #[xmlserde(name = b"fieldRender", ty = "child")]
     pub field_renders: Vec<FieldRenderXml>,
+    /// The workbook's enum sets: the option lists that `enum` / `multiSelect`
+    /// fields draw from. Workbook-level because a set is named by id and shared
+    /// across blocks and sheets.
+    ///
+    /// Ids and labels only. A variant's COLOUR is presentation and stays in the
+    /// host — the engine needs the options to decide whether a value is one of
+    /// them, and needs nothing else.
+    #[xmlserde(name = b"enumSet", ty = "child")]
+    pub enum_sets: Vec<EnumSetXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct EnumSetXml {
+    #[xmlserde(name = b"id", ty = "attr")]
+    pub id: String,
+    /// Human-readable name for the set. Optional: a set minted by inference
+    /// (from a column's distinct values) has no name worth writing down.
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: Option<String>,
+    #[xmlserde(name = b"variant", ty = "child")]
+    pub variants: Vec<EnumVariantXml>,
+}
+
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct EnumVariantXml {
+    /// What the cell stores.
+    #[xmlserde(name = b"id", ty = "attr")]
+    pub id: String,
+    /// What a reader sees. Absent when it is the same as the id.
+    #[xmlserde(name = b"label", ty = "attr")]
+    pub label: Option<String>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -96,10 +127,63 @@ pub struct BlockRange {
     pub perm_modify_description: Option<String>,
     #[xmlserde(name = b"permOverrideValidation", ty = "attr")]
     pub perm_override_validation: Option<String>,
+    /// Which block this one analyses, when it is an analysis block. Absent for
+    /// an ordinary block, which is every block written before this existed.
+    /// Same sheet, so the id alone identifies it.
+    #[xmlserde(name = b"analyzes", ty = "attr")]
+    pub analyzes: Option<usize>,
+    /// When the analysis block is a PIVOT, the recipe its cells and its shape
+    /// derive from: the source fields whose distinct values become this
+    /// block's rows and columns, and what is aggregated over them. Absent for
+    /// a plain analysis block (a total row).
+    ///
+    /// Flat attributes rather than a child element, to match how the pivot
+    /// crosses the wasm boundary — one shape to reason about, not two. Any of
+    /// them missing, or a `pivotFunc` this build does not know, drops the
+    /// pivot: the block opens as a plain analysis block rather than inventing
+    /// an aggregate. See `design/block-pivot.md`.
+    #[xmlserde(name = b"pivotRowDim", ty = "attr")]
+    pub pivot_row_dim: Option<String>,
+    #[xmlserde(name = b"pivotColDim", ty = "attr")]
+    pub pivot_col_dim: Option<String>,
+    #[xmlserde(name = b"pivotMeasure", ty = "attr")]
+    pub pivot_measure: Option<String>,
+    /// `SUM` | `COUNT` | `AVERAGE` | `MIN` | `MAX`.
+    #[xmlserde(name = b"pivotFunc", ty = "attr")]
+    pub pivot_func: Option<String>,
+    /// `ascending` (default) | `firstSeen` | `custom`.
+    #[xmlserde(name = b"pivotOrder", ty = "attr")]
+    pub pivot_order: Option<String>,
+    /// The sequence for `custom` order. A child element rather than a joined
+    /// attribute because a dimension value can contain any character,
+    /// including whatever separator a joined form would pick.
+    #[xmlserde(name = b"pivotOrderValue", ty = "child")]
+    pub pivot_order_values: Vec<PivotOrderValueXml>,
+    /// Which source records the pivot counts. Same reasoning: the criteria is
+    /// free text.
+    #[xmlserde(name = b"pivotFilter", ty = "child")]
+    pub pivot_filters: Vec<PivotFilterXml>,
     #[xmlserde(name = b"rowInfos", ty = "child")]
     pub row_infos: Vec<BlockLineInfo>,
     #[xmlserde(name = b"colInfos", ty = "child")]
     pub col_infos: Vec<BlockLineInfo>,
+}
+
+/// One value of a pivot's custom dimension order.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct PivotOrderValueXml {
+    #[xmlserde(name = b"v", ty = "attr")]
+    pub value: String,
+}
+
+/// One condition a source record must meet to be counted by a pivot.
+#[derive(Debug, XmlSerialize, XmlDeserialize)]
+pub struct PivotFilterXml {
+    #[xmlserde(name = b"field", ty = "attr")]
+    pub field: String,
+    /// Spreadsheet condition syntax, e.g. `>100` or `East`.
+    #[xmlserde(name = b"criteria", ty = "attr")]
+    pub criteria: String,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -220,6 +304,20 @@ pub struct LinkRangeXml {
 /// A form schema where data records run along rows. `key` is the column id
 /// holding the record-identifying field; `fields` lists the per-column
 /// field definitions in declared order.
+/// One `uniqueTogether` group: the field names that must not repeat together.
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
+pub struct UniqueTogetherXml {
+    #[xmlserde(name = b"field", ty = "child")]
+    pub fields: Vec<UniqueTogetherFieldXml>,
+}
+
+/// One field name inside a `uniqueTogether` group.
+#[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]
+pub struct UniqueTogetherFieldXml {
+    #[xmlserde(name = b"name", ty = "attr")]
+    pub name: String,
+}
+
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
 pub struct RowSchemaXml {
     #[xmlserde(name = b"blockId", ty = "attr")]
@@ -231,8 +329,19 @@ pub struct RowSchemaXml {
     /// of which alias is in the in-memory type).
     #[xmlserde(name = b"key", ty = "attr")]
     pub key: u32,
+    /// The record-axis line holding field NAMES rather than a record, by its
+    /// stable id. Absent for a schema that declares no header line, which is
+    /// every schema written before this attribute existed — so an older file
+    /// keeps meaning exactly what it meant.
+    #[xmlserde(name = b"header", ty = "attr")]
+    pub header: Option<u32>,
     #[xmlserde(name = b"field", ty = "child")]
     pub fields: Vec<SchemaFieldXml>,
+    /// Field groups that must be unique in COMBINATION. A child element rather
+    /// than an attribute because it is a list of lists; absent in every file
+    /// written before this existed, which reads as "no such rule".
+    #[xmlserde(name = b"uniqueTogether", ty = "child")]
+    pub unique_together: Vec<UniqueTogetherXml>,
 }
 
 /// Mirror of `RowSchemaXml` for column-oriented schemas. Identical wire
@@ -246,8 +355,19 @@ pub struct ColSchemaXml {
     pub name: String,
     #[xmlserde(name = b"key", ty = "attr")]
     pub key: u32,
+    /// The record-axis line holding field NAMES rather than a record, by its
+    /// stable id. Absent for a schema that declares no header line, which is
+    /// every schema written before this attribute existed — so an older file
+    /// keeps meaning exactly what it meant.
+    #[xmlserde(name = b"header", ty = "attr")]
+    pub header: Option<u32>,
     #[xmlserde(name = b"field", ty = "child")]
     pub fields: Vec<SchemaFieldXml>,
+    /// Field groups that must be unique in COMBINATION. A child element rather
+    /// than an attribute because it is a list of lists; absent in every file
+    /// written before this existed, which reads as "no such rule".
+    #[xmlserde(name = b"uniqueTogether", ty = "child")]
+    pub unique_together: Vec<UniqueTogetherXml>,
 }
 
 #[derive(Debug, XmlSerialize, XmlDeserialize)]
@@ -270,6 +390,63 @@ pub struct SchemaFieldXml {
     pub validation_formula: Option<String>,
     #[xmlserde(name = b"editabilityFormula", ty = "attr")]
     pub editability_formula: Option<String>,
+    /// The field's *declaration* — what it is and what it is for — as opposed
+    /// to the templates above, which are what currently guards it.
+    ///
+    /// Every one of these is optional, and absent means "nobody said". A file
+    /// written before the declaration existed loads with an unspecified type
+    /// and both constraints off, which is exactly what it meant. `kind` is a
+    /// free string rather than a closed set on purpose: a kind a newer build
+    /// introduced must not stop this one from opening the file — the reader
+    /// degrades it to unspecified.
+    #[xmlserde(name = b"kind", ty = "attr")]
+    pub kind: Option<String>,
+    /// Enum set backing a `kind` of `enum` / `multiSelect`.
+    #[xmlserde(name = b"enumSetId", ty = "attr")]
+    pub enum_set_id: Option<String>,
+    /// Target of a `kind` of `fieldRef` / `multiSelectRef`.
+    #[xmlserde(name = b"refSheetId", ty = "attr")]
+    pub ref_sheet_id: Option<u32>,
+    #[xmlserde(name = b"refBlockId", ty = "attr")]
+    pub ref_block_id: Option<u32>,
+    #[xmlserde(name = b"refFieldName", ty = "attr")]
+    pub ref_field_name: Option<String>,
+    #[xmlserde(name = b"description", ty = "attr")]
+    pub description: Option<String>,
+    /// Written only when true, so an ordinary field costs no attribute.
+    #[xmlserde(name = b"required", ty = "attr")]
+    pub required: Option<bool>,
+    #[xmlserde(name = b"unique", ty = "attr")]
+    pub unique: Option<bool>,
+    #[xmlserde(name = b"defaultValue", ty = "attr")]
+    pub default_value: Option<String>,
+    /// Who may write to this field's cells: `inherit` (absent) | `ownerOnly` |
+    /// `anyone`. A free string for the same reason `kind` is — a policy a newer
+    /// build introduces must not stop this one from opening the file.
+    #[xmlserde(name = b"writePolicy", ty = "attr")]
+    pub write_policy: Option<String>,
+    /// When the block analyses another one: how this field aggregates it.
+    /// `aggFunc` is `SUM|COUNT|AVERAGE|MIN|MAX`, `aggField` the field of the
+    /// analysed block. Both absent for an ordinary field.
+    ///
+    /// A free string for the same reason `kind` is: a function a newer build
+    /// introduces must not stop this one from opening the file.
+    #[xmlserde(name = b"aggFunc", ty = "attr")]
+    pub agg_func: Option<String>,
+    #[xmlserde(name = b"aggField", ty = "attr")]
+    pub agg_field: Option<String>,
+    /// When the block is a PIVOT and this column is hand-declared rather than
+    /// derived: which column-dimension value it filters on (`*` = every value,
+    /// i.e. a row total), and optionally its own measure and function.
+    ///
+    /// All absent for an ordinary derived column, which is every column of a
+    /// plain cross-tab.
+    #[xmlserde(name = b"pivotColValue", ty = "attr")]
+    pub pivot_col_value: Option<String>,
+    #[xmlserde(name = b"pivotMeasure", ty = "attr")]
+    pub pivot_measure: Option<String>,
+    #[xmlserde(name = b"pivotFunc", ty = "attr")]
+    pub pivot_func: Option<String>,
 }
 
 /// A free-form schema: explicit `(key, row, col, renderId)` tuples with no

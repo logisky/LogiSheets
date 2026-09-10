@@ -72,6 +72,12 @@ fn convert_diff<C: VersionExecCtx>(
 ) -> Result<Option<(Diff, SheetId)>, Error> {
     match payload {
         EditPayload::UpsertFieldRenderInfo(_) => Ok(None),
+        // An enum set is workbook-level metadata, not cell content. What
+        // changing one CAN affect is the membership rule of every field that
+        // declares it — those are per-record shadows, dirtied through the
+        // schema, not through this cell-level diff.
+        EditPayload::UpsertEnumSet(_) => Ok(None),
+        EditPayload::RemoveEnumSet(_) => Ok(None),
         // A conditional-formatting edit changes how the whole covered range
         // renders, and the range is not known here without resolving anchors, so
         // the sheet is marked wholly stale rather than diffed cell by cell.
@@ -130,6 +136,22 @@ fn convert_diff<C: VersionExecCtx>(
         // Metadata only: no cell changes value or moves, so the host just
         // needs to know the block itself is different.
         EditPayload::SetBlockDescription(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((
+                Diff::BlockUpdate {
+                    sheet_id,
+                    id: p.block_id,
+                },
+                sheet_id,
+            )))
+        }
+        // Re-pointing a block at a different source changes what every one of
+        // its cells computes, so the whole block is stale — same as a
+        // permissions or description change, which also alter the block
+        // wholesale rather than any one cell.
+        EditPayload::SetBlockAnalyzes(p) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(p.sheet_idx)
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;

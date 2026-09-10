@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest'
-import {callerRegistry, isFieldUserEditable} from './index.js'
+import {callerRegistry} from './index.js'
 
 describe('callerRegistry', () => {
     it('assigns a stable user uuid', () => {
@@ -37,18 +37,6 @@ describe('callerRegistry', () => {
     })
 })
 
-describe('isFieldUserEditable', () => {
-    it('blocks only when userEditable === false', () => {
-        expect(isFieldUserEditable({userEditable: false})).toBe(false)
-    })
-
-    it('permits true / undefined / formula-string / missing field', () => {
-        expect(isFieldUserEditable({userEditable: true})).toBe(true)
-        expect(isFieldUserEditable({})).toBe(true)
-        expect(isFieldUserEditable({userEditable: 'A1>0'})).toBe(true)
-        expect(isFieldUserEditable(undefined)).toBe(true)
-    })
-})
 
 describe('resolveActor', () => {
     it('translates a uuid back to the identity the engine knows', () => {

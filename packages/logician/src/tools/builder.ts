@@ -29,11 +29,16 @@ import {
     isErrorMessage,
 } from 'logisheets-web/pure'
 import type {CraftCalc, Value} from 'logisheets-web/pure'
+// The single home for the pivot payload sequences, shared with the browser
+// app — the order they send is load-bearing and must not exist twice.
+import {WorkbookOps, aggregateKeepsFormat} from 'logisheets-core'
+import type {AggFunc, DimOrder} from 'logisheets-core'
 import type {
     ActionEffect,
     BlockActor,
     BlockInfo,
     BlockOp,
+    BlockSchemaFieldEntry,
     CellInfo,
     Client,
     EditPayload,
@@ -167,6 +172,23 @@ const FIELD_SCHEMA: JSONSchema = {
             type: 'boolean',
             description:
                 'Whether the user can edit this cell directly. Use editability formula via set_field_rule for conditional editing.',
+            default: false,
+        },
+        description: {
+            type: 'string',
+            description:
+                'What this field means, in a sentence, where the name alone does not say it — the unit it is in ("in units of 10k"), the convention it follows, or something a later reader must not do to it. Saved on the schema and returned by describe_block, so write it for whoever opens the file next rather than for this conversation.',
+        },
+        required: {
+            type: 'boolean',
+            description:
+                'Every record must carry a value here. Declared on the schema, so every host and every later reader sees it.',
+            default: false,
+        },
+        unique: {
+            type: 'boolean',
+            description:
+                'No two records may carry the same value here. Declared on the schema.',
             default: false,
         },
     },
@@ -379,7 +401,15 @@ interface CreateBlockInput {
         num_fmt?: string
         enum_id?: string
         user_editable?: boolean
+        description?: string
+        required?: boolean
+        unique?: boolean
     }>
+    /**
+     * Field groups whose values must not repeat in COMBINATION — the block's
+     * own rule, as opposed to the per-field `unique`.
+     */
+    unique_together?: ReadonlyArray<ReadonlyArray<string>>
     initial_rows?: ReadonlyArray<{
         key: string
         values?: Record<string, unknown>
@@ -393,6 +423,36 @@ interface ResolvedField {
     num_fmt?: string
     enum_id?: string
     user_editable?: boolean
+    description?: string
+    required?: boolean
+    unique?: boolean
+}
+
+/**
+ * A resolved field's declaration in the engine's flat form.
+ *
+ * `date` and `datetime` both land on the engine's `datetime`: the difference
+ * between them is a number format, which lives on the field's render info, not
+ * in what the field IS.
+ */
+function engineFieldType(
+    f: ResolvedField
+): BlockSchemaFieldEntry['fieldType'] | undefined {
+    switch (f.field_type) {
+        case 'string':
+            return {kind: 'string'}
+        case 'number':
+            return {kind: 'number'}
+        case 'boolean':
+            return {kind: 'boolean'}
+        case 'date':
+        case 'datetime':
+            return {kind: 'datetime'}
+        case 'enum':
+            return f.enum_id ? {kind: 'enum', enumSetId: f.enum_id} : undefined
+        default:
+            return undefined
+    }
 }
 
 /**
@@ -473,7 +533,7 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
     namespace: 'build',
     name: 'create_block',
     description: [
-        'Create a structured block (table) on a sheet. fields[0] is the row-key column (always read-only). Block ref name (`name`) is used as the first arg to BLOCKREF/BLOCKREFS in formulas.',
+        'Create a structured block (table) on a sheet. fields[0] is the row-key column — the value BLOCKREF matches on, so it has to be unique per record; it is ordinary data you can write. Block ref name (`name`) is used as the first arg to BLOCKREF/BLOCKREFS in formulas.',
         '',
         'Field types supported:',
         "  - 'string' / 'number'   — plain text/numeric cells.",
@@ -512,6 +572,12 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                 items: FIELD_SCHEMA,
                 description:
                     'Column definitions in order. fields[0] is the row-key column.',
+            },
+            unique_together: {
+                type: 'array',
+                description:
+                    'Field groups whose values must not repeat in COMBINATION — a rule about the TABLE, not about one cell. `unique` on a field covers one column; this covers several together, which nothing else can say. Reach for it on a fact table: a repeated (region, quarter) is an error nowhere, it just makes every total over that table quietly count twice. Violations show up in inspect__list_violations like any other rule.',
+                items: {type: 'array', items: {type: 'string'}},
             },
             initial_rows: {
                 type: 'array',
@@ -707,26 +773,14 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
         }
         const sheetId = sheetIdRes
 
-        const renderIds: string[] = []
-        for (let i = 0; i < resolvedFields.length; i++) {
-            const f = resolvedFields[i]
-            if (bm) {
-                const typeSpec = buildFieldTypeSpec(
-                    f,
-                    enumVariantsByField.get(i)
-                )
-                const fi = bm.fieldManager.create(sheetId, blockId, {
-                    name: f.name,
-                    type: typeSpec,
-                    required: false,
-                    unique: false,
-                    userEditable: i === 0 ? false : f.user_editable ?? true,
-                })
-                renderIds.push(fi.id)
-            } else {
-                renderIds.push(`${input.name}__f${i}`)
-            }
-        }
+        // A render id per field. Nothing is stored against it: everything the
+        // field means goes on the schema below, which is where every host
+        // reads it from. The host mints ids when it is present only so they
+        // match the form its own widgets expect; headless, a name derived from
+        // the block is just as stable.
+        const renderIds: string[] = resolvedFields.map((_, i) =>
+            bm ? bm.fieldManager.nextRenderId() : `${input.name}__f${i}`
+        )
 
         // 3. Compose the payload sequence:
         //      CreateBlock
@@ -780,16 +834,12 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
             })
         }
 
-        // Auto-inject a variant-whitelist validation formula for each
-        // enum field. Engine-managed via Phase 1+2: storing this in
-        // BindFormSchema.validationFormulas means the shadow is
-        // installed on every row automatically (and on every new row
-        // from InsertRowsInBlock).
-        const validationFormulas = resolvedFields.map((_, i) => {
-            const variants = enumVariantsByField.get(i)
-            if (!variants) return ''
-            return enumWhitelistFormula(variants)
-        })
+        // No whitelist formula is written here any more. A field declaring
+        // `enum{setId}` gets its membership rule generated by the engine from
+        // the set's own options
+        // (crates/controller/src/block_manager/derived_rules.rs) — so it means
+        // the same thing in a headless host, and editing the set updates the
+        // rule instead of leaving a stale copy of the old options behind.
 
         payloads.push({
             type: 'bindFormSchema',
@@ -799,16 +849,41 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                 .blockId(blockId)
                 .fieldFrom(0)
                 .keyIdx(0)
-                .fields(fieldNames)
-                .renderIds(renderIds)
-                // No value templates at create time; rules are layered
-                // via set_field_rule. Empty strings normalize to None
-                // engine-side (matches the TS binding's `readonly
-                // string[]` shape).
-                .fieldFormulas(fieldNames.map(() => ''))
-                .validationFormulas(validationFormulas)
-                .editabilityFormulas([])
+                // No value templates at create time; rules are layered via
+                // set_field_rule. The DECLARATION, though, goes in now: it is
+                // what the agent said the field is, and it is the only record
+                // of that — describe_block reads it back off the schema.
+                .fields(
+                    resolvedFields.map((f, i) => ({
+                        name: fieldNames[i],
+                        renderId: renderIds[i],
+
+                        fieldType: engineFieldType(f),
+                        description: f.description || undefined,
+                        required: f.required,
+                        unique: f.unique,
+                        // Every field inherits the block's rules unless the
+                        // caller says otherwise, the key column included.
+                        //
+                        // The key used to be closed here on the reasoning that
+                        // it is a row identifier rather than user data. True
+                        // of a key the ENGINE writes; false of every table
+                        // someone builds, where the key column is the order
+                        // number or the code — exactly the data they came to
+                        // enter. It left a new block with a column its author
+                        // could not fill in.
+                        writePolicy:
+                            f.user_editable === false
+                                ? 'ownerOnly'
+                                : f.user_editable === true
+                                ? 'anyone'
+                                : 'inherit',
+                    }))
+                )
                 .row(true)
+                .uniqueTogether(
+                    (input.unique_together ?? []).map((g) => ({fields: [...g]}))
+                )
                 .build(),
         })
 
@@ -855,72 +930,12 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
             `create_block("${input.name}")`
         )
 
-        // Stamp the schema's refName onto every FieldInfo we just
-        // created. FieldManager doesn't know the refName at create-time
-        // — the host learns it from BindFormSchema, which commits as
-        // part of the tx above. Without this stamp the block-composer
-        // and similar UI lose the reverse refName→fields lookup.
-        if (bm) {
-            bm.fieldManager.setBlockRefName(sheetId, blockId, input.name)
-        }
-
         const widgetNote = bm ? 'widget rendering on' : 'no widget host'
         return {
             data: {block_id: blockId},
             display: `Created block "${input.name}" (id=${blockId}) at sheet "${input.sheet}" pos (${input.position.row},${input.position.col}) — ${input.fields.length} field(s) × ${rowCnt} row(s) (${widgetNote}).`,
         }
     },
-}
-
-/** Map Watson's flat field input to the `FieldTypeEnum` shape the host
- *  FieldManager expects. We only emit the variants we currently
- *  support; richer types (datetime, fieldRef, image, multiSelect...)
- *  are out of scope until Watson exposes their UX. */
-function buildFieldTypeSpec(
-    f: {
-        name: string
-        field_type: (typeof FIELD_TYPE_ENUM)[number]
-        num_fmt?: string
-        enum_id?: string
-    },
-    enumVariants: readonly string[] | undefined
-): FieldTypeSpec {
-    switch (f.field_type) {
-        case 'string':
-            return {type: 'string', validation: ''}
-        case 'number':
-            return {
-                type: 'number',
-                validation: '',
-                formatter: f.num_fmt ?? '',
-            }
-        // The engine has no distinct date type — dates are numbers carrying
-        // a date formatter. Honor an explicit num_fmt, else a sensible default.
-        case 'date':
-            return {
-                type: 'number',
-                validation: '',
-                formatter: f.num_fmt ?? 'yyyy-mm-dd',
-            }
-        case 'datetime':
-            return {
-                type: 'number',
-                validation: '',
-                formatter: f.num_fmt ?? 'yyyy-mm-dd hh:mm',
-            }
-        case 'boolean':
-            return {type: 'boolean'}
-        case 'enum':
-            // enumVariants check happened at the gate above; treat
-            // missing here as a programming error rather than a user
-            // error.
-            if (!f.enum_id || !enumVariants) {
-                throw new Error(
-                    `internal: missing enum_id/variants for enum field "${f.name}"`
-                )
-            }
-            return {type: 'enum', id: f.enum_id}
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1670,23 +1685,17 @@ type FieldTypeSpec =
     | {type: 'boolean'}
     | {type: 'enum'; id: string}
 
-interface FieldInfoCreate {
-    name: string
-    type: FieldTypeSpec
-    description?: string
-    required: boolean
-    unique: boolean
-    defaultValue?: string
-    userEditable?: boolean
-}
-
+/**
+ * Mints render ids, and nothing else.
+ *
+ * The host used to hold a full field record per render id, and this tool wrote
+ * one — name, type, description, `required`, `unique`, `userEditable` — plus a
+ * follow-up call to stamp the schema's ref name onto each. All of it is on the
+ * schema now, so what remains is handing out an id before the schema is bound
+ * with it.
+ */
 interface FieldManagerLike {
-    create(
-        sheetId: number,
-        blockId: number,
-        fieldData: FieldInfoCreate
-    ): {id: string} & FieldInfoCreate
-    setBlockRefName(sheetId: number, blockId: number, refName: string): void
+    nextRenderId(): string
 }
 
 interface BlockManagerLike {
@@ -1697,22 +1706,6 @@ interface BlockManagerLike {
 function tryGetBlockManager(): BlockManagerLike | null {
     const g = globalThis as unknown as {blockManager?: BlockManagerLike}
     return g.blockManager ?? null
-}
-
-/** Build a per-field validation_formula body that whitelists the given
- *  variant ids. Empty cells are allowed (UI lets the user clear the
- *  selection). Uses EXACT for case-sensitive match — variant ids in
- *  factory-simulator-style flows are stable ASCII strings, but the
- *  helper stays safe under CJK / mixed-case variants too. */
-function enumWhitelistFormula(variantIds: readonly string[]): string {
-    if (variantIds.length === 0) return ''
-    const clauses = variantIds.map((v) => {
-        // Excel string literals escape `"` as `""`.
-        const escaped = v.replace(/"/g, '""')
-        return `EXACT(#PLACEHOLDER,"${escaped}")`
-    })
-    // `=OR(#PLACEHOLDER="", EXACT(...), EXACT(...))`
-    return `OR(#PLACEHOLDER="",${clauses.join(',')})`
 }
 
 export const defineEnumSet: Tool<DefineEnumSetInput, DefineEnumSetOutput> = {
@@ -1814,6 +1807,32 @@ export const defineEnumSet: Tool<DefineEnumSetInput, DefineEnumSetOutput> = {
             bound = true
         }
 
+        // The set goes into the ENGINE too — ids and labels, workbook-level,
+        // persisted with the file. That is what makes it readable by a host
+        // that is not this one, and it survives a save/load; the host registry
+        // above only adds the colours and the dropdown widget.
+        //
+        // This is also what lets the whitelist stop being a formula Watson
+        // writes by hand: with the options in the engine, the membership rule
+        // can be derived from `enum{setId}` instead of baked in at create time.
+        await commitTransaction(
+            asClient(_ctx),
+            [
+                {
+                    type: 'upsertEnumSet',
+                    value: {
+                        id: input.id,
+                        name: setName,
+                        variants: variants.map((v) => ({
+                            id: v.id,
+                            label: v.value,
+                        })),
+                    },
+                },
+            ],
+            `define_enum_set("${input.id}")`
+        )
+
         // Always cache locally — the create_block handler reads this map
         // to auto-inject a whitelist validation formula for enum fields,
         // regardless of whether the host registered the set or not.
@@ -1830,9 +1849,12 @@ export const defineEnumSet: Tool<DefineEnumSetInput, DefineEnumSetOutput> = {
                 variant_count: variants.length,
                 variant_ids: variants.map((v) => v.id),
             },
-            display: bound
-                ? `Defined enum set "${input.id}" with ${variants.length} variant(s); registered with host blockManager.`
-                : `Defined enum set "${input.id}" with ${variants.length} variant(s); host blockManager not present, kept in Watson session only.`,
+            display:
+                `Defined enum set "${input.id}" with ${variants.length} ` +
+                `variant(s) in the workbook` +
+                (bound
+                    ? '; host dropdown + colours registered.'
+                    : '; no host blockManager here, so no dropdown widget — the options themselves are in the workbook either way.'),
         }
     },
 }
@@ -2047,10 +2069,124 @@ interface FieldDescription {
     /** Per-row boolean rule — host permission patch gates writes
      *  when it evaluates false. `null` if not declared. */
     editability: string | null
+
+    // ---- Declaration -----------------------------------------------------
+    // What the field IS, as opposed to the rules above, which are what
+    // currently guards it. Until the engine schema carried this, an agent
+    // declared a type at create_block and could never read it back — in any
+    // host. See design/block-field-semantics.md.
+
+    /**
+     * Declared type: `string` | `number` | `boolean` | `datetime` | `image` |
+     * `enum` | `multiSelect` | `fieldRef` | `multiSelectRef`. `null` when
+     * nobody has claimed one — a block from before the declaration existed, or
+     * one converted from plain cells. Read it before writing a value.
+     */
+    type: string | null
+    /** Enum set the options come from, for `enum` / `multiSelect`. */
+    enum_set_id?: string
+    /** Which block field a `fieldRef` / `multiSelectRef` draws from. */
+    references?: {sheet_id: number; block_id: number; field: string}
+    /**
+     * What the field means, in prose, as whoever built it wrote it — the unit,
+     * the convention, the thing not to do. `null` when nobody said.
+     */
+    description: string | null
+    /** Every record must carry a value here. */
+    required: boolean
+    /** No two records may carry the same value here. */
+    unique: boolean
+    /** What a newly-added record starts with, if anything. */
+    default_value?: string
+    /**
+     * Who may write here: `inherit` (the block's own owner rules) |
+     * `ownerOnly` | `anyone`. A declaration — hosts decide with it, the engine
+     * does not enforce it, because the engine does not know who is writing.
+     */
+    write_policy: string
+    /**
+     * When this block ANALYSES another one: what this column is.
+     * `"SUM of amt"`, `"AVERAGE of price"`. Absent on an ordinary field.
+     *
+     * A field with this is engine-computed from the source block — do not
+     * write to it (the write is dropped), and do not treat its value as a
+     * record of anything. Change what it shows by changing the declaration.
+     */
+    aggregates?: string
 }
 
 interface DescribeBlockOutput {
     block: string
+    /**
+     * The block this one ANALYSES, when it is an analysis block — a total row,
+     * a set of statistics, a pivot. Absent for an ordinary table.
+     *
+     * Its rows are its own records, NOT the source's. Never sum an analysis
+     * block alongside the block it analyses: you would count the same numbers
+     * twice. Read the source for records, read this for the conclusions drawn
+     * from them.
+     */
+    analyzes?: string
+    /**
+     * The blocks that analyse THIS one, if any — where to find its totals.
+     * Their values are addressable like any other block's, e.g.
+     * `BLOCKREF("orders_analysis", "TOTAL", "amt")`.
+     */
+    analyzed_by?: string[]
+    /**
+     * When this block is a PIVOT, the recipe every one of its cells is
+     * generated from, in words — e.g.
+     * `rows = region, columns = quarter, SUM of amt (of "sales")`.
+     *
+     * Its cells are engine-computed; do not write to them.
+     */
+    pivot?: string
+    /**
+     * Present ONLY when this pivot's shape is out of date, and then it is the
+     * most important thing on this block.
+     *
+     * A stale pivot is the one way a block can mislead without being wrong:
+     * every number in it is correct, and whole groups are simply absent, so a
+     * total taken from it is short and nothing on the sheet says so. Call
+     * `build__refresh_pivot` before reading or reporting its numbers.
+     */
+    pivot_is_stale?: string
+    /**
+     * Present when this pivot's recipe cannot be evaluated at all — normally
+     * because it names a source field that no longer exists.
+     *
+     * Louder than staleness and for a worse reason: its cells do not error,
+     * they read **0**, so the block looks like a table of real zeroes. Do not
+     * report any number from it.
+     */
+    pivot_is_broken?: string
+    /**
+     * Source records that belong to no cell of this pivot, because their
+     * grouping value is blank. A refresh cannot fix it — the data has to be
+     * filled in — so say so rather than quietly totalling without them.
+     */
+    pivot_unassigned_records?: number
+    /**
+     * Why this pivot would NOT survive a save to .xlsx as a real Excel pivot
+     * table, when it would not.
+     *
+     * Absent means it maps exactly. Present means the file still opens and
+     * still shows the right numbers — but as a grid Excel cannot recompute or
+     * re-pivot, because the recipe uses something Excel's pivots have no way
+     * to say. Worth knowing BEFORE building, whenever the workbook is headed
+     * for Excel: the reason names the part that does not map and what to use
+     * instead.
+     */
+    pivot_excel_note?: string
+    /**
+     * Field groups whose values must not repeat in COMBINATION.
+     *
+     * The one rule a block states about ITSELF rather than about one of its
+     * cells — every other rule here judges a single value, or one record's
+     * values against each other. Absent when the block declares none.
+     * Violations reach `inspect__list_violations` like any other rule.
+     */
+    unique_together?: string[][]
     /**
      * What the block is for, in prose, as whoever built it wrote it. The
      * schema says what shape the records are; this is the only thing that says
@@ -2092,7 +2228,17 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
     namespace: 'build',
     name: 'describe_block',
     description: [
-        "Return a block's full structure for the LLM: identity (name, sheet, position), per-field schema (name, position, value_formula, validation, editability rules — all from the Rust schema, the engine's authoritative source), and row keys in order.",
+        "Return a block's full structure for the LLM: identity (name, sheet, position), per-field schema, and row keys in order. Every field reports both what it IS — `type`, `description`, `required`, `unique`, `default_value`, and `references` for a field pointing at another block — and what currently guards it: the `value_formula`, `validation` and `editability` templates. All of it comes from the Rust schema, the engine's authoritative source, so the answer is the same in every host and survives a save/load.",
+        '',
+        "Read a field's `type` and `description` BEFORE writing a value to it: the description is where the unit, the convention, or the thing-not-to-do is written down, and it is the only record of it. A `type` of null means nobody has claimed one yet.",
+        '',
+        '`analyzes` and `analyzed_by` say whether this block is a table or a ' +
+            'conclusion drawn from one. A block with `analyzes` set is an ANALYSIS ' +
+            'block — a total row, a set of statistics, a pivot — and its rows are ' +
+            "its own, not the source's. Never sum an analysis block alongside the " +
+            'block it analyses: that counts the same numbers twice. A field with ' +
+            '`aggregates` set is engine-computed from the source; writes to it are ' +
+            'dropped, and you change it by changing the declaration.',
         '',
         'Pass `include_rows: true` to additionally include current cell values as `rows[].values[fieldName]`. Off by default to save tokens — use it when the agent actually needs to inspect data, not when it only needs the shape.',
     ].join('\n'),
@@ -2146,13 +2292,38 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
         const sheetName =
             sheetInfos[block.sheetIdx]?.name ?? `sheet#${block.sheetIdx}`
 
-        const fields: FieldDescription[] = schema.fields.map((f) => ({
-            name: f.field,
-            position: f.idx,
-            value_formula: nonEmpty(f.valueFormula),
-            validation: nonEmpty(f.validationFormula),
-            editability: nonEmpty(f.editabilityFormula),
-        }))
+        const fields: FieldDescription[] = schema.fields.map((f) => {
+            const ty = f.fieldType
+            const target =
+                ty?.refSheetId !== undefined &&
+                ty?.refBlockId !== undefined &&
+                ty?.refFieldName !== undefined
+                    ? {
+                          sheet_id: ty.refSheetId,
+                          block_id: ty.refBlockId,
+                          field: ty.refFieldName,
+                      }
+                    : undefined
+            return {
+                name: f.field,
+                position: f.idx,
+                value_formula: nonEmpty(f.valueFormula),
+                validation: nonEmpty(f.validationFormula),
+                editability: nonEmpty(f.editabilityFormula),
+                type: nonEmpty(ty?.kind),
+                enum_set_id: nonEmpty(ty?.enumSetId) ?? undefined,
+                references: target,
+                description: nonEmpty(f.description),
+                required: !!f.required,
+                unique: !!f.unique,
+                default_value: nonEmpty(f.defaultValue) ?? undefined,
+                write_policy: f.writePolicy,
+                aggregates:
+                    f.aggFunc && f.aggField
+                        ? `${f.aggFunc} of ${f.aggField}`
+                        : undefined,
+            }
+        })
 
         // Row keys in block-row order (the `idx` on KeyEntry is the
         // row index; sorting by it gives natural top-to-bottom order).
@@ -2183,8 +2354,156 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
             }
         })
 
+        // Ids are the engine's currency; a reader wants names. Resolved from
+        // the same `getAllBlocks` result, so this costs no extra call.
+        const nameOfBlock = (id: number): string | undefined =>
+            allBlocks.find(
+                (b) => b.blockId === id && b.sheetIdx === block.sheetIdx
+            )?.schema?.name
+
+        // A pivot's SHAPE is data, so it can fall behind its source while every
+        // number in it stays correct. That is worth a round trip: an agent
+        // that reads a stale pivot under-reports and has no way to tell.
+        const pivotReport: {
+            pivot?: string
+            pivot_is_stale?: string
+            pivot_is_broken?: string
+            pivot_unassigned_records?: number
+            pivot_excel_note?: string
+        } = {}
+        if (block.pivot) {
+            const p = block.pivot
+            const src = block.analyzes
+                ? nameOfBlock(block.analyzes) ?? `block#${block.analyzes}`
+                : '?'
+            // Everything the recipe says. A reader who cannot see the filters
+            // cannot tell that records are being excluded — the same "correct
+            // numbers, incomplete picture" failure staleness is.
+            const declared = (block.schema?.fields ?? []).filter(
+                (f) => f.pivotColValue !== undefined
+            )
+            const says = (f: {
+                field: string
+                pivotColValue?: string
+                pivotFunc?: string
+                pivotMeasure?: string
+            }) =>
+                `"${f.field}" is ` +
+                (f.pivotColValue === '*'
+                    ? 'a total across every column'
+                    : `for ${p.colDim} = ${f.pivotColValue}`) +
+                (f.pivotFunc ? ` (${f.pivotFunc} of ${f.pivotMeasure})` : '')
+            pivotReport.pivot =
+                `rows = ${p.rowDim}` +
+                (p.colDim ? `, columns = ${p.colDim}` : '') +
+                `, ${p.func} of ${p.measure} (of "${src}")` +
+                (p.filters?.length
+                    ? `; counting ONLY records where ${p.filters
+                          .map((f) => `${f.field} ${f.criteria}`)
+                          .join(' and ')} — every number here excludes the rest`
+                    : '') +
+                (p.order === 'custom'
+                    ? `; rows in a fixed order (${(p.orderValues ?? []).join(
+                          ', '
+                      )}), any others after`
+                    : p.order === 'firstSeen'
+                    ? "; rows in the source's own order"
+                    : '') +
+                (declared.length ? `; ${declared.map(says).join('; ')}` : '')
+
+            // Whether it survives a save to .xlsx as a real pivot. The saver
+            // already decides this on every write; reporting it here is what
+            // lets a recipe be chosen knowing the answer, rather than the file
+            // degrading quietly.
+            // Optional: a host that predates this RPC simply says nothing
+            // about Excel. `describe_block` is a read-only report, and losing
+            // one line of it is not worth failing the whole description over.
+            const excel = await client.pivotExcelNote?.({
+                sheetIdx: block.sheetIdx,
+                blockId: block.blockId,
+            })
+            if (excel && !isErrorMessage(excel) && excel.reason) {
+                pivotReport.pivot_excel_note =
+                    `Saved to .xlsx this will NOT be a real Excel pivot table, ` +
+                    `because ${excel.reason} The numbers are still written and ` +
+                    `still right; Excel just cannot recompute or re-pivot them.`
+            }
+
+            const plan = await client.pivotPlan({
+                sheetIdx: block.sheetIdx,
+                blockId: block.blockId,
+            })
+            if (isErrorMessage(plan)) {
+                // Never swallowed. This is the ONE signal that a pivot's
+                // recipe has come unstuck from its source, and the cells give
+                // no hint: they read 0, not an error.
+                pivotReport.pivot_is_broken =
+                    `${plan.msg}. Every cell of this pivot is therefore reading 0 ` +
+                    'rather than failing — do NOT report any number from it. Fix ' +
+                    'the recipe (a field it names may have been renamed or removed) ' +
+                    'or rebuild the pivot.'
+            } else {
+                if (plan.isStale) {
+                    const parts: string[] = []
+                    if (plan.missingKeys.length)
+                        parts.push(
+                            `${plan.missingKeys.length} group(s) of ${
+                                p.rowDim
+                            } are NOT shown here (${plan.missingKeys.join(
+                                ', '
+                            )})`
+                        )
+                    if (plan.missingFields.length)
+                        parts.push(
+                            `${plan.missingFields.length} value(s) of ${
+                                p.colDim
+                            } have no column (${plan.missingFields.join(', ')})`
+                        )
+                    if (plan.extraKeys.length)
+                        parts.push(
+                            `${
+                                plan.extraKeys.length
+                            } row(s) no longer exist in the source (${plan.extraKeys.join(
+                                ', '
+                            )})`
+                        )
+                    if (plan.extraFields.length)
+                        parts.push(
+                            `${
+                                plan.extraFields.length
+                            } column(s) no longer exist in the source (${plan.extraFields.join(
+                                ', '
+                            )})`
+                        )
+                    pivotReport.pivot_is_stale =
+                        parts.join('; ') +
+                        '. The numbers shown are each correct but INCOMPLETE — ' +
+                        'call build__refresh_pivot before reading or reporting them.'
+                }
+                if (plan.unassignedRecords > 0)
+                    pivotReport.pivot_unassigned_records =
+                        plan.unassignedRecords
+            }
+        }
+
         const out: DescribeBlockOutput = {
             block: input.name,
+            analyzes:
+                block.analyzes !== undefined
+                    ? nameOfBlock(block.analyzes) ?? `block#${block.analyzes}`
+                    : undefined,
+            // Defaulted, not asserted: an app can ship a wasm older than this
+            // tool, and describe_block failing outright would be a much worse
+            // answer than reporting no analyses.
+            analyzed_by: (block.analyzedBy ?? []).length
+                ? block.analyzedBy.map((id) => nameOfBlock(id) ?? `block#${id}`)
+                : undefined,
+            ...pivotReport,
+            // Only when there is one: an empty list would read as a fact
+            // about the block rather than the absence of a rule.
+            unique_together: schema?.uniqueTogether?.length
+                ? schema.uniqueTogether.map((g) => [...g.fields])
+                : undefined,
             description: nonEmpty(block.description),
             owner: nonEmpty(block.owner),
             block_id: block.blockId,
@@ -2319,7 +2638,7 @@ export const evalFormula: Tool<EvalFormulaInput, EvalFormulaOutput> = {
         '  - "empty"   — value is null (formula returned an empty cell)',
         '',
         'Use for:',
-        '  - Quick checks: "=SUMIFS(OrderStatus, \\"金额\\", \\"*\\")" → total',
+        '  - Quick checks: "=SUMIFS(OrderStatus, \\"amount\\", \\"*\\")" → total',
         '  - Sanity-test a candidate template before set_field_rule',
         '  - BLOCKREF / BLOCKREFS lookups against any block in the workbook',
         '',
@@ -2333,7 +2652,7 @@ export const evalFormula: Tool<EvalFormulaInput, EvalFormulaOutput> = {
             expr: {
                 type: 'string',
                 description:
-                    'Formula, with or without leading "=". E.g. "SUM(A1:A10)" or "=BLOCKREF(\\"orders\\", \\"O001\\", \\"金额\\")".',
+                    'Formula, with or without leading "=". E.g. "SUM(A1:A10)" or "=BLOCKREF(\\"orders\\", \\"O001\\", \\"amount\\")".',
             },
         },
         required: ['expr'],
@@ -2504,6 +2823,27 @@ export const checkpoint: Tool<CheckpointInput, CheckpointOutput> = {
 // transaction. Where a reference cannot be rewritten safely they refuse and say
 // what stands in the way, rather than leaving a model that looks intact.
 
+/**
+ * One field of a snapshot. Mirrors the payload's own `SchemaFieldSpec` — which
+ * matters because a snapshot is round-tripped through `bindPayload` to rebuild
+ * the schema: anything this shape drops, a rename silently wipes. That is
+ * exactly how the declaration would be lost if it were left out here.
+ */
+interface SnapField {
+    name: string
+    renderId: string
+    valueFormula: string
+    validationFormula: string
+    editabilityFormula: string
+    /** The declaration, carried through untouched. */
+    fieldType?: BlockSchemaFieldEntry['fieldType']
+    description?: string
+    required?: boolean
+    unique?: boolean
+    defaultValue?: string
+    writePolicy?: string
+}
+
 /** All of a block's schema, as the payload that would recreate it verbatim. */
 interface SchemaSnapshot {
     sheetIdx: number
@@ -2512,11 +2852,7 @@ interface SchemaSnapshot {
     fieldFrom: number
     keyIdx: number
     row: boolean
-    fields: string[]
-    renderIds: string[]
-    fieldFormulas: string[]
-    validationFormulas: string[]
-    editabilityFormulas: string[]
+    fields: SnapField[]
 }
 
 function snapshot(b: BlockInfo): SchemaSnapshot | undefined {
@@ -2534,11 +2870,19 @@ function snapshot(b: BlockInfo): SchemaSnapshot | undefined {
         fieldFrom: 0,
         keyIdx: 0,
         row: true,
-        fields: ordered.map((f) => f.field),
-        renderIds: ordered.map((f) => f.renderId),
-        fieldFormulas: ordered.map((f) => f.valueFormula ?? ''),
-        validationFormulas: ordered.map((f) => f.validationFormula ?? ''),
-        editabilityFormulas: ordered.map((f) => f.editabilityFormula ?? ''),
+        fields: ordered.map((f) => ({
+            name: f.field,
+            renderId: f.renderId,
+            valueFormula: f.valueFormula ?? '',
+            validationFormula: f.validationFormula ?? '',
+            editabilityFormula: f.editabilityFormula ?? '',
+            fieldType: f.fieldType,
+            description: f.description,
+            required: f.required,
+            unique: f.unique,
+            defaultValue: f.defaultValue,
+            writePolicy: f.writePolicy,
+        })),
     }
 }
 
@@ -2551,11 +2895,21 @@ function bindPayload(s: SchemaSnapshot): EditPayload {
             .blockId(s.blockId)
             .fieldFrom(s.fieldFrom)
             .keyIdx(s.keyIdx)
-            .fields(s.fields)
-            .renderIds(s.renderIds)
-            .fieldFormulas(s.fieldFormulas)
-            .validationFormulas(s.validationFormulas)
-            .editabilityFormulas(s.editabilityFormulas)
+            .fields(
+                s.fields.map((f) => ({
+                    name: f.name,
+                    renderId: f.renderId,
+                    valueFormula: f.valueFormula || undefined,
+                    validationFormula: f.validationFormula || undefined,
+                    editabilityFormula: f.editabilityFormula || undefined,
+                    fieldType: f.fieldType,
+                    description: f.description,
+                    required: f.required,
+                    unique: f.unique,
+                    defaultValue: f.defaultValue,
+                    writePolicy: f.writePolicy,
+                }))
+            )
             .row(s.row)
             .build(),
     }
@@ -2563,17 +2917,19 @@ function bindPayload(s: SchemaSnapshot): EditPayload {
 
 /** Every template a snapshot holds, for scanning or rewriting. */
 function templates(s: SchemaSnapshot): string[] {
-    return [
-        ...s.fieldFormulas,
-        ...s.validationFormulas,
-        ...s.editabilityFormulas,
-    ]
+    return s.fields.flatMap((f) => [
+        f.valueFormula,
+        f.validationFormula,
+        f.editabilityFormula,
+    ])
 }
 
 function rewriteTemplates(s: SchemaSnapshot, f: (t: string) => string): void {
-    s.fieldFormulas = s.fieldFormulas.map(f)
-    s.validationFormulas = s.validationFormulas.map(f)
-    s.editabilityFormulas = s.editabilityFormulas.map(f)
+    for (const field of s.fields) {
+        field.valueFormula = f(field.valueFormula)
+        field.validationFormula = f(field.validationFormula)
+        field.editabilityFormula = f(field.editabilityFormula)
+    }
 }
 
 /** A quoted literal is a stable token, so this substitution is exact. */
@@ -2713,11 +3069,14 @@ export const renameField: Tool<
         }
         const snap = snapshot(target)
         if (!snap) throw new Error(`block "${input.block}" has no schema`)
-        if (!snap.fields.includes(input.from)) {
+        const fieldNames = () => snap.fields.map((f) => f.name)
+        if (!fieldNames().includes(input.from)) {
             throw new Error(
                 `block "${input.block}" has no field named "${
                     input.from
-                }" — it has ${snap.fields.map((f) => `"${f}"`).join(', ')}`
+                }" — it has ${fieldNames()
+                    .map((f) => `"${f}"`)
+                    .join(', ')}`
             )
         }
         if (input.from === input.to) {
@@ -2726,7 +3085,7 @@ export const renameField: Tool<
                 display: `"${input.to}" already has that name.`,
             }
         }
-        if (snap.fields.includes(input.to)) {
+        if (fieldNames().includes(input.to)) {
             throw new Error(
                 `block "${input.block}" already has a field named "${input.to}" — field names address cells, so they must be unique`
             )
@@ -2757,7 +3116,9 @@ export const renameField: Tool<
             )
         }
 
-        snap.fields = snap.fields.map((f) => (f === input.from ? input.to : f))
+        for (const f of snap.fields) {
+            if (f.name === input.from) f.name = input.to
+        }
         const own = new RegExp(
             `(#FIELD\\s*\\(\\s*)"${escapeForRegex(input.from)}"`,
             'g'
@@ -3118,11 +3479,17 @@ export const convertToBlock: Tool<
                         .blockId(blockId)
                         .fieldFrom(0)
                         .keyIdx(keyIdx)
-                        .fields(fields)
-                        .renderIds(fields.map((_, i) => `${input.name}__f${i}`))
-                        .fieldFormulas([])
-                        .validationFormulas([])
-                        .editabilityFormulas([])
+                        // A table adopted from ordinary cells declares nothing
+                        // about its fields — the header row gives names and
+                        // that is all anyone said. They come in unspecified,
+                        // which is the honest reading; `set_field_rule` and a
+                        // later edit can claim types.
+                        .fields(
+                            fields.map((name, i) => ({
+                                name,
+                                renderId: `${input.name}__f${i}`,
+                            }))
+                        )
                         .row(true)
                         .build(),
                 },
@@ -3327,6 +3694,1002 @@ async function assertMayModify(
     }
 }
 
+// ---------------------------------------------------------------------------
+// create_analysis_block — a table's totals, as their own block
+// ---------------------------------------------------------------------------
+
+const AGG_FUNCS = ['SUM', 'COUNT', 'COUNTA', 'AVERAGE', 'MIN', 'MAX'] as const
+
+interface CreateAnalysisBlockInput {
+    source: string
+    name?: string
+    label?: string
+    aggregates?: ReadonlyArray<{
+        field: string
+        func: (typeof AGG_FUNCS)[number]
+    }>
+}
+
+/**
+ * A block's number format per FIELD name, read off its render entries.
+ *
+ * This is what an analysis block or a pivot of it inherits: both aggregate a
+ * source column, so both are measured in that column's units.
+ */
+function numFmtsOf(block: BlockInfo): Record<string, string | undefined> {
+    const entries = (block.schema?.fields ?? []).map((f) => [
+        f.field,
+        block.fieldRenders?.find((r) => r.renderId === f.renderId)?.style
+            ?.formatter || undefined,
+    ])
+    return Object.fromEntries(entries)
+}
+
+export const createAnalysisBlock: Tool<
+    CreateAnalysisBlockInput,
+    {block: string; block_id: number; aggregated: string[]}
+> = {
+    namespace: 'build',
+    name: 'create_analysis_block',
+    description: [
+        'Add a block that analyses another one — a totals row, sitting directly below the table it summarises.',
+        '',
+        'It is an ordinary block that declares which block it analyses, so its result is addressable like any other: `BLOCKREF("<name>", "<label>", "<field>")`. That is the point of it being separate — a total you can only look at is much less useful than one you can reference.',
+        '',
+        "What the engine does with the declaration: it GENERATES each field's formula from it, so renaming a field of the source rebuilds the total instead of breaking it, and the total tracks the source as rows are added. Do not write the formulas yourself.",
+        '',
+        'By default every `number` field of the source gets a SUM and everything else is left blank; pass `aggregates` to choose. Removing the source removes this block with it.',
+        '',
+        'Read it back with describe_block: the analysis reports `analyzes`, the source reports `analyzed_by`. Never sum an analysis block alongside its source — that counts the same numbers twice.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            source: {
+                type: 'string',
+                description: 'Ref name of the block to analyse.',
+            },
+            name: {
+                type: 'string',
+                description:
+                    'Ref name for the new block. Defaults to "<source>_analysis".',
+            },
+            label: {
+                type: 'string',
+                description:
+                    'What goes in the key column, and therefore the key the result is addressed by. Defaults to "TOTAL".',
+            },
+            aggregates: {
+                type: 'array',
+                description:
+                    'Which source fields to aggregate and how. Omit to SUM every field the source declares as `number`.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        field: {
+                            type: 'string',
+                            description: 'Field name of the SOURCE block.',
+                        },
+                        func: {type: 'string', enum: [...AGG_FUNCS]},
+                    },
+                    required: ['field', 'func'],
+                },
+            },
+        },
+        required: ['source'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const source = all.find((b) => b.schema?.name === input.source)
+        if (!source) {
+            throw new Error(`no block with ref name "${input.source}"`)
+        }
+        const schema = source.schema
+        if (!schema) {
+            throw new Error(
+                `block "${input.source}" has no schema, so it has no fields to aggregate`
+            )
+        }
+        const name = input.name ?? `${input.source}_analysis`
+        if (all.some((b) => b.schema?.name === name)) {
+            throw new Error(
+                `a block named "${name}" already exists — ref names are how formulas reach a block, so pick another`
+            )
+        }
+        const label = input.label ?? 'TOTAL'
+
+        const ordered = [...schema.fields].sort((a, b) => a.idx - b.idx)
+        // Default: SUM every field the source DECLARES as a number. The
+        // declaration is why this can be a default at all — guessing from the
+        // data would sum an id column.
+        const chosen = new Map<string, (typeof AGG_FUNCS)[number]>()
+        if (input.aggregates?.length) {
+            for (const a of input.aggregates) {
+                if (!ordered.some((f) => f.field === a.field)) {
+                    throw new Error(
+                        `block "${input.source}" has no field named "${a.field}"`
+                    )
+                }
+                chosen.set(a.field, a.func)
+            }
+        } else {
+            for (const f of ordered) {
+                if (f.fieldType?.kind === 'number') chosen.set(f.field, 'SUM')
+            }
+        }
+        if (chosen.size === 0) {
+            throw new Error(
+                `nothing to aggregate: block "${input.source}" declares no number fields. ` +
+                    'Pass `aggregates` explicitly, or declare a field type first.'
+            )
+        }
+
+        const idRes = await client.getAvailableBlockId({
+            sheetIdx: source.sheetIdx,
+        })
+        if (isErrorMessage(idRes)) {
+            throw new Error(`getAvailableBlockId failed: ${idRes.msg}`)
+        }
+        const blockId = idRes
+        const row = source.rowStart + source.rowCnt
+
+        await commitTransaction(
+            client,
+            [
+                // Room first, or the new block would land on whatever sits
+                // below the table. This is also what keeps the pair adjacent
+                // as the source grows later.
+                {
+                    type: 'insertRows',
+                    value: {sheetIdx: source.sheetIdx, start: row, count: 1},
+                },
+                {
+                    type: 'createBlock',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        id: blockId,
+                        masterRow: row,
+                        masterCol: source.colStart,
+                        rowCnt: 1,
+                        colCnt: source.colCnt,
+                        // Declared as it is created, so it is never briefly a
+                        // stray table a reader would take for records.
+                        analyzes: source.blockId,
+                        description: `Analysis of "${input.source}".`,
+                    },
+                },
+                {
+                    type: 'bindFormSchema',
+                    value: {
+                        refName: name,
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        fieldFrom: 0,
+                        keyIdx: 0,
+                        row: true,
+                        fields: ordered.map((f, i) => {
+                            const func = chosen.get(f.field)
+                            return {
+                                name: f.field,
+                                renderId: `${name}__f${i}`,
+                                // No value formula: the engine generates it
+                                // from the aggregate declaration.
+                                aggFunc: func,
+                                aggField: func ? f.field : undefined,
+                            }
+                        }),
+                    },
+                },
+                // The label is the key the result is addressed by.
+                {
+                    type: 'blockInput',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        row: 0,
+                        col: schema.keys[0]?.idx ?? 0,
+                        input: label,
+                    },
+                },
+                // Carry each source column's number format across, so a total
+                // of a currency column reads as currency. The counts are the
+                // exception: they count records, not money.
+                ...ordered.map((f, i) => {
+                    const func = chosen.get(f.field)
+                    const keep =
+                        func === undefined || aggregateKeepsFormat(func)
+                    const numFmt = source.fieldRenders?.find(
+                        (r) => r.renderId === f.renderId
+                    )?.style?.formatter
+                    return {
+                        type: 'upsertFieldRenderInfo' as const,
+                        value: {
+                            renderId: `${name}__f${i}`,
+                            diyRender: false,
+                            styleUpdate: {
+                                setNumFmt: (keep ? numFmt : undefined) ?? '',
+                            },
+                        },
+                    }
+                }),
+            ],
+            `create_analysis_block("${input.source}")`
+        )
+
+        const aggregated = [...chosen.entries()].map(
+            ([field, func]) => `${func} of ${field}`
+        )
+        return {
+            data: {block: name, block_id: blockId, aggregated},
+            display:
+                `Created "${name}" below "${input.source}": ` +
+                `${aggregated.join(', ')}. ` +
+                `Reference a result with BLOCKREF("${name}", "${label}", "<field>").`,
+        }
+    },
+}
+
+// ---------------------------------------------------------------------------
+// create_pivot / refresh_pivot — a cross-tab as an analysis block
+// ---------------------------------------------------------------------------
+
+interface CreatePivotInput {
+    source: string
+    rows: string
+    columns?: string
+    measure: string
+    func?: (typeof AGG_FUNCS)[number]
+    name?: string
+    order?: 'ascending' | 'firstSeen' | 'custom'
+    order_values?: string[]
+    filters?: Array<{field: string; criteria: string}>
+    row_total?: string
+    extra_measures?: Array<{
+        name: string
+        func: (typeof AGG_FUNCS)[number]
+        measure: string
+        column?: string
+    }>
+}
+
+export const editAnalysisBlock: Tool<
+    {
+        name: string
+        aggregates?: Array<{field: string; func: AggFunc}>
+        label?: string
+    },
+    {block: string; aggregated: string[]}
+> = {
+    namespace: 'build',
+    name: 'edit_analysis_block',
+    description: [
+        "Change what an existing analysis block computes: which of the source's fields it aggregates, with which function, and the label its row is addressed by.",
+        '',
+        'Use this to arrive at an analysis in STEPS. Summing every number is often nearly right and wrong in one column — a rate wants AVERAGE, a text column wants COUNTA, an id column wants nothing at all. Adjust rather than rebuild: the block keeps its ref name, so formulas pointing at it keep working, and it is one undo.',
+        '',
+        '`aggregates` REPLACES the set outright — a field you leave out stops being computed and its cell goes blank. Read the current set from describe_block first if you mean to add to it.',
+        '',
+        'This is the simple kind of analysis: one row, one number per column. For one number per GROUP, use build__create_pivot / build__edit_pivot instead.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            name: {
+                type: 'string',
+                description: 'Ref name of the analysis block.',
+            },
+            aggregates: {
+                type: 'array',
+                description:
+                    'Replaces the whole set. Omit to leave the functions alone and change only `label`.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        field: {
+                            type: 'string',
+                            description: 'Field name of the SOURCE block.',
+                        },
+                        func: {type: 'string', enum: [...AGG_FUNCS]},
+                    },
+                    required: ['field', 'func'],
+                },
+            },
+            label: {
+                type: 'string',
+                description:
+                    'New row label, which is also the key the result is addressed by. Omit to keep it.',
+            },
+        },
+        required: ['name'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const block = await blockByName(client, input.name)
+        if (block.analyzes === undefined) {
+            throw new Error(
+                `block "${input.name}" does not analyse anything, so there is nothing to edit. Create one with build__create_analysis_block.`
+            )
+        }
+        if (block.pivot) {
+            throw new Error(
+                `block "${input.name}" is a pivot — use build__edit_pivot, which changes rows and columns as well as the number.`
+            )
+        }
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const source = all.find((b) => b.blockId === block.analyzes)
+        if (!source?.schema) {
+            throw new Error(
+                `analysis block "${input.name}" no longer has a source block`
+            )
+        }
+
+        // Omitted means unchanged, so the current declarations are the
+        // starting point — read off this block's own schema, where they live.
+        const current: Array<{field: string; func: AggFunc}> = (
+            block.schema?.fields ?? []
+        )
+            .filter((f) => f.aggFunc !== undefined && f.aggField !== undefined)
+            .map((f) => ({
+                field: f.aggField as string,
+                func: f.aggFunc as AggFunc,
+            }))
+        const aggregates = input.aggregates ?? current
+        if (aggregates.length === 0) {
+            throw new Error(
+                `nothing to aggregate: pass \`aggregates\` with at least one field`
+            )
+        }
+
+        const numFmtOf = (renderId: string) =>
+            source.fieldRenders?.find((r) => r.renderId === renderId)?.style
+                ?.formatter || undefined
+        const ops = new WorkbookOps(client)
+        const applied = await ops.editAnalysisBlock({
+            sheetIdx: block.sheetIdx,
+            blockId: block.blockId,
+            refName: input.name,
+            source: {
+                sheetIdx: source.sheetIdx,
+                blockId: source.blockId,
+                refName: source.schema.name,
+                rowStart: source.rowStart,
+                rowCnt: source.rowCnt,
+                colStart: source.colStart,
+                fields: [...source.schema.fields]
+                    .sort((a, b) => a.idx - b.idx)
+                    .map((f) => ({
+                        name: f.field,
+                        isNumber: f.fieldType?.kind === 'number',
+                        numFmt: numFmtOf(f.renderId),
+                    })),
+                keyIdx: source.schema.keys?.[0]?.idx ?? 0,
+            },
+            aggregates,
+            label: input.label,
+        })
+
+        const aggregated = applied.map((a) => `${a.func} of ${a.field}`)
+        return {
+            data: {block: input.name, aggregated},
+            display:
+                `"${input.name}" now computes ${aggregated.join(', ')}.` +
+                (input.label ? ` Row labelled "${input.label}".` : ''),
+        }
+    },
+}
+
+export const createPivot: Tool<
+    CreatePivotInput,
+    {
+        block: string
+        block_id: number
+        rows: string[]
+        columns: string[]
+        unassigned_records: number
+    }
+> = {
+    namespace: 'build',
+    name: 'create_pivot',
+    description: [
+        'Cross-tabulate a table: one row per distinct value of `rows`, one column per distinct value of `columns`, each cell aggregating `measure`.',
+        '',
+        'The result is an ordinary block, so every cell is addressable: `BLOCKREF("<name>", "<a rows value>", "<a columns value>")`. That is what lets you put one number from it in a sentence or feed it to another calculation.',
+        '',
+        'You declare the recipe; the engine generates every cell from it. Do not write formulas, and do not write into the block — renaming a field of the source rebuilds the pivot rather than breaking it, which is only true because nothing is hand-written.',
+        '',
+        '`rows` and `columns` must be fields whose values REPEAT (a region, a quarter, a status). Pointing either at an id gives one row per record, which is the source table again, not a pivot.',
+        '',
+        "IMPORTANT: a pivot's numbers are live but its SHAPE is not. When new values appear in the source, its rows and columns fall behind while every number in it stays correct — call build__refresh_pivot. describe_block reports when that has happened.",
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            source: {
+                type: 'string',
+                description: 'Ref name of the table to pivot.',
+            },
+            rows: {
+                type: 'string',
+                description:
+                    'Field of the source whose distinct values become the ROWS. Its values must repeat.',
+            },
+            columns: {
+                type: 'string',
+                description:
+                    'Field whose distinct values become the COLUMNS. Omit for a simple group-by with one value column.',
+            },
+            measure: {
+                type: 'string',
+                description: 'Field being aggregated. Normally a number field.',
+            },
+            func: {
+                type: 'string',
+                enum: [...AGG_FUNCS],
+                description:
+                    'How to aggregate. Defaults to SUM. COUNT counts matching RECORDS and ignores `measure`; COUNTA counts the records whose `measure` is filled in, which is how you ask how complete a column is.',
+            },
+            name: {
+                type: 'string',
+                description:
+                    'Ref name for the new block. Defaults to "<source>_pivot".',
+            },
+            order: {
+                type: 'string',
+                enum: ['ascending', 'firstSeen', 'custom'],
+                description:
+                    "Order of the rows. `ascending` (default) sorts; `firstSeen` keeps the source's own sequence; `custom` uses `order_values`.",
+            },
+            order_values: {
+                type: 'array',
+                items: {type: 'string'},
+                description:
+                    'The row sequence for `order: custom`. A value you omit is placed after the listed ones, never hidden.',
+            },
+            filters: {
+                type: 'array',
+                description:
+                    'Which source records count at all. Omit to count every one. Applied to the rows AND the numbers, so a group left with no records gets no row rather than a row reading 0.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        field: {
+                            type: 'string',
+                            description: 'Field of the SOURCE block.',
+                        },
+                        criteria: {
+                            type: 'string',
+                            description:
+                                'Spreadsheet condition syntax: `>100`, `East`, `<>closed`.',
+                        },
+                    },
+                    required: ['field', 'criteria'],
+                },
+            },
+            row_total: {
+                type: 'string',
+                description:
+                    'Name for a column totalling each row across EVERY value of `columns` — e.g. "Total". Omit for no total column.',
+            },
+            extra_measures: {
+                type: 'array',
+                description:
+                    'Extra columns with their own function and measure, for showing more than one number per group.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        name: {
+                            type: 'string',
+                            description: 'Column name in the pivot.',
+                        },
+                        func: {type: 'string', enum: [...AGG_FUNCS]},
+                        measure: {
+                            type: 'string',
+                            description: 'Field of the SOURCE block.',
+                        },
+                        column: {
+                            type: 'string',
+                            description:
+                                'Restrict it to one value of `columns`. Omit to span every value.',
+                        },
+                    },
+                    required: ['name', 'func', 'measure'],
+                },
+            },
+        },
+        required: ['source', 'rows', 'measure'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const source = all.find((b) => b.schema?.name === input.source)
+        if (!source) {
+            throw new Error(`no block with ref name "${input.source}"`)
+        }
+        const schema = source.schema
+        if (!schema) {
+            throw new Error(
+                `block "${input.source}" has no schema, so it has no fields to group by`
+            )
+        }
+        const has = (f: string) => schema.fields.some((x) => x.field === f)
+        for (const [what, f] of [
+            ['rows', input.rows],
+            ['measure', input.measure],
+            ...(input.columns ? [['columns', input.columns] as const] : []),
+        ] as ReadonlyArray<readonly [string, string]>) {
+            if (!has(f)) {
+                throw new Error(
+                    `\`${what}\`: block "${input.source}" has no field named "${f}". ` +
+                        `It has: ${schema.fields
+                            .map((x) => x.field)
+                            .join(', ')}`
+                )
+            }
+        }
+        const name = input.name ?? `${input.source}_pivot`
+        if (all.some((b) => b.schema?.name === name)) {
+            throw new Error(
+                `a block named "${name}" already exists — ref names are how formulas reach a block, so pick another`
+            )
+        }
+
+        for (const f of input.filters ?? []) {
+            if (!has(f.field)) {
+                throw new Error(
+                    `\`filters\`: block "${input.source}" has no field named "${f.field}". ` +
+                        `It has: ${schema.fields
+                            .map((x) => x.field)
+                            .join(', ')}`
+                )
+            }
+        }
+        for (const m of input.extra_measures ?? []) {
+            if (!has(m.measure)) {
+                throw new Error(
+                    `\`extra_measures\`: block "${input.source}" has no field named "${m.measure}".`
+                )
+            }
+        }
+        if (input.order === 'custom' && !input.order_values?.length) {
+            throw new Error(
+                '`order: custom` needs `order_values` — the sequence to put the rows in.'
+            )
+        }
+        if (input.row_total && !input.columns) {
+            throw new Error(
+                'A row total spans the values of `columns`, and this pivot has none — ' +
+                    'without `columns` every column already totals the whole row.'
+            )
+        }
+
+        const idRes = await client.getAvailableBlockId({
+            sheetIdx: source.sheetIdx,
+        })
+        if (isErrorMessage(idRes)) {
+            throw new Error(`getAvailableBlockId failed: ${idRes.msg}`)
+        }
+
+        // A row total first, then the extra measures — the order a reader
+        // expects, and the order the engine preserves across a refresh.
+        const extraColumns = [
+            ...(input.row_total
+                ? [{name: input.row_total, colValue: null}]
+                : []),
+            ...(input.extra_measures ?? []).map((m) => ({
+                name: m.name,
+                colValue: m.column ?? null,
+                func: m.func,
+                measure: m.measure,
+            })),
+        ]
+
+        const ops = new WorkbookOps(client)
+        const made = await ops.createPivot({
+            source: {
+                sheetIdx: source.sheetIdx,
+                blockId: source.blockId,
+                refName: input.source,
+                rowStart: source.rowStart,
+                rowCnt: source.rowCnt,
+                colStart: source.colStart,
+                // So a pivot of a currency column reads as currency.
+                numFmts: numFmtsOf(source),
+            },
+            blockId: idRes,
+            refName: name,
+            rowDim: input.rows,
+            colDim: input.columns,
+            measure: input.measure,
+            func: input.func ?? 'SUM',
+            order: input.order,
+            orderValues: input.order_values,
+            filters: input.filters,
+            extraColumns,
+        })
+
+        const func = input.func ?? 'SUM'
+        const shape = input.columns
+            ? `${made.keys.length} x ${made.fields.length}`
+            : `${made.keys.length} row(s)`
+        return {
+            data: {
+                block: name,
+                block_id: idRes,
+                rows: made.keys,
+                columns: made.fields,
+                unassigned_records: made.unassignedRecords,
+            },
+            display:
+                `Created pivot "${name}" (${shape}): ${func} of ${input.measure} ` +
+                `by ${input.rows}${
+                    input.columns ? ` x ${input.columns}` : ''
+                }. ` +
+                `Reference a cell with BLOCKREF("${name}", "<${
+                    input.rows
+                }>", "<${input.columns ?? made.fields[0]}>").` +
+                (made.unassignedRecords > 0
+                    ? ` NOTE: ${made.unassignedRecords} record(s) have no ${input.rows} and are in no cell of it.`
+                    : ''),
+        }
+    },
+}
+
+export const editPivot: Tool<
+    {
+        name: string
+        rows?: string
+        columns?: string | null
+        measure?: string
+        func?: AggFunc
+        order?: DimOrder
+        order_values?: string[]
+        filters?: Array<{field: string; criteria: string}>
+        row_total?: string
+        extra_measures?: Array<{
+            name: string
+            func: AggFunc
+            measure: string
+            column?: string
+        }>
+    },
+    {
+        block: string
+        rows: string[]
+        columns: string[]
+        unassigned_records: number
+    }
+> = {
+    namespace: 'build',
+    name: 'edit_pivot',
+    description: [
+        "Change an existing pivot's recipe — what it groups by, what it measures, how, in what order, over which records — and reshape it to match.",
+        '',
+        'Use this rather than deleting and recreating: the block keeps its ref name, so every formula pointing at it keeps working, and the whole change is one undo.',
+        '',
+        'This is also the way to REPAIR a pivot whose recipe stopped resolving (describe_block reports `pivot_is_broken`) — for instance after a source field was renamed. A broken pivot reads 0 in every cell rather than erroring, so it must be fixed, not refreshed: a refresh fails the same way.',
+        '',
+        'Everything you omit is UNCHANGED. What you pass replaces that part outright — `filters: []` clears the filters, `columns: null` turns a cross-tab into a simple group-by.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            name: {type: 'string', description: 'Ref name of the pivot block.'},
+            rows: {
+                type: 'string',
+                description:
+                    'New row dimension. Its values must repeat. Omit to keep the current one.',
+            },
+            columns: {
+                type: 'string',
+                description:
+                    'New column dimension. Pass null to drop the columns and make it a simple group-by. Omit to keep the current one.',
+            },
+            measure: {
+                type: 'string',
+                description:
+                    'New field to aggregate. Omit to keep the current one.',
+            },
+            func: {
+                type: 'string',
+                enum: [...AGG_FUNCS],
+                description: 'New aggregate. Omit to keep the current one.',
+            },
+            order: {
+                type: 'string',
+                enum: ['ascending', 'firstSeen', 'custom'],
+                description: 'New row order. Omit to keep the current one.',
+            },
+            order_values: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'The row sequence for `order: custom`.',
+            },
+            filters: {
+                type: 'array',
+                description:
+                    'Replaces the current filters outright. Pass an empty array to count every record again.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        field: {type: 'string'},
+                        criteria: {
+                            type: 'string',
+                            description:
+                                'Spreadsheet condition syntax: `>100`, `East`, `<>closed`.',
+                        },
+                    },
+                    required: ['field', 'criteria'],
+                },
+            },
+            row_total: {
+                type: 'string',
+                description:
+                    'Name for a column totalling each row across every column value. Replaces the declared columns along with `extra_measures`.',
+            },
+            extra_measures: {
+                type: 'array',
+                description:
+                    'Replaces the declared extra columns outright, together with `row_total`. Omit BOTH to keep the ones the pivot has.',
+                items: {
+                    type: 'object',
+                    properties: {
+                        name: {type: 'string'},
+                        func: {type: 'string', enum: [...AGG_FUNCS]},
+                        measure: {type: 'string'},
+                        column: {type: 'string'},
+                    },
+                    required: ['name', 'func', 'measure'],
+                },
+            },
+        },
+        required: ['name'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const block = await blockByName(client, input.name)
+        const was = block.pivot
+        if (!was) {
+            throw new Error(
+                `block "${input.name}" is not a pivot, so it has no recipe to edit`
+            )
+        }
+        const all = await client.getAllBlocks({})
+        if (isErrorMessage(all)) {
+            throw new Error(`getAllBlocks failed: ${all.msg}`)
+        }
+        const source = all.find((b) => b.blockId === block.analyzes)
+        if (!source) {
+            throw new Error(
+                `pivot "${input.name}" no longer has a source block, so there is nothing to plan against`
+            )
+        }
+
+        // Omitted means unchanged. `columns` is the one that needs a third
+        // state: absent keeps it, null drops it.
+        const rowDim = input.rows ?? was.rowDim
+        const colDim =
+            input.columns === undefined
+                ? was.colDim ?? undefined
+                : input.columns ?? undefined
+        const measure = input.measure ?? was.measure
+        const func = (input.func ?? was.func) as AggFunc
+
+        const fields = source.schema?.fields ?? []
+        const has = (f: string) => fields.some((x) => x.field === f)
+        for (const [what, f] of [
+            ['rows', rowDim],
+            ['measure', measure],
+            ...(colDim ? [['columns', colDim] as const] : []),
+            ...(input.filters ?? []).map((x) => ['filters', x.field] as const),
+        ] as ReadonlyArray<readonly [string, string]>) {
+            if (!has(f)) {
+                throw new Error(
+                    `\`${what}\`: block "${source.schema?.name}" has no field named "${f}". ` +
+                        `It has: ${fields.map((x) => x.field).join(', ')}`
+                )
+            }
+        }
+
+        // The declared columns are replaced as a set, or kept as a set — a
+        // half-replaced set would be a shape nobody asked for.
+        const restating =
+            input.row_total !== undefined || input.extra_measures !== undefined
+        const extraColumns = restating
+            ? [
+                  ...(input.row_total
+                      ? [{name: input.row_total, colValue: null}]
+                      : []),
+                  ...(input.extra_measures ?? []).map((m) => ({
+                      name: m.name,
+                      colValue: m.column ?? null,
+                      func: m.func,
+                      measure: m.measure,
+                  })),
+              ]
+            : (block.schema?.fields ?? [])
+                  .filter((f) => f.pivotColValue !== undefined)
+                  .map((f) => ({
+                      name: f.field,
+                      colValue:
+                          f.pivotColValue === '*'
+                              ? null
+                              : f.pivotColValue ?? null,
+                      func: f.pivotFunc as AggFunc | undefined,
+                      measure: f.pivotMeasure,
+                  }))
+
+        const ops = new WorkbookOps(client)
+        const made = await ops.editPivot({
+            sheetIdx: block.sheetIdx,
+            blockId: block.blockId,
+            refName: input.name,
+            source: {
+                sheetIdx: source.sheetIdx,
+                blockId: source.blockId,
+                refName: source.schema?.name ?? '',
+                rowStart: source.rowStart,
+                rowCnt: source.rowCnt,
+                colStart: source.colStart,
+                numFmts: numFmtsOf(source),
+            },
+            currentRowCnt: block.rowCnt,
+            currentColCnt: block.colCnt,
+            rowDim,
+            colDim,
+            measure,
+            func,
+            order: (input.order ?? was.order) as DimOrder | undefined,
+            orderValues: input.order_values ?? was.orderValues ?? undefined,
+            filters: input.filters ?? was.filters ?? undefined,
+            extraColumns,
+        })
+
+        return {
+            data: {
+                block: input.name,
+                rows: made.keys,
+                columns: made.fields,
+                unassigned_records: made.unassignedRecords,
+            },
+            display:
+                `Re-cut "${input.name}": rows = ${rowDim}` +
+                (colDim ? `, columns = ${colDim}` : '') +
+                `, ${func} of ${measure}. ` +
+                `Now ${made.keys.length} row(s) x ${made.fields.length} column(s).` +
+                (made.unassignedRecords > 0
+                    ? ` ${made.unassignedRecords} record(s) have an empty ${rowDim} and are in no cell.`
+                    : ''),
+        }
+    },
+}
+
+export const refreshPivot: Tool<
+    {name: string},
+    {
+        changed: boolean
+        added_rows: string[]
+        removed_rows: string[]
+        added_columns: string[]
+        removed_columns: string[]
+        unassigned_records: number
+    }
+> = {
+    namespace: 'build',
+    name: 'refresh_pivot',
+    description: [
+        "Bring a pivot's rows and columns back in line with its source.",
+        '',
+        'Its NUMBERS were never stale — they are live formulas. Only the set of rows and columns falls behind, because no formula can add a row. That is exactly why this matters: a stale pivot shows correct numbers with whole groups missing, and totals taken from it are short with nothing to say so.',
+        '',
+        'Call it before reading or reporting a pivot that describe_block flagged. Safe and cheap to call when nothing has changed — it reports that it did nothing.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'never',
+    inputSchema: {
+        properties: {
+            name: {type: 'string', description: 'Ref name of the pivot block.'},
+        },
+        required: ['name'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const block = await blockByName(client, input.name)
+        if (!block.pivot) {
+            throw new Error(
+                `block "${input.name}" is not a pivot, so there is no shape to refresh`
+            )
+        }
+        const keyField = block.schema?.keys?.length
+            ? // The key column holds the row dimension; its FIELD name is what
+              // the re-bind has to restate.
+              block.schema.fields.find(
+                  (f) => f.idx === block.schema!.keys[0].idx
+              )?.field ?? block.pivot.rowDim
+            : block.pivot.rowDim
+
+        // The source carries the number formats a refreshed column inherits.
+        // Absent (a pivot whose source was removed) the refresh still runs and
+        // simply leaves formats alone.
+        const all = await client.getAllBlocks({})
+        const source = isErrorMessage(all)
+            ? undefined
+            : all.find((b) => b.blockId === block.analyzes)
+
+        const ops = new WorkbookOps(client)
+        const changed = await ops.refreshPivot({
+            sheetIdx: block.sheetIdx,
+            blockId: block.blockId,
+            refName: input.name,
+            keyField,
+            // So a row total or a second measure is restated rather than
+            // rewritten as an ordinary derived column.
+            currentFields: block.schema?.fields,
+            // So a column the refresh ADDS is formatted like the ones beside
+            // it. The formats live on the SOURCE, which is the block this
+            // pivot analyses.
+            formats: source
+                ? {
+                      numFmts: numFmtsOf(source),
+                      measure: block.pivot.measure,
+                      func: block.pivot.func as AggFunc,
+                  }
+                : undefined,
+        })
+
+        if (!changed) {
+            return {
+                data: {
+                    changed: false,
+                    added_rows: [],
+                    removed_rows: [],
+                    added_columns: [],
+                    removed_columns: [],
+                    unassigned_records: 0,
+                },
+                display: `"${input.name}" was already current — nothing to refresh.`,
+            }
+        }
+
+        const bits: string[] = []
+        const say = (label: string, xs: string[]) => {
+            if (xs.length) bits.push(`${label} ${xs.join(', ')}`)
+        }
+        say('added rows', changed.addedKeys)
+        say('removed rows', changed.removedKeys)
+        say('added columns', changed.addedFields)
+        say('removed columns', changed.removedFields)
+        return {
+            data: {
+                changed: true,
+                added_rows: changed.addedKeys,
+                removed_rows: changed.removedKeys,
+                added_columns: changed.addedFields,
+                removed_columns: changed.removedFields,
+                unassigned_records: changed.unassignedRecords,
+            },
+            display:
+                `Refreshed "${input.name}": ${bits.join('; ')}.` +
+                (changed.unassignedRecords > 0
+                    ? ` ${changed.unassignedRecords} record(s) still belong to no group (their grouping value is blank) and are in no cell — a refresh cannot fix that.`
+                    : ''),
+        }
+    },
+}
+
 export const BUILDER_TOOLS: Tool[] = [
     convertToBlock as Tool,
     renameBlock as Tool,
@@ -3340,6 +4703,11 @@ export const BUILDER_TOOLS: Tool[] = [
     defineEnumSet,
     listBlocks,
     describeBlock,
+    createAnalysisBlock as Tool,
+    editAnalysisBlock as Tool,
+    createPivot as Tool,
+    editPivot as Tool,
+    refreshPivot as Tool,
     setBlockDescription as Tool,
     setBlockPermissions as Tool,
     evalFormula,

@@ -24,34 +24,32 @@ export class Box {
         // set default to center
         const alignX = align ?? 'center'
         switch (alignX) {
-            // default
-            // 常规
-            // 居中
+            // general / centre
             case 'general':
             case 'center':
                 textAlign = 'center'
                 tx = x + this.width / 2
                 break
-            // 靠左(缩进)
+            // left (indented)
             case 'left':
                 textAlign = 'left'
                 tx = x
                 break
-            // 靠右(缩进)
+            // right (indented)
             case 'right':
                 textAlign = 'right'
                 tx = x + this.width
                 break
-            // // 填充
+            // // fill
             // case AlignX.H_FILL:
             //     return box.x
-            // // 跨列居中
+            // // centre across columns
             // case AlignX.H_CENTER_CONTINUOUS:
             //     return 'center'
-            // // 两端对齐
+            // // justify
             // case AlignX.H_JUSTIFY:
             //     return 'center'
-            // // 分散对齐(缩进)
+            // // distributed (indented)
             // case AlignX.H_DISTRIBUTED:
             //     return 'center'
             default:
@@ -70,26 +68,26 @@ export class Box {
         // set default to center
         const alignY = vertical ?? 'center'
         switch (alignY) {
-            // 靠上
+            // top
             case 'top':
                 textBaseline = 'top'
                 ty = y
                 break
             // default
-            // 居中
+            // centre
             case 'center':
                 textBaseline = 'middle'
                 ty = y + this.height / 2
                 break
-            // 靠下
+            // bottom
             case 'bottom':
                 textBaseline = 'bottom'
                 ty = y + this.height
                 break
-            // // 分散对齐
+            // // distributed
             // case AlignY.V_DISTRIBUTED:
             //     return 'bottom'
-            // // 两端对齐
+            // // justify
             // case AlignY.V_JUSTIFY:
             //     return 'bottom'
             default:

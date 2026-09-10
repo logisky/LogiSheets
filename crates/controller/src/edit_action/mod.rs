@@ -120,6 +120,9 @@ pub enum EditPayload {
     BlockLineNameFieldUpdate(BlockLineNameFieldUpdate),
     SetBlockDescription(SetBlockDescription),
     SetBlockPermissions(SetBlockPermissions),
+    SetBlockAnalyzes(SetBlockAnalyzes),
+    UpsertEnumSet(UpsertEnumSet),
+    RemoveEnumSet(RemoveEnumSet),
 
     CellFormatBrush(CellFormatBrush),
     LineFormatBrush(LineFormatBrush),
@@ -648,6 +651,16 @@ pub struct CreateBlock {
     /// What the block is for, in prose, for an AI or a person reading the
     /// sheet later. A craft creating a block should say what it is for here.
     pub description: Option<String>,
+    /// Which block this one analyses, when it is an analysis block. Set here
+    /// rather than in a follow-up payload so the block is never briefly a
+    /// stray table — the whole creation lands as one transaction, and a reader
+    /// between two payloads never sees a total row it would mistake for a
+    /// record. See `design/block-analysis.md`.
+    pub analyzes: Option<usize>,
+    /// When the block is a PIVOT, the recipe its cells and its shape derive
+    /// from. Requires `analyzes`: a pivot with no source is refused, because
+    /// every cell of it would aggregate nothing. See `design/block-pivot.md`.
+    pub pivot: Option<crate::block_manager::schema_manager::field_type::PivotSpecParts>,
 }
 
 /// Rewrite a block's prose description, or clear it with an empty string.
@@ -665,6 +678,36 @@ pub struct SetBlockDescription {
     pub sheet_idx: usize,
     pub block_id: usize,
     pub description: String,
+}
+
+/// Declare (or clear) a block's whole analysis declaration: what it analyses,
+/// and — when it is a pivot — the recipe.
+///
+/// Both at once, deliberately. A pivot without a source is meaningless, so two
+/// payloads that could disagree would only create states to defend against.
+/// Sending this always states both: omitting `pivot` makes the block a plain
+/// analysis (a total row), and omitting `analyzes` makes it an ordinary block.
+///
+/// Governed by `BlockOp::ModifySchema`: what a block analyses is as much a
+/// structural fact about it as its fields are, and pointing an existing block
+/// at a different source changes what every one of its cells computes.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "set_block_analyzes.ts", builder, rename_all = "camelCase")]
+pub struct SetBlockAnalyzes {
+    pub sheet_idx: usize,
+    pub block_id: usize,
+    /// The block being analysed, or `None` to make this an ordinary block
+    /// again. Must be on the same sheet, and must not be the block itself.
+    pub analyzes: Option<usize>,
+    /// The pivot recipe, or `None` for a plain analysis block. Requires
+    /// `analyzes`.
+    pub pivot: Option<crate::block_manager::schema_manager::field_type::PivotSpecParts>,
+}
+
+impl From<SetBlockAnalyzes> for EditPayload {
+    fn from(value: SetBlockAnalyzes) -> Self {
+        EditPayload::SetBlockAnalyzes(value)
+    }
 }
 
 /// Replace a block's per-operation policies, and optionally its default one.
@@ -766,6 +809,23 @@ pub enum BlockOp {
 }
 
 impl BlockOp {
+    /// Which operation a payload counts as, keyed by the payload's wire type
+    /// name (`EditPayload`'s `type` tag). `None` when the payload is not
+    /// something a block can single out.
+    ///
+    /// The mapping belongs to the engine because the engine defines the
+    /// operations. Every host that enforces a policy needs it — the app, the
+    /// craft runtime, Watson — and each keeping its own table is how the same
+    /// payload comes to be governed differently in different hosts. A payload
+    /// this returns `None` for is not unguarded: the caller falls back to its
+    /// owner check, which is what the app already did.
+    pub fn for_payload_type(payload_type: &str) -> Option<BlockOp> {
+        BLOCK_OP_BY_PAYLOAD
+            .iter()
+            .find(|(name, _)| *name == payload_type)
+            .map(|(_, op)| *op)
+    }
+
     /// Every operation, so a caller can render or check the whole set without
     /// having to keep its own list in step with this one.
     pub const ALL: [BlockOp; 7] = [
@@ -791,6 +851,33 @@ impl BlockOp {
         }
     }
 }
+
+/// Which [`BlockOp`] each payload counts as, by wire type name.
+///
+/// One table, so the answer cannot differ between the engine and a host. Names
+/// are `EditPayload`'s `type` tag — the camelCase form of the variant.
+pub const BLOCK_OP_BY_PAYLOAD: &[(&str, BlockOp)] = &[
+    ("insertRowsInBlock", BlockOp::InsertDeleteLines),
+    ("deleteRowsInBlock", BlockOp::InsertDeleteLines),
+    ("insertColsInBlock", BlockOp::InsertDeleteLines),
+    ("deleteColsInBlock", BlockOp::InsertDeleteLines),
+    ("resizeBlock", BlockOp::InsertDeleteLines),
+    ("removeBlock", BlockOp::RemoveBlock),
+    ("bindFormSchema", BlockOp::ModifySchema),
+    ("bindRandomSchema", BlockOp::ModifySchema),
+    ("upsertFieldFormulas", BlockOp::ModifySchema),
+    ("upsertFieldRenderInfo", BlockOp::ModifySchema),
+    ("blockLineNameFieldUpdate", BlockOp::ModifySchema),
+    // Handing a block's policies over is itself a schema-level change —
+    // otherwise anyone could unlock a block simply by asking to.
+    ("setBlockPermissions", BlockOp::ModifySchema),
+    ("setBlockAnalyzes", BlockOp::ModifySchema),
+    ("cellInput", BlockOp::CellInput),
+    ("blockInput", BlockOp::CellInput),
+    ("reorderBlockLines", BlockOp::SortByField),
+    ("moveBlockLine", BlockOp::SortByField),
+    ("setBlockDescription", BlockOp::ModifyDescription),
+];
 
 /// Per-operation overrides of a block's [`ModifyPolicy`].
 ///
@@ -1093,6 +1180,251 @@ impl From<ReorderBlockLines> for EditPayload {
     }
 }
 
+/// One field of a form schema: its identity, the three rule templates that
+/// guard it, and its declaration.
+///
+/// This replaced five positionally-aligned `Vec`s on [`BindFormSchema`]
+/// (`fields` / `render_ids` / `field_formulas` / `validation_formulas` /
+/// `editability_formulas`), each with its own "an empty vec means all-None"
+/// convention. Adding the declaration would have made it ten, so the shape had
+/// to go before the declaration could arrive.
+///
+/// Everything but `name` and `render_id` is optional; an omitted entry means
+/// "nobody said", not "clear it".
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "schema_field_spec.ts", builder, rename_all = "camelCase")]
+pub struct SchemaFieldSpec {
+    pub name: String,
+    /// Generated by the host. Ties the field to its render behaviour
+    /// (`FieldRenderManager`) and, for now, to the host's own field metadata.
+    pub render_id: String,
+    /// Template making the field engine-computed. Uses `#FIELD("name")` for a
+    /// sibling cell in the same record and `#KEY` for the record's key. When
+    /// set, user writes to the field are dropped — the formula is the
+    /// constraint.
+    pub value_formula: Option<String>,
+    /// Boolean template evaluated per record. FALSE raises a
+    /// `ShadowKind::Validation` warning; the value still commits. Also accepts
+    /// `#PLACEHOLDER` for the cell itself.
+    pub validation_formula: Option<String>,
+    /// Boolean template evaluated per record. FALSE installs a
+    /// `ShadowKind::UserEditable` lock the host permission layer reads.
+    pub editability_formula: Option<String>,
+    /// What kind of value belongs here. Omitted reads as unspecified.
+    pub field_type: Option<crate::block_manager::schema_manager::field_type::FieldTypeParts>,
+    /// What the field means, in prose, for whoever reads the block next.
+    pub description: Option<String>,
+    /// Every record must carry a value here. Omitted reads as false.
+    pub required: Option<bool>,
+    /// No two records may carry the same value here. Omitted reads as false.
+    pub unique: Option<bool>,
+    /// What a newly-added record starts with.
+    pub default_value: Option<String>,
+    /// Who may write to this field's cells: `inherit` (or omitted) |
+    /// `ownerOnly` | `anyone`. A declaration the host decides with — the engine
+    /// does not know who is writing. Omitted inherits the block's own rules.
+    pub write_policy: Option<String>,
+    /// When the block analyses another one: how this field aggregates it.
+    /// `SUM` | `COUNT` | `AVERAGE` | `MIN` | `MAX`, over `agg_field` of the
+    /// analysed block. Both are needed — one without the other is not a
+    /// declaration anybody made — and both omitted is an ordinary field.
+    ///
+    /// The value formula is generated from this; do not also send one.
+    pub agg_func: Option<String>,
+    pub agg_field: Option<String>,
+    /// When the block is a PIVOT and this column is hand-declared rather than
+    /// derived from the column dimension's values.
+    ///
+    /// `pivot_col_value` is the value it filters on; `*` means EVERY value,
+    /// which is a row total. `pivot_measure` / `pivot_func` override the
+    /// block's recipe for this column alone, which is how a pivot carries a
+    /// second measure. All omitted is an ordinary derived column — the
+    /// field's own name is the value — and that is every column of a plain
+    /// cross-tab. See `design/block-pivot.md` §9.
+    pub pivot_col_value: Option<String>,
+    pub pivot_measure: Option<String>,
+    pub pivot_func: Option<String>,
+}
+
+/// One option of an enum set.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "enum_variant_spec.ts", builder, rename_all = "camelCase")]
+pub struct EnumVariantSpec {
+    /// What the cell stores.
+    pub id: String,
+    /// What a reader sees. Omit when it is the same as the id — the shape a set
+    /// inferred from a column's distinct values takes.
+    pub label: Option<String>,
+}
+
+/// Create or replace one of the workbook's enum sets: the option list an
+/// `enum` / `multiSelect` field draws from.
+///
+/// Replaces rather than merges. A set is the complete list of what is allowed,
+/// so a caller sending four variants means four — and removing an option has to
+/// be expressible.
+///
+/// Ids and labels only. A variant's colour is presentation and stays in the
+/// host, keyed by variant id; the engine needs the options in order to judge a
+/// value and needs nothing else.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "upsert_enum_set.ts", builder, rename_all = "camelCase")]
+pub struct UpsertEnumSet {
+    pub id: String,
+    /// Human-readable name. Omit for a set nobody named.
+    pub name: Option<String>,
+    /// Refused when empty: a set with no options allows nothing, which would
+    /// light up every cell in every field that uses it.
+    pub variants: Vec<EnumVariantSpec>,
+}
+
+impl From<UpsertEnumSet> for EditPayload {
+    fn from(value: UpsertEnumSet) -> Self {
+        EditPayload::UpsertEnumSet(value)
+    }
+}
+
+/// Drop an enum set. Fields still declaring it keep the declaration; their
+/// membership rule then has no options to check against, which surfaces as a
+/// violation rather than as silent acceptance.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "remove_enum_set.ts", builder, rename_all = "camelCase")]
+pub struct RemoveEnumSet {
+    pub id: String,
+}
+
+impl From<RemoveEnumSet> for EditPayload {
+    fn from(value: RemoveEnumSet) -> Self {
+        EditPayload::RemoveEnumSet(value)
+    }
+}
+
+impl SchemaFieldSpec {
+    /// A field with nothing declared and no rules — the shape a plain column
+    /// takes. Chain the setters for whatever it actually has.
+    pub fn new(name: impl Into<String>, render_id: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            render_id: render_id.into(),
+            value_formula: None,
+            validation_formula: None,
+            editability_formula: None,
+            field_type: None,
+            description: None,
+            required: None,
+            unique: None,
+            default_value: None,
+            write_policy: None,
+            agg_func: None,
+            pivot_col_value: None,
+            pivot_measure: None,
+            pivot_func: None,
+            agg_field: None,
+        }
+    }
+
+    pub fn with_value_formula(mut self, f: Option<String>) -> Self {
+        self.value_formula = f;
+        self
+    }
+
+    pub fn with_validation_formula(mut self, f: Option<String>) -> Self {
+        self.validation_formula = f;
+        self
+    }
+
+    pub fn with_editability_formula(mut self, f: Option<String>) -> Self {
+        self.editability_formula = f;
+        self
+    }
+
+    pub fn with_field_type(
+        mut self,
+        t: crate::block_manager::schema_manager::field_type::FieldType,
+    ) -> Self {
+        self.field_type = Some(t.to_parts());
+        self
+    }
+
+    pub fn with_description(mut self, d: Option<String>) -> Self {
+        self.description = d;
+        self
+    }
+
+    pub fn with_required(mut self, r: bool) -> Self {
+        self.required = Some(r);
+        self
+    }
+
+    pub fn with_unique(mut self, u: bool) -> Self {
+        self.unique = Some(u);
+        self
+    }
+
+    pub fn with_default_value(mut self, v: Option<String>) -> Self {
+        self.default_value = v;
+        self
+    }
+
+    pub fn with_write_policy(
+        mut self,
+        p: crate::block_manager::schema_manager::field_type::FieldWritePolicy,
+    ) -> Self {
+        self.write_policy = Some(p.as_str().to_string());
+        self
+    }
+
+    /// Declare this column a pivot ROW TOTAL: it spans every value of the
+    /// column dimension instead of one of them.
+    pub fn with_pivot_total(mut self) -> Self {
+        self.pivot_col_value =
+            Some(crate::block_manager::schema_manager::field_type::PIVOT_COL_ALL.to_string());
+        self
+    }
+
+    /// Declare this pivot column's own measure and function, so one pivot can
+    /// show `SUM of amt` beside `COUNT of orders`. `col_value` is the column
+    /// dimension value it belongs to, or `None` for a total across all of them.
+    pub fn with_pivot_column(
+        mut self,
+        col_value: Option<&str>,
+        func: crate::block_manager::schema_manager::field_type::AggFunc,
+        measure: impl Into<String>,
+    ) -> Self {
+        self.pivot_col_value = Some(
+            col_value
+                .unwrap_or(crate::block_manager::schema_manager::field_type::PIVOT_COL_ALL)
+                .to_string(),
+        );
+        self.pivot_func = Some(func.as_str().to_string());
+        self.pivot_measure = Some(measure.into());
+        self
+    }
+
+    pub fn with_aggregate(
+        mut self,
+        func: crate::block_manager::schema_manager::field_type::AggFunc,
+        source_field: impl Into<String>,
+    ) -> Self {
+        self.agg_func = Some(func.as_str().to_string());
+        self.agg_field = Some(source_field.into());
+        self
+    }
+}
+
+/// One `unique_together` group: the field names whose values must not repeat
+/// in combination.
+///
+/// A named type rather than a bare `Vec<Vec<String>>` because the binding
+/// generator renders a nested list as `readonly readonly string[][]`, which is
+/// not valid TypeScript. Wrapping the inner list also gives the concept a name
+/// on both sides of the wire, and matches the shape it is persisted in.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "unique_together_group.ts", rename_all = "camelCase")]
+pub struct UniqueTogetherGroup {
+    pub fields: Vec<String>,
+}
+
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "bind_form_schema.ts", builder, rename_all = "camelCase")]
 pub struct BindFormSchema {
@@ -1103,40 +1435,26 @@ pub struct BindFormSchema {
     pub field_from: usize,
     // Form schema keys start from this index.
     pub key_idx: usize,
-    pub fields: Vec<String>,
-    // Generated by frontend app.
-    // It is used to customize the fields' render behaviors.
-    // The length of this vector should be the same as `fields`.
-    pub render_ids: Vec<String>,
+    /// The fields, in order along the schema's field axis.
+    pub fields: Vec<SchemaFieldSpec>,
     pub row: bool,
-    /// Per-field value-formula templates. Same indexing as `fields` —
-    /// entry `i` is the formula for field `fields[i]`, or `None` for
-    /// free-form fields. `Some("")` is treated as `None` after trim.
+    /// Index along the RECORD axis of the line that holds field NAMES rather
+    /// than a record — row 0 for a table with a header row above its data.
     ///
-    /// Templates use `#FIELD("name")` (substituted with a reference to
-    /// the same row's sibling cell) and `#KEY` (substituted with this
-    /// row's key value as a string literal). When a field has a
-    /// template, the engine derives the cell value from it; user
-    /// `blockInput` payloads targeting that field are ignored (the
-    /// formula is the constraint).
+    /// `None` (the default, and what every caller sent before this existed)
+    /// means the names live only in the schema, and every line of the block is
+    /// a record. Declaring one is what makes a header travel with the block:
+    /// it is part of the block rather than a stray row above it, and it is the
+    /// schema that says so, because which line is names is a matter of how the
+    /// block is READ.
+    pub header_idx: Option<usize>,
+    /// Field-name groups whose values must not repeat in COMBINATION.
     ///
-    /// Callers must always send this vec (use `[]` for "no templates").
-    /// The vec length, when non-empty, must equal `fields.len()` — index
-    /// alignment is positional.
-    pub field_formulas: Vec<Option<String>>,
-    /// Per-field validation-formula templates. Same indexing as `fields`.
-    /// Each template is evaluated per row as a boolean: FALSE surfaces
-    /// a `ShadowKind::Validation` warning on the cell (advisory; the
-    /// cell value still commits). Empty vec = all None. Supports the
-    /// same placeholders as `field_formulas`, plus `#PLACEHOLDER` which
-    /// expands to a reference to the cell itself.
-    pub validation_formulas: Vec<Option<String>>,
-    /// Per-field editability-formula templates. Same indexing as `fields`.
-    /// Each template is evaluated per row as a boolean: FALSE installs
-    /// a `ShadowKind::UserEditable` lock so the host permission patch
-    /// refuses writes to that cell. Empty vec = all None. Same
-    /// placeholder support as `validation_formulas`.
-    pub editability_formulas: Vec<Option<String>>,
+    /// `Option` so a caller that predates this keeps working; absent and empty
+    /// mean the same thing. A group of fewer than two names is ignored —
+    /// single-field uniqueness is `SchemaFieldSpec::unique`, which already
+    /// derives its own rule.
+    pub unique_together: Option<Vec<UniqueTogetherGroup>>,
 }
 
 impl From<BindFormSchema> for EditPayload {

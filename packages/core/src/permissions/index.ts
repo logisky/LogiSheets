@@ -118,20 +118,9 @@ class CallerRegistry {
 
 export const callerRegistry = new CallerRegistry()
 
-/** Minimal shape needed to decide static editability — a subset of the
- * engine's FieldInfo. `userEditable` may be a boolean or a formula string. */
-export interface FieldEditableInfo {
-    userEditable?: boolean | string
-}
-
-/**
- * Whether a field permits user edits based on its static declaration alone
- * (ignoring any dynamic formula). `userEditable === false` blocks; `true`,
- * `undefined`, or a formula string permits (the formula is enforced
- * downstream via a shadow value).
- */
-export function isFieldUserEditable(
-    fi: FieldEditableInfo | undefined
-): boolean {
-    return fi?.userEditable !== false
-}
+// `FieldEditableInfo` and `isFieldUserEditable` used to live here, reading a tri-state `userEditable`
+// boolean off the host's own field store. The field's write policy is declared
+// on the engine schema now (`FieldWritePolicy`), and the app reads it from
+// there — see src/core/blocks/field-projection.ts and
+// design/block-field-semantics.md, so there is no host-side flag left to
+// interpret.

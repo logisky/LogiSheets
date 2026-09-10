@@ -25,7 +25,10 @@ export interface RejectedEffect {
  * Message for a rejected transaction: the engine's reason when it gave one,
  * and the bare code when it didn't.
  */
-export function transactionFailure(label: string, effect: RejectedEffect): Error {
+export function transactionFailure(
+    label: string,
+    effect: RejectedEffect
+): Error {
     const reason = effect.errorMessage?.trim()
     return new Error(
         reason !== undefined && reason !== ''

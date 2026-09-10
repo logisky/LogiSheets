@@ -4,7 +4,7 @@ use itertools::Itertools;
 use logisheets_base::SheetId;
 use logisheets_parser::unparse::{CellShift, Stringify};
 use logisheets_workbook::{
-    logisheets::{BlockLineInfo, BlockRange},
+    logisheets::{BlockLineInfo, BlockRange, PivotFilterXml, PivotOrderValueXml},
     prelude::{
         Comments, CtAuthors, CtCell, CtCol, CtColor, CtCols, CtComment, CtCommentList, CtFormula,
         CtMention, CtMentions, CtMergeCell, CtMergeCells, CtRow, CtRst, CtSheet, CtSheetData,
@@ -135,6 +135,10 @@ pub fn save_sheets<S: SaverTrait>(
                         .map(|p| p.as_wire_str().to_string())
                 };
                 use crate::edit_action::BlockOp;
+                // Written through the same flat form the wasm boundary uses,
+                // so there is one representation to reason about rather than a
+                // wire shape and a separate on-disk shape.
+                let pivot = block.pivot.as_ref().map(|p| p.to_parts());
                 Some(BlockRange {
                     block_id: *block_id,
                     start_row: row_idx,
@@ -155,6 +159,33 @@ pub fn save_sheets<S: SaverTrait>(
                     perm_sort_by_field: perm(BlockOp::SortByField),
                     perm_modify_description: perm(BlockOp::ModifyDescription),
                     perm_override_validation: perm(BlockOp::OverrideValidation),
+                    analyzes: block.analyzes,
+                    pivot_row_dim: pivot.as_ref().map(|p| p.row_dim.clone()),
+                    pivot_col_dim: pivot.as_ref().and_then(|p| p.col_dim.clone()),
+                    pivot_measure: pivot.as_ref().map(|p| p.measure.clone()),
+                    pivot_func: pivot.as_ref().map(|p| p.func.clone()),
+                    pivot_order: pivot.as_ref().map(|p| p.order.clone().unwrap_or_default()),
+                    pivot_order_values: pivot
+                        .as_ref()
+                        .and_then(|p| p.order_values.as_ref())
+                        .map(|vs| {
+                            vs.iter()
+                                .map(|v| PivotOrderValueXml { value: v.clone() })
+                                .collect()
+                        })
+                        .unwrap_or_default(),
+                    pivot_filters: pivot
+                        .as_ref()
+                        .and_then(|p| p.filters.as_ref())
+                        .map(|fs| {
+                            fs.iter()
+                                .map(|f| PivotFilterXml {
+                                    field: f.field.clone(),
+                                    criteria: f.criteria.clone(),
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default(),
                     row_infos,
                     col_infos,
                 })

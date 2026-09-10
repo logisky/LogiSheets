@@ -37,31 +37,20 @@ describe('SpreadsheetRuntime (Node, real WASM engine)', () => {
         rt.closeAll()
     })
 
-    it('reports formula-validation and field-constraint violations', async () => {
+    it('reports formula-validation violations', async () => {
         const rt = new SpreadsheetRuntime()
         const wb = rt.createWorkbook()
         await writeBlock(wb, [
             ['Alice', 'Active', '30'],
-            ['Bob', 'Frozen', '25'], // Frozen not allowed
-            ['Alice', 'Active', '-5'], // dup name; age fails >0
+            ['Bob', 'Frozen', '25'],
+            ['Alice', 'Active', '-5'], // age fails >0
         ])
         const rows = [0, 1, 2]
 
-        const fieldViol = await wb.ops.checkFieldConstraints([
-            {
-                field: {name: 'Name', required: true, unique: true},
-                cells: rows.map((r) => ({sheetIdx: 0, row: r, col: 0})),
-            },
-            {
-                field: {name: 'Status', required: true, unique: false},
-                allowed: ['Active', 'Closed'],
-                cells: rows.map((r) => ({sheetIdx: 0, row: r, col: 1})),
-            },
-        ])
-        expect(fieldViol.map((v) => v.kind).sort()).toEqual([
-            'duplicate',
-            'membership',
-        ])
+        // `required` / `unique` / membership are no longer checked in
+        // TypeScript: the engine derives the rule from the field's declaration
+        // and reports it through the same validation channel as every other
+        // rule. See design/block-field-semantics.md, stage 2.
 
         const formulaViol = await wb.ops.checkValidations(
             rows.map((r) => ({

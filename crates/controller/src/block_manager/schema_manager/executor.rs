@@ -6,11 +6,21 @@ use crate::{
     Error,
     block_manager::schema_manager::{
         ctx::BlockSchemaCtx,
+        field_type::{AggFunc, FieldAggregate, FieldType, FieldWritePolicy},
         manager::SchemaManager,
         schema::{ColSchema, FieldEntry, RandomSchema, RowSchema, Schema, SchemaTrait},
     },
     edit_action::EditPayload,
 };
+
+/// Trim a template and collapse an empty / whitespace-only one to `None`, so
+/// a caller sending `Some("")` means the same as sending nothing.
+fn normalize_formula(input: Option<String>) -> Option<String> {
+    input.and_then(|s| {
+        let t = s.trim().to_string();
+        if t.is_empty() { None } else { Some(t) }
+    })
+}
 
 /// Normalize a `Vec<Option<String>>` of formula templates: trim whitespace,
 /// collapse empty / whitespace-only strings to `None`. Used uniformly for
@@ -25,16 +35,6 @@ fn normalize_formula_vec(input: Vec<Option<String>>) -> Vec<Option<String>> {
             })
         })
         .collect()
-}
-
-/// Pad a formula vec with `None` to match `target_len`. Used so callers can
-/// omit `validation_formulas` / `editability_formulas` (sending `vec![]`)
-/// and have it interpreted as "all None" instead of a length mismatch.
-fn pad_to_len(input: Vec<Option<String>>, target_len: usize) -> Vec<Option<String>> {
-    if input.is_empty() {
-        return vec![None; target_len];
-    }
-    input
 }
 
 /// Apply a slice of (possibly-updated) rule values to a schema's existing
@@ -124,56 +124,41 @@ impl BlockSchemaExecutor {
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let block_id = p.block_id;
 
-                // Pad-to-len the optional rule vecs so callers can omit
-                // them (send vec![]) and have it mean "all None".
-                let field_formulas = pad_to_len(p.field_formulas, p.fields.len());
-                let validation_formulas = pad_to_len(p.validation_formulas, p.fields.len());
-                let editability_formulas = pad_to_len(p.editability_formulas, p.fields.len());
-
-                // Length checks after pad — if user sent a non-empty but
-                // wrong-length vec, that's an error.
-                if field_formulas.len() != p.fields.len()
-                    || validation_formulas.len() != p.fields.len()
-                    || editability_formulas.len() != p.fields.len()
-                {
-                    return Err(BasicError::InvalidFormula(format!(
-                        "BindFormSchema: formula vec length mismatch \
-                         (fields={}, value={}, validation={}, editability={})",
-                        p.fields.len(),
-                        field_formulas.len(),
-                        validation_formulas.len(),
-                        editability_formulas.len()
-                    ))
-                    .into());
-                }
-
-                // Validate template references *before* committing the
-                // schema: every #FIELD("X") in any rule template must
-                // refer to a field name actually declared in this bind.
-                // (#KEY is always valid; #PLACEHOLDER is allowed in
-                // validation/editability but not in value_formula —
-                // leaving it untouched there surfaces as #NAME?.)
-                let declared_names: std::collections::HashSet<String> =
-                    p.fields.iter().cloned().collect();
-                validate_field_refs(&field_formulas, &declared_names, "field_formulas")?;
-                validate_field_refs(&validation_formulas, &declared_names, "validation_formulas")?;
+                // Validate template references *before* committing the schema:
+                // every #FIELD("X") in any rule template must name a field
+                // actually declared in this bind. (#KEY is always valid;
+                // #PLACEHOLDER is allowed in validation / editability but not
+                // in value_formula — leaving it untouched there surfaces as
+                // #NAME?.)
+                let declared_names: HashSet<String> =
+                    p.fields.iter().map(|f| f.name.clone()).collect();
                 validate_field_refs(
-                    &editability_formulas,
+                    &p.fields
+                        .iter()
+                        .map(|f| f.value_formula.clone())
+                        .collect::<Vec<_>>(),
                     &declared_names,
-                    "editability_formulas",
+                    "value_formula",
+                )?;
+                validate_field_refs(
+                    &p.fields
+                        .iter()
+                        .map(|f| f.validation_formula.clone())
+                        .collect::<Vec<_>>(),
+                    &declared_names,
+                    "validation_formula",
+                )?;
+                validate_field_refs(
+                    &p.fields
+                        .iter()
+                        .map(|f| f.editability_formula.clone())
+                        .collect::<Vec<_>>(),
+                    &declared_names,
+                    "editability_formula",
                 )?;
 
-                let mut value_iter = normalize_formula_vec(field_formulas).into_iter();
-                let mut validation_iter = normalize_formula_vec(validation_formulas).into_iter();
-                let mut editability_iter = normalize_formula_vec(editability_formulas).into_iter();
-
                 let mut fields = Vec::new();
-                for (i, (field, render_id)) in p
-                    .fields
-                    .into_iter()
-                    .zip(p.render_ids.into_iter())
-                    .enumerate()
-                {
+                for (i, spec) in p.fields.into_iter().enumerate() {
                     let idx = i + p.field_from;
                     // RowSchema (p.row=true) stores ColId per field — fields
                     // run along columns, records along rows. ColSchema flips
@@ -188,29 +173,87 @@ impl BlockSchemaExecutor {
                     } else {
                         ctx.fetch_block_cell_id(&sheet_id, &block_id, idx, 0)?.row
                     };
-                    let entry = FieldEntry::new(id, render_id)
-                        .with_value_formula(value_iter.next().flatten())
-                        .with_validation_formula(validation_iter.next().flatten())
-                        .with_editability_formula(editability_iter.next().flatten());
-                    fields.push((field, entry));
+                    let field_type = spec
+                        .field_type
+                        .map(FieldType::from)
+                        .unwrap_or(FieldType::Unspecified);
+                    let entry = FieldEntry::new(id, spec.render_id)
+                        .with_value_formula(normalize_formula(spec.value_formula))
+                        .with_validation_formula(normalize_formula(spec.validation_formula))
+                        .with_editability_formula(normalize_formula(spec.editability_formula))
+                        .with_field_type(field_type)
+                        .with_description(normalize_formula(spec.description))
+                        .with_required(spec.required.unwrap_or(false))
+                        .with_unique(spec.unique.unwrap_or(false))
+                        .with_default_value(spec.default_value)
+                        .with_write_policy(FieldWritePolicy::from_str(spec.write_policy.as_deref()))
+                        // Both halves or neither. A function with no field to
+                        // aggregate, or a field with no function, is not a
+                        // declaration — and a function this build does not know
+                        // yields no aggregate rather than a guess.
+                        .with_pivot_column(
+                            crate::block_manager::schema_manager::field_type::PivotColumn::from_parts(
+                                spec.pivot_col_value.as_deref(),
+                                spec.pivot_measure.as_deref(),
+                                spec.pivot_func.as_deref(),
+                            ),
+                        )
+                        .with_aggregate(match (spec.agg_func.as_deref(), spec.agg_field) {
+                            (Some(func), Some(source_field)) => AggFunc::from_str(func)
+                                .map(|func| FieldAggregate { func, source_field }),
+                            _ => None,
+                        });
+                    fields.push((spec.name, entry));
                 }
+                // The header arrives as an INDEX along the record axis and is
+                // stored as that line's stable ID: an index would be wrong the
+                // moment a line is inserted above it, and the id is also what
+                // lets `cell_role` classify a header cell without consulting
+                // the navigator.
+                // A group naming fewer than two fields says nothing that
+                // `unique` does not already say, so it is dropped rather than
+                // generating a rule that duplicates one.
+                let unique_together: Vec<Vec<String>> = p
+                    .unique_together
+                    .clone()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|g| g.fields)
+                    .filter(|g: &Vec<String>| g.len() > 1)
+                    .collect();
                 let schema = if p.row {
                     let key = ctx
                         .fetch_block_cell_id(&sheet_id, &block_id, 0, p.key_idx)?
                         .col;
+                    let header = match p.header_idx {
+                        Some(idx) => {
+                            Some(ctx.fetch_block_cell_id(&sheet_id, &block_id, idx, 0)?.row)
+                        }
+                        None => None,
+                    };
                     Schema::RowSchema(RowSchema {
                         fields,
                         key,
                         name: p.ref_name.clone(),
+                        header,
+                        unique_together: unique_together.clone(),
                     })
                 } else {
                     let key = ctx
                         .fetch_block_cell_id(&sheet_id, &block_id, p.key_idx, 0)?
                         .row;
+                    let header = match p.header_idx {
+                        Some(idx) => {
+                            Some(ctx.fetch_block_cell_id(&sheet_id, &block_id, 0, idx)?.col)
+                        }
+                        None => None,
+                    };
                     Schema::ColSchema(ColSchema {
                         fields,
                         key,
                         name: p.ref_name.clone(),
+                        header,
+                        unique_together: unique_together.clone(),
                     })
                 };
                 // A ref name addresses one block for the whole workbook. Taking
@@ -218,9 +261,7 @@ impl BlockSchemaExecutor {
                 // the first block stayed on the sheet but every BLOCKREF naming
                 // it silently began resolving to the second — formulas that kept
                 // evaluating, against the wrong data.
-                if let Some((owner_sheet, owner_block)) =
-                    manager.ref_name_owner(&p.ref_name)
-                {
+                if let Some((owner_sheet, owner_block)) = manager.ref_name_owner(&p.ref_name) {
                     if (owner_sheet, owner_block) != (sheet_id, block_id) {
                         return Err(BasicError::BlockRefNameTaken(
                             p.ref_name.clone(),
@@ -430,9 +471,7 @@ impl BlockSchemaExecutor {
                 // the first block stayed on the sheet but every BLOCKREF naming
                 // it silently began resolving to the second — formulas that kept
                 // evaluating, against the wrong data.
-                if let Some((owner_sheet, owner_block)) =
-                    manager.ref_name_owner(&p.ref_name)
-                {
+                if let Some((owner_sheet, owner_block)) = manager.ref_name_owner(&p.ref_name) {
                     if (owner_sheet, owner_block) != (sheet_id, block_id) {
                         return Err(BasicError::BlockRefNameTaken(
                             p.ref_name.clone(),

@@ -2,13 +2,16 @@ import {
     BlockActor,
     BlockModifyInfo,
     BlockOp,
+    BlockOpPolicy,
     WorkbookClient,
     Transaction,
     Payload,
     isErrorMessage,
 } from 'logisheets-engine'
+import type {BlockDisplayInfo} from 'logisheets-engine'
 import {toast} from 'react-toastify'
 import {getEngine} from '@/core/engine'
+import {fieldAt} from './field-editable'
 import {callerRegistry} from 'logisheets-core'
 
 const CALLER_UUID_KEY = '__callerUuid'
@@ -32,41 +35,40 @@ function permissionDeniedError() {
 /**
  * Which of the block's declared operations a payload counts as.
  *
- * `undefined` means the payload is not one of the five a block can single out
- * (removing or moving the whole block, restyling it); those keep the older
- * owner-identity check below rather than silently becoming unguarded.
+ * The table comes from the ENGINE, which is what defines the operations. It
+ * used to be spelled out here, and the craft runtime and Watson each had their
+ * own notion — which is how the same payload comes to be governed by different
+ * rules depending on who sent it. Static, so it is fetched once and cached.
+ *
+ * `undefined` means the payload is not one a block can single out; those keep
+ * the owner check below rather than silently becoming unguarded.
  */
-export function blockOpForPayload(type: string): BlockOp | undefined {
-    switch (type) {
-        case 'insertRowsInBlock':
-        case 'deleteRowsInBlock':
-        case 'insertColsInBlock':
-        case 'deleteColsInBlock':
-        case 'resizeBlock':
-            return 'insertDeleteLines'
-        case 'removeBlock':
-            return 'removeBlock'
-        // `setBlockPermissions` belongs here because handing a block's
-        // policies over is itself a schema-level change — otherwise anyone
-        // could unlock a block simply by asking to.
-        case 'bindFormSchema':
-        case 'bindRandomSchema':
-        case 'upsertFieldFormulas':
-        case 'upsertFieldRenderInfo':
-        case 'blockLineNameFieldUpdate':
-        case 'setBlockPermissions':
-            return 'modifySchema'
-        case 'cellInput':
-        case 'blockInput':
-            return 'cellInput'
-        case 'reorderBlockLines':
-        case 'moveBlockLine':
-            return 'sortByField'
-        case 'setBlockDescription':
-            return 'modifyDescription'
-        default:
-            return undefined
+let opTable: Map<string, BlockOp> | undefined
+let opTableLoading: Promise<void> | undefined
+
+/** Drop the cached table. For tests; the mapping is static in a real session. */
+export function resetOpTableForTest(): void {
+    opTable = undefined
+    opTableLoading = undefined
+}
+
+export async function loadOpTable(client: WorkbookClient): Promise<void> {
+    if (opTable) return
+    if (!opTableLoading) {
+        opTableLoading = (async () => {
+            const got = await client.getBlockOpForPayloads()
+            if (!isErrorMessage(got)) {
+                opTable = new Map(got.map((e) => [e.payloadType, e.op]))
+            }
+        })().finally(() => {
+            opTableLoading = undefined
+        })
     }
+    await opTableLoading
+}
+
+export function blockOpForPayload(type: string): BlockOp | undefined {
+    return opTable?.get(type)
 }
 
 /**
@@ -133,20 +135,28 @@ export function isPersistedOwner(
  * Whether the block states a policy for `op` at all — an explicit override, or
  * a default that is not simply "anyone".
  *
- * This is not a permission decision (that is `mayModifyBlock`'s), it is the
- * difference between a block that says "anyone may" and one that says nothing.
- * A block created with an `owner` but no policy falls in the second group, and
- * for those the in-memory owner check below still applies — dropping it just
- * because the engine reads an unstated policy as `all` would make such a block
- * *less* protected than it was before the engine knew about policies.
+ * Asked of the ENGINE rather than reconstructed from `modifyPolicy` and
+ * `permissions` here. It is not a permission decision (that is
+ * `mayModifyBlock`'s), it is the difference between a block that says "anyone
+ * may" and one that says nothing — and a block created with an `owner` but no
+ * policy falls in the second group, where the owner check below still applies.
+ * Reading an unstated policy as "anyone" would make such a block LESS protected
+ * than it was before the engine knew about policies.
  */
-export function declaresPolicy(
-    info: BlockModifyInfo | undefined,
+async function declaresPolicy(
+    client: WorkbookClient,
+    cache: Map<string, readonly BlockOpPolicy[] | undefined>,
+    ref: {sheetIdx: number; blockId: number},
     op: BlockOp
-): boolean {
-    if (!info) return false
-    const explicit = (info.permissions as Record<string, unknown>)[op]
-    return explicit !== undefined || info.modifyPolicy !== 'all'
+): Promise<boolean> {
+    const key = `${ref.sheetIdx}-${ref.blockId}`
+    let policies = cache.get(key)
+    if (!cache.has(key)) {
+        const got = await client.getBlockOpPolicies(ref)
+        policies = isErrorMessage(got) ? undefined : got
+        cache.set(key, policies)
+    }
+    return policies?.find((p) => p.op === op)?.stated ?? false
 }
 
 function isBlockPayload(payload: Payload): boolean {
@@ -256,9 +266,18 @@ async function validateCellInput(
     client: WorkbookClient,
     payload: Payload,
     callerUuid: string,
-    modifyInfoCache: Map<string, BlockModifyInfo | undefined>
+    modifyInfoCache: Map<string, BlockModifyInfo | undefined>,
+    policyCache: Map<string, readonly BlockOpPolicy[] | undefined>
 ): Promise<boolean> {
-    if (!(await mayWriteHere(client, payload, callerUuid, modifyInfoCache))) {
+    if (
+        !(await mayWriteHere(
+            client,
+            payload,
+            callerUuid,
+            modifyInfoCache,
+            policyCache
+        ))
+    ) {
         return false
     }
     // Being allowed to write here is a separate question from being allowed to
@@ -334,7 +353,8 @@ async function mayWriteHere(
     client: WorkbookClient,
     payload: Payload,
     callerUuid: string,
-    modifyInfoCache: Map<string, BlockModifyInfo | undefined>
+    modifyInfoCache: Map<string, BlockModifyInfo | undefined>,
+    policyCache: Map<string, readonly BlockOpPolicy[] | undefined>
 ): Promise<boolean> {
     const v = payload.value as {
         sheetIdx: number
@@ -358,7 +378,7 @@ async function mayWriteHere(
 
     // Dynamic editability formula takes precedence over the static
     // flag — the formula lets the schema author express conditions
-    // like "editable only while 等级<3". Only consult the shadow when
+    // like "editable only while level<3". Only consult the shadow when
     // the schema actually declares an editability formula for this
     // field (post-Phase-1+2 authoritative source); otherwise we skip
     // the extra RPC and avoid allocating a wasteful shadow id.
@@ -426,7 +446,15 @@ async function mayWriteHere(
     if (allowed === false) {
         return false
     }
-    if (allowed === true && declaresPolicy(info, 'cellInput')) {
+    if (
+        allowed === true &&
+        (await declaresPolicy(
+            client,
+            policyCache,
+            {sheetIdx: v.sheetIdx, blockId},
+            'cellInput'
+        ))
+    ) {
         return true
     }
 
@@ -439,8 +467,12 @@ async function mayWriteHere(
 }
 
 /**
- * Returns the field's declared `userEditable` setting. Note: this can
- * now be `boolean | string | undefined`:
+ * Whether the field permits user writes, as the SCHEMA declares it.
+ *
+ * Read off the block's schema, which the grid already carries — this used to
+ * go through the caller registry to a renderId and then into the host's own
+ * field store, three hops to reach a flag the schema now states. Returns
+ * `boolean | string | undefined`:
  *   - `boolean` — static decision (`false` blocks edits permanently).
  *   - `string`  — a formula. The patch path doesn't evaluate formulas
  *     synchronously (that would require an async shadow lookup per
@@ -454,17 +486,28 @@ function lookupFieldUserEditable(
     blockRow: number,
     blockCol: number
 ): boolean | string | undefined {
-    const renderId = callerRegistry.getFieldRenderId(
-        sheetIdx,
-        blockId,
-        blockRow,
-        blockCol
-    )
-    if (!renderId) return undefined
     try {
-        const blockManager = getEngine().getBlockManager()
-        const info = blockManager.fieldManager.get(renderId)
-        return info?.userEditable
+        const grid = getEngine().getGrid()
+        const block = grid?.blockInfos?.find(
+            (b: BlockDisplayInfo) =>
+                b.info.sheetIdx === sheetIdx && b.info.blockId === blockId
+        )
+        if (!block) return undefined
+        const field = fieldAt(
+            block.info,
+            block.info.rowStart + blockRow,
+            block.info.colStart + blockCol
+        )
+        switch (field?.writePolicy) {
+            case 'ownerOnly':
+                return false
+            case 'anyone':
+                return true
+            default:
+                // `inherit`, or no schema field: the field says nothing, so
+                // the block's own owner rules decide.
+                return undefined
+        }
     } catch {
         return undefined
     }
@@ -515,8 +558,17 @@ function applyPatch() {
             callerUuid: string
         ): Promise<boolean> {
             const tx = transaction as Transaction
+            // The payload -> operation table, from the engine. Loaded before
+            // anything is judged: without it every payload reads as
+            // ungoverned, which would quietly stop enforcing the blocks'
+            // declared policies. Static, so this is one RPC per session.
+            await loadOpTable(this)
             // One metadata read per distinct block, not per payload: a
             // transaction touching a block usually touches it several times.
+            const policyCache = new Map<
+                string,
+                readonly BlockOpPolicy[] | undefined
+            >()
             const modifyInfoCache = new Map<
                 string,
                 BlockModifyInfo | undefined
@@ -527,7 +579,8 @@ function applyPatch() {
                         this,
                         payload,
                         callerUuid,
-                        modifyInfoCache
+                        modifyInfoCache,
+                        policyCache
                     )
                     if (!ok) {
                         return false
@@ -591,10 +644,7 @@ function applyPatch() {
                     // see `declaresPolicy`.
                     if (
                         allowed === true &&
-                        declaresPolicy(
-                            await modifyInfo(this, modifyInfoCache, ref),
-                            op
-                        )
+                        (await declaresPolicy(this, policyCache, ref, op))
                     ) {
                         continue
                     }
@@ -669,7 +719,7 @@ function applyPatch() {
                             blockId: number
                             fieldFrom: number
                             row: boolean
-                            renderIds: readonly string[]
+                            fields: readonly {renderId: string}[]
                         }
                         // `row: true` → fields are arranged across columns
                         // (one field per column starting at fieldFrom);
@@ -677,13 +727,13 @@ function applyPatch() {
                         // Remember the mapping so cellInput validation can
                         // look up the FieldInfo and consult userEditable.
                         const axis: 'col' | 'row' = v.row ? 'col' : 'row'
-                        v.renderIds.forEach((renderId, i) => {
+                        v.fields.forEach((f, i) => {
                             callerRegistry.registerFieldPosition(
                                 v.sheetIdx,
                                 v.blockId,
                                 axis,
                                 v.fieldFrom + i,
-                                renderId
+                                f.renderId
                             )
                         })
                     }

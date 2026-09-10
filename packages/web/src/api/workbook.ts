@@ -6,9 +6,17 @@ import {
     BlockInfo,
     BlockSortOrder,
     GetBlockSortOrderParams,
+    PivotPlan,
+    PivotPlanParams,
+    PivotExcelNote,
+    PivotPlanForParams,
     MayModifyBlockParams,
     CheckFieldValidationParams,
     FieldValidationVerdict,
+    DuplicateBlockKey,
+    EnumSetInfo,
+    BlockOpForPayload,
+    BlockOpPolicy,
     GetBlockModifyInfoParams,
     BlockModifyInfo,
     FormulaDisplayInfo,
@@ -652,6 +660,61 @@ export class Workbook {
     }
 
     /**
+     * Read-only: the shape a PIVOT block should have, what it has now, and the
+     * difference.
+     *
+     * A pivot's rows and columns are the source's distinct dimension values,
+     * so its shape is data and no formula can produce it. The engine computes
+     * the plan; a host applies it as one transaction in the order
+     * `design/block-pivot.md` §6 pins.
+     *
+     * Read `isStale` before trusting a pivot's totals: a stale pivot's numbers
+     * are each correct while a whole group is absent, which is the one way a
+     * block can mislead without being wrong. `missingKeys` /
+     * `unassignedRecords` say what is not being shown.
+     */
+    public pivotPlan(params: PivotPlanParams): Result<PivotPlan> {
+        return rpc(
+            'pivotPlan',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Read-only: why this pivot could NOT be saved as a real Excel pivot
+     * table, or `null` when it can.
+     *
+     * The saver decides this on every write. Asking it here means a recipe can
+     * be chosen knowing whether it survives the trip, instead of the file
+     * quietly degrading to a grid of numbers Excel cannot recompute.
+     */
+    public pivotExcelNote(params: PivotPlanParams): Result<PivotExcelNote> {
+        return rpc(
+            'pivotExcelNote',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Read-only: the shape a pivot over `sourceBlock` WOULD have, for a recipe
+     * no block carries yet.
+     *
+     * This is what lets a host create a pivot at its right size in ONE
+     * transaction — and therefore one undo. Without it, creating would mean
+     * making the block, asking what shape it should be, and reshaping it,
+     * leaving an empty declared pivot as an intermediate state.
+     */
+    public pivotPlanFor(params: PivotPlanForParams): Result<PivotPlan> {
+        return rpc(
+            'pivotPlanFor',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
      * Whether `actor` may perform `op` on this block.
      *
      * The engine cannot enforce a block's write policy on its own — a payload
@@ -786,6 +849,78 @@ export class Workbook {
 
     public getAllBlockFields(): Result<readonly BlockField[]> {
         return rpc('getAllBlockFields', undefined, this._id)
+    }
+
+    /**
+     * Which block operation each payload counts as, keyed by the payload's
+     * `type`. Static — fetch once and cache.
+     *
+     * The engine defines the operations, so it answers this. Every host that
+     * enforces a policy needs the mapping, and each keeping its own table is
+     * how the same payload comes to be governed differently in different
+     * hosts. A payload absent from the table is not unguarded: the caller
+     * falls back to its own owner check.
+     */
+    public getBlockOpForPayloads(): Result<readonly BlockOpForPayload[]> {
+        return rpc('getBlockOpForPayloads', undefined, this._id)
+    }
+
+    /**
+     * What a block declares for each operation — the policy in force, and
+     * whether the block says anything about that operation at all.
+     *
+     * `stated` is the half a host cannot compute for itself: "anyone may,
+     * because nobody said" and "anyone may, because someone said so" are
+     * different facts, and only the first leaves room for the host's own owner
+     * check. Whether a given ACTOR is allowed is `mayModifyBlock`.
+     */
+    public getBlockOpPolicies(params: {
+        sheetIdx: number
+        blockId: number
+    }): Result<readonly BlockOpPolicy[]> {
+        return rpc(
+            'getBlockOpPolicies',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * The workbook's enum sets — the option lists `enum` / `multiSelect` fields
+     * draw from.
+     *
+     * A field's declaration names a set by id and does not carry it, so without
+     * this a host can read the declaration and still not know what is allowed.
+     * That was every headless host's position while the sets lived in the
+     * browser's AppData blob.
+     *
+     * Ids and labels only: a variant's colour is presentation and stays in the
+     * host, keyed by variant id.
+     */
+    public getEnumSets(): Result<readonly EnumSetInfo[]> {
+        return rpc('getEnumSets', undefined, this._id)
+    }
+
+    /**
+     * Every duplicated block row key in the workbook.
+     *
+     * The engine refuses to CREATE a duplicate: a transaction that would leave
+     * two records of one block sharing a key is rejected whole. That guard
+     * judges only the keys the transaction itself wrote, so a block that
+     * arrived already broken — from an .xlsx written elsewhere, or by an older
+     * build — stays editable rather than being locked out of its own repair.
+     *
+     * This is the other half. Nothing surfaces those on its own: `BLOCKREF`
+     * resolves a repeated key to its first match and reports no error, so one
+     * record is unreachable and every aggregate over the block counts the
+     * reachable one twice, silently. Poll it at a decision point (opening a
+     * file, before trusting a total) and filter by sheet or block yourself.
+     *
+     * An empty key is not a duplicate — that is what an inserted row starts
+     * life with, and it is unaddressable rather than wrong.
+     */
+    public duplicateBlockKeys(): Result<readonly DuplicateBlockKey[]> {
+        return rpc('duplicateBlockKeys', undefined, this._id)
     }
 
     /**

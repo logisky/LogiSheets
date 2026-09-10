@@ -14,6 +14,12 @@ export interface ViewOverlayLayerProps {
     /** Viewport coordinates of this view's canvas top-left (for hover math). */
     canvasStartX: number
     canvasStartY: number
+    /**
+     * Select a cell and scroll it into view, through this view's own selection
+     * state. Passed down to the block layer, where a block and its analysis
+     * are navigable from either end.
+     */
+    navigateToCell?: (row: number, col: number) => void
 }
 
 /**
@@ -48,6 +54,7 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
     activeSheet,
     canvasStartX,
     canvasStartY,
+    navigateToCell,
 }) => {
     const rootRef = useRef<HTMLDivElement>(null)
 
@@ -98,6 +105,7 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
                     grid={grid}
                     canvasStartX={canvasStartX}
                     canvasStartY={canvasStartY}
+                    navigateToCell={navigateToCell}
                 />
             )}
             {grid && (

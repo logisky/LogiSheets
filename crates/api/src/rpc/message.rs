@@ -3,12 +3,13 @@ use gents_derives::{Interface, TS};
 use crate::BlockId;
 use crate::{
     ActionEffect, AppData, AppendixWithCell, BlockActor, BlockDataRow, BlockField, BlockInfo,
-    BlockModifyInfo, BlockOp, BlockSortOrder, CellCoordinateWithSheet, CellImageInfo, CellInfo,
-    FieldValidationVerdict,
-    CellInput, CellPosition, CellRefRange, CfRuleInfo, ChartInfo, ColId, Comment, DependentCell,
-    DisplayWindow, DisplayWindowWithStartPoint, EditPayload, ErrorMessage, FormulaDisplayInfo,
-    LinkInfo, MergeCell, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo,
-    SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
+    BlockModifyInfo, BlockOp, BlockOpForPayload, BlockOpPolicy, BlockSortOrder,
+    CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
+    CfRuleInfo, ChartInfo, ColId, Comment, DependentCell, DisplayWindow,
+    DisplayWindowWithStartPoint, DuplicateBlockKey, EditPayload, EnumSetInfo, ErrorMessage,
+    FieldValidationVerdict, FormulaDisplayInfo, LinkInfo, MergeCell, PivotExcelNote, PivotPlan,
+    PivotSpecParts, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId,
+    SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
 };
 
 // ============================================================================
@@ -62,6 +63,9 @@ pub enum Message {
     GetSheetId(GetSheetIdParams),
     GetBlockValues(GetBlockValuesParams),
     GetBlockSortOrder(GetBlockSortOrderParams),
+    PivotPlan(PivotPlanParams),
+    PivotExcelNote(PivotPlanParams),
+    PivotPlanFor(PivotPlanForParams),
     MayModifyBlock(MayModifyBlockParams),
     CheckFieldValidation(CheckFieldValidationParams),
     GetBlockModifyInfo(GetBlockModifyInfoParams),
@@ -80,6 +84,10 @@ pub enum Message {
     GetBlockInfo(GetBlockInfoParams),
     GetCellInfos(GetCellInfosParams),
     GetAllBlockFields,
+    DuplicateBlockKeys,
+    GetEnumSets,
+    GetBlockOpForPayloads,
+    GetBlockOpPolicies(GetBlockOpPoliciesParams),
     Undo,
     Redo,
     CleanHistory,
@@ -509,6 +517,24 @@ pub struct GetBlockSortOrderParams {
     pub asc: bool,
 }
 
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_pivot_plan_params.ts", rename_all = "camelCase")]
+pub struct PivotPlanParams {
+    pub sheet_idx: usize,
+    /// The PIVOT block — not its source. Errors when the block is not a pivot.
+    pub block_id: BlockId,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rpc_pivot_plan_for_params.ts", rename_all = "camelCase")]
+pub struct PivotPlanForParams {
+    pub sheet_idx: usize,
+    /// The block to be analysed — the SOURCE, since the pivot block does not
+    /// exist yet. Used to create a pivot at its right size in one transaction.
+    pub source_block: BlockId,
+    pub spec: PivotSpecParts,
+}
+
 /// Ask whether an actor may perform one operation on a block.
 ///
 /// The engine cannot enforce a block's write policy — a payload carries no
@@ -522,6 +548,18 @@ pub struct MayModifyBlockParams {
     pub block_id: BlockId,
     pub op: BlockOp,
     pub actor: BlockActor,
+}
+
+/// Which policies a block declares, per operation — beyond whether a given
+/// actor is allowed, which is [`MayModifyBlockParams`].
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "get_block_op_policies_params.ts",
+    rename_all = "camelCase"
+)]
+pub struct GetBlockOpPoliciesParams {
+    pub sheet_idx: usize,
+    pub block_id: BlockId,
 }
 
 /// Ask whether a value would break a block field's validation rule, before
@@ -892,6 +930,14 @@ pub struct WorkbookMethods {
         params: GetBlockSortOrderParams,
         book_id: Option<usize>,
     ) -> Result<BlockSortOrder, ErrorMessage>,
+    pub pivot_plan:
+        fn(params: PivotPlanParams, book_id: Option<usize>) -> Result<PivotPlan, ErrorMessage>,
+    pub pivot_plan_for:
+        fn(params: PivotPlanForParams, book_id: Option<usize>) -> Result<PivotPlan, ErrorMessage>,
+    /// Why a pivot would not survive a save to .xlsx as a real pivot table, or
+    /// `None`. Asked before building, not discovered after saving.
+    pub pivot_excel_note:
+        fn(params: PivotPlanParams, book_id: Option<usize>) -> Result<PivotExcelNote, ErrorMessage>,
     pub may_modify_block:
         fn(params: MayModifyBlockParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
     pub check_field_validation: fn(
@@ -905,6 +951,15 @@ pub struct WorkbookMethods {
     pub get_available_block_id:
         fn(params: GetAvailableBlockIdParams, book_id: Option<usize>) -> Result<u32, ErrorMessage>,
     pub get_all_block_fields: fn(book_id: Option<usize>) -> Result<Vec<BlockField>, ErrorMessage>,
+    pub duplicate_block_keys:
+        fn(book_id: Option<usize>) -> Result<Vec<DuplicateBlockKey>, ErrorMessage>,
+    pub get_enum_sets: fn(book_id: Option<usize>) -> Result<Vec<EnumSetInfo>, ErrorMessage>,
+    pub get_block_op_for_payloads:
+        fn(book_id: Option<usize>) -> Result<Vec<BlockOpForPayload>, ErrorMessage>,
+    pub get_block_op_policies: fn(
+        params: GetBlockOpPoliciesParams,
+        book_id: Option<usize>,
+    ) -> Result<Vec<BlockOpPolicy>, ErrorMessage>,
     pub get_all_blocks: fn(
         params: GetAllBlocksParams,
         book_id: Option<usize>,

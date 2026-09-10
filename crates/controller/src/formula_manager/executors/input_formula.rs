@@ -280,8 +280,7 @@ pub fn convert_cells_to_block<C: FormulaExecCtx>(
             }
             let bcid =
                 ctx.fetch_block_cell_id(&sheet, &block_id, r - master_row, c - master_col)?;
-            executor =
-                register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)?;
+            executor = register_parsed_ast(executor, sheet, CellId::BlockCell(bcid), ast, ctx)?;
         }
     }
     Ok(executor)
@@ -523,6 +522,18 @@ pub fn input_block_cell_template<C: FormulaExecCtx>(
         .map_err(|l| BasicError::SheetIdxExceed(l))?;
     let bcid = ctx.fetch_block_cell_id(&sheet, &block_id, block_row, block_col)?;
     let Some(tpl) = ctx.block_cell_template(sheet, &bcid) else {
+        // No declaration for this cell. In an ANALYSIS block that means the
+        // cell must hold nothing: every non-key cell of one is generated, so a
+        // field that stopped declaring an aggregate — or a pivot column the
+        // recipe no longer produces — has to lose the formula it was given.
+        // Without this, dropping a column from an analysis left the previous
+        // formula computing away under a heading that no longer claimed it.
+        //
+        // Only for analysis blocks. An ordinary block's cells can hold
+        // formulas a person wrote, and a re-bind must not touch those.
+        if ctx.block_is_analysis(sheet, block_id) {
+            return remove(executor, sheet, CellId::BlockCell(bcid), ctx);
+        }
         return Ok(executor);
     };
 
@@ -820,10 +831,7 @@ fn find_self_block_ref(
 /// {@link find_self_block_ref}.
 fn collect_ref_ranges(ast: &ast::Node, out: &mut Vec<(SheetId, RangeId)>) {
     match &ast.pure {
-        ast::PureNode::Func(func) => func
-            .args
-            .iter()
-            .for_each(|n| collect_ref_ranges(n, out)),
+        ast::PureNode::Func(func) => func.args.iter().for_each(|n| collect_ref_ranges(n, out)),
         ast::PureNode::Value(_) | ast::PureNode::ArrayConstant(_) => {}
         ast::PureNode::Reference(reference) => match reference {
             ast::CellReference::Mut(r) => out.push((r.sheet_id, r.range_id)),

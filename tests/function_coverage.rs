@@ -4,7 +4,7 @@
 //! (`crates/controller/src/calc_engine/calculator/funcs/mod.rs`):
 //!
 //!   1. every function has at least one logiscript test under `tests/`
-//!   2. every function has an autocomplete / signature-help entry (智能提示)
+//!   2. every function has an autocomplete / signature-help entry
 //!      in `resources/funcs/out/funcs.json`
 //!
 //! Functions that predate these guards are grandfathered in the baseline files

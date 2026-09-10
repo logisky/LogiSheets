@@ -11,7 +11,7 @@ mod bonds;
 mod boolean;
 mod choose;
 mod complex;
-mod condition;
+pub(crate) mod condition;
 mod count;
 mod countblank;
 mod countif;

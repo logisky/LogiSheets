@@ -41,6 +41,10 @@ pub struct FormulaConnector<'a> {
     pub idx_navigator: &'a Navigator,
     pub external_links_manager: &'a mut ExtBooksManager,
     pub block_schema_manager: &'a SchemaManager,
+    /// The workbook's enum sets. Needed because a field declaring
+    /// `enum{setId}` names its options rather than carrying them, and the
+    /// membership rule is generated from them.
+    pub enum_set_manager: &'a crate::block_manager::enum_manager::EnumSetManager,
     /// Read-only access to the container so the formula executor can
     /// fetch the current `#KEY` value when materializing a templated
     /// block cell's formula.
@@ -50,6 +54,24 @@ pub struct FormulaConnector<'a> {
 }
 
 impl<'a> FormulaConnector<'a> {
+    /// What this block analyses and how, if anything. `None` for an ordinary
+    /// block, and for a block that has gone missing — a marker pointing at
+    /// nothing yields no generated formula rather than a broken one.
+    fn analysis_of(
+        &self,
+        sheet_id: SheetId,
+        block_id: logisheets_base::BlockId,
+    ) -> Option<crate::block_manager::analysis::AnalysisTarget<'_>> {
+        let bp = self
+            .id_navigator
+            .get_block_place(&sheet_id, &block_id)
+            .ok()?;
+        Some(crate::block_manager::analysis::AnalysisTarget {
+            source: bp.analyzes?,
+            pivot: bp.pivot.as_ref(),
+        })
+    }
+
     fn get_id_fetcher(&mut self) -> IdFetcher<'_> {
         IdFetcher {
             sheet_id_manager: self.sheet_id_manager,
@@ -381,9 +403,23 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         self.block_schema_manager.cell_role(sheet_id, cell)
     }
 
+    fn analyzed_by(
+        &self,
+        sheet_id: SheetId,
+        block_id: logisheets_base::BlockId,
+    ) -> Vec<logisheets_base::BlockId> {
+        self.id_navigator.analyzed_by(&sheet_id, block_id)
+    }
+
+    fn block_is_analysis(&self, sheet_id: SheetId, block_id: logisheets_base::BlockId) -> bool {
+        self.id_navigator
+            .get_block_place(&sheet_id, &block_id)
+            .is_ok_and(|p| p.analyzes.is_some())
+    }
+
     fn is_block_cell_templated(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
         self.block_schema_manager
-            .formula_for_block_cell(sheet_id, cell)
+            .formula_for_block_cell(sheet_id, cell, self.analysis_of(sheet_id, cell.block_id))
             .is_some()
     }
 
@@ -392,9 +428,11 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<crate::formula_manager::ctx::BlockCellTemplate> {
-        let template = self
-            .block_schema_manager
-            .formula_for_block_cell(sheet_id, cell)?;
+        let template = self.block_schema_manager.formula_for_block_cell(
+            sheet_id,
+            cell,
+            self.analysis_of(sheet_id, cell.block_id),
+        )?;
         let ctx = self.block_cell_row_substitutes(sheet_id, cell)?;
         Some(crate::formula_manager::ctx::BlockCellTemplate {
             template,
@@ -411,7 +449,10 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         field: &str,
     ) -> Option<BlockCellId> {
         let block_id = cell.block_id;
-        let bp = self.id_navigator.get_block_place(&sheet_id, &block_id).ok()?;
+        let bp = self
+            .id_navigator
+            .get_block_place(&sheet_id, &block_id)
+            .ok()?;
         let key_cells = self
             .block_schema_manager
             .get_all_key_cell_ids_by_block(sheet_id, block_id, bp)?;
@@ -441,9 +482,22 @@ impl<'a> FormulaExecCtx for FormulaConnector<'a> {
         kind: crate::sid_assigner::ShadowKind,
     ) -> Option<String> {
         match kind {
-            crate::sid_assigner::ShadowKind::Validation => self
-                .block_schema_manager
-                .validation_for_block_cell(sheet_id, cell),
+            // Not the stored template — the EFFECTIVE rule: what the field's
+            // declaration implies (required / unique / membership /
+            // reference), ANDed with what its author wrote. Composing it here,
+            // at the single point where the shadow's formula is materialized,
+            // is what makes the declaration mean the same thing in every host
+            // and lets a rename regenerate the rule instead of leaving a
+            // stale copy behind. See `block_manager::derived_rules`.
+            crate::sid_assigner::ShadowKind::Validation => {
+                crate::block_manager::derived_rules::effective_validation(
+                    self.block_schema_manager,
+                    self.enum_set_manager,
+                    sheet_id,
+                    cell,
+                    self.analysis_of(sheet_id, cell.block_id),
+                )
+            }
             crate::sid_assigner::ShadowKind::UserEditable => self
                 .block_schema_manager
                 .editability_for_block_cell(sheet_id, cell),

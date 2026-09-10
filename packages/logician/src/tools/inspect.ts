@@ -12,7 +12,9 @@
 import {getFirstCell, isErrorMessage} from 'logisheets-web/pure'
 import type {
     BlockInfo,
+    BlockSchemaFieldEntry,
     Client,
+    DuplicateBlockKey,
     Selection,
     SheetCellId,
     Value,
@@ -70,6 +72,30 @@ export interface ValidationViolation {
     address: CellAddress
 }
 
+/**
+ * Two records of one block carrying the same row key.
+ *
+ * Not a validation rule — a broken address. `(block, key, field)` is how a
+ * block names a cell, and `BLOCKREF` resolves a key by taking the FIRST
+ * record that matches: a repeat makes the others unreachable and every
+ * aggregate over the block counts the reachable one twice, with no error
+ * anywhere. The engine refuses to create one, so these are the ones the
+ * workbook arrived with.
+ */
+export interface DuplicateKeyViolation {
+    /** Block ref name. */
+    block: string
+    sheet: string
+    /** The repeated key. */
+    key: string
+    /**
+     * Record indices sharing it, in block order. The first is the record
+     * every BLOCKREF to this key resolves to; the rest are unreachable until
+     * one of them is given a distinct key.
+     */
+    records: number[]
+}
+
 // ---------------------------------------------------------------------------
 // 1. list_violations
 // ---------------------------------------------------------------------------
@@ -91,14 +117,25 @@ const DEFAULT_LIMIT = 50
 
 export const listViolations: Tool<
     ListViolationsInput,
-    {violations: ValidationViolation[]; truncated: boolean}
+    {
+        violations: ValidationViolation[]
+        duplicate_keys: DuplicateKeyViolation[]
+        pivots_needing_attention: PivotHealthNote[]
+        truncated: boolean
+    }
 > = {
     namespace: 'inspect',
     name: 'list_violations',
     description: [
         'Scan validation shadow cells and return every cell whose validation formula currently evaluates FALSE. Validation is advisory — the cell still holds its value, but the host UI renders a warning marker and you should treat it as "something the user/AI got wrong".',
         '',
-        "Use this when answering 'why is something red?', 'what's broken after my last edit?', or before committing a multi-step build that depends on existing constraints.",
+        "A field's rule is what its DECLARATION implies — `required`, `unique`, enum membership, reference existence — ANDed with whatever rule its author wrote. `rule` in the output names the declaration rather than quoting the generated formula, because the generated one is not something anyone typed. So a field with no rule text of its own can still appear here, which is the point: before the engine derived these, a required-but-empty cell raised nothing at all.",
+        '',
+        'Also returns `duplicate_keys`: blocks where two records carry the same row key. That is not an advisory rule but a broken address — BLOCKREF resolves a key to the FIRST matching record, so the others are unreachable and every aggregate over the block double-counts, silently and without an error anywhere. The engine refuses to create a duplicate, so anything reported here came in with the file. Fix it by giving one of the records a distinct key before trusting any total over that block.',
+        '',
+        "Also returns `pivots_needing_attention`. A pivot fails in a way no validation rule can see: `stale` means its numbers are each correct while whole groups are MISSING, and `broken` means its recipe stopped resolving so every cell reads 0 rather than erroring. Neither shows up as a red cell anywhere. Treat a broken pivot's numbers as unusable and fix the recipe; refresh a stale one before quoting any total from it.",
+        '',
+        "Use this when answering 'why is something red?', 'what's broken after my last edit?', or before quoting any number you did not just compute yourself. It is the one call that answers 'is anything here untrustworthy' — the alternative is describe_block on every block, which is easy to skip and easy to forget.",
         '',
         'Filters compose: omit both `block` and `sheet` to scan the whole workbook; pass either to narrow.',
         '',
@@ -128,11 +165,12 @@ export const listViolations: Tool<
         const client = asClient(ctx)
         const limit = input.limit ?? DEFAULT_LIMIT
 
-        // 1. Pull blocks (with their schemas + cells) and sheet name
-        //    map in parallel.
-        const [blocksRes, sheetsRes] = await Promise.all([
+        // 1. Pull blocks (with their schemas + cells), the sheet name map,
+        //    and the workbook's duplicate row keys in parallel.
+        const [blocksRes, sheetsRes, dupsRes] = await Promise.all([
             client.getAllBlocks({}),
             client.getAllSheetInfo(),
+            fetchDuplicateKeys(client),
         ])
         if (isErrorMessage(blocksRes)) {
             throw new Error(`getAllBlocks failed: ${blocksRes.msg}`)
@@ -159,6 +197,29 @@ export const listViolations: Tool<
             }
         }
 
+        // Duplicate keys are scoped by the same filters. They are reported
+        // whole rather than counted against `limit`: there are never many, and
+        // a truncated list of broken addresses is worse than none.
+        const inScope = new Set(blocks.map((b) => b.blockId))
+        const duplicateKeys: DuplicateKeyViolation[] = dupsRes
+            .filter((d) => inScope.has(d.blockId))
+            .map((d) => ({
+                block: d.blockName || `block#${d.blockId}`,
+                sheet: sheetName(d.sheetIdx),
+                key: d.key,
+                records: [...d.records],
+            }))
+
+        // 2b. Pivot health, for the blocks in scope.
+        //
+        // A pivot fails in a way no validation rule can see: its numbers are
+        // each correct while whole groups are missing, or its recipe has
+        // stopped resolving and every cell reads 0 rather than erroring. Both
+        // are "a number you should not trust", which is what this tool is for
+        // — and asking `describe_block` per block is not something an agent
+        // reliably remembers to do before reporting a total.
+        const pivots = await fetchPivotHealth(client, blocks)
+
         // 3. For each block, enumerate (row, field-with-validation)
         //    pairs as sheet-absolute coordinates. Group by sheetIdx so
         //    we can issue one bulk shadow fetch per sheet.
@@ -178,11 +239,24 @@ export const listViolations: Tool<
             const schema = block.schema
             if (!schema) continue
 
-            // Fields that carry a validation rule.
+            // Fields the engine guards. A stored `validationFormula` is the
+            // author's own rule — but a field can be guarded with no stored
+            // rule at all, because `required`, `unique`, enum membership and
+            // reference existence are DERIVED from the declaration and
+            // installed as shadows by the engine. Probing only the stored ones
+            // would miss exactly the constraints an agent could not see before.
+            //
+            // Unwrapped once per block rather than per field: the wire type
+            // is a struct only because a nested list generates invalid
+            // TypeScript, and the rule logic below reads better over names.
+            const uniqueGroups = (schema.uniqueTogether ?? []).map(
+                (g) => g.fields
+            )
             const ruled = schema.fields.filter(
                 (f) =>
-                    typeof f.validationFormula === 'string' &&
-                    f.validationFormula.trim() !== ''
+                    (typeof f.validationFormula === 'string' &&
+                        f.validationFormula.trim() !== '') ||
+                    derivesARule(f, uniqueGroups)
             )
             if (ruled.length === 0) continue
 
@@ -198,7 +272,7 @@ export const listViolations: Tool<
                     list.push({
                         block,
                         fieldName: f.field,
-                        fieldRule: (f.validationFormula ?? '').trim(),
+                        fieldRule: explainRule(f, uniqueGroups),
                         keyValue: keyByRow.get(r) ?? '',
                         blockRow: r,
                         blockCol: f.idx,
@@ -211,9 +285,22 @@ export const listViolations: Tool<
         }
 
         if (probesBySheet.size === 0) {
+            const parts: string[] = []
+            if (duplicateKeys.length)
+                parts.push(describeDuplicates(duplicateKeys))
+            if (pivots.length) parts.push(describePivots(pivots))
             return {
-                data: {violations: [], truncated: false},
-                display: 'No validation rules declared in scope.',
+                data: {
+                    violations: [],
+                    duplicate_keys: duplicateKeys,
+                    pivots_needing_attention: pivots,
+                    truncated: false,
+                },
+                display: parts.length
+                    ? `No validation rules declared in scope, but ${parts.join(
+                          '; '
+                      )}.`
+                    : 'No validation rules declared in scope.',
             }
         }
 
@@ -291,16 +378,191 @@ export const listViolations: Tool<
             })
         }
 
+        const parts: string[] = []
+        if (violations.length === 0) {
+            parts.push('No validation violations')
+        } else {
+            parts.push(
+                `${violations.length} violation${
+                    violations.length === 1 ? '' : 's'
+                }${truncated ? ` (truncated at limit=${limit})` : ''}`
+            )
+        }
+        if (duplicateKeys.length) parts.push(describeDuplicates(duplicateKeys))
+        if (pivots.length) parts.push(describePivots(pivots))
+
         return {
-            data: {violations, truncated},
-            display:
-                violations.length === 0
-                    ? 'No validation violations.'
-                    : `${violations.length} violation${
-                          violations.length === 1 ? '' : 's'
-                      }${truncated ? ` (truncated at limit=${limit})` : ''}.`,
+            data: {
+                violations,
+                duplicate_keys: duplicateKeys,
+                pivots_needing_attention: pivots,
+                truncated,
+            },
+            display: `${parts.join('; ')}.`,
         }
     },
+}
+
+/** Whether the field's declaration makes the engine generate a rule. */
+function derivesARule(
+    f: BlockSchemaFieldEntry,
+    // A field can carry a rule it does not declare itself: naming it in one of
+    // the BLOCK's `unique_together` groups gives it one. Leaving that out here
+    // would not mislabel the violation — it would mean the cell is never
+    // probed and the violation is never found at all.
+    uniqueTogether: readonly (readonly string[])[] = []
+): boolean {
+    const kind = f.fieldType?.kind
+    return (
+        !!f.required ||
+        !!f.unique ||
+        uniqueTogether.some((g) => g.includes(f.field)) ||
+        kind === 'enum' ||
+        kind === 'multiSelect' ||
+        kind === 'fieldRef' ||
+        kind === 'multiSelectRef'
+    )
+}
+
+/**
+ * Why this field is guarded, for a reader.
+ *
+ * Names the DECLARATION rather than the generated formula. "required + unique"
+ * says what a `COUNTIF(BLOCKREFSB(0,3,"*","email"),#PLACEHOLDER)=1` string
+ * means without the reader having to decode it — and the generated string is
+ * not something anyone typed, so quoting it back would misrepresent where the
+ * constraint came from. The author's own rule is quoted verbatim, because that
+ * one they did type.
+ */
+function explainRule(
+    f: BlockSchemaFieldEntry,
+    // The block's own rules, which land on a field's shadow as well: the
+    // shadow is ONE boolean over every clause ANDed together, so a label that
+    // named only the per-field declarations would confidently blame the wrong
+    // one. A composite-uniqueness violation was being reported as "one of enum
+    // set …" — a reason that is not merely unhelpful but untrue.
+    uniqueTogether: readonly (readonly string[])[] = []
+): string {
+    const parts: string[] = []
+    if (f.required) parts.push('required')
+    if (f.unique) parts.push('unique')
+    for (const g of uniqueTogether) {
+        if (g.includes(f.field)) {
+            parts.push(`unique together with (${g.join(', ')})`)
+        }
+    }
+    const kind = f.fieldType?.kind
+    if (kind === 'enum' || kind === 'multiSelect') {
+        parts.push(`one of enum set "${f.fieldType?.enumSetId ?? '?'}"`)
+    } else if (kind === 'fieldRef' || kind === 'multiSelectRef') {
+        parts.push(
+            `must exist in ${f.fieldType?.refFieldName ?? '?'} of block #${
+                f.fieldType?.refBlockId ?? '?'
+            }`
+        )
+    }
+    const own = (f.validationFormula ?? '').trim()
+    if (own) parts.push(own)
+    return parts.join(' + ')
+}
+
+/**
+ * The workbook's duplicate row keys, or none if this client cannot answer.
+ *
+ * Degrading is deliberate: `list_violations` exists to report what is wrong
+ * with the data, and an older `logisheets-web` (or a host stub) that has no
+ * `duplicateBlockKeys` should cost the caller the duplicate report, not the
+ * validation scan it actually asked for.
+ */
+async function fetchDuplicateKeys(
+    client: Client
+): Promise<readonly DuplicateBlockKey[]> {
+    const ask = (client as Partial<Client>).duplicateBlockKeys
+    if (typeof ask !== 'function') return []
+    const res = await ask.call(client)
+    return isErrorMessage(res) ? [] : res
+}
+
+/** A pivot whose shape or recipe means its numbers cannot be taken at face value. */
+interface PivotHealthNote {
+    block: string
+    sheet_idx: number
+    /** `stale` — correct numbers, missing groups. `broken` — every cell 0. */
+    state: 'stale' | 'broken'
+    detail: string
+}
+
+/**
+ * Ask the engine for each pivot's plan and report the ones that need doing
+ * something about.
+ *
+ * `pivot_plan` erroring IS the broken signal — it means the recipe names
+ * something the source no longer has, and the cells are quietly reading 0
+ * because a `BLOCKREFS` matching nothing yields an empty matrix. Swallowing
+ * that error would leave the one failure with no symptom at all.
+ */
+async function fetchPivotHealth(
+    client: Client,
+    blocks: readonly BlockInfo[]
+): Promise<PivotHealthNote[]> {
+    const out: PivotHealthNote[] = []
+    for (const b of blocks) {
+        if (!b.pivot) continue
+        const name = b.schema?.name ?? `block#${b.blockId}`
+        const plan = await client.pivotPlan({
+            sheetIdx: b.sheetIdx,
+            blockId: b.blockId,
+        })
+        if (isErrorMessage(plan)) {
+            out.push({
+                block: name,
+                sheet_idx: b.sheetIdx,
+                state: 'broken',
+                detail:
+                    `${plan.msg}. Every cell of this pivot is reading 0 rather ` +
+                    `than failing — do NOT report any number from it. Fix the ` +
+                    `recipe with build__edit_pivot, or rebuild it.`,
+            })
+            continue
+        }
+        if (plan.isStale) {
+            const missing = [...plan.missingKeys, ...plan.missingFields]
+            out.push({
+                block: name,
+                sheet_idx: b.sheetIdx,
+                state: 'stale',
+                detail:
+                    `${missing.length} group(s)/column(s) the source has are not ` +
+                    `shown here${
+                        missing.length ? ` (${missing.join(', ')})` : ''
+                    }. ` +
+                    `Every number in it is correct but the table is INCOMPLETE — ` +
+                    `call build__refresh_pivot before reading or reporting it.`,
+            })
+        }
+    }
+    return out
+}
+
+function describePivots(notes: readonly PivotHealthNote[]): string {
+    const broken = notes.filter((n) => n.state === 'broken').length
+    const stale = notes.length - broken
+    const bits: string[] = []
+    if (broken)
+        bits.push(
+            `${broken} pivot${broken === 1 ? '' : 's'} whose recipe is broken`
+        )
+    if (stale) bits.push(`${stale} stale pivot${stale === 1 ? '' : 's'}`)
+    return bits.join(' and ')
+}
+
+function describeDuplicates(dups: readonly DuplicateKeyViolation[]): string {
+    const blocks = [...new Set(dups.map((d) => d.block))]
+    const named = blocks.map((b) => `"${b}"`).join(', ')
+    const them = blocks.length === 1 ? 'it' : 'them'
+    return `${dups.length} duplicate row key${
+        dups.length === 1 ? '' : 's'
+    } in ${named} — records are unreachable and totals over ${them} double-count`
 }
 
 // ---------------------------------------------------------------------------
@@ -338,29 +600,26 @@ interface WhyLockedOutput {
 /** Minimal host-side interface for the static `userEditable` flag.
  *  Read-only — we never write back. Loose-typed because the engine
  *  package isn't a dependency of logician. */
-interface FieldManagerLike {
-    getByBlock(
-        sheetId: number,
-        blockId: number
-    ): ReadonlyArray<{name: string; userEditable?: boolean}>
-}
-interface BlockManagerLike {
-    fieldManager: FieldManagerLike
-}
-function tryReadStaticUserEditable(
-    sheetId: number,
-    blockId: number,
-    fieldName: string
+/**
+ * The field's declared write policy, as a tri-state.
+ *
+ * Off the SCHEMA. This used to reach into the browser's own field store through
+ * `globalThis.blockManager` — so the answer existed only in that one host, and
+ * `why_locked` simply could not see this gate anywhere else. The policy is
+ * declared on the schema now (`writePolicy`), which every host reads.
+ */
+function declaredWritePolicy(
+    field: {writePolicy?: string} | undefined
 ): boolean | undefined {
-    const g = globalThis as unknown as {blockManager?: BlockManagerLike}
-    const bm = g.blockManager
-    if (!bm) return undefined
-    try {
-        const fis = bm.fieldManager.getByBlock(sheetId, blockId)
-        const fi = fis.find((f) => f.name === fieldName)
-        return fi?.userEditable
-    } catch {
-        return undefined
+    switch (field?.writePolicy) {
+        case 'ownerOnly':
+            return false
+        case 'anyone':
+            return true
+        default:
+            // `inherit`: the field says nothing, so the block's own owner rules
+            // decide and there is no field-level verdict to report.
+            return undefined
     }
 }
 
@@ -487,10 +746,8 @@ export const whyLocked: Tool<WhyLockedInput, WhyLockedOutput> = {
         }
 
         // 3. Optional: read static userEditable from host FieldManager.
-        const staticUserEditable = tryReadStaticUserEditable(
-            block.sheetId,
-            block.blockId,
-            input.field
+        const staticUserEditable = declaredWritePolicy(
+            schema.fields.find((f) => f.field === input.field)
         )
 
         // 4. Compose final verdict + plain-language reason.
@@ -662,7 +919,6 @@ export const getActiveSelection: Tool<
 // Bundle
 // ---------------------------------------------------------------------------
 
-
 // ---------------------------------------------------------------------------
 // trace — what a number depends on, and what depends on it
 // ---------------------------------------------------------------------------
@@ -722,7 +978,9 @@ interface TraceOutput {
     precedents?: TracedRange[]
     /** What reads this cell, each with the reference it used. Present unless
      *  direction was 'precedents'. */
-    dependents?: Array<TracedCell & {via: string; scope: 'cell' | 'field' | 'block'}>
+    dependents?: Array<
+        TracedCell & {via: string; scope: 'cell' | 'field' | 'block'}
+    >
     /**
      * Set when any reported edge is wider than a single cell. Block
      * dependencies are tracked per field, so a dependent list for one block
@@ -752,7 +1010,10 @@ function rangeRef(r: {
     allCols: boolean
 }): string {
     if (r.allRows) {
-        return `${a1(0, r.startCol).replace(/\d+$/, '')}:${a1(0, r.endCol).replace(/\d+$/, '')}`
+        return `${a1(0, r.startCol).replace(/\d+$/, '')}:${a1(
+            0,
+            r.endCol
+        ).replace(/\d+$/, '')}`
     }
     if (r.allCols) {
         return `${r.startRow + 1}:${r.endRow + 1}`
@@ -901,10 +1162,20 @@ export const trace: Tool<TraceInput, TraceOutput> = {
             if (r.allRows || r.allCols) return none
             // A single cell inside a block names one (key, field) exactly.
             if (r.startRow === r.endRow && r.startCol === r.endCol) {
-                const a = locateInBlock(r.sheetIdx, r.startRow, r.startCol, blocks)
+                const a = locateInBlock(
+                    r.sheetIdx,
+                    r.startRow,
+                    r.startCol,
+                    blocks
+                )
                 return a === undefined
                     ? none
-                    : {...none, block: a.block, row_key: a.row_key, field: a.field}
+                    : {
+                          ...none,
+                          block: a.block,
+                          row_key: a.row_key,
+                          field: a.field,
+                      }
             }
             // A rectangle spanning a block's whole row range is that block —
             // one column of it names a field, all of it names the block.
@@ -968,7 +1239,8 @@ export const trace: Tool<TraceInput, TraceOutput> = {
                 // time less precisely — so keep the block-wide edge only when it
                 // is the whole answer, which is the BLOCKREFS case.
                 .filter(({named}, _i, all) => {
-                    if (named.scope !== 'block' || named.block === null) return true
+                    if (named.scope !== 'block' || named.block === null)
+                        return true
                     return !all.some(
                         (o) =>
                             o.named.scope === 'field' &&
@@ -1048,7 +1320,11 @@ export const trace: Tool<TraceInput, TraceOutput> = {
         if (wide) parts.push('some edges are field- or block-wide')
         return {
             data: out,
-            display: `${out.target.block ? `${out.target.block}.${out.target.field}` : out.target.ref}: ${parts.join(', ')}.`,
+            display: `${
+                out.target.block
+                    ? `${out.target.block}.${out.target.field}`
+                    : out.target.ref
+            }: ${parts.join(', ')}.`,
         }
     },
 }

@@ -20,6 +20,10 @@ import type {
     ErrorMessage,
     AppData,
     BlockField,
+    DuplicateBlockKey,
+    EnumSetInfo,
+    BlockOpForPayload,
+    BlockOpPolicy,
     TempStatusDiff,
     ShadowCellInfo,
     Client,
@@ -535,6 +539,44 @@ export class WorkbookClient implements Client {
         >
     }
 
+    /**
+     * Every duplicated block row key in the workbook — see
+     * `Client['duplicateBlockKeys']`. The engine refuses to create one; this
+     * finds the ones a file arrived with, which nothing else surfaces.
+     */
+    duplicateBlockKeys(): Resp<readonly DuplicateBlockKey[]> {
+        return this._call(MethodName.DuplicateBlockKeys) as Resp<
+            readonly DuplicateBlockKey[]
+        >
+    }
+
+    /**
+     * The workbook's enum sets — see `Client['getEnumSets']`. Ids and labels;
+     * colours stay in the host's own EnumSetManager, keyed by variant id.
+     */
+    getEnumSets(): Resp<readonly EnumSetInfo[]> {
+        return this._call(MethodName.GetEnumSets) as Resp<
+            readonly EnumSetInfo[]
+        >
+    }
+
+    /** See `Client['getBlockOpForPayloads']`. Static — cache it. */
+    getBlockOpForPayloads(): Resp<readonly BlockOpForPayload[]> {
+        return this._call(MethodName.GetBlockOpForPayloads) as Resp<
+            readonly BlockOpForPayload[]
+        >
+    }
+
+    /** See `Client['getBlockOpPolicies']`. */
+    getBlockOpPolicies(params: {
+        sheetIdx: number
+        blockId: number
+    }): Resp<readonly BlockOpPolicy[]> {
+        return this._call(MethodName.GetBlockOpPolicies, params) as Resp<
+            readonly BlockOpPolicy[]
+        >
+    }
+
     getShadowCellId(params: {
         sheetIdx: number
         rowIdx: number
@@ -680,6 +722,21 @@ export class WorkbookClient implements Client {
     getBlockSortOrder: Client['getBlockSortOrder'] = (params) =>
         this._call(MethodName.GetBlockSortOrder, params) as ReturnType<
             Client['getBlockSortOrder']
+        >
+
+    pivotPlan: Client['pivotPlan'] = (params) =>
+        this._call(MethodName.PivotPlan, params) as ReturnType<
+            Client['pivotPlan']
+        >
+
+    pivotExcelNote: Client['pivotExcelNote'] = (params) =>
+        this._call(MethodName.PivotExcelNote, params) as ReturnType<
+            Client['pivotExcelNote']
+        >
+
+    pivotPlanFor: Client['pivotPlanFor'] = (params) =>
+        this._call(MethodName.PivotPlanFor, params) as ReturnType<
+            Client['pivotPlanFor']
         >
 
     getBlockModifyInfo: Client['getBlockModifyInfo'] = (params) =>

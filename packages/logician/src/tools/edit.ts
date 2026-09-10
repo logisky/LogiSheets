@@ -361,7 +361,7 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
     namespace: 'edit',
     name: 'preview_changes',
     description: [
-        'Dry-run edits on the workbook\'s temp branch and report what they would do. Nothing is committed — the branch is discarded, so this is the safe way to explore a model instead of changing it and putting it back.',
+        "Dry-run edits on the workbook's temp branch and report what they would do. Nothing is committed — the branch is discarded, so this is the safe way to explore a model instead of changing it and putting it back.",
         '',
         'Two shapes. `changes` runs one hypothetical and returns every cell that would move, direct writes and cascaded recalculations alike. `scenarios` runs several, each on its own branch, and returns one result per scenario in order — that is a sensitivity table or a scenario comparison in a single call.',
         '',
@@ -427,8 +427,8 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
             input.scenarios !== undefined
                 ? [...input.scenarios]
                 : input.changes !== undefined
-                  ? [{changes: input.changes}]
-                  : []
+                ? [{changes: input.changes}]
+                : []
         if (scenarios.length === 0) {
             throw new Error('pass either `changes` or `scenarios`')
         }
@@ -449,10 +449,7 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
         }
 
         /** Translate one change into a BlockInput payload, failing fast. */
-        const toPayload = (
-            c: BlockCellChange,
-            where: string
-        ): EditPayload => {
+        const toPayload = (c: BlockCellChange, where: string): EditPayload => {
             const block = blockByName.get(c.block)
             if (!block) {
                 throw new Error(`${where}: no block with ref name "${c.block}"`)
@@ -496,7 +493,9 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                 }
                 const schema = block.schema
                 if (!schema) {
-                    throw new Error(`watch[${i}]: block "${t.block}" has no schema`)
+                    throw new Error(
+                        `watch[${i}]: block "${t.block}" has no schema`
+                    )
                 }
                 const rowEntry = schema.keys.find((k) => k.key === t.row_key)
                 if (!rowEntry) {
@@ -504,7 +503,9 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                         `watch[${i}]: no row with key "${t.row_key}" in block "${t.block}"`
                     )
                 }
-                const fieldEntry = schema.fields.find((f) => f.field === t.field)
+                const fieldEntry = schema.fields.find(
+                    (f) => f.field === t.field
+                )
                 if (!fieldEntry) {
                     throw new Error(
                         `watch[${i}]: no field named "${t.field}" in block "${t.block}"`
@@ -557,7 +558,10 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                     throw new Error(`preview_changes: ${result.msg}`)
                 }
                 if (result.status.type === 'err') {
-                    throw transactionFailure(`preview_changes (${where})`, result)
+                    throw transactionFailure(
+                        `preview_changes (${where})`,
+                        result
+                    )
                 }
 
                 if (watchCoords.length > 0) {
@@ -644,7 +648,9 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                 const d = results[0]?.diff ?? []
                 return d.length === 0
                     ? 'No cells would change.'
-                    : `${d.length} cell${d.length === 1 ? '' : 's'} would change.`
+                    : `${d.length} cell${
+                          d.length === 1 ? '' : 's'
+                      } would change.`
             }
             return `${results.length} scenarios previewed.`
         }
@@ -654,11 +660,11 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                 single !== undefined
                     ? {scenarios: results, diff: single}
                     : watchCoords.length > 0
-                      ? {
-                            watching: watchCoords.map((w) => w.target),
-                            scenarios: results,
-                        }
-                      : {scenarios: results},
+                    ? {
+                          watching: watchCoords.map((w) => w.target),
+                          scenarios: results,
+                      }
+                    : {scenarios: results},
             display: describe(),
         }
     },
@@ -769,7 +775,7 @@ export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
     description: [
         'Find the input value that makes a chosen output equal a target — "what discount rate gives a value per share of 30".',
         '',
-        'Runs entirely on the engine\'s temp branch, so the workbook is never modified: this is a question, not an edit. The search happens inside the engine rather than as a conversation, so it costs one tool call instead of one per iteration.',
+        "Runs entirely on the engine's temp branch, so the workbook is never modified: this is a question, not an edit. The search happens inside the engine rather than as a conversation, so it costs one tool call instead of one per iteration.",
         '',
         'Name both cells semantically as (block, row_key, field) or by coordinate as (row, col). Give `between` when you know a bracket; otherwise it expands outward from the current input value to find one.',
         '',
@@ -804,7 +810,10 @@ export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
                     col: {type: 'integer'},
                 },
             },
-            to: {type: 'number', description: 'The value `target` should reach.'},
+            to: {
+                type: 'number',
+                description: 'The value `target` should reach.',
+            },
             between: {
                 type: 'array',
                 items: {type: 'number'},
@@ -815,7 +824,8 @@ export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
             },
             tolerance: {
                 type: 'number',
-                description: 'How close to `to` counts as solved. Default 1e-6 relative.',
+                description:
+                    'How close to `to` counts as solved. Default 1e-6 relative.',
             },
             max_iterations: {type: 'integer', default: 60},
         },
@@ -837,12 +847,23 @@ export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
         const resolve = (
             ptr: CellPointer,
             what: string
-        ): {sheetIdx: number; row: number; col: number; blockId?: number; blockRow?: number; blockCol?: number} => {
+        ): {
+            sheetIdx: number
+            row: number
+            col: number
+            blockId?: number
+            blockRow?: number
+            blockCol?: number
+        } => {
             if (ptr.block !== undefined) {
                 const b = blocks.find((x) => x.schema?.name === ptr.block)
-                if (!b) throw new Error(`${what}: no block named "${ptr.block}"`)
+                if (!b)
+                    throw new Error(`${what}: no block named "${ptr.block}"`)
                 const schema = b.schema
-                if (!schema) throw new Error(`${what}: block "${ptr.block}" has no schema`)
+                if (!schema)
+                    throw new Error(
+                        `${what}: block "${ptr.block}" has no schema`
+                    )
                 const key = schema.keys.find((k) => k.key === ptr.row_key)
                 if (!key) {
                     throw new Error(
@@ -924,7 +945,11 @@ export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
             }
             try {
                 const result = await client.handleTransaction({
-                    transaction: {payloads: [writePayload(v)], undoable: false, temp: true},
+                    transaction: {
+                        payloads: [writePayload(v)],
+                        undoable: false,
+                        temp: true,
+                    },
                 })
                 if (isErrorMessage(result)) {
                     throw new Error(`goal_seek: ${result.msg}`)
@@ -1045,7 +1070,9 @@ export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
                     searched: [lo, hi],
                     note:
                         `the target does not cross ${input.to} between ${lo} and ${hi} ` +
-                        `(it is ${flo + input.to} and ${fhi + input.to} at the ends)`,
+                        `(it is ${flo + input.to} and ${
+                            fhi + input.to
+                        } at the ends)`,
                 },
                 display: `No crossing of ${input.to} in [${lo}, ${hi}].`,
             }

@@ -31,6 +31,7 @@ import {
     getFirstCell,
 } from 'logisheets-engine'
 import {tx} from '@/core/transaction'
+import {hydrateEnumSetsFromWorkbook} from '@/core/blocks/enum-hydrate'
 import {
     getPersistentInteractions,
     loadPersistentInteractions,
@@ -332,15 +333,35 @@ export const Toolbar = observer(
                         BLOCK_MANAGER.parseAppData(d.data)
                     }
                 })
+                // The workbook's own enum sets win over whatever the host
+                // registry held: they are the thing that persists and the thing
+                // the engine's membership rule is generated from. The host
+                // contributes colour. Without this a workbook authored headless
+                // opens with correct validation and an empty dropdown.
+                try {
+                    await hydrateEnumSetsFromWorkbook(
+                        engine.getWorkbook() as never,
+                        BLOCK_MANAGER.enumSetManager
+                    )
+                } catch {
+                    // The file still opens: the engine validates enum fields
+                    // from its own sets either way, so the cost is a dropdown
+                    // that lists nothing until the next open.
+                    toast('Could not read this file’s option lists', {
+                        type: 'warning',
+                    })
+                }
                 // Force a new grid reference so BlockInterfaceComponent
                 // re-renders. During `engine.loadFile` the gridChange listener
-                // already called setGrid(grid) — but that fired BEFORE
-                // parseAppData populated FieldManager, so the first render
-                // saw blocks with no matching fields and soft-skipped them
-                // all. Passing the same object reference here would be a
-                // React no-op (Object.is bails out); spread forces a fresh
-                // identity so React re-renders BlockInterface with the
-                // now-populated FieldManager.
+                // already called setGrid(grid), but that fired before the enum
+                // colours and options were merged, so dropdowns would render
+                // empty until something else moved. Passing the same object
+                // reference here would be a React no-op (Object.is bails out);
+                // spread forces a fresh identity.
+                //
+                // The block fields themselves no longer need this: they are
+                // projected from the schema the grid already carries, so there
+                // is no window in which a block renders without them.
                 setGrid({...grid})
                 // Reset to first sheet — host's previous active idx may not
                 // exist in the new workbook (engine.loadFile already rendered

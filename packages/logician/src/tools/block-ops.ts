@@ -21,12 +21,16 @@ async function commit(
     const tx: Transaction = {payloads: [payload], undoable: true, temp: false}
     const r = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(r)) throw new Error(`${label}: ${r.msg}`)
-    if (r.status.type === 'err')
-        throw transactionFailure(label, r)
+    if (r.status.type === 'err') throw transactionFailure(label, r)
 }
 
 export const moveBlock: Tool<
-    {sheetIdx: number; blockId: number; newMasterRow: number; newMasterCol: number},
+    {
+        sheetIdx: number
+        blockId: number
+        newMasterRow: number
+        newMasterCol: number
+    },
     {ok: true}
 > = {
     namespace: 'build',
@@ -39,8 +43,14 @@ export const moveBlock: Tool<
         properties: {
             sheetIdx: {type: 'integer'},
             blockId: {type: 'integer'},
-            newMasterRow: {type: 'integer', description: 'New top-left row (zero-based).'},
-            newMasterCol: {type: 'integer', description: 'New top-left column (zero-based).'},
+            newMasterRow: {
+                type: 'integer',
+                description: 'New top-left row (zero-based).',
+            },
+            newMasterCol: {
+                type: 'integer',
+                description: 'New top-left column (zero-based).',
+            },
         },
         required: ['sheetIdx', 'blockId', 'newMasterRow', 'newMasterCol'],
     },
@@ -99,7 +109,10 @@ export const resizeBlock: Tool<
     },
 }
 
-export const removeBlock: Tool<{sheetIdx: number; blockId: number}, {ok: true}> = {
+export const removeBlock: Tool<
+    {sheetIdx: number; blockId: number},
+    {ok: true}
+> = {
     namespace: 'build',
     name: 'remove_block',
     description:
@@ -116,7 +129,10 @@ export const removeBlock: Tool<{sheetIdx: number; blockId: number}, {ok: true}> 
     handler: async (input, ctx) => {
         await commit(
             asClient(ctx),
-            {type: 'removeBlock', value: {sheetIdx: input.sheetIdx, id: input.blockId}},
+            {
+                type: 'removeBlock',
+                value: {sheetIdx: input.sheetIdx, id: input.blockId},
+            },
             'remove_block'
         )
         return {data: {ok: true}, display: `Removed block ${input.blockId}`}

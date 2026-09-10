@@ -1,8 +1,7 @@
 /**
  * Synchronously resolve "is the user allowed to edit this cell?" using
- * only state that's available without RPC: the grid's `blockInfos`,
- * the host's caller-registry (which maps block cells to renderIds when
- * a schema binds), and the engine's in-process FieldManager.
+ * only state that's available without RPC: the grid's `blockInfos`, whose
+ * `schema` states each field's write policy.
  *
  * Used by host UI commit paths (cell editor, edit-bar) and by every
  * block-interface widget to short-circuit interaction BEFORE a
@@ -16,23 +15,39 @@
  *     engine owns those cells; see `getCellFieldFormula`.
  *   - Non-block cell → editable (cells outside any block have no field
  *     constraint).
- *   - Block cell with field `userEditable: true` → editable.
- *   - Block cell with field `userEditable: false` → NOT editable.
- *   - Block cell with field `userEditable: undefined` → editable
- *     (permissive default; the engine's owner-based fallback is the
- *     final word and only matters when a block is registered to a
- *     specific caller).
+ *   - Block cell whose field declares `writePolicy: 'ownerOnly'` → NOT
+ *     editable.
+ *   - `'anyone'` or `'inherit'` → editable here; for `'inherit'` the engine's
+ *     owner-based fallback is the final word, and only matters when a block is
+ *     registered to a specific caller.
  *
  * Limitations:
- *   - This only handles the *static* boolean form of `userEditable`.
- *     The dynamic string form (per-cell shadow formula) requires
- *     async shadow lookup; callers that need to honour it must route
- *     through the async permission patch instead.
+ *   - This handles only the field's declared policy. A per-record editability
+ *     FORMULA is enforced through a shadow, which needs an async lookup;
+ *     callers that must honour it route through the async permission patch.
  */
 
 import type {BlockDisplayInfo, Grid} from 'logisheets-engine'
-import {getEngine} from '@/core/engine'
-import {callerRegistry, isFieldUserEditable} from 'logisheets-core'
+import type {BlockSchemaFieldEntry} from 'logisheets-web/pure'
+
+/**
+ * The schema field a sheet-absolute coordinate falls in, or `undefined` when
+ * the block has no schema or the cell is outside its declared fields.
+ *
+ * A row schema runs its fields along columns and its records along rows; a
+ * column schema flips both.
+ */
+export function fieldAt(
+    info: BlockDisplayInfo['info'],
+    row: number,
+    col: number
+): BlockSchemaFieldEntry | undefined {
+    const schema = info.schema
+    if (!schema) return undefined
+    const idx =
+        schema.schemaType === 'col' ? row - info.rowStart : col - info.colStart
+    return schema.fields.find((f) => f.idx === idx)
+}
 
 /**
  * The block whose rectangle covers a sheet-absolute coordinate, or
@@ -127,23 +142,14 @@ export function isCellUserEditableSync(
             col >= info.colStart &&
             col < info.colStart + info.colCnt
         ) {
-            const blockRow = row - info.rowStart
-            const blockCol = col - info.colStart
-            const renderId = callerRegistry.getFieldRenderId(
-                sheetIdx,
-                info.blockId,
-                blockRow,
-                blockCol
-            )
-            if (!renderId) return true
-            try {
-                const fi = getEngine()
-                    .getBlockManager()
-                    .fieldManager.get(renderId)
-                return isFieldUserEditable(fi)
-            } catch {
-                return true
-            }
+            // Off the SCHEMA, which the grid already carries. This used to go
+            // through the caller registry to a renderId and then into the
+            // host's own field store — three hops to reach a flag the block's
+            // own schema now states, and the only reason the registry had to
+            // be populated at all for a cell edit to be judged.
+            const field = fieldAt(info, row, col)
+            if (!field) return true
+            return field.writePolicy !== 'ownerOnly'
         }
     }
     return true

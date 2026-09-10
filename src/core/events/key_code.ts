@@ -5,7 +5,7 @@
  */
 export const enum KeyboardEventCode {
     /**
-     * `~ on a US keyboard. This is the 半角/全角/漢字 (hankaku/zenkaku/kanji)
+     * `~ on a US keyboard. This is the hankaku/zenkaku/kanji
      * key on Japanese keyboard.
      */
     BACKQUOTE = 'Backquote',

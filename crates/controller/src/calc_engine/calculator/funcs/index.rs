@@ -76,11 +76,7 @@ fn pick_area(cv: CalcVertex, area: Option<usize>) -> Result<CalcVertex, ast::Err
         return Err(ast::Error::Value);
     }
     match cv {
-        CalcVertex::Union(u) => u
-            .into_iter()
-            .nth(i - 1)
-            .map(|v| *v)
-            .ok_or(ast::Error::Ref),
+        CalcVertex::Union(u) => u.into_iter().nth(i - 1).map(|v| *v).ok_or(ast::Error::Ref),
         // A single area: only `area_num = 1` names it.
         other if i == 1 => Ok(other),
         _ => Err(ast::Error::Ref),

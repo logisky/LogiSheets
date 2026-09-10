@@ -34,10 +34,7 @@ import {
     type ValidationRule,
     type Violation,
 } from '../validation/index.js'
-import {
-    checkFieldConstraints as checkFieldConstraintsPure,
-    type FieldColumn,
-} from '../field/index.js'
+import type {FieldTypeEnum} from '../field/index.js'
 import {
     generateFontPayload,
     generateAlgnmentPayload,
@@ -82,10 +79,325 @@ export interface FormBlockField {
      * `overrideValidation` write gate, and any other host.
      */
     validationFormula?: string
+    /**
+     * Per-field editability template — FALSE installs a `UserEditable` lock the
+     * host permission layer reads.
+     *
+     * Carried here because a schema re-bind replaces the field wholesale: the
+     * three bind sites below used to send `editabilityFormulas: []` ("all
+     * None"), so editing a block through this layer silently dropped any
+     * editability template it had.
+     */
+    editabilityFormula?: string
     /** Whether the field renders via a host-drawn (DIY) overlay. */
     diyRender: boolean
     /** Number format applied to the field's render info. */
     numFmt?: string
+
+    // ---- Declaration -----------------------------------------------------
+    // What the field IS, as opposed to what currently guards it. These reach
+    // the engine schema, so every host reads the same answer and they survive
+    // a save/load — previously they lived only in the browser's FieldManager,
+    // persisted as opaque JSON nothing but the browser read. See
+    // design/block-field-semantics.md.
+
+    /** Declared type. Omitted reads as unspecified (free-form). */
+    fieldType?: FieldTypeEnum
+    /** Enum set backing a `fieldType` of 'enum' / 'multiSelect'. */
+    enumSetId?: string
+    /** Target of a `fieldType` of 'fieldRef' / 'multiSelectRef'. */
+    refTarget?: {sheetId: number; blockId: number; fieldName: string}
+    /** What the field means, in prose, for whoever reads the block next. */
+    description?: string
+    /** Every record must carry a value here. */
+    required?: boolean
+    /** No two records may carry the same value here. */
+    unique?: boolean
+    /** What a newly-added record starts with. */
+    defaultValue?: string
+    /**
+     * Who may write to this field's cells: `'inherit'` (the block's own owner
+     * rules) | `'ownerOnly'` | `'anyone'`.
+     *
+     * Declared on the schema so every host reads the same answer — it was the
+     * last field-level rule that lived only in the browser's own field store,
+     * as a tri-state `userEditable` boolean. The engine persists and answers;
+     * it does not enforce, because it does not know who is writing.
+     */
+    writePolicy?: 'inherit' | 'ownerOnly' | 'anyone'
+}
+
+/** The engine's flat `FieldTypeParts` shape, or undefined for unspecified. */
+function fieldTypeParts(f: FormBlockField) {
+    if (!f.fieldType || f.fieldType === 'unspecified') return undefined
+    return {
+        kind: f.fieldType,
+        enumSetId: f.enumSetId,
+        refSheetId: f.refTarget?.sheetId,
+        refBlockId: f.refTarget?.blockId,
+        refFieldName: f.refTarget?.fieldName,
+    }
+}
+
+/**
+ * An option list a field can draw from, as the engine stores it.
+ *
+ * Ids and labels only. A variant's COLOUR is presentation and stays in the
+ * host, keyed by variant id — the engine needs the options in order to judge a
+ * value and needs nothing else.
+ */
+export interface EnumSetDecl {
+    id: string
+    name?: string
+    variants: ReadonlyArray<{id: string; label?: string}>
+}
+
+/**
+ * `upsertEnumSet` payloads for the sets a block's fields reference.
+ *
+ * Emitted in the same transaction as the schema bind, so a field declaring
+ * `enum{setId}` and the set it names never land apart — the declaration is
+ * useless to any other host without the options beside it. A set with no
+ * variants is skipped rather than sent: the engine refuses it (it would allow
+ * nothing), and failing the whole bind over a half-authored option list is the
+ * wrong trade.
+ */
+function enumSetPayloads(
+    fields: readonly FormBlockField[],
+    sets: readonly EnumSetDecl[] | undefined
+): Payload[] {
+    if (!sets || sets.length === 0) return []
+    const referenced = new Set(
+        fields.map((f) => f.enumSetId).filter((id): id is string => !!id)
+    )
+    return sets
+        .filter((s) => referenced.has(s.id) && s.variants.length > 0)
+        .map((s) => ({
+            type: 'upsertEnumSet' as const,
+            value: {
+                id: s.id,
+                name: s.name,
+                variants: s.variants.map((v) => ({id: v.id, label: v.label})),
+            },
+        }))
+}
+
+/**
+ * How an analysis field aggregates the field it reads. Every one lowers to
+ * `FUNC(BLOCKREFSB(...))` in the engine, which is why adding one is a one-line
+ * change there and none here.
+ *
+ * `COUNT` counts numbers, `COUNTA` counts values that are simply THERE — over
+ * `10, 20, "n/a", <blank>` they say 2 and 3. In a pivot, COUNT counts matching
+ * records and COUNTA counts the ones whose measure is filled in.
+ */
+export type AggFunc = 'SUM' | 'COUNT' | 'COUNTA' | 'AVERAGE' | 'MIN' | 'MAX'
+
+/** One field of an analysis block: what it aggregates, and how. */
+export interface AnalysisAggregate {
+    /** Field name of the SOURCE block. */
+    field: string
+    func: AggFunc
+}
+
+/** One column of the block being analysed, as the analysis needs to see it. */
+export interface AnalysisSourceField {
+    name: string
+    /**
+     * Whether the source DECLARES this field a number. Not whether its cells
+     * currently hold numbers: guessing from the data totals an id column, and
+     * leaves a still-empty column out of a total it belongs in.
+     */
+    isNumber: boolean
+    /**
+     * The source column's number format, carried onto the total so a sum of
+     * currency reads as currency.
+     */
+    numFmt?: string
+}
+
+/**
+ * Whether the result of `func` over a column is still measured in that
+ * column's units, and so should carry its number format.
+ *
+ * A sum, an average, a minimum or a maximum of a currency column is currency.
+ * The counts are not: they answer "how many", so formatting one like the
+ * column it counts would print "$3" for three orders. These are the aggregates
+ * whose result changes what is being measured.
+ */
+export function aggregateKeepsFormat(func: AggFunc): boolean {
+    return func !== 'COUNT' && func !== 'COUNTA'
+}
+
+/**
+ * A pivot recipe as PLAIN data, whatever the caller handed over.
+ *
+ * A recipe read back off a block arrives through the worker boundary, and what
+ * comes out the other side is not necessarily structured-cloneable on the way
+ * back in — a host that passes a recipe straight from `BlockInfo.pivot` into a
+ * payload gets "could not be cloned" from `postMessage`, at the moment of the
+ * write, with nothing in any test to warn it. Rebuilding every field by value
+ * makes that impossible to hit.
+ */
+function plainSpec(spec: {
+    rowDim: string
+    colDim?: string
+    measure: string
+    func: AggFunc
+    order: DimOrder
+    orderValues: readonly string[]
+    filters: readonly PivotFilter[]
+}) {
+    return {
+        rowDim: String(spec.rowDim),
+        ...(spec.colDim === undefined ? {} : {colDim: String(spec.colDim)}),
+        measure: String(spec.measure),
+        func: spec.func,
+        order: spec.order,
+        orderValues: spec.orderValues.map((v) => String(v)),
+        filters: spec.filters.map((f) => ({
+            field: String(f.field),
+            criteria: String(f.criteria),
+        })),
+    }
+}
+
+/**
+ * A pivot's header is the FIRST line of its block, and its records follow.
+ *
+ * Named because three places have to agree about it: the geometry (a pivot is
+ * one line taller than it has groups), the bind (`headerIdx`), and the writes
+ * that fill it. It is first because Excel's `headerRowCount="1"` cannot mean
+ * anything else.
+ */
+const PIVOT_HEADER_ROW = 0
+/** Block-relative row of a pivot's first RECORD, i.e. just after the header. */
+const PIVOT_FIRST_RECORD = 1
+
+/** The block being analysed. */
+export interface AnalysisSource {
+    sheetIdx: number
+    blockId: number
+    /** Its ref name — used in the new block's description, not in a formula. */
+    refName: string
+    rowStart: number
+    rowCnt: number
+    colStart: number
+    /** Fields in COLUMN order, so the analysis's columns line up with them. */
+    fields: readonly AnalysisSourceField[]
+    /** Which column is the key — where the label goes. */
+    keyIdx: number
+}
+
+/**
+ * SUM over every field the source declares a number.
+ *
+ * A default is only possible because the declaration exists: this is what the
+ * field-type work in `design/block-field-semantics.md` bought — before it, a
+ * caller could only guess from the data.
+ */
+export function defaultAnalysisAggregates(
+    fields: readonly AnalysisSourceField[]
+): AnalysisAggregate[] {
+    return fields
+        .filter((f) => f.isNumber)
+        .map((f) => ({field: f.name, func: 'SUM' as const}))
+}
+
+/**
+ * How a pivot orders the distinct values it turns into rows and columns.
+ *
+ * `custom` takes the sequence from `orderValues`; values it does not mention
+ * follow in ascending order rather than disappearing, because a hidden group
+ * is the failure a pivot must never commit silently.
+ */
+export type DimOrder = 'ascending' | 'firstSeen' | 'custom'
+
+/** One condition a source record must meet to be counted by a pivot. */
+export interface PivotFilter {
+    field: string
+    /** Spreadsheet condition syntax: `">100"`, `"East"`, `"<>closed"`. */
+    criteria: string
+}
+
+/**
+ * A pivot column that is declared rather than derived.
+ *
+ * A plain cross-tab needs none of these: each column's name IS the dimension
+ * value and the block's recipe supplies the rest. These exist for the two
+ * things that cannot express — a ROW TOTAL (`colValue: null`, spanning every
+ * value) and a SECOND MEASURE (`measure` / `func` of its own).
+ *
+ * A refresh leaves declared columns alone: they were never derived from the
+ * data, so the data cannot justify removing them.
+ */
+export interface PivotColumnSpec {
+    /** Column name in the pivot. */
+    name: string
+    /** Which column-dimension value it filters on; `null` spans every one. */
+    colValue: string | null
+    measure?: string
+    func?: AggFunc
+}
+
+/** The block a pivot analyses, as the create needs to see it. */
+export interface PivotSource {
+    sheetIdx: number
+    blockId: number
+    /** Its ref name — used in the new block's description, not in a formula. */
+    refName: string
+    rowStart: number
+    rowCnt: number
+    colStart: number
+    /**
+     * Number format per SOURCE field name, for the pivot to inherit: a cell of
+     * a pivot is an aggregate of one source column, so a SUM of a currency
+     * column should read as currency rather than as a bare number.
+     *
+     * Optional — omit it and the pivot is left unformatted, which is what
+     * every caller got before this existed.
+     */
+    numFmts?: Readonly<Record<string, string | undefined>>
+}
+
+/** What a refresh actually changed. */
+export interface PivotRefresh {
+    /** Groups that appeared in the source and now have a row. */
+    addedKeys: string[]
+    /** Rows the source no longer justifies. */
+    removedKeys: string[]
+    addedFields: string[]
+    removedFields: string[]
+    /**
+     * Source records with a blank dimension. They are in NO cell of the pivot,
+     * so its grand total is short by their measure — a refresh cannot fix
+     * that, only report it.
+     */
+    unassignedRecords: number
+}
+
+/**
+ * One field of a `bindFormSchema` payload.
+ *
+ * The payload used to take five positionally-aligned arrays (names, renderIds,
+ * and one per rule kind), which three call sites below each spelled out by
+ * hand. Carrying the declaration too would have made it eight — so the payload
+ * became a list of these, and the three call sites became one function.
+ */
+function toSchemaFieldSpec(f: FormBlockField) {
+    return {
+        name: f.name,
+        renderId: f.renderId,
+        valueFormula: f.valueFormula || undefined,
+        validationFormula: f.validationFormula || undefined,
+        editabilityFormula: f.editabilityFormula || undefined,
+        fieldType: fieldTypeParts(f),
+        description: f.description || undefined,
+        required: f.required,
+        unique: f.unique,
+        defaultValue: f.defaultValue || undefined,
+        writePolicy: f.writePolicy,
+    }
 }
 
 /**
@@ -456,6 +768,8 @@ export class WorkbookOps {
         refName: string
         keyIdx: number
         fields: readonly FormBlockField[]
+        /** Option lists the fields reference; written in the same transaction. */
+        enumSets?: readonly EnumSetDecl[]
     }): Promise<void> {
         const {
             sheetIdx,
@@ -478,6 +792,7 @@ export class WorkbookOps {
                     colCnt: fields.length,
                 },
             },
+            ...enumSetPayloads(fields, opts.enumSets),
             {
                 type: 'bindFormSchema',
                 value: {
@@ -487,13 +802,7 @@ export class WorkbookOps {
                     fieldFrom: 0,
                     row: true,
                     keyIdx: keyIdx < 0 ? 0 : keyIdx,
-                    fields: fields.map((f) => f.name),
-                    renderIds: fields.map((f) => f.renderId),
-                    fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                    validationFormulas: fields.map(
-                        (f) => f.validationFormula ?? ''
-                    ),
-                    editabilityFormulas: [],
+                    fields: fields.map(toSchemaFieldSpec),
                 },
             },
             ...fields.map((f) => ({
@@ -524,6 +833,8 @@ export class WorkbookOps {
         refName: string
         keyIdx: number
         fields: readonly FormBlockField[]
+        /** Option lists the fields reference; written in the same transaction. */
+        enumSets?: readonly EnumSetDecl[]
     }): Promise<void> {
         const {
             sheetIdx,
@@ -548,6 +859,7 @@ export class WorkbookOps {
                     colCnt,
                 },
             },
+            ...enumSetPayloads(fields, opts.enumSets),
             {
                 type: 'bindFormSchema',
                 value: {
@@ -557,13 +869,7 @@ export class WorkbookOps {
                     fieldFrom: 0,
                     row: true,
                     keyIdx: keyIdx < 0 ? 0 : keyIdx,
-                    fields: fields.map((f) => f.name),
-                    renderIds: fields.map((f) => f.renderId),
-                    fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                    validationFormulas: fields.map(
-                        (f) => f.validationFormula ?? ''
-                    ),
-                    editabilityFormulas: [],
+                    fields: fields.map(toSchemaFieldSpec),
                 },
             },
             ...fields.map((f) => ({
@@ -606,6 +912,8 @@ export class WorkbookOps {
         refName: string
         keyIdx: number
         fields: readonly FormBlockField[]
+        /** Option lists the fields reference; written in the same transaction. */
+        enumSets?: readonly EnumSetDecl[]
     }): Promise<void> {
         const {sheetIdx, blockId, currentColCnt, refName, keyIdx, fields} = opts
         const newColCnt = fields.length
@@ -626,6 +934,7 @@ export class WorkbookOps {
                 },
             })
         }
+        payloads.push(...enumSetPayloads(fields, opts.enumSets))
         payloads.push({
             type: 'bindFormSchema',
             value: {
@@ -635,13 +944,7 @@ export class WorkbookOps {
                 fieldFrom: 0,
                 row: true,
                 keyIdx: keyIdx < 0 ? 0 : keyIdx,
-                fields: fields.map((f) => f.name),
-                renderIds: fields.map((f) => f.renderId),
-                fieldFormulas: fields.map((f) => f.valueFormula ?? ''),
-                validationFormulas: fields.map(
-                    (f) => f.validationFormula ?? ''
-                ),
-                editabilityFormulas: [],
+                fields: fields.map(toSchemaFieldSpec),
             },
         })
         payloads.push(
@@ -692,6 +995,947 @@ export class WorkbookOps {
             ],
             true
         )
+    }
+
+    // ---- analysis blocks ------------------------------------------------
+
+    /**
+     * Create the block that analyses `source`: a totals row placed directly
+     * below it, declaring what it analyses and how each of its fields
+     * aggregates. See `design/block-analysis.md`.
+     *
+     * **No formula is sent.** The engine generates each aggregate field's
+     * formula from the declaration, which is what makes renaming a source
+     * field rebuild the total instead of silently zeroing it. A field with no
+     * aggregate stays an ordinary cell — that is the label column, and the
+     * label is also the key the result is addressed by
+     * (`BLOCKREF(refName, label, field)`).
+     *
+     * One transaction, so it is one undo, and so a reader between two payloads
+     * never sees a one-row table it would mistake for a record.
+     *
+     * Returns what it aggregated, in column order, for the caller to report.
+     */
+    async createAnalysisBlock(opts: {
+        source: AnalysisSource
+        blockId: number
+        refName: string
+        label: string
+        /**
+         * Which source fields to aggregate and how. Omit for
+         * {@link defaultAnalysisAggregates} — SUM over every field the source
+         * DECLARES as a number.
+         */
+        aggregates?: readonly AnalysisAggregate[]
+    }): Promise<readonly AnalysisAggregate[]> {
+        const {source, blockId, refName, label} = opts
+        const chosen = new Map<string, AggFunc>()
+        for (const a of opts.aggregates ??
+            defaultAnalysisAggregates(source.fields)) {
+            if (!source.fields.some((f) => f.name === a.field)) {
+                throw new Error(
+                    `Cannot aggregate "${a.field}": the block has no such field.`
+                )
+            }
+            chosen.set(a.field, a.func)
+        }
+        if (chosen.size === 0) {
+            throw new Error(
+                'Nothing to aggregate: no field of this block is declared a ' +
+                    'number. Give a field the number type first, or choose ' +
+                    'what to aggregate explicitly.'
+            )
+        }
+
+        const row = source.rowStart + source.rowCnt
+        const renderIdOf = (i: number) => `${refName}__agg${i}`
+        await this.apply(
+            [
+                // Room first, or the block would land on whatever sits below
+                // the table. This is also what pushes the pair apart as the
+                // source grows, keeping them adjacent.
+                {
+                    type: 'insertRows',
+                    value: {sheetIdx: source.sheetIdx, start: row, count: 1},
+                },
+                {
+                    type: 'createBlock',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        id: blockId,
+                        masterRow: row,
+                        masterCol: source.colStart,
+                        rowCnt: 1,
+                        colCnt: source.fields.length,
+                        analyzes: source.blockId,
+                        description: `Analysis of "${source.refName}".`,
+                    },
+                },
+                {
+                    type: 'bindFormSchema',
+                    value: {
+                        refName,
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        fieldFrom: 0,
+                        row: true,
+                        keyIdx: source.keyIdx < 0 ? 0 : source.keyIdx,
+                        fields: source.fields.map((f, i) => {
+                            const func = chosen.get(f.name)
+                            return {
+                                name: f.name,
+                                renderId: renderIdOf(i),
+                                aggFunc: func,
+                                aggField: func ? f.name : undefined,
+                            }
+                        }),
+                    },
+                },
+                // The label, which is the key the result is addressed by.
+                {
+                    type: 'blockInput',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        row: 0,
+                        col: source.keyIdx < 0 ? 0 : source.keyIdx,
+                        input: label,
+                    },
+                },
+                // Carry each source column's number format across, so a total
+                // is formatted like the column it totals rather than as a bare
+                // number. A COUNT is the exception — it counts records, not
+                // currency — so it is left plain.
+                ...source.fields.map((f, i) => {
+                    const func = chosen.get(f.name)
+                    const keep =
+                        func === undefined || aggregateKeepsFormat(func)
+                    return {
+                        type: 'upsertFieldRenderInfo' as const,
+                        value: {
+                            renderId: renderIdOf(i),
+                            diyRender: false,
+                            styleUpdate: {
+                                setNumFmt: (keep ? f.numFmt : undefined) ?? '',
+                            },
+                        },
+                    }
+                }),
+            ],
+            true
+        )
+
+        return source.fields
+            .filter((f) => chosen.has(f.name))
+            .map((f) => ({field: f.name, func: chosen.get(f.name)!}))
+    }
+
+    /**
+     * Change WHAT an existing analysis block computes — which source fields it
+     * aggregates, with which function, and the label its row is addressed by.
+     *
+     * The shape never changes: an analysis block is one row with one column
+     * per source field, so an edit is a re-bind and nothing else. That is the
+     * whole difference from {@link editPivot}, where changing the recipe
+     * changes how many rows and columns there are.
+     *
+     * Exists so an analysis can be arrived at in STEPS. The first guess (sum
+     * every number) is often nearly right and occasionally wrong in one
+     * column, and without this the only remedy was to delete the block and
+     * build it again — losing its ref name, and with it every formula pointing
+     * at it.
+     */
+    async editAnalysisBlock(opts: {
+        sheetIdx: number
+        /** The analysis block being edited. */
+        blockId: number
+        /** Its ref name, which the re-bind has to restate. */
+        refName: string
+        /** The block it analyses, for its field list and number formats. */
+        source: AnalysisSource
+        aggregates: readonly AnalysisAggregate[]
+        /**
+         * A new row label, or omit to leave it alone. Rewriting it re-aims
+         * nothing — unlike a pivot key, an analysis block's label is just the
+         * name its single row is addressed by.
+         */
+        label?: string
+        /** Where the block sits, needed only when `label` is given. */
+        rowStart?: number
+        colStart?: number
+    }): Promise<readonly AnalysisAggregate[]> {
+        const {sheetIdx, blockId, refName, source} = opts
+        const chosen = new Map<string, AggFunc>()
+        for (const a of opts.aggregates) {
+            if (!source.fields.some((f) => f.name === a.field)) {
+                throw new Error(
+                    `Cannot aggregate "${a.field}": the block has no such field.`
+                )
+            }
+            chosen.set(a.field, a.func)
+        }
+        if (chosen.size === 0) {
+            throw new Error(
+                'Nothing to aggregate: choose at least one field and function.'
+            )
+        }
+
+        const renderIdOf = (i: number) => `${refName}__agg${i}`
+        const payloads: Payload[] = [
+            {
+                type: 'bindFormSchema',
+                value: {
+                    refName,
+                    sheetIdx,
+                    blockId,
+                    fieldFrom: 0,
+                    row: true,
+                    keyIdx: source.keyIdx < 0 ? 0 : source.keyIdx,
+                    fields: source.fields.map((f, i) => {
+                        const func = chosen.get(f.name)
+                        return {
+                            name: f.name,
+                            renderId: renderIdOf(i),
+                            aggFunc: func,
+                            aggField: func ? f.name : undefined,
+                        }
+                    }),
+                },
+            },
+        ]
+        const keyCol = source.keyIdx < 0 ? 0 : source.keyIdx
+        if (opts.label !== undefined) {
+            payloads.push({
+                type: 'blockInput',
+                value: {
+                    sheetIdx,
+                    blockId,
+                    row: 0,
+                    col: keyCol,
+                    input: opts.label,
+                },
+            })
+        }
+        // Blank the columns this edit STOPPED computing.
+        //
+        // The engine drops the formula on its own — a generated cell with no
+        // declaration must not keep one, or it would go on recomputing under a
+        // heading that no longer claims it. What it does not do is clear the
+        // VALUE the formula last produced: removing a formula normally leaves
+        // its value behind, which is right everywhere else and wrong here, and
+        // a re-bind gives the container no hook to say so. So the caller says
+        // it. Never the key column — that holds the label.
+        source.fields.forEach((f, i) => {
+            if (i === keyCol || chosen.has(f.name)) return
+            payloads.push({
+                type: 'blockInput',
+                value: {sheetIdx, blockId, row: 0, col: i, input: ''},
+            })
+        })
+        // Formats last, for the same reason as everywhere else: they attach to
+        // the render ids the bind declares. A column that stopped being a SUM
+        // and became a COUNT stops being currency with it.
+        payloads.push(
+            ...source.fields.map((f, i) => {
+                const func = chosen.get(f.name)
+                const keep = func === undefined || aggregateKeepsFormat(func)
+                return {
+                    type: 'upsertFieldRenderInfo' as const,
+                    value: {
+                        renderId: renderIdOf(i),
+                        diyRender: false,
+                        styleUpdate: {
+                            setNumFmt: (keep ? f.numFmt : undefined) ?? '',
+                        },
+                    },
+                }
+            })
+        )
+
+        await this.apply(payloads, true)
+        return source.fields
+            .filter((f) => chosen.has(f.name))
+            .map((f) => ({field: f.name, func: chosen.get(f.name)!}))
+    }
+
+    // ---- pivots -----------------------------------------------------------
+
+    /**
+     * The label row a pivot carries directly above itself, as `cellInput`
+     * payloads.
+     *
+     * A pivot's column names are DATA — they are the column dimension's own
+     * values — but they live on the schema, which means the raw sheet shows a
+     * grid of numbers with nothing to say what the columns are. Everything
+     * that is not our own UI sees it that way: another tool, a person reading
+     * the file, and Excel, whose pivot tables require the labels to be in
+     * cells. So the pivot writes them there.
+     *
+     * The row sits OUTSIDE the block, immediately above it. Inside would break
+     * what a block is: every row of a block is a record addressed by its key,
+     * so a header row would become a record keyed "region" — captured by
+     * `#KEY`, counted by the key-uniqueness guard, and aggregated by anything
+     * reading the block.
+     *
+     * Rewritten in full whenever the column set can have changed, because a
+     * label left behind from a previous shape is worse than no label: it names
+     * a column that is now something else.
+     */
+    private pivotHeaderRow(opts: {
+        sheetIdx: number
+        blockId: number
+        fieldNames: readonly string[]
+    }): Payload[] {
+        // Block-relative, so nothing here depends on where the block sits.
+        // The header is one of the block's own lines — the schema says which —
+        // so it travels with the block, which a row above it did not.
+        //
+        // Exactly the columns the block now has, and no attempt to blank the
+        // ones a shrink dropped: those cells went with the columns. Reaching
+        // past the block's width is not a harmless no-op either — a
+        // `blockInput` outside the block fails the whole transaction, which is
+        // how the old absolute-coordinate version hid the mistake.
+        return opts.fieldNames.map((name, i) => ({
+            type: 'blockInput' as const,
+            value: {
+                sheetIdx: opts.sheetIdx,
+                blockId: opts.blockId,
+                row: PIVOT_HEADER_ROW,
+                col: i,
+                input: name,
+            },
+        }))
+    }
+
+    /**
+     * The number format each of a pivot's columns should carry, in the order
+     * the columns are declared (`[key, ...value columns]`).
+     *
+     * Every column of a pivot aggregates ONE source column, so it is formatted
+     * like that column. Which source column differs per kind:
+     *
+     * - the key column holds the row dimension's own values;
+     * - a derived column is `func(measure)` from the recipe;
+     * - a declared column (a row total, a second measure) names its own, and
+     *   falls back to the recipe's for whatever it leaves out.
+     *
+     * A COUNT column is deliberately plain — see {@link aggregateKeepsFormat}.
+     *
+     * Returned as `''` rather than `undefined` for "no format", because the
+     * payload is also how a format is CLEARED, and a refresh re-states every
+     * column: `refreshPivot` reassigns render ids by position, so a column
+     * that appears shifts the ids after it, and only restating all of them
+     * keeps each format on the column it belongs to.
+     */
+    private pivotColumnFormats(opts: {
+        fieldNames: readonly string[]
+        measure: string
+        func: AggFunc
+        numFmts: Readonly<Record<string, string | undefined>>
+        declared?: (
+            name: string
+        ) => {measure?: string; func?: string} | undefined
+    }): string[] {
+        const {fieldNames, numFmts} = opts
+        const fmt = (field: string, func: AggFunc) =>
+            (aggregateKeepsFormat(func) ? numFmts[field] : undefined) ?? ''
+        return fieldNames.map((name, i) => {
+            // Field 0 is the key column: the row dimension's values, named
+            // after the dimension itself.
+            if (i === 0) return numFmts[name] ?? ''
+            const d = opts.declared?.(name)
+            if (d)
+                return fmt(
+                    d.measure ?? opts.measure,
+                    (d.func as AggFunc | undefined) ?? opts.func
+                )
+            return fmt(opts.measure, opts.func)
+        })
+    }
+
+    /**
+     * Create a pivot of `source`: a cross-tab whose rows are the distinct
+     * values of `rowDim`, whose columns are the distinct values of `colDim`,
+     * and whose cells are `func` over `measure`.
+     *
+     * **One transaction**, so it is one undo — which is why it asks the engine
+     * for the shape BEFORE creating the block (`pivotPlanFor`). Creating first
+     * and reshaping after would leave an empty declared pivot as an
+     * intermediate state and take two undos to remove.
+     *
+     * No formula is sent. The engine generates every cell from the recipe plus
+     * the cell's own row key and field name, which is what makes renaming a
+     * source field rebuild the pivot instead of breaking it.
+     *
+     * Returns the shape it created, for the caller to report.
+     */
+    async createPivot(opts: {
+        source: PivotSource
+        blockId: number
+        refName: string
+        rowDim: string
+        /** Omit for a grouped pivot: one value column, no cross-tab. */
+        colDim?: string
+        measure: string
+        func: AggFunc
+        order?: DimOrder
+        /** The sequence for `order: 'custom'`. */
+        orderValues?: readonly string[]
+        /** Which source records to count at all. Omit to count every one. */
+        filters?: readonly PivotFilter[]
+        /**
+         * Columns beyond the derived ones — a row total, a second measure.
+         * Appended after the cross-tab's own columns.
+         */
+        extraColumns?: readonly PivotColumnSpec[]
+        /**
+         * Name of the pivot's single value column when `colDim` is omitted.
+         * Ignored for a real cross-tab, whose column names ARE the dimension's
+         * values.
+         */
+        valueColumn?: string
+    }): Promise<{keys: string[]; fields: string[]; unassignedRecords: number}> {
+        const {source, blockId, refName, rowDim, colDim, measure, func} = opts
+        const spec = plainSpec({
+            rowDim,
+            colDim,
+            measure,
+            func,
+            order: opts.order ?? 'ascending',
+            // Always sent, even empty: the plan and the cells must agree
+            // about what is counted, and an omitted list on one side only
+            // would be exactly that disagreement.
+            orderValues: opts.orderValues ?? [],
+            filters: opts.filters ?? [],
+        })
+        const plan = await this.client.pivotPlanFor({
+            sheetIdx: source.sheetIdx,
+            sourceBlock: source.blockId,
+            spec,
+        })
+        if (isErrorMessage(plan)) {
+            throw new Error(plan.msg)
+        }
+        if (plan.keys.length === 0) {
+            throw new Error(
+                `Nothing to pivot: no record of "${source.refName}" has a value ` +
+                    `for "${rowDim}", so the pivot would have no rows.`
+            )
+        }
+
+        const extra = opts.extraColumns ?? []
+        const valueFields = [
+            ...(colDim ? plan.fields : [opts.valueColumn ?? measure]),
+            ...extra.map((c) => c.name),
+        ]
+        // The block starts directly below the source and OWNS its header
+        // line, so it is one row taller than it has groups.
+        const row = source.rowStart + source.rowCnt
+        // The key column is named after the row dimension: it holds that
+        // dimension's values, and the name is what a reader sees.
+        const fieldNames = [rowDim, ...valueFields]
+        const rowCnt = plan.keys.length + 1
+
+        await this.apply(
+            [
+                // Room first, so the pivot does not land on whatever sits
+                // below the table.
+                {
+                    type: 'insertRows',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        start: row,
+                        count: rowCnt,
+                    },
+                },
+                {
+                    type: 'createBlock',
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        id: blockId,
+                        masterRow: row,
+                        masterCol: source.colStart,
+                        rowCnt,
+                        colCnt: fieldNames.length,
+                        analyzes: source.blockId,
+                        // Declared as it is created, so it is never briefly a
+                        // stray table a reader would take for records.
+                        pivot: spec,
+                        description:
+                            `Pivot of "${source.refName}": rows = ${rowDim}` +
+                            (colDim ? `, columns = ${colDim}` : '') +
+                            `, ${func} of ${measure}.`,
+                    },
+                },
+                // The header names, and the keys, BOTH before the bind.
+                // `#KEY` is captured when the bind materializes each row, so a
+                // key written afterwards leaves that row filtering on "" — a
+                // whole grid of zeros, no error.
+                ...this.pivotHeaderRow({
+                    sheetIdx: source.sheetIdx,
+                    blockId,
+                    fieldNames,
+                }),
+                ...plan.keys.map((key, i) => ({
+                    type: 'blockInput' as const,
+                    value: {
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        row: PIVOT_FIRST_RECORD + i,
+                        col: 0,
+                        input: key,
+                    },
+                })),
+                {
+                    type: 'bindFormSchema',
+                    value: {
+                        refName,
+                        sheetIdx: source.sheetIdx,
+                        blockId,
+                        fieldFrom: 0,
+                        keyIdx: 0,
+                        row: true,
+                        // The first line holds the field names, not a record.
+                        headerIdx: PIVOT_HEADER_ROW,
+                        // Field names ARE the column dimension's values.
+                        // Nothing per-field is declared; the engine derives
+                        // every cell from the recipe.
+                        fields: fieldNames.map((name, i) => {
+                            const declared = extra.find((c) => c.name === name)
+                            return {
+                                name,
+                                renderId: `${refName}__p${i}`,
+                                // Only a DECLARED column carries these; a
+                                // derived one says nothing and the engine
+                                // reads its name as the dimension value.
+                                ...(declared
+                                    ? {
+                                          pivotColValue:
+                                              declared.colValue ?? '*',
+                                          pivotMeasure: declared.measure,
+                                          pivotFunc: declared.func,
+                                      }
+                                    : {}),
+                            }
+                        }),
+                    },
+                },
+                // After the bind, which is what declares the render ids these
+                // attach to. A pivot of a currency column reads as currency.
+                ...this.pivotColumnFormats({
+                    fieldNames,
+                    measure,
+                    func,
+                    numFmts: source.numFmts ?? {},
+                    declared: (name) => extra.find((c) => c.name === name),
+                }).map((numFmt, i) => ({
+                    type: 'upsertFieldRenderInfo' as const,
+                    value: {
+                        renderId: `${refName}__p${i}`,
+                        diyRender: false,
+                        styleUpdate: {setNumFmt: numFmt},
+                    },
+                })),
+            ],
+            true
+        )
+
+        return {
+            keys: [...plan.keys],
+            fields: valueFields,
+            unassignedRecords: plan.unassignedRecords,
+        }
+    }
+
+    /**
+     * Bring a pivot's SHAPE back in line with its source: add rows for groups
+     * that appeared, drop rows for groups that are gone, same for columns.
+     *
+     * Its numbers were never stale — they are live formulas. Only the set of
+     * rows and columns needs this, because no formula can add a row.
+     *
+     * One transaction, and the payload order is not negotiable
+     * (`design/block-pivot.md` §6): grow, write the keys, bind, shrink. Keys
+     * before the bind because `#KEY` is captured at materialization; grow
+     * before the bind because a field cannot bind to a column that does not
+     * exist; shrink after, so nothing is left bound to a vanishing column.
+     *
+     * Returns what changed, or `null` when the pivot was already current — so
+     * a caller can say "nothing to do" instead of reporting an empty refresh.
+     */
+    async refreshPivot(opts: {
+        sheetIdx: number
+        blockId: number
+        /** The pivot's ref name, which the re-bind has to restate. */
+        refName: string
+        /** Its key field's name — the column holding the row dimension. */
+        keyField: string
+        /**
+         * The pivot's CURRENT schema fields, so a re-bind can restate any
+         * column that was declared by hand.
+         *
+         * Without them the re-bind would rewrite every column as a derived
+         * one, silently turning a row total into a column filtering on the
+         * literal value "Total" — which matches nothing and reads 0.
+         */
+        currentFields?: ReadonlyArray<{
+            field: string
+            pivotColValue?: string
+            pivotMeasure?: string
+            pivotFunc?: string
+        }>
+        /**
+         * Number format per SOURCE field name, and the recipe the pivot runs,
+         * so a column the refresh ADDS is formatted like the columns beside it
+         * instead of arriving as a bare number.
+         *
+         * Both or neither: without the recipe there is no way to know which
+         * source column a derived column aggregates. Omit to leave every
+         * format alone.
+         */
+        formats?: {
+            numFmts: Readonly<Record<string, string | undefined>>
+            measure: string
+            func: AggFunc
+        }
+    }): Promise<PivotRefresh | null> {
+        // No sheet coordinates: the keys and the header are written
+        // block-relative now, so a caller cannot get them wrong. It used to
+        // take `rowStart`, and a stale one wrote the keys outside the block —
+        // silently, because a key nobody reads just leaves the row filtering
+        // on the value it already had.
+        const {sheetIdx, blockId, refName, keyField} = opts
+        const plan = await this.client.pivotPlan({sheetIdx, blockId})
+        if (isErrorMessage(plan)) {
+            throw new Error(plan.msg)
+        }
+        if (!plan.isStale) return null
+
+        // A grouped pivot plans no columns, so it keeps the ones it has.
+        const fields =
+            plan.fields.length > 0 ? [...plan.fields] : [...plan.currentFields]
+        const fieldNames = [keyField, ...fields]
+        // The block owns its header line, so it is one row taller than it has
+        // groups.
+        const newRowCnt = plan.keys.length + 1
+        const newColCnt = fieldNames.length
+        const payloads: Payload[] = []
+        // ONE resize, to the final size, BEFORE the bind — in both directions.
+        //
+        // Growing first is obvious: a field cannot bind to a column that does
+        // not exist. Shrinking first is the part that cost something to learn:
+        // a `ResizeBlock` sent AFTER a bind leaves the generated formulas
+        // uncalculated, so a refresh that dropped a group left every surviving
+        // row BLANK — the keys were right and the numbers were gone. It is the
+        // same hazard as the no-op resize in
+        // `refreshing_a_pivot_with_a_trailing_no_op_resize_loses_the_new_row`,
+        // and the rule that covers both is: never resize a block after binding
+        // it. Nothing is orphaned, because the bind that follows states the
+        // surviving fields and only those.
+        if (
+            newRowCnt !== plan.currentKeys.length + 1 ||
+            newColCnt !== plan.currentFields.length + 1
+        ) {
+            payloads.push({
+                type: 'resizeBlock',
+                value: {sheetIdx, id: blockId, newRowCnt, newColCnt},
+            })
+        }
+        payloads.push(
+            // The labels, in full: a refresh can add or drop columns, and a
+            // label left over from the old shape names a column that is now
+            // something else.
+            ...this.pivotHeaderRow({
+                sheetIdx,
+                blockId,
+                fieldNames,
+            }),
+            ...plan.keys.map((key, i) => ({
+                type: 'blockInput' as const,
+                value: {
+                    sheetIdx,
+                    blockId,
+                    row: PIVOT_FIRST_RECORD + i,
+                    col: 0,
+                    input: key,
+                },
+            })),
+            {
+                type: 'bindFormSchema',
+                value: {
+                    refName,
+                    sheetIdx,
+                    blockId,
+                    fieldFrom: 0,
+                    keyIdx: 0,
+                    row: true,
+                    // Restated: the bind states the whole interpretation, so
+                    // omitting this would turn the header line into a record.
+                    headerIdx: PIVOT_HEADER_ROW,
+                    fields: fieldNames.map((name, i) => {
+                        const was = opts.currentFields?.find(
+                            (f) => f.field === name
+                        )
+                        return {
+                            name,
+                            renderId: `${refName}__p${i}`,
+                            // Restated verbatim. A declared column is not
+                            // derived from the data, so a refresh has no
+                            // business reinterpreting it.
+                            ...(was?.pivotColValue !== undefined
+                                ? {
+                                      pivotColValue: was.pivotColValue,
+                                      pivotMeasure: was.pivotMeasure,
+                                      pivotFunc: was.pivotFunc,
+                                  }
+                                : {}),
+                        }
+                    }),
+                },
+            }
+        )
+        // EVERY column is restated: render ids are assigned by position,
+        // so a column that appears shifts the ids after it and each format
+        // would otherwise stay behind on the wrong column.
+        if (opts.formats) {
+            payloads.push(
+                ...this.pivotColumnFormats({
+                    fieldNames,
+                    measure: opts.formats.measure,
+                    func: opts.formats.func,
+                    numFmts: opts.formats.numFmts,
+                    declared: (name) => {
+                        const was = opts.currentFields?.find(
+                            (f) => f.field === name
+                        )
+                        return was?.pivotColValue !== undefined
+                            ? {
+                                  measure: was.pivotMeasure,
+                                  func: was.pivotFunc,
+                              }
+                            : undefined
+                    },
+                }).map((numFmt, i) => ({
+                    type: 'upsertFieldRenderInfo' as const,
+                    value: {
+                        renderId: `${refName}__p${i}`,
+                        diyRender: false,
+                        styleUpdate: {setNumFmt: numFmt},
+                    },
+                }))
+            )
+        }
+
+        await this.apply(payloads, true)
+        return {
+            addedKeys: [...plan.missingKeys],
+            removedKeys: [...plan.extraKeys],
+            addedFields: [...plan.missingFields],
+            removedFields: [...plan.extraFields],
+            unassignedRecords: plan.unassignedRecords,
+        }
+    }
+
+    /**
+     * Change a pivot's RECIPE — what it groups by, what it measures, how, in
+     * what order, over which records — and reshape it to match, in one
+     * transaction.
+     *
+     * A recipe is not editable in place by hand: a pivot's numbers are
+     * generated from it, its column names ARE the column dimension's values,
+     * and its key column holds the row dimension's. Changing any of those by
+     * typing produces a table that says one thing and computes another —
+     * editing a row label does not re-aim the row, it relabels a group.
+     *
+     * Deliberately does NOT ask for the current plan. The commonest reason to
+     * edit is that the recipe has stopped resolving (a source field renamed
+     * out from under it, say), and planning the OLD recipe would fail exactly
+     * then. The caller states the block's present size instead, which it can
+     * always see.
+     *
+     * Payload order, for the same reasons as §6 with one addition: the RECIPE
+     * goes before the bind, because the bind is what regenerates every cell
+     * from it — set it after and the block re-materializes from the old one.
+     *
+     *   grow (if growing) → recipe → keys → bind → shrink (only if shrinking)
+     *
+     * Returns the shape it produced.
+     */
+    async editPivot(opts: {
+        sheetIdx: number
+        /** The pivot being edited. */
+        blockId: number
+        /** Its ref name, which the re-bind has to restate. */
+        refName: string
+        /** The block it analyses: what the new recipe is planned against. */
+        source: PivotSource
+
+        /**
+         * Its present size, so the reshape knows whether it grows or shrinks.
+         * Asked for rather than planned, so a broken recipe can still be
+         * fixed — which is most of the point of this method.
+         */
+        currentRowCnt: number
+        currentColCnt: number
+        rowDim: string
+        colDim?: string
+        measure: string
+        func: AggFunc
+        order?: DimOrder
+        orderValues?: readonly string[]
+        filters?: readonly PivotFilter[]
+        extraColumns?: readonly PivotColumnSpec[]
+        valueColumn?: string
+    }): Promise<{keys: string[]; fields: string[]; unassignedRecords: number}> {
+        const {
+            sheetIdx,
+            blockId,
+            refName,
+            source,
+            rowDim,
+            colDim,
+            measure,
+            func,
+        } = opts
+        // Rebuilt by value: an edit's recipe usually comes from the block
+        // itself, and passing that back through the worker unchanged fails to
+        // clone.
+        const spec = plainSpec({
+            rowDim,
+            colDim,
+            measure,
+            func,
+            order: opts.order ?? 'ascending',
+            orderValues: opts.orderValues ?? [],
+            filters: opts.filters ?? [],
+        })
+        const plan = await this.client.pivotPlanFor({
+            sheetIdx,
+            sourceBlock: source.blockId,
+            spec,
+        })
+        if (isErrorMessage(plan)) {
+            throw new Error(plan.msg)
+        }
+        if (plan.keys.length === 0) {
+            throw new Error(
+                `Nothing to pivot: no record of "${source.refName}" has a value ` +
+                    `for "${rowDim}", so the pivot would have no rows.`
+            )
+        }
+
+        const extra = opts.extraColumns ?? []
+        const valueFields = [
+            ...(colDim ? plan.fields : [opts.valueColumn ?? measure]),
+            ...extra.map((c) => c.name),
+        ]
+        // The key column is named after the row dimension, which the edit may
+        // have just changed.
+        const fieldNames = [rowDim, ...valueFields]
+        // One line taller than it has groups: the block owns its header.
+        const newRowCnt = plan.keys.length + 1
+        const newColCnt = fieldNames.length
+
+        const payloads: Payload[] = []
+        // ONE resize, to the final size, BEFORE the bind — in both directions.
+        //
+        // A refresh has to grow before and shrink after, because it keeps the
+        // old rows' keys and only adds to them. An edit rewrites every key, so
+        // it can take the block to its final size first and then bind onto it
+        // — which is the safer order: a `ResizeBlock` sent AFTER a bind leaves
+        // the generated formulas uncalculated, showing the value each cell had
+        // before the edit under its new formula. Resizing first also means the
+        // rows a shrink drops are gone before the new keys are written, so a
+        // key that already exists further down is not briefly a duplicate.
+        if (
+            newRowCnt !== opts.currentRowCnt ||
+            newColCnt !== opts.currentColCnt
+        ) {
+            payloads.push({
+                type: 'resizeBlock',
+                value: {sheetIdx, id: blockId, newRowCnt, newColCnt},
+            })
+        }
+        payloads.push(
+            // The labels, in full — an edit can change the whole column set.
+            ...this.pivotHeaderRow({
+                sheetIdx,
+                blockId,
+                fieldNames,
+            }),
+            // The new recipe, BEFORE the bind that regenerates from it.
+            {
+                type: 'setBlockAnalyzes',
+                value: {
+                    sheetIdx,
+                    blockId,
+                    analyzes: source.blockId,
+                    pivot: spec,
+                },
+            },
+            // Keys before the bind: `#KEY` is captured at materialization.
+            ...plan.keys.map((key, i) => ({
+                type: 'blockInput' as const,
+                value: {
+                    sheetIdx,
+                    blockId,
+                    row: PIVOT_FIRST_RECORD + i,
+                    col: 0,
+                    input: key,
+                },
+            })),
+            {
+                type: 'bindFormSchema',
+                value: {
+                    refName,
+                    sheetIdx,
+                    blockId,
+                    fieldFrom: 0,
+                    keyIdx: 0,
+                    row: true,
+                    // Restated: the bind states the whole interpretation, so
+                    // omitting this would turn the header line into a record.
+                    headerIdx: PIVOT_HEADER_ROW,
+                    fields: fieldNames.map((name, i) => {
+                        const declared = extra.find((c) => c.name === name)
+                        return {
+                            name,
+                            renderId: `${refName}__p${i}`,
+                            ...(declared
+                                ? {
+                                      pivotColValue: declared.colValue ?? '*',
+                                      pivotMeasure: declared.measure,
+                                      pivotFunc: declared.func,
+                                  }
+                                : {}),
+                        }
+                    }),
+                },
+            }
+        )
+        payloads.push(
+            ...this.pivotColumnFormats({
+                fieldNames,
+                measure,
+                func,
+                numFmts: source.numFmts ?? {},
+                declared: (name) => extra.find((c) => c.name === name),
+            }).map((numFmt, i) => ({
+                type: 'upsertFieldRenderInfo' as const,
+                value: {
+                    renderId: `${refName}__p${i}`,
+                    diyRender: false,
+                    styleUpdate: {setNumFmt: numFmt},
+                },
+            }))
+        )
+
+        await this.apply(payloads, true)
+        return {
+            keys: [...plan.keys],
+            fields: valueFields,
+            unassignedRecords: plan.unassignedRecords,
+        }
     }
 
     // ---- generic / temp-branch -----------------------------------------
@@ -854,31 +2098,5 @@ export class WorkbookOps {
             rules,
             (_sheetIdx, formula) => values.get(formula) as Value
         )
-    }
-
-    /** Check required / unique / membership field constraints. */
-    async checkFieldConstraints(
-        columns: readonly FieldColumn[]
-    ): Promise<Violation[]> {
-        const values = new Map<string, Value>()
-        for (const {cells} of columns) {
-            for (const c of cells) {
-                const key = `${c.sheetIdx}:${c.row}:${c.col}`
-                if (values.has(key)) continue
-                const v = await this.client.getValue({
-                    sheetIdx: c.sheetIdx,
-                    row: c.row,
-                    col: c.col,
-                })
-                if (isErrorMessage(v)) {
-                    throw new Error('Failed to read cell value: ' + v.msg)
-                }
-                values.set(key, v)
-            }
-        }
-        return checkFieldConstraintsPure(columns, (sheetIdx, row, col) => {
-            const v = values.get(`${sheetIdx}:${row}:${col}`)
-            return (v ?? 'empty') as Value
-        })
     }
 }

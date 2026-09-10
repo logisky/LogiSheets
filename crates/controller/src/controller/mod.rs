@@ -22,6 +22,9 @@ use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId};
 
 use logisheets_workbook::logisheets::AppData;
 use logisheets_workbook::prelude::{read, write};
+pub mod block_key_guard;
+mod pivot_guard;
+mod rename_propagation;
 pub mod display;
 mod executor;
 pub mod status;
@@ -661,7 +664,8 @@ mod tests {
         Alignment, BindFormSchema, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput,
         CellStyleUpdate, CreateBlock, CreateSheet, DeleteCols, DeleteRows, DeleteSheet, EditAction,
         EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertRows,
-        LineStyleUpdate, PayloadsAction, StatusCode, StyleUpdateType, VerticalAlignment,
+        LineStyleUpdate, PayloadsAction, SchemaFieldSpec, StatusCode, StyleUpdateType,
+        VerticalAlignment,
     };
 
     use super::Controller;
@@ -989,7 +993,7 @@ mod tests {
         // reserved in sheet_id_manager (delete never cleaned it up), so the
         // re-create failed with SheetNameAlreadyExists (ActionEffect version 0).
         let mut wb = Controller::default();
-        let name = "拼豆板".to_string();
+        let name = "Beads board".to_string();
         let create = || {
             EditAction::Payloads(PayloadsAction {
                 payloads: vec![EditPayload::CreateSheet(CreateSheet {
@@ -1035,6 +1039,8 @@ mod tests {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
+                    pivot: None,
                 }),
                 EditPayload::BlockLineNameFieldUpdate(BlockLineNameFieldUpdate {
                     sheet_idx,
@@ -1070,6 +1076,8 @@ mod tests {
                     modify_policy: None,
                     permissions: None,
                     description: None,
+                    analyzes: None,
+                    pivot: None,
                 }),
                 EditPayload::BlockLineStyleUpdate(BlockLineStyleUpdate {
                     sheet_idx,
@@ -1446,6 +1454,8 @@ mod tests {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             })],
             undoable: true,
             init: false,
@@ -1460,12 +1470,13 @@ mod tests {
                 block_id: 1,
                 field_from: 1,
                 key_idx: 0,
-                fields: vec!["qty".to_string(), "name".to_string()],
-                render_ids: vec!["r1".to_string(), "r2".to_string()],
+                fields: vec![
+                    SchemaFieldSpec::new("qty", "r1"),
+                    SchemaFieldSpec::new("name", "r2"),
+                ],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             })],
             undoable: true,
             init: false,
@@ -1552,6 +1563,8 @@ mod tests {
                 modify_policy: None,
                 permissions: None,
                 description: None,
+                analyzes: None,
+                pivot: None,
             })],
             undoable: true,
             init: false,
@@ -1564,12 +1577,10 @@ mod tests {
                 block_id: 7,
                 field_from: 1,
                 key_idx: 0,
-                fields: vec!["amount".to_string()],
-                render_ids: vec!["render-amount".to_string()],
+                fields: vec![SchemaFieldSpec::new("amount", "render-amount")],
                 row: true,
-                field_formulas: vec![],
-                validation_formulas: vec![],
-                editability_formulas: vec![],
+                header_idx: None,
+                unique_together: None,
             })],
             undoable: true,
             init: false,

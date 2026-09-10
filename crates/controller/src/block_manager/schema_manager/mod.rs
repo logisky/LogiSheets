@@ -1,6 +1,7 @@
 pub mod ctx;
 pub mod executor;
-mod manager;
+pub mod field_type;
+pub mod manager;
 pub mod persistence;
 pub mod schema;
 

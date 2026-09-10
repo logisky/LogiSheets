@@ -3,7 +3,24 @@ use logisheets_base::{BlockCellId, BlockFieldId, BlockId, SheetId};
 
 use crate::navigator::BlockPlace;
 
-use super::schema::{BlockCellRole, Field, RenderId, Schema, SchemaTrait};
+use super::field_type::FieldType;
+use super::schema::{BlockCellRole, Field, FieldEntry, RenderId, Schema, SchemaTrait};
+
+/// One field's declaration plus the rule its author wrote, borrowed.
+#[derive(Debug, Clone, Copy)]
+pub struct BlockFieldView<'a> {
+    pub name: &'a str,
+    pub field_type: &'a FieldType,
+    pub required: bool,
+    pub unique: bool,
+    /// The author's own rule. The rules the declaration implies are derived, not
+    /// stored — see `block_manager::derived_rules`.
+    pub validation_formula: Option<&'a str>,
+    /// How this field aggregates the block its own block analyses, if it does.
+    pub aggregate: Option<&'a super::field_type::FieldAggregate>,
+    /// When the block is a pivot and this column was hand-declared.
+    pub pivot_column: Option<&'a super::field_type::PivotColumn>,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct SchemaManager {
@@ -164,12 +181,113 @@ impl SchemaManager {
     /// any. Returns the raw template string (still includes the leading
     /// `=` if the schema author wrote one). Callers do substitution on
     /// the body.
-    pub fn formula_for_block_cell(&self, sheet_id: SheetId, cell: &BlockCellId) -> Option<String> {
+    /// The value-formula template governing a cell.
+    ///
+    /// `analysis` is what this cell's block analyses and how, when it is an
+    /// analysis block. It is passed in rather than looked up because it lives
+    /// on the navigator's `BlockPlace` alongside the block's other metadata,
+    /// not on the schema — and every caller already holds the navigator.
+    ///
+    /// An analysis field's formula is GENERATED from its declaration rather
+    /// than stored (see `block_manager::analysis`), and it wins over any
+    /// authored template: a field cannot both aggregate a source and compute
+    /// something else per record.
+    ///
+    /// Two kinds of generation, and a block is only ever one of them (the
+    /// combination is refused by `controller::pivot_guard`):
+    ///
+    /// - a **pivot** generates every cell from the block-level recipe, using
+    ///   the cell's own field name as the column filter and `#KEY` as the row
+    ///   filter, so its key column alone stays an ordinary cell;
+    /// - a **total row** generates from each field's own `aggregate`.
+    pub fn formula_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+        analysis: Option<crate::block_manager::analysis::AnalysisTarget<'_>>,
+    ) -> Option<String> {
+        // A header cell holds a field NAME. It is not a record's value, so
+        // nothing generates it and no template applies — which is also what
+        // keeps the re-materialization walks from installing an aggregate into
+        // it: they ask this, get `None`, and (in an analysis block) clear
+        // whatever was there.
+        if self.is_header_cell(sheet_id, cell) {
+            return None;
+        }
+        if let Some(target) = analysis {
+            if let Some(pivot) = target.pivot {
+                // A pivot's cells are generated wholesale from the recipe, so
+                // an authored template on one of them cannot apply — the
+                // column means what the recipe says it means.
+                if self.is_key_cell(sheet_id, cell) {
+                    return None;
+                }
+                let field = self.field_name_for_block_cell(sheet_id, cell)?;
+                let column = self
+                    .field_view_for_block_cell(sheet_id, cell)
+                    .and_then(|v| v.pivot_column);
+                return Some(crate::block_manager::analysis::pivot_formula(
+                    sheet_id,
+                    target.source,
+                    pivot,
+                    &field,
+                    column,
+                ));
+            }
+            if let Some(view) = self.field_view_for_block_cell(sheet_id, cell) {
+                if let Some(generated) = crate::block_manager::analysis::aggregate_formula(
+                    sheet_id,
+                    target.source,
+                    view.aggregate,
+                ) {
+                    return Some(generated);
+                }
+            }
+        }
         let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
         match schema {
             Schema::RowSchema(s) => s.formula_for_field_axis(cell.col).map(String::from),
             Schema::ColSchema(s) => s.formula_for_field_axis(cell.row).map(String::from),
             // RandomSchema doesn't carry templates in v1.
+            Schema::RandomSchema(_) => None,
+        }
+    }
+
+    /// A read-only view of one field's declaration and its author-written
+    /// rule, resolved from a cell.
+    ///
+    /// Exists so the rule derivation can see a field without knowing whether it
+    /// came from a `RowSchema` or a `ColSchema` — `FieldEntry` is generic over
+    /// its axis id, so it cannot be handed out directly across both.
+    pub fn field_view_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<BlockFieldView<'_>> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        fn view<'a, F>(name: &'a str, e: &'a FieldEntry<F>) -> BlockFieldView<'a> {
+            BlockFieldView {
+                name,
+                field_type: &e.field_type,
+                required: e.required,
+                unique: e.unique,
+                validation_formula: e.validation_formula.as_deref(),
+                aggregate: e.aggregate.as_ref(),
+                pivot_column: e.pivot_column.as_ref(),
+            }
+        }
+        match schema {
+            Schema::RowSchema(s) => s
+                .fields
+                .iter()
+                .find(|(_, e)| e.field_axis_id == cell.col)
+                .map(|(n, e)| view(n, e)),
+            Schema::ColSchema(s) => s
+                .fields
+                .iter()
+                .find(|(_, e)| e.field_axis_id == cell.row)
+                .map(|(n, e)| view(n, e)),
+            // RandomSchema carries no field declarations.
             Schema::RandomSchema(_) => None,
         }
     }
@@ -181,6 +299,14 @@ impl SchemaManager {
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<String> {
+        // A field name is not one of the values the field allows, so no rule
+        // reaches the header. Without this, the pivot key column's derived
+        // rule ("must name a group that occurs in the source") flagged the
+        // header cell that names the DIMENSION — a red marker on the one cell
+        // that is definitionally right.
+        if self.is_header_cell(sheet_id, cell) {
+            return None;
+        }
         let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
         match schema {
             Schema::RowSchema(s) => s.validation_for_field_axis(cell.col).map(String::from),
@@ -191,11 +317,59 @@ impl SchemaManager {
 
     /// Look up the editability-formula template attached to a cell's field,
     /// if any.
+    /// Whether this cell sits on the line its schema declares as the header.
+    ///
+    /// Pure schema knowledge — the schema stores the header as a line id, so
+    /// this needs nothing from the navigator.
+    pub fn is_header_cell(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
+        self.schemas
+            .get(&(sheet_id, cell.block_id))
+            .is_some_and(|s| matches!(s.cell_role(cell), BlockCellRole::Header))
+    }
+
+    /// Whether this block's schema declares a header AND it is the FIRST line
+    /// of the block. `None` when the block has no schema.
+    ///
+    /// Needs the navigator, because "first" is a question about where lines
+    /// are — which is the block's business, not the schema's. The schema knows
+    /// WHICH line; only the two together know whether it leads.
+    pub fn header_is_first_line(
+        &self,
+        sheet_id: SheetId,
+        block_id: BlockId,
+        bp: &BlockPlace,
+    ) -> Option<bool> {
+        let schema = self.schemas.get(&(sheet_id, block_id))?;
+        let header = schema.header_line();
+        // Which axis holds the records is the schema's own kind, so callers do
+        // not get to guess it.
+        let is_row = matches!(schema, Schema::RowSchema(_));
+        let first = if is_row {
+            bp.rows.get(0).copied()
+        } else {
+            bp.cols.get(0).copied()
+        };
+        Some(header.is_some() && header == first)
+    }
+
     pub fn editability_for_block_cell(
         &self,
         sheet_id: SheetId,
         cell: &BlockCellId,
     ) -> Option<String> {
+        // A header cell holds a field NAME, and typing over it would not
+        // rename the field — it would leave a heading that disagrees with what
+        // the column means. So the header declares itself NOT editable, which
+        // is enforced: the editability rule becomes this cell's `UserEditable`
+        // shadow, and the host permission layer refuses an edit whose shadow
+        // reads false. (The field's WRITE POLICY is only a declaration the
+        // host may interpret; the per-record rule is the half that bites.)
+        //
+        // Not simply "no rule": no rule means editable, which is how the
+        // heading could be typed over in the first place.
+        if self.is_header_cell(sheet_id, cell) {
+            return Some("FALSE()".to_string());
+        }
         let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
         match schema {
             Schema::RowSchema(s) => s.editability_for_field_axis(cell.col).map(String::from),
@@ -245,6 +419,42 @@ impl SchemaManager {
                 .collect(),
             Schema::RandomSchema(_) => return None,
         })
+    }
+
+    /// Whether this cell sits on the schema's KEY axis — the column of a row
+    /// schema (or the row of a column schema) that holds each record's key.
+    ///
+    /// By axis id rather than by field name, so a schema that declares no
+    /// field at the key axis still answers correctly.
+    pub fn is_key_cell(&self, sheet_id: SheetId, cell: &BlockCellId) -> bool {
+        match self.schemas.get(&(sheet_id, cell.block_id)) {
+            Some(Schema::RowSchema(s)) => s.key == cell.col,
+            Some(Schema::ColSchema(s)) => s.key == cell.row,
+            _ => false,
+        }
+    }
+
+    /// The name of the field this cell belongs to. For a pivot that is also
+    /// the column-dimension value the cell filters on.
+    pub fn field_name_for_block_cell(
+        &self,
+        sheet_id: SheetId,
+        cell: &BlockCellId,
+    ) -> Option<String> {
+        let schema = self.schemas.get(&(sheet_id, cell.block_id))?;
+        match schema {
+            Schema::RowSchema(s) => s
+                .fields
+                .iter()
+                .find(|(_, e)| e.field_axis_id == cell.col)
+                .map(|(n, _)| n.clone()),
+            Schema::ColSchema(s) => s
+                .fields
+                .iter()
+                .find(|(_, e)| e.field_axis_id == cell.row)
+                .map(|(n, _)| n.clone()),
+            Schema::RandomSchema(_) => None,
+        }
     }
 
     /// `BlockCellId` of the key cell that shares this cell's row (Row

@@ -1,8 +1,9 @@
 use crate::{
     ActionEffect, AppData, BasicError, BlockDataRow, BlockField, BlockId, BlockSortOrder,
     CellCoordinateWithSheet, CellInfo, ColId, DisplayWindow, EditAction, Error, ErrorMessage,
-    FormulaDisplayInfo, PayloadsAction, RowId, RowInfo, SaveFileResult, ShadowCellInfo,
-    SheetCellId, SheetId, SheetInfo, TempStatusDiff, Workbook, lex_and_fmt, lex_success,
+    FormulaDisplayInfo, PayloadsAction, PivotExcelNote, PivotPlan, PivotSpecParts, RowId, RowInfo,
+    SaveFileResult, ShadowCellInfo, SheetCellId, SheetId, SheetInfo, TempStatusDiff, Workbook,
+    lex_and_fmt, lex_success,
 };
 
 use super::{Manager, Transaction};
@@ -278,6 +279,54 @@ pub fn get_block_sort_order(
         .map_err(ErrorMessage::from)
 }
 
+/// The shape a pivot block should have, and whether it currently has it.
+///
+/// Read-only, like [`get_block_sort_order`]: it computes, the caller applies.
+/// The caller sends the reshape as ONE transaction in the order
+/// `design/block-pivot.md` §6 pins — grow, write the keys, bind, shrink —
+/// because `#KEY` is captured when the bind materializes each row.
+pub fn pivot_plan(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+) -> Result<PivotPlan, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.pivot_plan(sheet_idx, block_id)
+        .map_err(ErrorMessage::from)
+}
+
+/// Why a pivot could not be saved as a real Excel pivot table, or `None`.
+///
+/// Asked BEFORE building, so a recipe can be chosen knowing whether it will
+/// survive the trip — rather than discovering after a save that the file
+/// degraded to a grid of numbers Excel cannot recompute.
+pub fn pivot_excel_note(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+) -> Result<PivotExcelNote, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.pivot_excel_note(sheet_idx, block_id)
+        .map_err(ErrorMessage::from)
+}
+
+/// The shape a pivot over `source_block` WOULD have for a recipe no block
+/// carries yet — so a host can create a pivot at its right size in ONE
+/// transaction, and therefore one undo.
+pub fn pivot_plan_for(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    source_block: BlockId,
+    spec: PivotSpecParts,
+) -> Result<PivotPlan, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.pivot_plan_for(sheet_idx, source_block, &spec)
+        .map_err(ErrorMessage::from)
+}
+
 /// Whether `actor` may perform `op` on this block — see
 /// [`MayModifyBlockParams`]. Read-only: it decides nothing, it only answers,
 /// and the host is what actually refuses the edit.
@@ -425,6 +474,62 @@ pub fn get_cell_id(
 pub fn get_all_block_fields(mgr: &mut Manager, id: usize) -> Result<Vec<BlockField>, ErrorMessage> {
     let wb = mgr.get_mut_workbook(&id).unwrap();
     wb.get_all_block_fields().map_err(ErrorMessage::from)
+}
+
+/// Every duplicated block row key in the workbook.
+///
+/// The companion to the engine's write-path refusal: that stops a caller from
+/// creating a collision, this finds the ones a file arrived with. Nothing else
+/// surfaces them — `BLOCKREF` resolves a repeated key to its first match and
+/// says nothing — so a caller has to ask.
+/// Which [`BlockOp`](logisheets_controller::edit_action::BlockOp) each payload
+/// counts as, keyed by wire type name.
+///
+/// Static, so fetch once and cache. It lives here because the engine defines
+/// the operations: every host that enforces a policy needs the mapping, and
+/// each keeping its own table is how the same payload comes to be governed
+/// differently in different hosts.
+pub fn get_block_op_for_payloads(
+    mgr: &Manager,
+    id: usize,
+) -> Result<Vec<crate::BlockOpForPayload>, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    Ok(wb.get_block_op_for_payloads())
+}
+
+/// What a block declares for each operation, beyond whether a given actor is
+/// allowed. `stated` is the difference between a block that says "anyone may"
+/// and one that says nothing — a host needs it to know whether its own owner
+/// check still applies.
+pub fn get_block_op_policies(
+    mgr: &Manager,
+    id: usize,
+    sheet_idx: usize,
+    block_id: BlockId,
+) -> Result<Vec<crate::BlockOpPolicy>, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.get_block_op_policies(sheet_idx, block_id)
+        .map_err(ErrorMessage::from)
+}
+
+/// The workbook's enum sets — the option lists `enum` / `multiSelect` fields
+/// draw from.
+///
+/// A field's declaration names a set by id and does not carry it, so without
+/// this a host can read the declaration and still not know what is allowed —
+/// which is the state every headless host was in while the sets lived in the
+/// browser's AppData blob.
+pub fn get_enum_sets(mgr: &Manager, id: usize) -> Result<Vec<crate::EnumSetInfo>, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    Ok(wb.get_enum_sets())
+}
+
+pub fn duplicate_block_keys(
+    mgr: &Manager,
+    id: usize,
+) -> Result<Vec<crate::DuplicateBlockKey>, ErrorMessage> {
+    let wb = mgr.get_workbook(&id).unwrap();
+    Ok(wb.duplicate_block_keys())
 }
 
 pub fn handle_transaction(mgr: &mut Manager, id: usize, transaction: Transaction) -> ActionEffect {

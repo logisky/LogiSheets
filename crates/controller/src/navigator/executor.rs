@@ -55,6 +55,40 @@ fn check_block_line_range(
     Ok(())
 }
 
+/// Interpret a pivot declaration arriving on a payload, refusing the two
+/// states that would produce silently wrong numbers.
+///
+/// A pivot with **no source** is meaningless: every cell of it aggregates a
+/// block that was never named, so the whole grid would read 0 with nothing to
+/// say why. And a pivot whose source is **itself** is the cycle the separate-
+/// block design exists to avoid — refused here as well as in the `analyzes`
+/// check above, because a pivot reaches its source through the recipe too.
+///
+/// A recipe this build cannot interpret (an unknown aggregate function, a
+/// missing dimension) is dropped rather than guessed — see
+/// `PivotSpec::from_parts` — so the block stays a plain analysis block instead
+/// of quietly inventing an aggregate.
+fn pivot_from(
+    parts: Option<&crate::block_manager::schema_manager::field_type::PivotSpecParts>,
+    analyzes: Option<usize>,
+    block_id: usize,
+) -> Result<Option<crate::block_manager::schema_manager::field_type::PivotSpec>, Error> {
+    use crate::block_manager::schema_manager::field_type::PivotSpec;
+    let Some(parts) = parts else {
+        return Ok(None);
+    };
+    match analyzes {
+        None => Err(Error::PayloadError(format!(
+            "block {block_id} declares a pivot but analyses nothing — a pivot \
+             needs a source block to aggregate"
+        ))),
+        Some(src) if src == block_id => Err(Error::PayloadError(format!(
+            "block {block_id} cannot pivot over itself"
+        ))),
+        Some(_) => Ok(PivotSpec::from_parts(parts)),
+    }
+}
+
 /// Reject block dimensions that don't fit the sheet, or whose cell count is
 /// past what we're willing to materialize.
 fn check_block_size(row_cnt: u32, col_cnt: u32) -> Result<(), Error> {
@@ -214,8 +248,14 @@ impl NavExecutor {
                     create_block.owner.clone().unwrap_or_default(),
                     create_block.modify_policy.unwrap_or_default(),
                 )
+                .with_pivot(pivot_from(
+                    create_block.pivot.as_ref(),
+                    create_block.analyzes,
+                    create_block.id,
+                )?)
                 .with_description(create_block.description.clone().unwrap_or_default())
-                .with_permissions(create_block.permissions.clone().unwrap_or_default());
+                .with_permissions(create_block.permissions.clone().unwrap_or_default())
+                .with_analyzes(create_block.analyzes);
                 let block_id = create_block.id;
                 sheet_nav.data.blocks.insert(block_id, block_place);
                 sheet_nav.cache = Default::default();
@@ -231,6 +271,36 @@ impl NavExecutor {
                 };
                 let mut bp = bp.clone();
                 bp.description = p.description.clone();
+                sheet_nav.data.blocks.insert(p.block_id, bp);
+                Ok((self, true))
+            }
+            EditPayload::SetBlockAnalyzes(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let sheet_nav = self.nav.get_sheet_nav_mut(&sheet_id);
+                // A block cannot analyse itself: its cells would aggregate a
+                // set they belong to, which is the cycle the whole separate-
+                // block design exists to avoid.
+                if p.analyzes == Some(p.block_id) {
+                    return Err(Error::PayloadError(format!(
+                        "block {} cannot analyse itself",
+                        p.block_id
+                    )));
+                }
+                // And it has to analyse something that exists — a marker
+                // pointing at nothing would make the block's formulas read
+                // empty with no way for a reader to see why.
+                if let Some(source) = p.analyzes {
+                    if !sheet_nav.data.has_block_id(&source) {
+                        return Err(BasicError::BlockIdNotFound(sheet_id, source).into());
+                    }
+                }
+                let Some(bp) = sheet_nav.data.blocks.get(&p.block_id) else {
+                    return Err(BasicError::BlockIdNotFound(sheet_id, p.block_id).into());
+                };
+                let pivot = pivot_from(p.pivot.as_ref(), p.analyzes, p.block_id)?;
+                let bp = bp.clone().with_analyzes(p.analyzes).with_pivot(pivot);
                 sheet_nav.data.blocks.insert(p.block_id, bp);
                 Ok((self, true))
             }

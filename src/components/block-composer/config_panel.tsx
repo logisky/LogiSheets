@@ -35,7 +35,17 @@ import {
     RULE_PLACEHOLDER,
 } from './field-rule-editor'
 import {buttonSx, primaryButtonSx, cardSx, sectionLabelSx} from './styles'
-import {EnumSetManager, FieldManager} from 'logisheets-engine'
+import {EnumSetManager} from 'logisheets-engine'
+
+/**
+ * One existing field a `fieldRef` can point at. Projected from a block's
+ * schema, which is what declares `unique`.
+ */
+export interface ExternalField {
+    sheetId: number
+    blockId: number
+    name: string
+}
 import {useToast} from '@/ui/notification/useToast'
 
 interface FieldConfigPanelProps {
@@ -45,11 +55,16 @@ interface FieldConfigPanelProps {
     onCancel: () => void
     onSave: () => void
     enumSetManager: EnumSetManager
-    fieldManager: FieldManager
+    /**
+     * Every unique field the workbook already has, for choosing a `fieldRef`
+     * target. Read off the blocks' schemas — this used to come from the host's
+     * own field store, which meant the list existed only in this one host.
+     */
+    externalUniqueFields: readonly ExternalField[]
     /**
      * The fields belonging to the block currently being composed. The new
-     * block isn't saved yet, so its fields aren't in `fieldManager` and need
-     * to be surfaced separately to support same-block (self) references.
+     * block isn't saved yet, so it has no schema and its fields need to be
+     * surfaced separately to support same-block (self) references.
      */
     localFields: readonly FieldSetting[]
     /**
@@ -72,7 +87,7 @@ export const FieldConfigPanel = ({
     onCancel,
     onSave,
     enumSetManager,
-    fieldManager,
+    externalUniqueFields,
     localFields,
     canDelete = true,
     canEditPrimary = true,
@@ -861,9 +876,7 @@ export const FieldConfigPanel = ({
                         field.type === 'multiSelectRef') &&
                         (() => {
                             const SELF_SENTINEL = '__self__'
-                            const externalEligible = fieldManager
-                                .getAll()
-                                .filter((f) => f.unique)
+                            const externalEligible = externalUniqueFields
                             const localEligible = localFields.filter(
                                 (f) =>
                                     (f.unique || f.primary) && f.id !== field.id
@@ -906,7 +919,11 @@ export const FieldConfigPanel = ({
                                           name: f.name,
                                       }))
                                     : externalFieldsForBlock.map((f) => ({
-                                          id: f.id,
+                                          // A schema field has no id of its
+                                          // own; the name is what a reference
+                                          // stores and what the dropdown keys
+                                          // on, so it serves as both.
+                                          id: f.name,
                                           name: f.name,
                                       }))
 

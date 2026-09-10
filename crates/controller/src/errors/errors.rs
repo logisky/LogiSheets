@@ -22,6 +22,14 @@ pub enum Error {
     UnavailableSheetIdx(usize),
     #[error("invalid payload: {0}")]
     PayloadError(String),
+    /// A write would have given two records of one block the same row key.
+    /// `(block, key, field)` is the addressing scheme, so a repeat makes one
+    /// record unreachable and every aggregate over the block wrong — and does
+    /// it silently, which is why this is a refusal rather than a warning.
+    #[error(
+        "block \"{block}\" already has a record keyed \"{key}\"; row keys address cells, so they must be unique within a block"
+    )]
+    DuplicateBlockKey { block: String, key: String },
 }
 
 // A cleaner way for users to know about the error and a more convenient
@@ -63,6 +71,10 @@ impl From<Error> for ErrorMessage {
             Error::PayloadError(e) => {
                 let msg = e;
                 ErrorMessage { msg, ty: 6 }
+            }
+            e @ Error::DuplicateBlockKey { .. } => {
+                let msg = e.to_string();
+                ErrorMessage { msg, ty: 7 }
             }
         }
     }

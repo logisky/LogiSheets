@@ -1897,14 +1897,7 @@ impl<'a> Worksheet<'a> {
                                             .iter()
                                             .position(|id| id == &e.field_axis_id)
                                             .unwrap();
-                                        crate::controller::display::BlockSchemaFieldEntry {
-                                            field: f.clone(),
-                                            idx,
-                                            render_id: e.render_id.clone(),
-                                            value_formula: e.value_formula.clone(),
-                                            validation_formula: e.validation_formula.clone(),
-                                            editability_formula: e.editability_formula.clone(),
-                                        }
+                                        crate::controller::display::BlockSchemaFieldEntry::from_entry(f, idx, e)
                                     })
                                     .collect::<Vec<_>>();
                                 (keys, fields, vec![])
@@ -1934,14 +1927,7 @@ impl<'a> Worksheet<'a> {
                                             .iter()
                                             .position(|id| id == &e.field_axis_id)
                                             .unwrap();
-                                        crate::controller::display::BlockSchemaFieldEntry {
-                                            field: f.clone(),
-                                            idx,
-                                            render_id: e.render_id.clone(),
-                                            value_formula: e.value_formula.clone(),
-                                            validation_formula: e.validation_formula.clone(),
-                                            editability_formula: e.editability_formula.clone(),
-                                        }
+                                        crate::controller::display::BlockSchemaFieldEntry::from_entry(f, idx, e)
                                     })
                                     .collect::<Vec<_>>();
                                 (keys, fields, vec![])
@@ -1983,6 +1969,14 @@ impl<'a> Worksheet<'a> {
                             keys,
                             fields,
                             random_entries,
+                            header_idx: header_index(s, &block_place),
+                            unique_together: s
+                                .unique_together()
+                                .iter()
+                                .map(|g| crate::edit_action::UniqueTogetherGroup {
+                                    fields: g.clone(),
+                                })
+                                .collect(),
                         }
                     });
 
@@ -2060,6 +2054,9 @@ impl<'a> Worksheet<'a> {
                     }
                 }
                 BlockInfo {
+                    analyzes: block_place.analyzes,
+                    pivot: block_place.pivot.as_ref().map(|p| p.to_parts()),
+                    analyzed_by: self.controller.status.navigator.analyzed_by(&self.sheet_id, id),
                     sheet_idx,
                     sheet_id: self.sheet_id,
                     block_id: id,
@@ -2683,14 +2680,9 @@ impl<'a> Worksheet<'a> {
                                     .iter()
                                     .position(|id| id == &e.field_axis_id)
                                     .unwrap();
-                                crate::controller::display::BlockSchemaFieldEntry {
-                                    field: f.clone(),
-                                    idx,
-                                    render_id: e.render_id.clone(),
-                                    value_formula: e.value_formula.clone(),
-                                    validation_formula: e.validation_formula.clone(),
-                                    editability_formula: e.editability_formula.clone(),
-                                }
+                                crate::controller::display::BlockSchemaFieldEntry::from_entry(
+                                    f, idx, e,
+                                )
                             })
                             .collect::<Vec<_>>();
                         (keys, fields, vec![])
@@ -2720,14 +2712,9 @@ impl<'a> Worksheet<'a> {
                                     .iter()
                                     .position(|id| id == &e.field_axis_id)
                                     .unwrap();
-                                crate::controller::display::BlockSchemaFieldEntry {
-                                    field: f.clone(),
-                                    idx,
-                                    render_id: e.render_id.clone(),
-                                    value_formula: e.value_formula.clone(),
-                                    validation_formula: e.validation_formula.clone(),
-                                    editability_formula: e.editability_formula.clone(),
-                                }
+                                crate::controller::display::BlockSchemaFieldEntry::from_entry(
+                                    f, idx, e,
+                                )
                             })
                             .collect::<Vec<_>>();
                         (keys, fields, vec![])
@@ -2763,6 +2750,12 @@ impl<'a> Worksheet<'a> {
                     keys,
                     fields,
                     random_entries,
+                    header_idx: header_index(s, &block_place),
+                    unique_together: s
+                        .unique_together()
+                        .iter()
+                        .map(|g| crate::edit_action::UniqueTogetherGroup { fields: g.clone() })
+                        .collect(),
                 }
             });
 
@@ -2828,6 +2821,13 @@ impl<'a> Worksheet<'a> {
             }
         }
         Ok(BlockInfo {
+            analyzes: block_place.analyzes,
+            pivot: block_place.pivot.as_ref().map(|p| p.to_parts()),
+            analyzed_by: self
+                .controller
+                .status
+                .navigator
+                .analyzed_by(&self.sheet_id, block_id),
             sheet_id: self.sheet_id,
             block_id,
             row_start,
@@ -2986,6 +2986,25 @@ fn build_comment_note(comments: &InternalComments, note: &InternalNote) -> Comme
             .collect(),
         resolved: note.resolved,
     }
+}
+
+/// A schema's header line as a block-relative INDEX, for reporting.
+///
+/// The schema stores the line's stable id — that is what makes classification
+/// independent of the navigator — but a host counts lines from the block's
+/// corner, so the id is resolved here rather than leaking outward.
+fn header_index(
+    schema: &crate::block_manager::schema_manager::schema::Schema,
+    bp: &crate::navigator::BlockPlace,
+) -> Option<usize> {
+    use crate::block_manager::schema_manager::schema::{Schema, SchemaTrait};
+    let header = schema.header_line()?;
+    let lines = match schema {
+        Schema::RowSchema(_) => &bp.rows,
+        Schema::ColSchema(_) => &bp.cols,
+        Schema::RandomSchema(_) => return None,
+    };
+    lines.iter().position(|l| *l == header)
 }
 
 #[cfg(test)]
