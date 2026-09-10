@@ -6278,6 +6278,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"debugger@workspace:crafts/debugger":
+  version: 0.0.0-use.local
+  resolution: "debugger@workspace:crafts/debugger"
+  dependencies:
+    logisheets-web: "workspace:*"
+    typescript: "npm:^6.0.0"
+    vite: "npm:^5.0.0"
+  languageName: unknown
+  linkType: soft
+
 "decode-named-character-reference@npm:^1.0.0":
   version: 1.2.0
   resolution: "decode-named-character-reference@npm:1.2.0"

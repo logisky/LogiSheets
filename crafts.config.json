@@ -1,5 +1,5 @@
 {
-  "$comment": "Single source of truth for which crafts ship. `registry` maps a craft directory (under crafts/, served at /<dir>/index.html) to its panel label. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). Consumed by Vite (the panel's craft list, via `define` in vite.config.ts), publish-crafts.sh (what lands in dist/, via scripts/craft-dist.mjs) and the desktop CI (product name/id/title, via scripts/tauri-conf.mjs). Add a craft: add it here + register nothing else. Add a distribution: add an entry here.",
+  "$comment": "Single source of truth for which crafts ship. `registry` maps a craft directory (under crafts/, served at /<dir>/index.html) to its panel label. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). Consumed by Vite (the panel's craft list, via `define` in vite.config.ts), publish-crafts.sh (what lands in dist/, via scripts/craft-dist.mjs) and the desktop CI (product name/id/title, via scripts/tauri-conf.mjs). Add a craft: add it here + register nothing else. Add a distribution: add an entry here. A registry entry marked `devOnly` is offered ONLY by the dev server: it stays in `registry` (so dist/ pruning still removes it) but is filtered out of every distribution's craft list, so it is never published or bundled.",
   "registry": {
     "factory-simulator-zh": {
       "label": "Factory Simulator (中文)"
@@ -27,6 +27,10 @@
     },
     "minesweeper": {
       "label": "扫雷 (Minesweeper)"
+    },
+    "debugger": {
+      "label": "Debugger (dev)",
+      "devOnly": true
     }
   },
   "distributions": {

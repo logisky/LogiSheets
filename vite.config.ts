@@ -7,7 +7,13 @@ import * as fs from 'fs'
 // Which crafts the panel offers is driven by crafts.config.json + the
 // CRAFT_DIST env var (default: "default"). See crafts.config.json. (Mirrors
 // what the old webpack config injected via DefinePlugin.)
-function resolveCraftTools(): {
+//
+// `dev` additionally admits the registry's `devOnly` crafts (the debugger).
+// Gating here rather than in the app means a production bundle has no trace of
+// them: they never reach `__CRAFT_TOOLS__`, so there is no entry to hide and
+// no dead code to strip. scripts/craft-dist.mjs applies the same filter, which
+// is what keeps their files out of dist/.
+function resolveCraftTools(dev: boolean): {
     tools: {label: string; value: string}[]
     defaultCraft: string
 } {
@@ -16,8 +22,18 @@ function resolveCraftTools(): {
     )
     const name = process.env.CRAFT_DIST || 'default'
     const dist = cfg.distributions[name] ?? cfg.distributions.default
-    const dirs: string[] =
+    const selected: string[] =
         dist.crafts === 'all' ? Object.keys(cfg.registry) : dist.crafts
+    const dirs = selected.filter((d: string) => !cfg.registry[d]?.devOnly)
+    if (dev) {
+        // Appended, never inserted, so a dev build's craft order matches
+        // production's and the debugger is simply the last entry.
+        dirs.push(
+            ...Object.keys(cfg.registry).filter(
+                (d: string) => cfg.registry[d].devOnly
+            )
+        )
+    }
     const tools = dirs.map((d: string) => ({
         label: cfg.registry[d].label as string,
         value: `/${d}/index.html`,
@@ -28,8 +44,8 @@ function resolveCraftTools(): {
     return {tools, defaultCraft}
 }
 
-export default defineConfig(() => {
-    const craft = resolveCraftTools()
+export default defineConfig(({command}) => {
+    const craft = resolveCraftTools(command === 'serve')
     return {
         // Keep function/class names through minification. The prebuilt engine's
         // inlined Web Worker relies on names surviving; esbuild's default
