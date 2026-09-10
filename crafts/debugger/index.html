@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Debugger</title>
+        <style>
+            :root {
+                color-scheme: light;
+                --bg: #fbfcfd;
+                --fg: #1c2530;
+                --muted: #5c6b7a;
+                --line: #dfe5ea;
+                --accent: #2f6fdb;
+                --warn: #b3541e;
+                --danger: #b3261e;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                padding: 12px;
+                background: var(--bg);
+                color: var(--fg);
+                font:
+                    13px/1.45 -apple-system,
+                    BlinkMacSystemFont,
+                    'Segoe UI',
+                    Roboto,
+                    sans-serif;
+            }
+            h1 {
+                font-size: 14px;
+                margin: 0 0 2px;
+            }
+            .sub {
+                color: var(--muted);
+                font-size: 11.5px;
+                margin-bottom: 12px;
+            }
+            fieldset {
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                padding: 10px 12px 12px;
+                margin: 0 0 12px;
+                background: #fff;
+            }
+            legend {
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                color: var(--muted);
+                padding: 0 4px;
+            }
+            button {
+                font: inherit;
+                padding: 6px 11px;
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                background: #fff;
+                color: var(--fg);
+                cursor: pointer;
+                margin: 0 6px 6px 0;
+            }
+            button:hover:not(:disabled) {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+            button:disabled {
+                opacity: 0.5;
+                cursor: default;
+            }
+            button.primary {
+                background: var(--accent);
+                border-color: var(--accent);
+                color: #fff;
+                font-weight: 600;
+            }
+            button.primary:hover:not(:disabled) {
+                color: #fff;
+                filter: brightness(1.08);
+            }
+            button.danger {
+                color: var(--danger);
+            }
+            button.danger:hover:not(:disabled) {
+                border-color: var(--danger);
+                color: var(--danger);
+            }
+            label {
+                color: var(--muted);
+                margin-right: 4px;
+            }
+            input[type='number'],
+            input[type='text'] {
+                font: inherit;
+                width: 88px;
+                padding: 5px 7px;
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                margin-right: 10px;
+            }
+            .row {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                margin-bottom: 8px;
+            }
+            .hint {
+                color: var(--muted);
+                font-size: 11.5px;
+                margin: 2px 0 8px;
+            }
+            #log {
+                white-space: pre-wrap;
+                font:
+                    11.5px/1.5 ui-monospace,
+                    SFMono-Regular,
+                    Menlo,
+                    monospace;
+                background: #10161d;
+                color: #d6e2ee;
+                border-radius: 8px;
+                padding: 10px;
+                max-height: 260px;
+                overflow: auto;
+            }
+            #log .err {
+                color: #ff9b8f;
+            }
+            #log .ok {
+                color: #9ae6a0;
+            }
+            #log .dim {
+                color: #7d8b99;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Debugger</h1>
+        <div class="sub">
+            Dev-only fixtures. Everything lands as one undoable transaction —
+            ⌘Z puts it back.
+        </div>
+
+        <fieldset>
+            <legend>Create</legend>
+            <div class="row">
+                <label for="rows">rows</label>
+                <input id="rows" type="number" value="200" min="1" max="5000" />
+                <label for="name">name</label>
+                <input id="name" type="text" value="facts" />
+            </div>
+            <div class="row">
+                <button id="big" class="primary">Big block</button>
+                <button id="typed">One column per type</button>
+            </div>
+            <div class="hint">
+                Big block: key · region · quarter · units · price ·
+                <em>revenue (computed)</em> · active · updated · note, with a
+                header row. Placed below whatever is already on the sheet.
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Build on the last block</legend>
+            <button id="totals">Add totals row</button>
+            <button id="violations">Seed violations</button>
+            <div class="hint">
+                Seeding re-binds the schema with
+                <code>unique_together (region, quarter)</code> and
+                <code>unique</code> on <code>note</code>, then breaks both,
+                plus one blank required — three different markers to tell
+                apart.
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Inspect &amp; reset</legend>
+            <button id="list">List blocks</button>
+            <button id="goto">Jump to last</button>
+            <button id="clear">Clear log</button>
+            <button id="remove" class="danger">Remove my blocks</button>
+        </fieldset>
+
+        <div id="log"></div>
+
+        <script src="./debugger.js"></script>
+        <script>
+            const D = window.LogiSheetsDebugger
+
+            const logEl = document.getElementById('log')
+            function log(msg, cls) {
+                const line = document.createElement('div')
+                if (cls) line.className = cls
+                line.textContent = msg
+                logEl.appendChild(line)
+                logEl.scrollTop = logEl.scrollHeight
+            }
+
+            // The host injects its globals on iframe load AND again on every
+            // selection change, so they are not there when this script first
+            // runs. Poll rather than assume — the documented craft pattern.
+            function whenReady(fn) {
+                if (window.workbook && window.selection) return fn()
+                setTimeout(() => whenReady(fn), 40)
+            }
+
+            // Blocks this session created, so "remove" only touches its own
+            // and "build on the last" has something to point at. Not
+            // persisted: a reload starts a fresh session, and the blocks it
+            // forgot are still removable by hand.
+            const mine = []
+            let lastBig = null
+
+            const sheetIdx = () => window.selection.sheetIdx
+
+            /**
+             * `handleTransaction` RESOLVES on failure — it does not throw — so
+             * every call has to read the status back or a rejected fixture
+             * looks exactly like a successful one.
+             */
+            async function send(payloads, what) {
+                const t0 = performance.now()
+                const r = await window.workbook.handleTransaction({
+                    transaction: D.buildTransaction(payloads),
+                })
+                const ms = Math.round(performance.now() - t0)
+                if (r && r.status && r.status.type === 'err') {
+                    log(`✗ ${what}: ${r.status.value ?? 'rejected'}`, 'err')
+                    return false
+                }
+                log(`✓ ${what} — ${payloads.length} payloads, ${ms}ms`, 'ok')
+                return true
+            }
+
+            /** Every client read returns `value | ErrorMessage`. */
+            function unwrap(v, what) {
+                const e = D.errOf(v)
+                if (e !== null) throw new Error(`${what}: ${e}`)
+                return v
+            }
+
+            /**
+             * Where to drop the next block: under everything already on the
+             * sheet, so repeated clicks stack instead of overlapping. Blocks
+             * that overlap are not rejected, they just interleave, which is a
+             * confusing thing to debug on top of whatever you came here for.
+             *
+             * `getSheetDimension` takes a BARE sheet index, unlike its
+             * neighbours here (`getAvailableBlockId`, `getAllBlocks`) which
+             * take `{sheetIdx}`. Passing the object shape fails the request
+             * rather than being coerced.
+             */
+            async function nextFreeRow() {
+                const dim = unwrap(
+                    await window.workbook.getSheetDimension(sheetIdx()),
+                    'getSheetDimension'
+                )
+                // maxRow is the last USED row, so an empty sheet reports 0 and
+                // the first block lands at the top.
+                return dim.maxRow > 0 ? dim.maxRow + 2 : 0
+            }
+
+            async function newBlockId() {
+                return unwrap(
+                    await window.workbook.getAvailableBlockId({
+                        sheetIdx: sheetIdx(),
+                    }),
+                    'getAvailableBlockId'
+                )
+            }
+
+            function busy(on) {
+                document
+                    .querySelectorAll('button')
+                    .forEach((b) => (b.disabled = on))
+            }
+
+            async function guard(fn) {
+                busy(true)
+                try {
+                    await fn()
+                } catch (e) {
+                    log(`✗ ${e && e.message ? e.message : e}`, 'err')
+                } finally {
+                    busy(false)
+                }
+            }
+
+            whenReady(() => {
+                log(`ready — sheet ${sheetIdx()}`, 'dim')
+
+                document.getElementById('big').onclick = () =>
+                    guard(async () => {
+                        const rows = Math.max(
+                            1,
+                            Number(document.getElementById('rows').value) || 200
+                        )
+                        const refName =
+                            document.getElementById('name').value.trim() ||
+                            'facts'
+                        const spec = {
+                            sheetIdx: sheetIdx(),
+                            blockId: await newBlockId(),
+                            masterRow: await nextFreeRow(),
+                            masterCol: 0,
+                            refName,
+                        }
+                        const ok = await send(
+                            D.bigBlockPayloads({...spec, rows}),
+                            `big block "${refName}" (${rows} rows)`
+                        )
+                        if (ok) {
+                            mine.push(spec.blockId)
+                            lastBig = {...spec, rows}
+                            window.setSelection(
+                                spec.sheetIdx,
+                                spec.masterRow,
+                                spec.masterCol
+                            )
+                        }
+                    })
+
+                document.getElementById('typed').onclick = () =>
+                    guard(async () => {
+                        const spec = {
+                            sheetIdx: sheetIdx(),
+                            blockId: await newBlockId(),
+                            masterRow: await nextFreeRow(),
+                            masterCol: 0,
+                            refName: 'types',
+                        }
+                        const ok = await send(
+                            D.typedBlockPayloads(spec),
+                            'typed block "types"'
+                        )
+                        if (ok) {
+                            mine.push(spec.blockId)
+                            window.setSelection(
+                                spec.sheetIdx,
+                                spec.masterRow,
+                                spec.masterCol
+                            )
+                        }
+                    })
+
+                document.getElementById('totals').onclick = () =>
+                    guard(async () => {
+                        if (!lastBig) return log('no big block yet', 'dim')
+                        // Two clear rows under the source block — but never
+                        // on top of something else. Blocks created since (a
+                        // typed block, a second big one) sit in exactly that
+                        // gap, and an overlapping createBlock is REJECTED,
+                        // which took the whole fixture with it.
+                        const under = lastBig.masterRow + lastBig.rows + 1 + 2
+                        const spec = {
+                            sheetIdx: lastBig.sheetIdx,
+                            blockId: await newBlockId(),
+                            masterRow: Math.max(under, await nextFreeRow()),
+                            masterCol: lastBig.masterCol,
+                            refName: `${lastBig.refName}_total`,
+                        }
+                        const ok = await send(
+                            D.analysisBlockPayloads({
+                                ...spec,
+                                sourceBlockId: lastBig.blockId,
+                                sourceRowCnt: lastBig.rows + 1,
+                            }),
+                            `totals for "${lastBig.refName}"`
+                        )
+                        if (ok) mine.push(spec.blockId)
+                    })
+
+                document.getElementById('violations').onclick = () =>
+                    guard(async () => {
+                        if (!lastBig) return log('no big block yet', 'dim')
+                        await send(
+                            D.seedViolationsPayloads(lastBig),
+                            'seeded violations'
+                        )
+                    })
+
+                document.getElementById('list').onclick = () =>
+                    guard(async () => {
+                        const blocks = unwrap(
+                            await window.workbook.getAllBlocks({
+                                sheetIdx: sheetIdx(),
+                            }),
+                            'getAllBlocks'
+                        )
+                        if (!blocks.length) return log('no blocks', 'dim')
+                        blocks.forEach((b) => {
+                            const s = b.schema
+                            const fields = s
+                                ? s.fields.map((f) => f.field).join(', ')
+                                : '(no schema)'
+                            log(
+                                `#${b.blockId} ${
+                                    s ? s.name : '(unnamed)'
+                                } @${b.rowStart},${b.colStart} ${
+                                    b.rowCnt
+                                }×${b.colCnt} — ${fields}`
+                            )
+                        })
+                    })
+
+                document.getElementById('goto').onclick = () =>
+                    guard(async () => {
+                        if (!lastBig) return log('no big block yet', 'dim')
+                        window.setSelection(
+                            lastBig.sheetIdx,
+                            lastBig.masterRow,
+                            lastBig.masterCol
+                        )
+                        window.setAnchor(0)
+                    })
+
+                document.getElementById('clear').onclick = () => {
+                    logEl.textContent = ''
+                }
+
+                document.getElementById('remove').onclick = () =>
+                    guard(async () => {
+                        if (!mine.length) return log('nothing to remove', 'dim')
+                        // Reverse creation order, and only blocks that are
+                        // still there. Removing a source block CASCADES to the
+                        // analysis block that reads it, so removing them in
+                        // the order they were made asks the engine to delete
+                        // one that just went with its source — which is an
+                        // error, and fails the whole transaction.
+                        const live = new Set(
+                            unwrap(
+                                await window.workbook.getAllBlocks({
+                                    sheetIdx: sheetIdx(),
+                                }),
+                                'getAllBlocks'
+                            ).map((b) => b.blockId)
+                        )
+                        const doomed = mine.filter((id) => live.has(id))
+                        doomed.reverse()
+                        if (!doomed.length) {
+                            mine.length = 0
+                            lastBig = null
+                            return log('already gone', 'dim')
+                        }
+                        const payloads = doomed.map((id) => ({
+                            type: 'removeBlock',
+                            value: {sheetIdx: sheetIdx(), id},
+                        }))
+                        const ok = await send(
+                            payloads,
+                            `removed ${doomed.length} block(s)`
+                        )
+                        if (ok) {
+                            mine.length = 0
+                            lastBig = null
+                        }
+                    })
+            })
+        </script>
+    </body>
+</html>

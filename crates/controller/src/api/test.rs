@@ -3062,6 +3062,122 @@ fn a_header_cell_is_not_editable() {
 }
 
 #[test]
+fn a_header_cell_raises_no_validation_marker() {
+    use crate::controller::display::Value;
+    use crate::edit_action::{BindFormSchema, CellInput};
+    use crate::sid_assigner::ShadowKind;
+    use logisheets_base::CellId;
+
+    // The key field declares `unique`, whose derived rule counts the field's
+    // RECORD cells and demands exactly one match. The header is not a record,
+    // so its own text is not among them — the count comes back 0 and the rule
+    // reads FALSE. That put a violation marker on the one cell in the block
+    // that is definitionally correct: the word "name" in the heading.
+    //
+    // `validation_for_block_cell` already refused to hand the AUTHOR'S
+    // template to a header cell; this pins the other half, the rules the
+    // DECLARATION generates, which reached it by a different path.
+    let mut wb = Workbook::default();
+    let bid = wb.get_available_block_id(0).unwrap();
+    let rows = [("name", "age"), ("Alice", "10"), ("Bob", "11")];
+    let mut payloads = vec![EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id: bid,
+        master_row: 0,
+        master_col: 0,
+        row_cnt: rows.len(),
+        col_cnt: 2,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })];
+    for (r, (name, age)) in rows.iter().enumerate() {
+        for (c, v) in [name, age].iter().enumerate() {
+            payloads.push(EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: r,
+                col: c,
+                content: v.to_string(),
+            }));
+        }
+    }
+    payloads.push(EditPayload::BindFormSchema(BindFormSchema {
+        ref_name: "people".to_string(),
+        sheet_idx: 0,
+        block_id: bid,
+        field_from: 0,
+        key_idx: 0,
+        fields: vec![
+            SchemaFieldSpec::new("name", "h0")
+                .with_required(true)
+                .with_unique(true),
+            SchemaFieldSpec::new("age", "h1").with_unique(true),
+        ],
+        row: true,
+        header_idx: Some(0),
+        unique_together: None,
+    }));
+    let effect = apply(&mut wb, payloads);
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+
+    let validation = |wb: &mut Workbook, row: usize, col: usize| -> Value {
+        match wb.get_shadow_cell_id(0, row, col, ShadowKind::Validation) {
+            Ok(scid) => {
+                let id = match scid.cell_id {
+                    CellId::EphemeralCell(i) => i,
+                    _ => panic!("expected an ephemeral shadow cell"),
+                };
+                wb.get_shadow_info_by_id(id).unwrap().value
+            }
+            // No shadow installed at all is the strongest form of "not
+            // flagged", and what a header should get.
+            Err(_) => Value::Empty,
+        }
+    };
+
+    assert!(
+        !matches!(validation(&mut wb, 0, 0), Value::Bool(false)),
+        "the header naming the unique key field is not a violation, got {:?}",
+        validation(&mut wb, 0, 0)
+    );
+
+    assert!(
+        !matches!(validation(&mut wb, 0, 1), Value::Bool(false)),
+        "nor the header of the other unique field, got {:?}",
+        validation(&mut wb, 0, 1)
+    );
+
+    // The rule still bites where it should. `age` rather than the key column,
+    // because a duplicate KEY never gets far enough to be flagged: the row-key
+    // guard refuses the write outright, so the marker is what a unique
+    // NON-key field raises.
+    let effect = apply(
+        &mut wb,
+        vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 2,
+            col: 1,
+            content: "10".to_string(),
+        })],
+    );
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    assert!(
+        matches!(validation(&mut wb, 2, 1), Value::Bool(false)),
+        "a repeated value in a unique field IS a violation, got {:?}",
+        validation(&mut wb, 2, 1)
+    );
+}
+
+#[test]
 fn sorting_a_block_leaves_its_header_on_top() {
     // A header has no key to sort by, and `headerRowCount="1"` can only mean
     // the FIRST line of a table — so a sort that buried it would make the

@@ -1,0 +1,20 @@
+{
+    "name": "debugger",
+    "version": "0.1.0",
+    "description": "Dev-only craft: build big/realistic blocks in one click, then poke at them",
+    "main": "dist/debugger.js",
+    "module": "dist/debugger.js",
+    "scripts": {
+        "build": "vite build && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/debugger && mkdir -p ../../public/debugger && cp index.html ../../public/debugger/index.html && cp dist/debugger.js ../../public/debugger/debugger.js"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^6.0.0",
+        "vite": "^5.0.0"
+    }
+}

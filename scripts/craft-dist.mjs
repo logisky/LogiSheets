@@ -23,10 +23,18 @@ function resolve() {
         throw new Error(`Unknown CRAFT_DIST "${name}". Known: ${known}`)
     }
     const registry = CONFIG.registry
-    const dirs = dist.crafts === 'all' ? Object.keys(registry) : dist.crafts
-    for (const d of dirs) {
+    const selected = dist.crafts === 'all' ? Object.keys(registry) : dist.crafts
+    for (const d of selected) {
         if (!registry[d]) throw new Error(`Craft "${d}" (in distribution "${name}") is not in the registry`)
     }
+    // `devOnly` crafts (the debugger) are offered by the dev server only —
+    // vite.config.ts applies the same filter to the panel's list. Dropping
+    // them here is what keeps them out of dist/ and the desktop bundle: they
+    // stay in `registry`, so the prune step in publish-crafts.sh still deletes
+    // any dist/<craft> a previous build left behind, and the copy step never
+    // puts one back. Filtering after the check above so a typo in an explicit
+    // distribution list is still an error.
+    const dirs = selected.filter((d) => !registry[d].devOnly)
     return {name, dist, dirs, registry}
 }
 

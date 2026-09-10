@@ -216,6 +216,20 @@ pub fn effective_validation(
     cell: &BlockCellId,
     analysis: Option<crate::block_manager::analysis::AnalysisTarget<'_>>,
 ) -> Option<String> {
+    // A header cell holds a field's NAME, not a value of it, so no rule the
+    // field declares has anything to say about it. `unique` is the one that
+    // bit: its rule counts the field's RECORD cells and demands exactly one
+    // match, and the header's own text is not among them — so the count came
+    // back 0, the rule read FALSE, and the heading of every unique field wore
+    // a violation marker.
+    //
+    // The mirror of the guard in `SchemaManager::validation_for_block_cell`,
+    // which already kept the AUTHOR'S template off the header. That one was
+    // not enough on its own: the rules a DECLARATION generates never pass
+    // through it.
+    if schema.is_header_cell(sheet_id, cell) {
+        return None;
+    }
     // A pivot's KEY cell is the one cell of the block a person can type into
     // (every other cell is generated, and the engine already drops writes to
     // templated cells). It holds a row-dimension value, so it has to name a
