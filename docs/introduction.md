@@ -207,15 +207,6 @@ another.
 
 <figure class="block-craft">
 <svg viewBox="0 0 760 320" role="img" aria-label="Two crafts read and write the same block by (block, field, key); the block has a stable ID and schema inside the sheet, so references stay valid as rows and columns shift." xmlns="http://www.w3.org/2000/svg">
-  <style>
-    .box   { fill: var(--vp-c-bg-soft); stroke: var(--vp-c-divider); stroke-width: 1.5; }
-    .blk   { fill: var(--vp-c-bg-soft); stroke: var(--vp-c-brand-1); stroke-width: 2; }
-    .sheet { fill: none; stroke: var(--vp-c-divider); stroke-width: 1.5; stroke-dasharray: 6 5; }
-    .t     { fill: var(--vp-c-text-1); font: 600 14px var(--vp-font-family-base, sans-serif); }
-    .s     { fill: var(--vp-c-text-2); font: 12px var(--vp-font-family-base, sans-serif); }
-    .lbl   { fill: var(--vp-c-brand-1); font: 600 12px var(--vp-font-family-mono, ui-monospace, monospace); }
-    .conn  { stroke: var(--vp-c-brand-1); stroke-width: 1.5; fill: none; opacity: 0.75; }
-  </style>
 
   <!-- crafts -->
   <rect class="box" x="70" y="20" width="200" height="60" rx="10"/>

@@ -1,0 +1,95 @@
+/* Styles for the Ideas column (docs/ideas/). Kept here rather than in a
+   `<style>` block inside the markdown: Vue's template compiler errors on a
+   `<style>` tag it meets while compiling a page, which takes the whole page
+   down in `vitepress dev`. */
+
+/* Dateline under an essay's title. */
+.vp-doc .dateline {
+    margin-top: -0.5rem;
+    color: var(--vp-c-text-3);
+    font-size: 0.875rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Inline-SVG figure styles.
+
+   These live here, and NOT in a `<style>` inside the `<svg>` in the markdown,
+   because Vue's template compiler refuses a `<style>` tag it meets while
+   compiling a page: "Tags with side effect (<script> and <style>) are ignored
+   in client component templates". That is an ERROR, not a warning — it took
+   /introduction and /craft/craft down with a 404 in `vitepress dev` while the
+   production build rendered them fine, so the breakage only ever showed up
+   locally.
+
+   Every rule is scoped to its figure's wrapper class. The two diagrams reuse
+   generic class names (`.box`, `.t`, `.s`, `.lbl`, `.conn`) with values that
+   differ between them — `.lbl` is 12px in one and 12.5px in the other,
+   `.conn` opacity 0.75 vs 0.7 — so hoisting them unscoped would have had one
+   figure silently restyle the other.
+   --------------------------------------------------------------------------- */
+
+/* docs/introduction.md — two crafts addressing one block by (block, field, key). */
+.block-craft .box {
+    fill: var(--vp-c-bg-soft);
+    stroke: var(--vp-c-divider);
+    stroke-width: 1.5;
+}
+.block-craft .blk {
+    fill: var(--vp-c-bg-soft);
+    stroke: var(--vp-c-brand-1);
+    stroke-width: 2;
+}
+.block-craft .sheet {
+    fill: none;
+    stroke: var(--vp-c-divider);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 5;
+}
+.block-craft .t {
+    fill: var(--vp-c-text-1);
+    font: 600 14px var(--vp-font-family-base, sans-serif);
+}
+.block-craft .s {
+    fill: var(--vp-c-text-2);
+    font: 12px var(--vp-font-family-base, sans-serif);
+}
+.block-craft .lbl {
+    fill: var(--vp-c-brand-1);
+    font: 600 12px var(--vp-font-family-mono, ui-monospace, monospace);
+}
+.block-craft .conn {
+    stroke: var(--vp-c-brand-1);
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 0.75;
+}
+
+/* docs/craft/craft.md — one craft's shared logic behind three thin faces. */
+.craft-faces .box {
+    fill: var(--vp-c-bg-soft);
+    stroke: var(--vp-c-divider);
+    stroke-width: 1.5;
+}
+.craft-faces .core {
+    fill: var(--vp-c-bg-soft);
+    stroke: var(--vp-c-brand-1);
+    stroke-width: 2;
+}
+.craft-faces .t {
+    fill: var(--vp-c-text-1);
+    font: 600 14px var(--vp-font-family-base, sans-serif);
+}
+.craft-faces .s {
+    fill: var(--vp-c-text-2);
+    font: 12px var(--vp-font-family-base, sans-serif);
+}
+.craft-faces .lbl {
+    fill: var(--vp-c-brand-1);
+    font: 600 12.5px var(--vp-font-family-mono, ui-monospace, monospace);
+}
+.craft-faces .conn {
+    stroke: var(--vp-c-brand-1);
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 0.7;
+}
