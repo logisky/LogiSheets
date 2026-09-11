@@ -61,6 +61,7 @@ export default defineConfig({
         logo: '/logo/logisheets.jpg',
         nav: [
             {text: 'Introduction', link: '/introduction'},
+            {text: 'Ideas', link: '/ideas/'},
             {text: 'AI', link: '/ai'},
             {text: 'Guide', link: '/usage'},
         ],
@@ -70,6 +71,18 @@ export default defineConfig({
                 items: [
                     {text: 'What is LogiSheets?', link: '/introduction'},
                     {text: 'AI and humans, same document', link: '/ai'},
+                ],
+            },
+            {
+                // The evangelism column: essays on why the project exists.
+                // Add each new essay here.
+                text: 'Ideas',
+                items: [
+                    {text: 'Overview', link: '/ideas/'},
+                    {
+                        text: 'What is real AI-native?',
+                        link: '/ideas/what-is-real-AI-native',
+                    },
                 ],
             },
             {

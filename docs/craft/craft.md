@@ -45,14 +45,6 @@ None of these re-implement the logic — they're thin adapters over the same cor
 
 <figure class="craft-faces">
 <svg viewBox="0 0 760 300" role="img" aria-label="A craft's shared logic reached through three thin interfaces: index.html for the browser, conventional functions for the runtime, and JSDoc for AI." xmlns="http://www.w3.org/2000/svg">
-  <style>
-    .box  { fill: var(--vp-c-bg-soft); stroke: var(--vp-c-divider); stroke-width: 1.5; }
-    .core { fill: var(--vp-c-bg-soft); stroke: var(--vp-c-brand-1); stroke-width: 2; }
-    .t    { fill: var(--vp-c-text-1); font: 600 14px var(--vp-font-family-base, sans-serif); }
-    .s    { fill: var(--vp-c-text-2); font: 12px var(--vp-font-family-base, sans-serif); }
-    .lbl  { fill: var(--vp-c-brand-1); font: 600 12.5px var(--vp-font-family-mono, ui-monospace, monospace); }
-    .conn { stroke: var(--vp-c-brand-1); stroke-width: 1.5; fill: none; opacity: 0.7; }
-  </style>
 
   <!-- core -->
   <rect class="core" x="24" y="110" width="200" height="80" rx="10"/>
