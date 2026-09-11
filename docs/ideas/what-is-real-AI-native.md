@@ -4,9 +4,9 @@ description: Rust built the best correction loop in mainstream programming years
 
 # What is real AI-native?
 
-We've come across so much AI-native software. It is designed for AI agents, in the hope of being widely used in the next era.
+So much software is AI-native now. But what is AI-native?
 
-But what is AI-native? A good place to start the discussion is Rust. Yes, *Rust*.
+A good place to start the discussion is Rust. Yes, *Rust*.
 
 ## The most suitable language for the AI era?
 
@@ -25,37 +25,47 @@ It did not. Rust was never aiming at agents. It was aiming to be correct, and to
 
 ## Three kinds of operator
 
-The answer starts somewhere less exciting. Forget AI for a moment, and ask who operates software at all.
+To see why, forget AI for a moment and ask who operates software at all.
 
 **The human user.** They want a UI — buttons, menus, a canvas. Something to look at and point at.
 
 **The script.** It wants an API — a CLI flag, an SDK call, an HTTP endpoint. Something with a name, arguments and a return value. It never looks at your beautiful button.
 
-**The AI.** This is where almost every AI-native product goes wrong. It assumes AI is a third kind of operator needing a third kind of interface, bolts a chat box onto the side, and calls it a day.
+**The AI.** The new arrival, and the one almost every product is now busy building a third interface for.
 
 But an agent handed a task reaches for the CLI, calls the SDK, writes twenty lines of Python. **AI writes scripts.** And a button is only a function call with a picture on it, so the UI is a client of the API too — whether or not anyone outside can reach it. **All three arrive at the same interface.**
 
-So there are not three goals here. **There is one.** Give back a useless error and all three get that same useless error. They are *three doors into one room*.
+So ask what a good API actually gives them. Not merely that some call exists. It tells you **which call to make**. Each operation does one thing, its name says which thing, and operations with nothing to do with each other are kept apart. That is what lets anyone walk up to a system they have never seen and work out where to start.
+
+Now notice that this is also the whole job of a good UI. A menu is a classification. A screen is a boundary. A product is easy to navigate when somebody decided what the nouns were and which actions belonged to which one, and it is a maze when nobody did — you can see the mess as forty buttons that half overlap. The UI is that decision drawn in pixels. The API is the same decision written in names.
+
+So there are not three design problems here. **There is one.** Solve it and the person finds the right button, the script finds the right endpoint, and the agent picks the right tool, all out of the same work. They are *three doors into one room*.
 
 Which means AI-native is not a category. **It is a name people give to software that finally got its API right.**
 
-It also explains the chat box. The API under a UI never had to be good — it had no outside user, and the buttons worked anyway. AI is the first user that drags it into the open, and a chat box can only reach what the API reaches. That is why it so often cannot do what the button right next to it does. The chat box is not a feature. It is a confession.
-
-## AI-native? No, just human-native
+## AI-native? No, just human-friendly
 
 Ironically, AI stands for artificial intelligence. Much of this software is only pursuing friendship with AI, not the real intelligence.
 
 Looking back at those features that give AI such an advantage, they were doing humans a favour all along.
 
-The interface was the easy half. The two operators also *fail* the same way. Nobody reads the documentation. You do not read the documentation. A user clicks a button to find out what it does; an agent calls the endpoint to find out what it does. Both work from an incomplete picture of your software. Both fix that picture only from what your software tells them back. The agent does it in seconds and the person in an afternoon. There is no difference *in kind*.
+That shared interface was the easy half. Nobody has a complete picture of your software — not the person, not the script, not the agent — so everybody gets it wrong, constantly. Which is why the interesting question is not what your product does when the operator gets it right. Ask three things about what happens when they get it wrong.
 
-So stop asking what your product does when the operator gets it right. Nobody gets it right. Ask three things about what happens when they get it wrong.
+**Can they check their own work?** You can run the Rust compiler whenever you like and get an answer about the whole program in seconds. Cheap, on demand, complete. That is what closes the loop: act, ask, correct.
 
-**Can they check their own work?** Rust's real gift is not that the compiler complains. It is that you can ask it whenever you like, and get an answer about the whole program in seconds. Cheap, on demand, complete. That is what closes the loop: act, ask, correct. Most software has no such entry point. You act, and you find out in production, when a customer notices. An agent on that product is not being careless when it goes wrong. **It has no way to find out.**
+Now change one cell in a spreadsheet. What do you run to find out whether you just broke something? The workbook recalculates, shows you a number, and a wrong number looks exactly like a right one. `#REF!` turns up only where a formula could not run at all; the common failure is quieter — a total that shifted, a lookup that now misses, a range that stopped covering the last row. There is no `cargo check` for a workbook.
+
+Most software is in that position. You act, and you find out in production, when a customer notices. An agent on that product is not being careless when it goes wrong. **It has no way to find out.**
 
 **When they are wrong, can they put it right?** Compare `Invalid input.` with `Expected a date like 2024-01-31, got "31/01/2024".` The second is better for an AI. Obviously. Now ask who else it is better for, and notice you did not have to think about it. Rust's compiler names the borrow, shows where it began and ended, and often writes the fix. That was built because a human was stuck. An explanation good enough for a stuck human is good enough for a machine.
 
-**Is it hard to be wrong in the first place?** Best of all is the mistake you cannot make. Rust does not help you debug dangling pointers. It removes the category. And the guarantee is not advice, not a lint you can ignore. This one is expensive: you decide it early, and you pay in flexibility. A model is confident, fast, and entirely willing to do something stupid. No prompt fixes that. You make the space smaller, until the confident wrong move cannot be written. The borrow checker does not persuade you. It **refuses** you.
+**Is it hard to be wrong in the first place?** Best of all is the mistake you cannot make. Rust does not help you debug dangling pointers; it removes the category. The guarantee is not advice, and not a lint you can ignore.
+
+Ask an agent to analyse the cash flow statement in a workbook, and watch what it has to do first: work out which cells *are* the cash flow statement, which rows are line items, which columns are periods, whether that blank row is a separator or a missing figure. It will get this mostly right. In a financial model, **mostly right is the worst outcome there is** — nobody notices, and the number is wrong.
+
+None of that guessing is necessary. It happens because the file never said what it contained. Let the sheet declare *this is a cash flow statement, these are its line items, these are its periods*, and inference becomes lookup — and the person who opens the file next finds a table that says what it is.
+
+This is the expensive one: decided early, paid for in flexibility. It is also the only thing that works on something confident, fast, and entirely willing to do something stupid. No prompt fixes that. You make the space smaller until the confident wrong move cannot be written. The borrow checker does not persuade you. It **refuses** you.
 
 ## Real intelligence
 
