@@ -17,11 +17,20 @@ Key ideas:
 - [Blocks](https://docs.logisheets.com/blocks.html): The data model. What a block is, how to bind a schema, addressing by `(block, field, key)` and `BLOCKREF`, the payloads you actually use, the rules the engine checks for you, and who may write where.
 - [Crafts](https://docs.logisheets.com/craft/craft.html): The extension model — a craft is one piece of logic reachable from the browser, a headless runtime, and AI.
 - [Putting it together](https://docs.logisheets.com/composition.html): How blocks and crafts combine — crafts compose through shared blocks rather than by calling each other, and an agent is what makes those combinations actually get used.
-- [Read & write spreadsheets (SDK)](https://docs.logisheets.com/usage.html): Core API for scripting a headless `Workbook` from Rust and TypeScript — cells, formulas, styles, blocks, transactions, and undo/redo.
-- [Embed the spreadsheet UI (logisheets-engine)](https://docs.logisheets.com/engine.html): Drop an Excel-like, canvas-rendered spreadsheet grid into any web app; Web Worker + OffscreenCanvas architecture, multiple synchronized views.
-- [Headless on Node (logisheets-runtime)](https://docs.logisheets.com/runtime.html): Server-side spreadsheet runtime that manages many workbooks and exposes a JSON-RPC server, with no browser or canvas.
-- [Writing a craft](https://docs.logisheets.com/craft/writing-a-craft.html): Step-by-step tutorial for building a craft (scaffold with the craftsmith CLI), covering the host API, patterns, gotchas, and exposing your functions as AI tools for the built-in Watson assistant.
+## Guide
+
+Written as a ladder — each step builds on the one before it.
+
+- [1. Read & write Excel files](https://docs.logisheets.com/usage.html): Core API for scripting a headless `Workbook` from Rust and TypeScript — cells, formulas, styles, transactions, and undo/redo.
+- [2. Add a spreadsheet UI to your app](https://docs.logisheets.com/engine.html): Drop an Excel-like, canvas-rendered grid into any web app; Web Worker + OffscreenCanvas architecture, multiple synchronized views.
+- [3. Structure data with blocks](https://docs.logisheets.com/using-blocks.html): Hands-on walkthrough — create a block and fill it in one transaction, bind a schema, read it back, reference it with `BLOCKREF`, add rules, sort, and the mistakes that cost an afternoon.
+- [4. Write your own craft](https://docs.logisheets.com/craft/writing-a-craft.html): Step-by-step tutorial for building a craft (scaffold with the craftsmith CLI), covering the host API, patterns, gotchas, and exposing your functions as AI tools.
+- [5. AI assistant (logician)](https://docs.logisheets.com/logician.html): Put an agent on a workbook — `logisheets-logician`'s tool definitions and agent loop, the tool namespaces, mutation and confirmation policies, Watson, and logisheets-mcp.
+
+## Reference
+
 - [Charts](https://docs.logisheets.com/chart.html): Native Excel chart (OOXML `c:chartSpace`) support — read, render, create, edit, and save charts with lossless `.xlsx` round-tripping.
+- [Headless on Node (logisheets-runtime)](https://docs.logisheets.com/runtime.html): Server-side spreadsheet runtime that manages many workbooks and exposes a JSON-RPC server, with no browser or canvas.
 
 ## Ideas
 

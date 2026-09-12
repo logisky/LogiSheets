@@ -1,14 +1,17 @@
 ---
-description: Run LogiSheets headlessly on Node.js with logisheets-runtime — the server-side spreadsheet engine with a JSON-RPC server, no browser or canvas required.
+description: logisheets-runtime keeps workbooks open on a server — the real LogiSheets engine headless on Node, many live documents per process, a JSON-RPC server you define the methods of, and crafts running server-side.
 ---
 
-# Headless on Node (`logisheets-runtime`)
+# Run workbooks on a server
 
-`logisheets-runtime` is the **server-side counterpart of the browser app**: the
-full LogiSheets engine and the exact same operation layer the UI runs, but
-headless on Node — no browser, no canvas, no Web Worker. It also ships a tiny
-JSON-RPC server so a process can *host* live workbooks and let clients drive
-them.
+Most spreadsheet libraries treat a file as something you pick up, change, and
+put down. `logisheets-runtime` treats a workbook as something that **stays
+open**.
+
+A runtime is a process that holds live workbooks in memory. Your backend code, a
+scheduled job, or an HTTP caller operates on them by handle; formulas
+recalculate as they go; and the document is written back to `.xlsx` only when
+you decide to save. One process can hold many workbooks at once.
 
 ```bash
 npm install logisheets-runtime
@@ -18,44 +21,39 @@ npm install logisheets-runtime
 import {SpreadsheetRuntime, RpcServer} from 'logisheets-runtime'
 ```
 
-## The problem it solves
+## Is this the thing you want?
 
-LogiSheets has always had two halves that the browser app glues together:
+| You want to… | Use |
+| --- | --- |
+| Read a file, change it, write it back | the **[SDK](/usage)** (`logisheets` on Node) |
+| Show a grid to a user | the **[engine](/engine)** in a browser |
+| Keep documents open and let things operate on them | **this** |
 
-- the **engine** (Rust → WASM) that owns the workbook and recalculates formulas, and
-- **`logisheets-core`** — the UI-free operation layer (`WorkbookOps`: `inputCell`,
-  number formats, validations, fills, …) that the browser drives the engine with.
+The dividing line is whether the workbook has a lifetime longer than one
+function call. If it does — because several requests build it up, because you
+want to answer questions against it without re-parsing the file each time, or
+because a person and a job are both touching it — you want a runtime.
 
-In the browser those are wired through an **async** client: every call hops to a
-Web Worker over `postMessage`. That wiring is browser-shaped, so taking the same
-spreadsheet logic to the server used to mean re-implementing the glue: loading
-the Node WASM build, adapting its **synchronous** `handle()` entry point into the
-async client `WorkbookOps` expects, juggling per-workbook engine handles, and
-hand-rolling a request layer if you wanted to expose any of it.
+## What it gives you
 
-`logisheets-runtime` is that glue, done once:
+- **The real engine, headless.** The same Rust → WASM core and the same
+  operation layer (`WorkbookOps`: `inputCell`, number formats, validations,
+  fills, …) the browser app drives, running on Node with no browser, canvas or
+  Web Worker. Identical behaviour, no UI.
+- **Many workbooks, one process.** A single `SpreadsheetRuntime` owns any number
+  of open workbooks (`wb1`, `wb2`, …) and every call targets a handle, so one
+  server can serve many documents.
+- **A workbook as a service.** The built-in `RpcServer` (JSON-RPC 2.0 over HTTP,
+  dependency-free) lets you expose *your own* methods whose bodies read and
+  write the hosted workbooks — with a per-request **save / roll-back**, so a
+  caller can ask a throwaway "what-if" question and leave the document
+  untouched.
+- **Workbooks that carry their own rules.** A [craft](/craft/craft) can travel
+  inside a workbook and be reconstructed here, so the document guards its own
+  edits even with no UI in sight. See [Crafts in a runtime](#crafts-in-a-runtime).
 
-- **Run the real engine headlessly.** Create or load workbooks on Node and drive
-  them with the *same* `WorkbookOps` the browser uses — identical behavior,
-  zero UI. Ideal for server-side recalculation, `.xlsx` batch processing,
-  validation, scheduled jobs, tests, and serverless functions.
-- **One runtime, many workbooks.** A single `SpreadsheetRuntime` owns any number
-  of open workbooks (`wb1`, `wb2`, …); every call targets a specific handle, so
-  a process can serve many documents at once.
-- **Host workbooks as a service.** The built-in `RpcServer` (JSON-RPC 2.0 over
-  HTTP, dependency-free) lets you expose your *own* methods whose bodies
-  read/write workbooks — with a per-request **save / roll-back** lifecycle, so a
-  call can either persist or compute a throwaway "what-if" and leave the
-  document untouched.
-
-In short: the browser embeds LogiSheets for a *user*; the runtime embeds it for
-a *server*.
-
-::: tip Runnable example
-A complete, runnable example — build a workbook, host it over JSON-RPC, change a
-value remotely and read a formula's recalculated number — lives in
-[**logisheets-examples / logisheets-runtime**](https://github.com/logisky/logisheets-examples/tree/main/logisheets-runtime).
-:::
+Typical uses: server-side recalculation, `.xlsx` batch processing, validation
+services, scheduled jobs, tests, and serverless functions.
 
 ## Quick start
 
@@ -191,6 +189,92 @@ server.registerMutation(
 Standard JSON-RPC error codes are exported (`RPC_PARSE_ERROR`,
 `RPC_INVALID_REQUEST`, `RPC_METHOD_NOT_FOUND`, `RPC_INVALID_PARAMS`,
 `RPC_INTERNAL_ERROR`); application errors can use their own positive codes.
+
+## Crafts in a runtime
+
+This one is easy to misread, so start with what it is **not**.
+
+Crafts do not add methods to the runtime. What the runtime offers is whatever
+you registered on `RpcServer` — that and nothing else. A craft has no method
+name and cannot be called.
+
+What a craft can do is **sit in the path of an exchange you already defined**.
+A workbook carries its crafts in its own saved state; the runtime reconstructs
+them headlessly and runs their hooks around a JSON-RPC request. So the document
+brings its rules with it: open the same `.xlsx` on a server with no UI, and the
+guards that were protecting it in the browser are still protecting it.
+
+**Crafts govern exchanges. They do not define them.**
+
+### The four hooks
+
+A headless craft is a `runtime.ts` whose default export implements
+`CraftRuntime`:
+
+```ts
+import type {CraftRuntime} from 'logisheets-craftsmith/authoring'
+
+export default {
+    onLoad: (state, wb) => { /* install shadows, cache what you need */ },
+    onRequest: (req, state, wb) => { /* inspect, and object to reject */ },
+    onValidate: (state, wb) => { /* return Violation[] */ },   // optional
+    onResponse: (resp, state, wb) => { /* observe the result */ },
+} satisfies CraftRuntime
+```
+
+Each hook gets its own deserialized state and the live `Workbook` — so
+`wb.ops` and `wb.client` are both in reach. `onValidate` is the only optional
+one.
+
+`runCraftExchange` composes them in order, and each failure maps to a JSON-RPC
+error:
+
+| Stage | On failure |
+| --- | --- |
+| `onRequest` objects | `-32602` (invalid params) |
+| `onValidate` returns violations | `1001` (`RPC_VALIDATION_FAILED`), violations in `error.data` |
+| `onResponse` errors | `-32603` (internal error) |
+
+### Loading them
+
+Craft ids come from the workbook, not from your configuration:
+
+```ts
+import {loadCrafts, MemoryCraftRegistry, runCraftExchange} from 'logisheets-runtime'
+
+const registry = new MemoryCraftRegistry()
+registry.add('my-guard', await import('./my-guard/runtime.js'))
+
+const crafts = await loadCrafts(wb, registry)     // reads the workbook's own state
+const reply = await runCraftExchange(crafts, wb, request)
+```
+
+`loadCrafts` reads the workbook's AppData for the craft ids it was saved with,
+asks the registry for each manifest, and skips any craft whose manifest has no
+`rtJs` — that field is what marks a craft as having a headless face. A workbook
+saved without crafts loads none, which is the common case.
+
+Loading is fault-isolated: a craft that fails to import or fails `onLoad` is
+skipped rather than taking the others down. It is also silent, so if a craft
+you expected is not running, check the manifest's `rtJs` first.
+
+### Status
+
+Worth knowing before you build on this:
+
+- **Nothing loads crafts for you.** `SpreadsheetRuntime`, `RpcServer` and
+  `WorkbookWatcher` have no craft awareness — you call `loadCrafts` and
+  `runCraftExchange` yourself, as above. The one exception is
+  `EnterpriseRuntimeServer`, which wires them into a single `compute` task.
+- **No craft in this repo ships a runtime face yet.** The mechanism is
+  implemented and tested against the real engine, but you will be writing the
+  first `runtime.ts` rather than copying one.
+- **`craftsmith check` does not validate `runtime.ts`.** It is bundled
+  unexamined, so a default export that does not satisfy `CraftRuntime` fails
+  silently at load time instead of at build time.
+- **`HttpCraftRegistry` is best-effort.** It imports a craft over HTTP via a
+  `data:` URL, which works for self-contained ESM bundles and not for ones with
+  external dependencies.
 
 ## Hot-reloading workbooks — `WorkbookWatcher`
 
