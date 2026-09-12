@@ -24,22 +24,34 @@ const SIDEBAR = [
                 ],
             },
             {
-                // How to actually do things.
+                // How to actually do things. Numbered because the complaint
+                // about the old sidebar was that nothing showed these build on
+                // each other: 1 is the API, 2 puts a UI on that API, 3 and 4
+                // are what you do with it, 5 hands it to a model.
                 text: 'Guide',
                 items: [
+                    {text: '1. Read & write Excel files', link: '/usage'},
                     {
-                        text: 'Read & write spreadsheets (SDK)',
-                        link: '/usage',
-                    },
-                    {
-                        text: 'Embed the spreadsheet UI (engine)',
+                        text: '2. Add a spreadsheet UI to your app',
                         link: '/engine',
                     },
                     {
-                        text: 'Headless on Node (runtime)',
-                        link: '/runtime',
+                        text: '3. Structure data with blocks',
+                        link: '/using-blocks',
                     },
-                    {text: 'Write your own craft', link: '/craft/writing-a-craft'},
+                    {
+                        text: '4. Write your own craft',
+                        link: '/craft/writing-a-craft',
+                    },
+                    {text: '5. AI assistant (logician)', link: '/logician'},
+                ],
+            },
+            {
+                // Off the main path: real docs, but not part of the ladder.
+                text: 'Reference',
+                items: [
+                    {text: 'Charts', link: '/chart'},
+                    {text: 'Run workbooks on a server', link: '/runtime'},
                 ],
             },
             {
@@ -148,6 +160,35 @@ export default defineConfig({
             parts.push('\n\n---\n\n' + raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim())
         }
         await fs.writeFile(path.join(outDir, 'llms-full.txt'), parts.join('\n'), 'utf8')
+
+        // VitePress checks dead LINKS but not #anchors, so a heading rename
+        // silently leaves every link to it pointing at nothing. Found two real
+        // ones in engine.md the first time this ran. Note VitePress keeps
+        // punctuation in slugs: "Config — EngineConfig" becomes
+        // "config-—-engineconfig", em-dash and all.
+        const pages = new Map<string, Set<string>>()
+        const htmlFiles = (await fs.readdir(outDir, {recursive: true})) as string[]
+        for (const rel of htmlFiles.filter((f) => f.endsWith('.html'))) {
+            const html = await fs.readFile(path.join(outDir, rel), 'utf8')
+            pages.set(
+                rel.slice(0, -'.html'.length),
+                new Set([...html.matchAll(/id="([^"]*)"/g)].map((m) => m[1]))
+            )
+        }
+        const deadAnchors: string[] = []
+        for (const [page, anchors] of pages) {
+            const html = await fs.readFile(path.join(outDir, page + '.html'), 'utf8')
+            for (const [, frag] of html.matchAll(/href="#([^"]+)"/g)) {
+                const decoded = decodeURIComponent(frag)
+                if (!anchors.has(decoded) && !anchors.has(frag))
+                    deadAnchors.push(`${page}#${frag}`)
+            }
+        }
+        if (deadAnchors.length)
+            console.warn(
+                '[anchors] link to a heading that does not exist: ' +
+                    [...new Set(deadAnchors)].join(', ')
+            )
 
         const index = await fs.readFile(path.join(outDir, 'llms.txt'), 'utf8')
         const missing = routes.filter(

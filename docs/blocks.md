@@ -168,5 +168,5 @@ craft. Ask `mayModifyBlock` rather than reading the policy yourself.
 
 ## Where to go next
 
-- The full payload list → **[Read & write spreadsheets (SDK)](/usage#blocks-diy-cells-appendices-advanced)**
+- The full payload list → **[Read & write Excel files](/usage#blocks-diy-cells-appendices-advanced)**
 - Code that runs on top of a block → **[Crafts](/craft/craft)**

@@ -30,8 +30,8 @@ custom input tool — and it becomes a first-class feature of the sheet.
 
 The crafts already in the repo hint at the range: `what-if-calculator` (preview
 changes before committing), `markdown-table-extractor` (turn a selection into a
-table), `sudoku` / `minesweeper` / `fuse-beads` (interactive boards), and
-data-gateway-style validators. Each is a small app for one job.
+table), and `sudoku` / `minesweeper` / `fuse-beads` (interactive boards). Each
+is a small app for one job.
 
 ## One logic, three faces
 
@@ -82,7 +82,8 @@ None of these re-implement the logic — they're thin adapters over the same cor
 </figure>
 
 Each face is optional — implement only the ones your craft needs. A game is
-UI-only; a data validator is runtime-only; most crafts pick two or three.
+UI-only; most crafts pick two or three. One rule: a craft needs at least one of
+`index.html` or `tools.ts`, so a runtime face cannot stand on its own.
 
 - **Browser** — a standalone package loaded in a same-origin `<iframe>` in the
   craft panel. The host injects capabilities onto the craft's `window`

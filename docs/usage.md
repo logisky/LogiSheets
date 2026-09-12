@@ -2,7 +2,7 @@
 description: Read and write .xlsx (Excel) spreadsheets from Rust and TypeScript with the LogiSheets SDK — cells, formulas, styles, blocks and undo/redo, in the browser, on Node, or native.
 ---
 
-# Read & write spreadsheets (SDK)
+# Read & write Excel files
 
 LogiSheets ships its spreadsheet engine through several packages that share the
 same concepts and almost the same surface API. This guide explains the common

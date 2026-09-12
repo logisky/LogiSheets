@@ -98,7 +98,7 @@ You work with a `Workbook` and `Worksheet`, read cells, and send edits as
 batched **transactions**. Right for file conversion, report generation,
 server-side processing, or driving your own UI.
 
-→ **[Read & write spreadsheets (SDK)](/usage)**
+→ **[Read & write Excel files](/usage)**
 
 ### 2. As a spreadsheet in a web page
 
@@ -124,7 +124,7 @@ engine.on('ready', async () => {
 })
 ```
 
-→ **[Embed the spreadsheet UI](/engine)**
+→ **[Add a spreadsheet UI](/engine)**
 
 ### 3. With blocks and crafts
 
@@ -135,8 +135,8 @@ your own code, your crafts, and an agent can all read and write reliably.
 
 ## Where to go next
 
-- New to the engine? → **[Read & write spreadsheets (SDK)](/usage)**
-- Want a grid in a web app? → **[Embed the spreadsheet UI](/engine)**
+- New to the engine? → **[Read & write Excel files](/usage)**
+- Want a grid in a web app? → **[Add a spreadsheet UI](/engine)**
 - Storing real data in a sheet? → **[Blocks](/blocks)**
 - Building a feature on top? → **[Crafts](/craft/craft)**
 - How those two combine → **[Putting it together](/composition)**

@@ -2,7 +2,7 @@
 description: Embed an Excel-like spreadsheet UI with logisheets-engine — a canvas-rendered, Web Worker-powered data grid with formulas and .xlsx import/export.
 ---
 
-# Embed the spreadsheet UI (`logisheets-engine`)
+# Add a spreadsheet UI to your app
 
 `logisheets-engine` is a ready-made, interactive spreadsheet UI. Where the
 [core SDK](/usage) gives you a headless `Workbook` to script, the engine gives
@@ -290,7 +290,7 @@ await engine.setShowGridLines(false) // hide; pass true to show again
 await engine.setShowCellValues(false)
 ```
 
-The initial values come from [`EngineConfig`](#constructor-config-engineconfig):
+The initial values come from [`EngineConfig`](#constructor-config-%E2%80%94-engineconfig):
 `showHorizontalGridLines` / `showVerticalGridLines` / `showCellValues`, all
 `true` by default.
 
@@ -303,7 +303,7 @@ Zoom is built in. Out of the box, on any mounted view:
 - **Ctrl/⌘ + `+` / `-` / `0`** zooms in / out / back to 100%.
 
 Both gestures can be turned off per engine (`wheelZoom`, `zoomShortcuts` in
-[`EngineConfig`](#constructor-config-engineconfig)) if your app drives zoom
+[`EngineConfig`](#constructor-config-%E2%80%94-engineconfig)) if your app drives zoom
 itself.
 
 Zoom is modeled as an *effective-DPI* multiplier on the workbook-unit ↔ pixel
