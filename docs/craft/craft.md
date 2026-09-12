@@ -2,13 +2,15 @@
 description: A craft turns a LogiSheets spreadsheet into an app for your business — one piece of logic you write once and reach from the browser, a headless runtime, and AI.
 ---
 
-# Craft
+# Crafts
 
-`Craft` is a core concept of `LogiSheets`.
+A **craft** is a small application that lives inside a LogiSheets workbook.
 
-> **A craft is one piece of logic that can run in three places — in the
-> browser, in a headless runtime, and as an AI capability — from a single
-> implementation.**
+You write the logic once, and it reaches three places: a UI in the browser, a
+headless runtime on Node, and the AI assistant. Same code, three ways in.
+
+Crafts work on [blocks](/blocks) — that is how one craft can read what another
+one wrote without the two colliding.
 
 ## What a craft gives you
 
@@ -103,8 +105,11 @@ logic, and the browser / runtime / AI are just ways to reach it.
 
 ## Get started
 
-➡️ **[Write your own craft](./writing-a-craft.md)** — scaffold with the
-`craftsmith` CLI, then the guide walks the host API, the common patterns, the
+➡️ **[Putting it together](/composition)** — how crafts and blocks combine,
+and why an agent is what makes those combinations actually get used.
+
+➡️ **[Write your own craft](/craft/writing-a-craft)** — scaffold with the
+`craftsmith` CLI, then the guide covers the host API, the common patterns, the
 gotchas, and how to expose your craft's functions as AI tools.
 
 ```bash

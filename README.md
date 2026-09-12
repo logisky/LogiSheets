@@ -14,7 +14,7 @@ A spreadsheet is the most widely understood interface humans have for structured
 
 LogiSheets closes that gap in the document itself. **Blocks** give regions a stable identity and a schema, so an agent addresses data as *(block, field, key)* rather than `Sheet1!C5`. Declarations, rules, and write policies live in the file — the engine can tell an agent what a column means, when a value is wrong, and which cells it may not touch. The human still sees an ordinary grid, and the file is still a real `.xlsx`.
 
-→ **[AI and humans, same document](https://docs.logisheets.com/ai)** — what an agent actually sees, and how the boundaries work.
+→ **[What is LogiSheets?](https://docs.logisheets.com/introduction)** — what an agent actually sees, and how the boundaries work.
 
 > An **open-source spreadsheet library** and **Excel (`.xlsx`) engine** for **JavaScript / TypeScript** and **Rust** — read, write, and evaluate spreadsheets with **formula** support in the **browser** (via **WebAssembly**), on **Node.js**, or natively in Rust. A programmable alternative to SheetJS / ExcelJS with a full recalculation engine, an embeddable UI, and a first-class agent toolkit.
 

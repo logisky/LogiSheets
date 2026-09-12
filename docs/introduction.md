@@ -1,127 +1,92 @@
 ---
-description: What LogiSheets is — a Rust + WebAssembly spreadsheet engine that reads, edits and writes real .xlsx (Excel) files natively, on Node.js and in the browser, and is designed as common ground for people and AI to work in the same document.
+description: LogiSheets is a Rust + WebAssembly spreadsheet engine that reads and writes real .xlsx files — and writes down the structure of a sheet, so that people and AI agents can work in the same document.
 ---
 
 # What is LogiSheets?
 
-LogiSheets is a web-based spreadsheet engine, written in Rust and compiled to
-WASM, that reads, manipulates and writes real `.xlsx` files. It runs natively
-(Rust), on the server (Node.js) and in the browser.
+LogiSheets is a spreadsheet engine written in Rust and compiled to WebAssembly.
+It reads, edits and writes real `.xlsx` files, and the same engine runs in the
+browser, on Node.js, and natively in Rust.
 
-What sets it apart from "just another spreadsheet library" is four design
-goals:
+That part is ordinary. Here is the part that is not.
 
-### Excel compatibility
+## Where AI and people work together
 
-LogiSheets speaks `.xlsx` natively — formulas, styles, merged cells, multiple
-sheets — so a workbook produced or edited by LogiSheets opens cleanly in Excel,
-and a workbook authored in Excel loads without loss. You don't trade
-compatibility for the features below; you get both.
+A spreadsheet is the most widely understood tool people have for working with
+data. It is also a bad thing to hand a machine.
 
-### Structured data — the core idea
+Everything that makes a sheet readable to a person is a habit, kept in their
+head. Where the table starts and stops. That the first row is headings. That
+column D is a percentage, and the empty rows at the bottom are padding rather
+than missing data. A person takes all of this in at a glance and never thinks
+about it again.
 
-This is what LogiSheets is really about, and where it parts ways with a normal
-spreadsheet.
+A model sees none of it. Give an agent a plain grid and it has to guess the
+structure, then act on the guess. When the guess is wrong nothing breaks — you
+get a believable number in a believable cell, and somebody finds out weeks
+later.
 
-A plain spreadsheet is a *loose grid of cells addressed by position*. That
-position-addressing is the source of its most painful failure modes:
+LogiSheets writes those habits into the file, so one document works for both
+readers:
 
-- **References break under edits.** Insert a row at the top and everything below
-  shifts. Formulas, named ranges, and any external code that pointed at "row 12"
-  are now silently pointing at the wrong data.
-- **There is no notion of identity.** The cell `C5` is just a coordinate — the
-  grid has no idea that `C5:F20` is "the line-items table" with columns
-  *name / qty / price / total*. The structure lives only in the author's head.
-- **You can't safely build on top of it.** Because a region has no stable handle
-  and no declared shape, a plugin or an integration can't reliably read or write
-  "the third field of the second row of that table."
+- The **person** sees an ordinary grid, and gets a real `.xlsx`.
+- The **agent** sees tables it can name, columns whose type and meaning it can
+  read back, rows it can address by key, rules that say when a value is wrong,
+  and limits on what it may change.
 
-LogiSheets fixes this at the data-model level with a single idea: a **Block** —
-a region of the sheet with a **stable identity** and a coordinate space of its
-own. That one property is load-bearing. Give a region an identity, and a whole
-set of things a loose grid simply can't express all follow from it:
+There is no separate "AI copy" of the data, and no chat box bolted to the side.
+It is one file with enough structure written down that both can work in it.
+That structure is a **[block](/blocks)**, and everything else here is built on
+it.
 
-- **It survives edits.** The engine tracks a block's cells by stable IDs, so
-  inserting or deleting rows elsewhere in the sheet leaves the block — and every
-  reference into it — pointing at the right cells.
-- **It can mean something.** Attach a **schema** — named fields, keys — and the
-  block's contents carry *meaning*, not just a location: "the row keyed
-  `2024-Q1`, field `revenue`" becomes an addressable thing, wherever the block
-  currently sits.
-- **It can be governed.** Because the region has a boundary and an owner, you can
-  hang rules on it — which cells are inputs and which are computed, which ones the
-  **user may edit**, what values are valid. A block is where a form's "only these
-  fields are editable, and only with valid values" actually lives; a loose grid
-  has nowhere to put that.
-- **It can be built on.** A stable handle plus a declared shape is exactly what
-  external code, the AI assistant, and other crafts need to read and write
-  structured data reliably — by *(block, field, key)*, through the block payload
-  family (`blockInput`, `insertRowsInBlock`, `bindFormSchema`, …).
+An agent reaches the engine three ways, all of them the same API underneath:
 
-These aren't four separate features — they're the same fact, *a region with
-identity*, seen from four angles. The payoff: data in LogiSheets can be
-*structured* — tables that know they're tables — while still living in a familiar,
-Excel-compatible spreadsheet. This is the foundation everything else is built on.
+- **Watson**, the assistant built into the web app.
+- **`logisheets-logician`**, the agent toolkit — tool definitions that drive a
+  real workbook. No host dependencies, so it runs in the browser or on Node.
+- **[`logisheets-mcp`](https://github.com/logisky/logisheets-mcp)**, which puts
+  the engine behind the Model Context Protocol for Claude Desktop, Cursor, or
+  your own agent.
 
-### Common ground for people and AI
+## What else is different
 
-Structured data is not only good engineering — it is what makes a spreadsheet
-usable by a machine at all, and this is the goal the others serve.
+### It really is Excel
 
-A spreadsheet is the most widely understood interface humans have for
-structured data. It is also one of the worst interfaces you could hand a model,
-for exactly the reasons above: everything that makes a sheet readable to a
-person is a *convention*, held in their head and nowhere else. Where the table
-starts and stops, that the first row is headings, that column D is a
-percentage and not a count — none of that is written down anywhere the machine
-can read. An agent handed a raw grid has no choice but to infer it, and its
-mistakes are the quiet kind: a plausible number in a plausible cell.
+LogiSheets speaks `.xlsx` natively — formulas, styles, merged cells, several
+sheets. A file it writes opens cleanly in Excel, and a file Excel wrote loads
+without losing anything. You do not trade compatibility for the features below.
+You get both.
 
-LogiSheets puts those conventions in the document, so the same file is legible
-to both readers at once:
+### Blocks: tables that know they are tables
 
-- The person sees an ordinary grid, and a real `.xlsx`.
-- The agent sees blocks it can name, fields whose types and meaning it can read
-  back, records addressed by key, rules that tell it when a value is wrong, and
-  policies that tell it which cells are not its to touch.
+In a plain spreadsheet a cell is only a coordinate. `C5` does not know it
+belongs to the line-items table, so a formula pointing at it breaks the moment
+somebody inserts a row.
 
-Neither view is a translation of the other, and there is no synchronised
-"AI copy" of the data. It is one document with enough declared structure that
-both can work in it — which is why the AI story here is not a chat panel bolted
-onto a grid, but the same block model the rest of this page is about.
+A **block** is a region of the sheet with a stable identity, and optionally a
+**schema** — named columns, a key column, declared types. Once a region has
+those, you stop addressing cells and start addressing data: *the `revenue`
+field of the `2024-Q1` row of the `income_statement` block*. That address
+survives every insert, delete and sort.
 
-→ **[AI and humans, same document](/ai)** covers what an agent actually sees,
-how it learns it was wrong, and how the boundaries work in both directions.
+→ **[Blocks](/blocks)**
 
-### Easy to extend (built for secondary development)
+### Crafts: small apps that live in the sheet
 
-LogiSheets is designed to be built *on*, not just used. The engine exposes a
-rich, uniform API across every target — the same `Workbook` / `Worksheet`
-concepts and the same transaction/payload edit model in Rust and TypeScript — so
-you can drive it from a backend, a script, or a custom UI without fighting the
-abstraction.
+A spreadsheet is generic; your work is not. A **craft** is a small application
+that runs inside LogiSheets — a pricing form, a what-if calculator, a
+simulator. You write the logic once and it reaches the browser UI, a headless
+runtime, and the AI assistant.
 
-Blocks make this practical: because a region has a stable identity and a schema,
-your own code can reliably read and write structured data inside a sheet. On top
-of that, **Crafts** let you package custom behavior — an embedded form, a
-what-if calculator, a domain-specific table — as a small application that lives
-inside the spreadsheet. Whether you're embedding LogiSheets in a product or
-extending it with plugins, the APIs are meant to make that straightforward.
-
-In other words, LogiSheets is a faithful Excel engine, a structured-data model,
-a shared surface for people and agents, *and* a platform you can develop
-against.
+→ **[Crafts](/craft/craft)**
 
 ## Three ways to use it
 
-Depending on what you're building, you'll meet LogiSheets at one of three
-levels. They build on each other — the engine wraps the SDK, and crafts build on
-blocks.
+The three build on each other, so pick the lowest one that does your job.
 
-### 1. As a plain spreadsheet library
+### 1. As a spreadsheet library
 
-Use the engine directly to read, edit and write `.xlsx`. Same core API across
-three packages:
+Read, edit and write `.xlsx` from code. The same core API in three packages:
 
 | Package | Language | Where it runs |
 | --- | --- | --- |
@@ -129,28 +94,22 @@ three packages:
 | `logisheets` | TypeScript (WASM) | Node.js |
 | `logisheets-web` | TypeScript (WASM) | Browser |
 
-You work with a `Workbook` and `Worksheet`, read cells, and apply edits as
-batched **transactions**. This is the right level for file conversion, headless
-report generation, server-side data processing, or wiring your own UI.
+You work with a `Workbook` and `Worksheet`, read cells, and send edits as
+batched **transactions**. Right for file conversion, report generation,
+server-side processing, or driving your own UI.
 
-→ See **[Read & write spreadsheets (SDK)](/usage)** for the full API with Rust and TypeScript
-examples.
+→ **[Read & write spreadsheets (SDK)](/usage)**
 
-### 2. As an online spreadsheet (`logisheets-engine`)
+### 2. As a spreadsheet in a web page
 
-If you want a ready-made, interactive spreadsheet *in the browser* — selection,
-scrolling, inline editing, sheet tabs, canvas rendering — use
-**`logisheets-engine`**. It's a high-performance UI component built on top of
-`logisheets-web`, using `OffscreenCanvas` and a Web Worker so editing and
-rendering never block the main thread.
+If you want a working grid in the browser — selection, scrolling, editing,
+sheet tabs — use **`logisheets-engine`**. It is a canvas UI built on
+`logisheets-web`, using `OffscreenCanvas` and a Web Worker so rendering never
+blocks the page.
 
 ```bash
 npm install logisheets-engine logisheets-web
 ```
-
-You drive everything through a single `Engine` object — it owns the Web Worker
-internally, so you never wire one up yourself. Construct it, wait for `ready`,
-mount it into a DOM element, and load a file:
 
 ```ts
 import {Engine} from 'logisheets-engine'
@@ -160,101 +119,24 @@ const engine = new Engine()
 engine.on('ready', async () => {
     engine.mount(document.getElementById('spreadsheet')!)
 
-    const buf = await fetch('workbook.xlsx').then(r => r.arrayBuffer())
+    const buf = await fetch('workbook.xlsx').then((r) => r.arrayBuffer())
     await engine.loadFile(new Uint8Array(buf), 'workbook.xlsx')
 })
 ```
 
-This is the right level when you want users to *use* a spreadsheet, not when you
-want to script one.
+→ **[Embed the spreadsheet UI](/engine)**
 
-→ See **[Embed the spreadsheet UI](/engine)** for the full integration guide.
+### 3. With blocks and crafts
 
-### 3. Advanced: Blocks & Crafts
+This is the level that makes LogiSheets more than a grid: structured regions
+your own code, your crafts, and an agent can all read and write reliably.
 
-The deepest level is what makes LogiSheets more than a spreadsheet: building
-**structured, programmable regions**.
-
-- **Blocks** are rectangular regions identified by a stable ID rather than by
-  cell coordinates. Cells inside a block keep their relative positions when rows
-  or columns are inserted elsewhere in the sheet, and a block can carry a
-  **schema** (named fields, keys) so its contents have meaning beyond "the cells
-  at C3:F20". You manipulate blocks with the block payload family
-  (`createBlock`, `blockInput`, `insertRowsInBlock`, `bindFormSchema`, …).
-
-- **Crafts** are small applications that live inside LogiSheets. A craft is
-  configured against a block and performs custom operations on its data — think
-  of an embedded form, a what-if calculator, or a table extractor that the user
-  interacts with right in the sheet. Crafts are how you extend the platform with
-  domain-specific behavior.
-
-#### Blocks are how crafts coexist
-
-Crafts don't run in isolation. Several can operate on the same workbook, and they
-often build on each other — one craft writes data another reads, the AI assistant
-reads what a form craft produced, and the user keeps editing the sheet
-throughout. If a craft addressed its data by raw position (`Sheet1!C5`), any of
-those edits — a row inserted above, a column moved, another craft reshaping a
-table — would silently shift the cells out from under it, and the next read would
-return the wrong thing.
-
-A **block** is the fix. A craft anchors its data to a block and addresses it by
-**_(block, field, key)_** instead of a coordinate. Because the engine tracks a
-block's cells by stable IDs, that address stays valid no matter what happens
-elsewhere in the sheet. Blocks are the **reliable index** that lets crafts
-cooperate — read and write each other's structured data — without stepping on one
-another.
-
-<figure class="block-craft">
-<svg viewBox="0 0 760 320" role="img" aria-label="Two crafts read and write the same block by (block, field, key); the block has a stable ID and schema inside the sheet, so references stay valid as rows and columns shift." xmlns="http://www.w3.org/2000/svg">
-
-  <!-- crafts -->
-  <rect class="box" x="70" y="20" width="200" height="60" rx="10"/>
-  <text class="t" x="170" y="46" text-anchor="middle">Craft A</text>
-  <text class="s" x="170" y="66" text-anchor="middle">e.g. a budget form</text>
-
-  <rect class="box" x="490" y="20" width="200" height="60" rx="10"/>
-  <text class="t" x="590" y="46" text-anchor="middle">Craft B</text>
-  <text class="s" x="590" y="66" text-anchor="middle">e.g. a report / the AI</text>
-
-  <!-- connectors from crafts to the block -->
-  <path class="conn" d="M170 80 C 170 150, 300 176, 350 206"/>
-  <path class="conn" d="M590 80 C 590 150, 460 176, 410 206"/>
-  <text class="lbl" x="196" y="140" text-anchor="middle">(block, field, key)</text>
-  <text class="lbl" x="566" y="140" text-anchor="middle">(block, field, key)</text>
-
-  <!-- sheet container -->
-  <rect class="sheet" x="40" y="170" width="680" height="132" rx="10"/>
-  <text class="s" x="58" y="192">Sheet — cells shift as rows / columns change</text>
-
-  <!-- block -->
-  <rect class="blk" x="280" y="206" width="200" height="82" rx="10"/>
-  <text class="t" x="380" y="234" text-anchor="middle">Block #b1</text>
-  <text class="s" x="380" y="254" text-anchor="middle">stable ID + schema</text>
-  <text class="lbl" x="380" y="276" text-anchor="middle">name · qty · price</text>
-</svg>
-</figure>
-
-Both crafts address the same block by _(block, field, key)_; rows and columns can
-shift anywhere in the sheet and each keeps pointing at the right data.
-
-This is where the *"from sheets to systems"* ambition becomes concrete. As an
-example of how far a craft can go, try the **Factory Simulator**:
-
-→ **[www.logisheets.com/?craft=factory-simulator](https://www.logisheets.com/?craft=factory-simulator)**
-
-It's not a spreadsheet that happens to have some numbers in it — it's an
-interactive simulation built *as a craft*, running inside an ordinary,
-Excel-compatible workbook. That's the point: the same grid that opens your
-`.xlsx` can also host a real application.
-
-→ Start with the **[block payload reference](/usage#blocks-diy-cells-appendices-advanced)**
-in the usage guide, then read the **[Craft system](/craft/craft)** for the
-plugin model.
+→ **[Blocks](/blocks)** and **[Crafts](/craft/craft)**
 
 ## Where to go next
 
 - New to the engine? → **[Read & write spreadsheets (SDK)](/usage)**
-- Want an interactive grid in a web app? → **[Embed the spreadsheet UI](/engine)**
-- Putting an agent to work in a sheet? → **[AI and humans, same document](/ai)**
-- Building structured data or plugins? → **[Craft system](/craft/craft)**
+- Want a grid in a web app? → **[Embed the spreadsheet UI](/engine)**
+- Storing real data in a sheet? → **[Blocks](/blocks)**
+- Building a feature on top? → **[Crafts](/craft/craft)**
+- How those two combine → **[Putting it together](/composition)**
