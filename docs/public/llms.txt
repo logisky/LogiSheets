@@ -1,23 +1,34 @@
 # LogiSheets
 
-> LogiSheets is a web-based spreadsheet engine written in Rust and compiled to WebAssembly. It reads, edits, and writes real `.xlsx` (Excel) files — formulas, styles, merged cells, and multiple sheets — with the exact same engine running natively in Rust, on Node.js, and in the browser. It is an open-source, programmable alternative to libraries like SheetJS and ExcelJS, with a full dependency-tracked recalculation engine and an embeddable spreadsheet UI.
+> LogiSheets is a web-based spreadsheet engine written in Rust and compiled to WebAssembly. It reads, edits, and writes real `.xlsx` (Excel) files — formulas, styles, merged cells, and multiple sheets — with the exact same engine running natively in Rust, on Node.js, and in the browser. It is an open-source (MIT), programmable alternative to libraries like SheetJS and ExcelJS, with a full dependency-tracked recalculation engine and an embeddable spreadsheet UI.
 
-Key ideas that set it apart:
+What sets it apart: a spreadsheet is the most widely understood tool people have for working with data, and one of the worst things to hand a machine, because everything that makes a sheet readable to a person is an unwritten habit. LogiSheets writes those habits into the file, so one document serves both a person and an AI agent.
+
+Key ideas:
 
 - **One engine everywhere.** The core is Rust → WASM; the browser app and the headless Node runtime share it with no reimplementation.
-- **Blocks (structured data).** A `Block` keeps a region of cells together as a schema-aware table addressed by stable IDs, so inserts and deletes never break references. Fields carry types, validation, uniqueness, and required constraints.
-- **Crafts (plugins).** Self-contained mini-apps written in plain JS/TS that extend a workbook through the same public API the core uses, turning a spreadsheet into a real application.
-- **AI-native.** `logician` is an agent toolkit that operates workbooks through structured LLM tools; it powers Watson, the in-app assistant, and runs on Node too.
+- **Blocks.** A block is a region of a sheet with a stable identity and an optional schema — named fields, a key column, declared types. Data is addressed as `(block, field, key)` instead of by cell coordinates, so references survive inserts, deletes and sorts. Declared constraints (`required`, `unique`, enum membership, cross-block references, `unique_together`) are turned into checks by the engine.
+- **Crafts.** Self-contained mini-apps written in plain JS/TS. Crafts never call each other; they meet at blocks, which is what lets them compose. One implementation reaches a browser UI, a headless runtime, and the AI assistant.
+- **For people and AI.** An agent reads a block's schema back, is told when a value breaks a rule (`list_violations`) and why a cell is locked (`why_locked`), and is bounded by per-operation write policies. The same declarations drive the warning markers a person sees.
 
 ## Documentation
 
-- [What is LogiSheets?](https://docs.logisheets.com/introduction.html): Overview of the project, its design goals, and how the Rust + WASM engine runs natively, on Node, and in the browser.
+- [What is LogiSheets?](https://docs.logisheets.com/introduction.html): Overview — what the engine is, why a document should be legible to both people and agents, and the three levels you can use it at (library, UI component, blocks and crafts).
+- [Blocks](https://docs.logisheets.com/blocks.html): The data model. What a block is, how to bind a schema, addressing by `(block, field, key)` and `BLOCKREF`, the payloads you actually use, the rules the engine checks for you, and who may write where.
+- [Crafts](https://docs.logisheets.com/craft/craft.html): The extension model — a craft is one piece of logic reachable from the browser, a headless runtime, and AI.
+- [Putting it together](https://docs.logisheets.com/composition.html): How blocks and crafts combine — crafts compose through shared blocks rather than by calling each other, and an agent is what makes those combinations actually get used.
 - [Read & write spreadsheets (SDK)](https://docs.logisheets.com/usage.html): Core API for scripting a headless `Workbook` from Rust and TypeScript — cells, formulas, styles, blocks, transactions, and undo/redo.
 - [Embed the spreadsheet UI (logisheets-engine)](https://docs.logisheets.com/engine.html): Drop an Excel-like, canvas-rendered spreadsheet grid into any web app; Web Worker + OffscreenCanvas architecture, multiple synchronized views.
 - [Headless on Node (logisheets-runtime)](https://docs.logisheets.com/runtime.html): Server-side spreadsheet runtime that manages many workbooks and exposes a JSON-RPC server, with no browser or canvas.
-- [Charts](https://docs.logisheets.com/chart.html): Native Excel chart (OOXML `c:chartSpace`) support — read, render, create, edit, and save charts with lossless `.xlsx` round-tripping.
-- [Crafts](https://docs.logisheets.com/craft/craft.html): The core concept — a craft is one piece of logic reachable from the browser, a headless runtime, and AI; what it gives you and how it loads.
 - [Writing a craft](https://docs.logisheets.com/craft/writing-a-craft.html): Step-by-step tutorial for building a craft (scaffold with the craftsmith CLI), covering the host API, patterns, gotchas, and exposing your functions as AI tools for the built-in Watson assistant.
+- [Charts](https://docs.logisheets.com/chart.html): Native Excel chart (OOXML `c:chartSpace`) support — read, render, create, edit, and save charts with lossless `.xlsx` round-tripping.
+
+## Ideas
+
+Essays on why the project exists, aimed at readers deciding whether the approach is right rather than at API users.
+
+- [Ideas](https://docs.logisheets.com/ideas/): Index of the essays.
+- [What is real AI-native?](https://docs.logisheets.com/ideas/what-is-real-AI-native.html): Rust built the best correction loop in mainstream programming years before anyone was designing for agents. Argues that "AI-native" is not a category — it is software that got its API right, that can be asked whether the last step was wrong, that explains the answer, and that makes the worst mistakes impossible to express.
 
 ## Packages
 
@@ -26,10 +37,13 @@ Key ideas that set it apart:
 - [logisheets-engine (npm)](https://www.npmjs.com/package/logisheets-engine): Embeddable, canvas-rendered spreadsheet UI component.
 - [logisheets-core (npm)](https://www.npmjs.com/package/logisheets-core): UI-free, engine-neutral workbook operation logic shared by every host.
 - [logisheets-runtime (npm)](https://www.npmjs.com/package/logisheets-runtime): Headless Node spreadsheet runtime built on logisheets-core.
+- [logisheets-logician (npm)](https://www.npmjs.com/package/logisheets-logician): Agent toolkit — LLM tool definitions, prompts and an agent loop for driving a real workbook. Powers Watson (the in-app assistant) and logisheets-mcp.
 - [logisheets-formula-editor (npm)](https://www.npmjs.com/package/logisheets-formula-editor): CodeMirror 6 formula editor with syntax highlighting and autocomplete (React + framework-agnostic core).
 - [logisheets-rs (crates.io)](https://crates.io/crates/logisheets-rs): The public Rust API for the spreadsheet engine.
 
 ## Optional
 
+- [llms-full.txt](https://docs.logisheets.com/llms-full.txt): Every documentation page concatenated into one file, generated at build time.
 - [GitHub repository](https://github.com/logisky/LogiSheets): Source code, issues, and the full monorepo.
-- [Live demo — Factory Simulator](https://www.logisheets.com/?craft=factory-simulator): An interactive simulation game built entirely on LogiSheets (Blocks, live formulas, clickable cells).
+- [logisheets-mcp](https://github.com/logisky/logisheets-mcp): Model Context Protocol server exposing the engine to any MCP host (Claude Desktop, Cursor, custom agents). Self-hostable.
+- [Live demo — Factory Simulator](https://www.logisheets.com/?craft=factory-simulator): An interactive simulation game built entirely on LogiSheets (blocks, live formulas, clickable cells).
