@@ -10,6 +10,7 @@ import {useDiffLayer} from '@/components/diff-layer'
 import {SpreadsheetView} from '@/components/spreadsheet-view'
 import {ActiveViewBadge} from '@/components/spreadsheet-view/active-view-badge'
 import {FormulaEditReminder} from '@/components/formula-edit-reminder'
+import {TempModeBar} from '@/components/temp-mode'
 import {globalStore} from '@/store'
 // import {DiffLayerTestPanel} from '@/components/diff-layer/DiffLayerTestPanel'
 
@@ -62,6 +63,19 @@ export const ContentComponent = observer(function ContentComponent({
             }
         />
     )
+    // Temp mode is a mode, and a mode needs a visible way out. It floats over
+    // the grid — the cells it is about to keep or throw away — rather than
+    // over the edit bar, so it covers nothing you need while deciding. The
+    // count is the diff layer's engine query, so it is the real number of
+    // changed cells, and it is there whether or not the overlay is switched on.
+    const tempBar = (
+        <TempModeBar
+            changeCount={diffLayer.diffState.cells.length}
+            onCommit={() => void diffLayer.commit()}
+            onDiscard={() => void diffLayer.discard()}
+        />
+    )
+
     return (
         <div className={styles.host} style={{position: 'relative'}}>
             <FormulaEditReminder />
@@ -74,6 +88,7 @@ export const ContentComponent = observer(function ContentComponent({
                 // Split: main and second view are symmetric panes (canvas +
                 // its own sheet-tab bar), so the tab bars line up.
                 <div className={styles.middle}>
+                    {tempBar}
                     <div
                         className={styles.pane}
                         onPointerDownCapture={() =>
@@ -99,6 +114,7 @@ export const ContentComponent = observer(function ContentComponent({
                 // Single view: canvas fills the middle, sheet-tab bar below.
                 <>
                     <div className={styles.middle}>
+                        {tempBar}
                         <div className={styles.canvas}>{mainCanvas}</div>
                     </div>
                     <SheetsTabComponent

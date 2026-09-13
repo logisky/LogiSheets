@@ -178,28 +178,6 @@ $btn: 28px;
 
 /* Temp mode is a mode, so it gets a persistent chip rather than a quiet icon —
    amber because it is a warning about where edits are going, not an accent. */
-.tempChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  margin-right: 2px;
-  border: 1px solid #f3c86b;
-  border-radius: 6px;
-  background: #fdf5e4;
-  color: #92620a;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.tempChip:hover {
-  background: #fbedd0;
-  border-color: #e0ad45;
-}
-
 .logo {
   width: 22px;
   height: 22px;

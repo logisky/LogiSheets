@@ -616,6 +616,10 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         this._ctx.postMessage({id: WorkerUpdate.CellAndSheet})
     }
 
+    public isInTempMode(): Result<boolean> {
+        return this.workbook.isInTempMode()
+    }
+
     public toggleStatus(useTemp: boolean): Result<void> {
         return this.workbook.toggleStatus(useTemp)
     }
@@ -960,6 +964,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.CleanupTempStatus:
                     result = this.cleanupTempStatus()
+                    break
+                case MethodName.IsInTempMode:
+                    result = this.isInTempMode()
                     break
                 case MethodName.GetSheetNameByIdx:
                     result = this.getSheetNameByIdx(args)

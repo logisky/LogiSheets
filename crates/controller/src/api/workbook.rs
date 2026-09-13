@@ -399,6 +399,14 @@ impl Workbook {
         // No-op: self.status always reflects the active state (temp or real).
     }
 
+    /// Whether a temp branch is currently active. The branch is a single
+    /// workbook-wide slot, so a caller that is about to open one (a dry run, a
+    /// goal-seek probe) must ask first: opening on top of someone else's branch
+    /// accumulates into it, and discarding afterwards throws their work away.
+    pub fn is_in_temp_mode(&self) -> bool {
+        self.controller.is_in_temp_mode()
+    }
+
     pub fn batch_get_cell_info_by_id(&self, ids: Vec<SheetCellId>) -> Result<Vec<CellInfo>> {
         let mut result = Vec::new();
         for id in ids {

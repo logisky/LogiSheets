@@ -1,0 +1,67 @@
+// Temp mode's amber, shared with the toolbar chip so the two read as one
+// state rather than two features.
+$edge: #f3c86b;
+$fill: #fdf5e4;
+$ink: #92620a;
+
+.bar {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 92%;
+    height: 32px;
+    padding: 0 8px 0 12px;
+    border: 1px solid $edge;
+    border-radius: 8px;
+    background: $fill;
+    color: $ink;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.icon {
+    flex: 0 0 auto;
+}
+
+.label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.commit {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #fff;
+
+    &:hover {
+        background: #1a43b8;
+    }
+}
+
+.discard {
+    background: #fff;
+    border-color: $edge;
+    color: $ink;
+
+    &:hover {
+        background: #fbedd0;
+    }
+}

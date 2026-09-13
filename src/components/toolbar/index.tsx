@@ -1339,23 +1339,12 @@ export const Toolbar = observer(
                     </Tabs>
                     <span className={styles.grow} />
                     {/* Document-level actions. Saving lives here rather than
-                        only in the File menu because it is the most-used one,
-                        and temp mode announces itself here because it is a
-                        mode: entering it from the Advanced tab and then
-                        switching to Home used to leave no sign that edits were
-                        going to a scratch branch. */}
-                    {globalStore.isTempMode ? (
-                        <Tooltip title="Editing on a scratch branch — click to commit it">
-                            <button
-                                type="button"
-                                className={styles.tempChip}
-                                onClick={onToggleTempMode}
-                            >
-                                <ScienceIcon fontSize="small" />
-                                Temp mode
-                            </button>
-                        </Tooltip>
-                    ) : null}
+                        only in the File menu because it is the most-used one.
+                        Temp mode used to announce itself here too, as a chip
+                        whose single action was to commit; the bar over the
+                        grid says the same thing with the change count and both
+                        exits, and two amber pills for one state read as two
+                        features. */}
                     <Tooltip
                         title={
                             globalStore.showComments

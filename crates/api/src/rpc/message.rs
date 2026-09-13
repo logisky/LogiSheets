@@ -56,6 +56,7 @@ pub enum Message {
     GetCellIdByBlockRef(GetCellIdByBlockRefParams),
     ExportBlockData(ExportBlockDataParams),
     GetTempStatusChanges,
+    IsInTempMode,
     GetBlockDisplayWindow(GetBlockDisplayWindowParams),
     GetBlockRowId(GetBlockRowIdParams),
     GetBlockColId(GetBlockColIdParams),
@@ -1061,6 +1062,10 @@ pub struct WorkbookMethods {
         book_id: Option<usize>,
     ) -> Result<Vec<BlockDataRow>, ErrorMessage>,
     pub get_temp_status_changes: fn(book_id: Option<usize>) -> Result<TempStatusDiff, ErrorMessage>,
+    // Whether a temp branch is open. There is only one per workbook, so a
+    // caller about to open its own must check: `cleanup_temp_status` discards
+    // the whole branch, including edits somebody else put there.
+    pub is_in_temp_mode: fn(book_id: Option<usize>) -> Result<bool, ErrorMessage>,
     pub check_formula:
         fn(params: CheckFormulaParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
 

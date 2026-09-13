@@ -491,6 +491,10 @@ export class WorkbookClient implements Client {
         return this._call(MethodName.CleanupTempStatus) as Resp<void>
     }
 
+    isInTempMode(): Resp<boolean> {
+        return this._call(MethodName.IsInTempMode) as Resp<boolean>
+    }
+
     // ========================================================================
     // File Operations
     // ========================================================================

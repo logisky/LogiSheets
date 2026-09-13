@@ -99,7 +99,7 @@ export interface Conversation {
     title: string
     /** Workbook this conversation is bound to. Optional for cross-workbook chats. */
     workbook_id?: string
-    /** Anthropic model id, e.g. "claude-opus-4-8". */
+    /** Model id in the provider's own spelling, e.g. "claude-opus-5". */
     model: string
     created_at: number
     updated_at: number

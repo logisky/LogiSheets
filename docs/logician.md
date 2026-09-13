@@ -78,7 +78,7 @@ You choose which tool groups to register. A read-only reporting bot might take
 `INSPECT_TOOLS` and `CELL_TOOLS` and nothing else; registering fewer tools is
 the simplest way to bound what an agent can do.
 
-Defaults worth knowing: `model` is `claude-opus-4-8`, `max_tokens` is 4096,
+Defaults worth knowing: `model` is `claude-opus-5`, `max_tokens` is 4096,
 `max_tool_iterations` is 16, and `confirm` auto-approves — which you almost
 certainly want to override (see below).
 
@@ -94,6 +94,14 @@ interface LlmClient {
 
 Wrap whichever SDK you use. The loop calls `registry.toLlmTools()` before every
 request, so tools loaded mid-conversation become available immediately.
+
+What crosses that interface is an Anthropic-shaped IR — content blocks,
+`tool_use` / `tool_result`, a `stop_reason`. A client for an Anthropic-wire
+endpoint passes it straight through; a client for an OpenAI-wire endpoint
+translates it, which is a couple of hundred lines and covers most of the rest
+of the field: OpenAI, DeepSeek, Qwen, OpenRouter, Groq, Gemini's compatibility
+endpoint, and the local servers (Ollama, LM Studio, vLLM). Watson ships both
+adapters and picks between them per provider.
 
 ## What the tools cover
 
@@ -150,11 +158,24 @@ Two more safety rails are ordinary workbook features rather than AI ones:
 and `build__checkpoint` takes a snapshot to roll back to. Undo works on an
 agent's turn exactly as it works on yours.
 
+### The scratch branch is the user's
+
+A workbook has exactly one temp branch, and discarding it discards all of it.
+`edit__preview_changes` and `edit__goal_seek` want one for their dry runs, but
+so does the person who turned on **Temp mode** to try something — and a
+committed write discards the branch outright, so an agent writing mid-session
+would delete work the user was still looking at.
+
+So the agent checks first. While a branch is open that the agent did not open,
+every write tool and both dry-run tools refuse and say why, and the model is
+expected to relay that: commit or discard the temp-mode changes, then ask
+again. Nothing an agent does can take that branch away from you.
+
 ## Watson
 
-**Watson** is the assistant in the web app. It is this toolkit plus an
-Anthropic-wire LLM client, a browser conversation store, and a confirmation
-modal.
+**Watson** is the assistant in the web app. It is this toolkit plus an LLM
+client (Anthropic-wire or OpenAI-wire, chosen per provider in settings), a
+browser conversation store, and a confirmation modal.
 
 A **craft** can extend what Watson is able to do. Annotate an exported function
 with JSDoc — `@logicianSkill` once for the craft, `@tool` per function, plus
