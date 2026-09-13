@@ -19,6 +19,7 @@
 import {useState, useEffect, useCallback} from 'react'
 import {autorun} from 'mobx'
 import {useEngine, useOps} from '@/core/engine/provider'
+import {useTempModeControls} from '@/components/temp-mode'
 import {globalStore} from '@/store'
 import type {Payload, TempStatusDiff} from 'logisheets-engine'
 import {isErrorMessage} from 'logisheets-engine'
@@ -168,28 +169,9 @@ export function useDiffLayer(): UseDiffLayerReturn {
         [ops]
     )
 
-    const commit = useCallback(async () => {
-        try {
-            await ops.commitTempStatus()
-        } catch {
-            // commitTempStatus not available on this client
-        }
-        globalStore.setTempMode(false) // observer clears diff state
-    }, [ops])
-
-    const discard = useCallback(async () => {
-        try {
-            await ops.cleanupTempStatus()
-        } catch {
-            // cleanupTempStatus not available on this client
-        }
-        // Re-render to surface the rolled-back state.
-        const grid = engine.getGrid()
-        if (grid) {
-            await engine.render(grid.anchorX, grid.anchorY)
-        }
-        globalStore.setTempMode(false)
-    }, [ops, engine])
+    // Ending the session is the same act wherever it is triggered from — the
+    // bar over the grid, the Watson panel, here — so it lives in one place.
+    const {commit, discard} = useTempModeControls()
 
     return {
         diffState,

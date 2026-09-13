@@ -213,6 +213,40 @@ $panelBg: #ffffff;
     color: #98a2b3;
 }
 
+// Temp mode's amber, the same one the toolbar chip and the bar over the grid
+// use — one state, one colour, wherever it shows up.
+.tempNotice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 8px;
+    padding: 8px 10px;
+    border: 1px solid #f3c86b;
+    border-radius: 8px;
+    background: #fdf5e4;
+    color: #92620a;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.tempNoticeText {
+    flex: 1;
+    min-width: 0;
+}
+
+.tempNoticeRow {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 0 0 auto;
+
+    .btn {
+        padding: 3px 10px;
+        font-size: 12px;
+        border-radius: 6px;
+    }
+}
+
 .composer {
     display: flex;
     align-items: flex-end;

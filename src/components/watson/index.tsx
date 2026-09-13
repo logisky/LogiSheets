@@ -11,12 +11,14 @@
  * WebCraftStore + the skills__discover / skills__use meta-tools.
  */
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {observer} from 'mobx-react-lite'
 import {IconButton, Tooltip} from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import SendIcon from '@mui/icons-material/Send'
 import StopIcon from '@mui/icons-material/Stop'
 import SettingsIcon from '@mui/icons-material/SettingsOutlined'
 import AddIcon from '@mui/icons-material/AddCommentOutlined'
+import ScienceIcon from '@mui/icons-material/ScienceOutlined'
 import {
     Agent,
     ToolRegistry,
@@ -38,7 +40,9 @@ import {
 } from 'logisheets-logician'
 import {getCraftState, setCraftState} from 'logisheets-core'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
+import {useTempModeControls} from '@/components/temp-mode'
 import {useWorkbook} from '@/core/engine/provider'
+import {globalStore} from '@/store'
 import {IdbConversationStore} from './lib/storage-idb'
 import {AnthropicBrowserClient} from './lib/llm-anthropic'
 import {OpenAiBrowserClient} from './lib/llm-openai'
@@ -132,8 +136,13 @@ function networkHint(provider: ProviderDef): string {
     return 'Check your connection and the base URL in Settings.'
 }
 
-export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
+export const Watson = observer(function Watson({
+    open,
+    onClose,
+    workbookId,
+}: WatsonProps) {
     const workbook = useWorkbook()
+    const tempMode = useTempModeControls()
 
     const [bubbles, setBubbles] = useState<ChatBubble[]>([])
     const [input, setInput] = useState('')
@@ -452,6 +461,41 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
                 )}
             </div>
 
+            {/* Temp mode changes what Watson is allowed to do, so it has to
+                say so where you are about to ask — the workbook has one
+                scratch branch, and a committed write discards it, so the
+                write tools refuse until the session is ended one way or the
+                other. Both ways are right here rather than back on the grid. */}
+            {globalStore.isTempMode && (
+                <div
+                    className={styles.tempNotice}
+                    data-testid="watson-temp-notice"
+                >
+                    <ScienceIcon fontSize="small" />
+                    <div className={styles.tempNoticeText}>
+                        <b>Temp mode is on.</b> Your edits are on a scratch
+                        branch. Watson can still read and preview, but it will
+                        not write until you keep or drop them.
+                    </div>
+                    <div className={styles.tempNoticeRow}>
+                        <button
+                            type="button"
+                            className={`${styles.btn} ${styles.btnPrimary}`}
+                            onClick={() => void tempMode.commit()}
+                        >
+                            Commit
+                        </button>
+                        <button
+                            type="button"
+                            className={styles.btn}
+                            onClick={() => void tempMode.discard()}
+                        >
+                            Discard
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className={styles.composer}>
                 <textarea
                     className={styles.input}
@@ -516,7 +560,7 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
             )}
         </div>
     )
-}
+})
 
 const Bubble = ({bubble: b}: {bubble: ChatBubble}) => {
     if (b.kind === 'user')
