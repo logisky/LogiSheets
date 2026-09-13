@@ -46,6 +46,7 @@ import type {
 } from 'logisheets-web/pure'
 import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool.js'
 import {transactionFailure} from './effect.js'
+import {assertScratchBranchFree} from './temp-branch.js'
 
 /**
  * Watson editing a sheet is a craft as far as a block's write policy is
@@ -127,6 +128,7 @@ async function commitTransaction(
     label: string,
     undoable = true
 ): Promise<void> {
+    await assertScratchBranchFree(client, label)
     const tx: Transaction = {payloads, undoable, temp: false}
     const result = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(result)) {

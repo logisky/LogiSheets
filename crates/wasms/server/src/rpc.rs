@@ -282,6 +282,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.field_filter,
         )),
         Message::GetTempStatusChanges => res_to_js(controller::get_temp_status_changes(&mgr, id)),
+        Message::IsInTempMode => ok_to_js(&controller::is_in_temp_mode(&mgr, id)),
         Message::GetBlockDisplayWindow(params) => {
             res_to_js(controller::get_display_window_for_block(
                 &mut mgr,

@@ -82,6 +82,7 @@ export enum MethodName {
     Save = 'save',
 
     CleanupTempStatus = 'cleanupTempStatus',
+    IsInTempMode = 'isInTempMode',
     ToggleStatus = 'toggleStatus',
     CommitTempStatus = 'commitTempStatus',
     BatchGetCellInfoById = 'batchGetCellInfoById',

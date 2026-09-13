@@ -21,6 +21,7 @@ import type {
 } from 'logisheets-web/pure'
 import type {JSONSchema, Tool, ToolContext} from '../tool.js'
 import {transactionFailure} from './effect.js'
+import {assertScratchBranchFree, withTempBranch} from './temp-branch.js'
 
 /** Narrow ToolContext.workbook to the concrete `Client` from
  *  logisheets-web. `WorkbookClient` is a type alias for `Client` —
@@ -45,6 +46,7 @@ async function commitTransaction(
     payloads: EditPayload[],
     label: string
 ): Promise<void> {
+    await assertScratchBranchFree(client, label)
     const tx: Transaction = {payloads, undoable: true, temp: false}
     const result = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(result)) {
@@ -543,15 +545,10 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
             )
 
             // Each scenario gets its own temp branch, so they are independent
-            // hypotheticals rather than a cumulative sequence. Cleanup is in
-            // `finally` — and checked, because a failed discard leaves the
-            // previewed writes as the live state, which is the one outcome this
-            // tool must never produce.
-            const toggleRes = await client.toggleStatus({useTemp: true})
-            if (isErrorMessage(toggleRes)) {
-                throw new Error(`toggleStatus failed: ${toggleRes.msg}`)
-            }
-            try {
+            // hypotheticals rather than a cumulative sequence. The branch is
+            // workbook-wide, so `withTempBranch` refuses outright when someone
+            // else already has one open — see tools/temp-branch.ts.
+            await withTempBranch(client, 'preview_changes', async () => {
                 const tx: Transaction = {payloads, undoable: false, temp: true}
                 const result = await client.handleTransaction({transaction: tx})
                 if (isErrorMessage(result)) {
@@ -586,50 +583,35 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                         )
                     }
                     results.push({label: scenario.label, values})
-                } else {
-                    const diffRes = await client.getTempStatusChanges()
-                    if (isErrorMessage(diffRes)) {
-                        throw new Error(
-                            `getTempStatusChanges failed: ${diffRes.msg}`
-                        )
-                    }
-                    const diff: PreviewDiffEntry[] = diffRes.cells.map((c) => {
-                        const annot = locateInBlock(
-                            c.sheetIdx,
-                            c.row,
-                            c.col,
-                            allRes
-                        )
-                        return {
-                            block: annot?.block ?? null,
-                            row_key: annot?.row_key ?? null,
-                            field: annot?.field ?? null,
-                            sheet_idx: c.sheetIdx,
-                            row: c.row,
-                            col: c.col,
-                            before: flattenValue(c.oldValue),
-                            after: flattenValue(c.newValue),
-                        }
-                    })
-                    results.push({label: scenario.label, diff})
+                    return
                 }
-            } finally {
-                // A cleanup that fails leaves the temp branch — and therefore
-                // the previewed writes — as the live state, the exact opposite
-                // of what this tool promises. Swallowing the result is how that
-                // went unnoticed once already: the engine's RPC was named
-                // `cleanTempStatus` while the client interface said
-                // `cleanupTempStatus`, so on any host that forwards method
-                // names verbatim the discard was a silent no-op and every dry
-                // run committed itself.
-                const cleaned = await client.cleanupTempStatus()
-                if (isErrorMessage(cleaned)) {
+
+                const diffRes = await client.getTempStatusChanges()
+                if (isErrorMessage(diffRes)) {
                     throw new Error(
-                        `preview_changes could not discard its temp branch (${cleaned.msg}) — ` +
-                            'the workbook may now hold the previewed values'
+                        `getTempStatusChanges failed: ${diffRes.msg}`
                     )
                 }
-            }
+                const diff: PreviewDiffEntry[] = diffRes.cells.map((c) => {
+                    const annot = locateInBlock(
+                        c.sheetIdx,
+                        c.row,
+                        c.col,
+                        allRes
+                    )
+                    return {
+                        block: annot?.block ?? null,
+                        row_key: annot?.row_key ?? null,
+                        field: annot?.field ?? null,
+                        sheet_idx: c.sheetIdx,
+                        row: c.row,
+                        col: c.col,
+                        before: flattenValue(c.oldValue),
+                        after: flattenValue(c.newValue),
+                    }
+                })
+                results.push({label: scenario.label, diff})
+            })
         }
 
         const single =
@@ -939,11 +921,11 @@ export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
         let probes = 0
         const probe = async (v: number): Promise<number | null> => {
             probes += 1
-            const toggleRes = await client.toggleStatus({useTemp: true})
-            if (isErrorMessage(toggleRes)) {
-                throw new Error(`toggleStatus failed: ${toggleRes.msg}`)
-            }
-            try {
+            // Every probe takes and releases the workbook's single scratch
+            // branch. `withTempBranch` refuses when it is already someone
+            // else's — a search that discarded the user's temp-mode edits
+            // twenty times over is not a search anyone asked for.
+            return withTempBranch(client, 'goal_seek', async () => {
                 const result = await client.handleTransaction({
                     transaction: {
                         payloads: [writePayload(v)],
@@ -958,15 +940,7 @@ export const goalSeek: Tool<GoalSeekInput, GoalSeekOutput> = {
                     throw transactionFailure('goal_seek', result)
                 }
                 return await readTarget()
-            } finally {
-                const cleaned = await client.cleanupTempStatus()
-                if (isErrorMessage(cleaned)) {
-                    throw new Error(
-                        `goal_seek could not discard its temp branch (${cleaned.msg}) — ` +
-                            'the workbook may now hold a probe value'
-                    )
-                }
-            }
+            })
         }
 
         const current = await (async (): Promise<number> => {

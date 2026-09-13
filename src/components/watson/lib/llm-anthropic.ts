@@ -22,6 +22,20 @@ import type {
     LlmCreateMessageParams,
     LlmResponse,
 } from 'logisheets-logician'
+import {
+    LlmError,
+    httpStatusToCode,
+    jitterSleep,
+    stripTrailingSlash,
+    type LlmErrorCode,
+    type RequestInfo,
+} from './llm-shared'
+
+// The typed error and its codes moved to ./llm-shared when the OpenAI-wire
+// client arrived and needed the same ones; re-exported here so importers of
+// this module keep working.
+export {LlmError}
+export type {LlmErrorCode, RequestInfo}
 
 // ---------------------------------------------------------------------------
 // Options
@@ -72,15 +86,6 @@ export interface AnthropicBrowserClientOptions {
      * telemetry. Optional.
      */
     onRequest?: (info: RequestInfo) => void
-}
-
-export interface RequestInfo {
-    duration_ms: number
-    http_status: number
-    input_tokens?: number
-    output_tokens?: number
-    cache_read_tokens?: number
-    cache_creation_tokens?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -185,7 +190,8 @@ export class AnthropicBrowserClient implements LlmClient {
                 if (this.directBrowserAccess) {
                     // Required for direct browser → Anthropic calls.
                     // See the comment at the top of this file.
-                    headers['anthropic-dangerous-direct-browser-access'] = 'true'
+                    headers['anthropic-dangerous-direct-browser-access'] =
+                        'true'
                 }
                 const res = await this.fetchImpl(url, {
                     method: 'POST',
@@ -203,8 +209,7 @@ export class AnthropicBrowserClient implements LlmClient {
                         http_status: res.status,
                         input_tokens: data.usage?.input_tokens,
                         output_tokens: data.usage?.output_tokens,
-                        cache_read_tokens:
-                            data.usage?.cache_read_input_tokens,
+                        cache_read_tokens: data.usage?.cache_read_input_tokens,
                         cache_creation_tokens:
                             data.usage?.cache_creation_input_tokens,
                     })
@@ -220,7 +225,7 @@ export class AnthropicBrowserClient implements LlmClient {
                     continue
                 }
                 throw new LlmError(
-                    httpStatusToCode(res.status, errBody),
+                    httpStatusToCode(res.status),
                     errBody?.error?.message ??
                         `Model provider API ${res.status} ${res.statusText}`,
                     {status: res.status, body: errBody}
@@ -250,31 +255,6 @@ export class AnthropicBrowserClient implements LlmClient {
 }
 
 // ---------------------------------------------------------------------------
-// Typed error
-// ---------------------------------------------------------------------------
-
-export type LlmErrorCode =
-    | 'missing_api_key'
-    | 'unauthorized'
-    | 'rate_limited'
-    | 'bad_request'
-    | 'server_error'
-    | 'network'
-    | 'aborted'
-    | 'unknown'
-
-export class LlmError extends Error {
-    code: LlmErrorCode
-    details?: unknown
-    constructor(code: LlmErrorCode, message: string, details?: unknown) {
-        super(message)
-        this.name = 'LlmError'
-        this.code = code
-        this.details = details
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -300,27 +280,4 @@ async function safeReadError(res: Response): Promise<WireError | null> {
     } catch {
         return null
     }
-}
-
-function httpStatusToCode(
-    status: number,
-    body: WireError | null
-): LlmErrorCode {
-    if (status === 401 || status === 403) return 'unauthorized'
-    if (status === 429) return 'rate_limited'
-    if (status >= 500) return 'server_error'
-    if (status >= 400) return 'bad_request'
-    // Should not happen for non-2xx, but stay defensive.
-    void body
-    return 'unknown'
-}
-
-function stripTrailingSlash(s: string): string {
-    return s.endsWith('/') ? s.slice(0, -1) : s
-}
-
-async function jitterSleep(attempt: number): Promise<void> {
-    const base = 500 * 2 ** attempt
-    const jitter = Math.random() * base * 0.3
-    await new Promise((r) => setTimeout(r, base + jitter))
 }

@@ -105,6 +105,11 @@ pub fn clean_temp_status(mgr: &mut Manager, id: usize) {
     wb.clean_temp_status();
 }
 
+pub fn is_in_temp_mode(mgr: &Manager, id: usize) -> bool {
+    let wb = mgr.get_workbook(&id).unwrap();
+    wb.is_in_temp_mode()
+}
+
 pub fn toggle_status(mgr: &mut Manager, id: usize, use_temp: bool) {
     let wb = mgr.get_mut_workbook(&id).unwrap();
     wb.toggle_status(use_temp);

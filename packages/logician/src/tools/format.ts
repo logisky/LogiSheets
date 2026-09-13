@@ -15,6 +15,7 @@ import type {
 } from 'logisheets-web/pure'
 import type {Tool, ToolContext} from '../tool.js'
 import {transactionFailure} from './effect.js'
+import {assertScratchBranchFree} from './temp-branch.js'
 
 function asClient(ctx: ToolContext): Client {
     return ctx.workbook as Client
@@ -24,6 +25,7 @@ async function commit(
     payloads: EditPayload[],
     label: string
 ): Promise<void> {
+    await assertScratchBranchFree(client, label)
     const tx: Transaction = {payloads, undoable: true, temp: false}
     const r = await client.handleTransaction({transaction: tx})
     if (isErrorMessage(r)) throw new Error(`${label}: ${r.msg}`)

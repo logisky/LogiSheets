@@ -41,6 +41,7 @@ import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {useWorkbook} from '@/core/engine/provider'
 import {IdbConversationStore} from './lib/storage-idb'
 import {AnthropicBrowserClient} from './lib/llm-anthropic'
+import {OpenAiBrowserClient} from './lib/llm-openai'
 import {getFetch, isTauri} from './lib/net'
 import {WebCraftStore} from './lib/craft-store-web'
 import {makeCraftInteractionsApi} from './lib/craft-interactions-adapter'
@@ -53,6 +54,8 @@ import {
     loadStoredBaseUrl,
     keyStorageKey,
     baseUrlStorageKey,
+    providerRequiresKey,
+    type ProviderDef,
     type ProviderId,
 } from './lib/providers'
 import styles from './watson.module.scss'
@@ -94,8 +97,11 @@ const prettyTool = (name: string) =>
     name.replace(/__/g, ' · ').replace(/_/g, ' ')
 
 // Map a caught turn error to a message worth showing the user. Duck-types on the
-// `code` the Anthropic client's LlmError carries; falls back to the message.
-function friendlyError(err: unknown): string {
+// `code` the LLM clients' LlmError carries; falls back to the message. Takes the
+// provider because the useful part of a network failure is provider-specific:
+// a local server that isn't running and a remote host a browser won't call are
+// both "network", and they need opposite advice.
+function friendlyError(err: unknown, provider: ProviderDef): string {
     const e = err as {code?: string; message?: string}
     switch (e?.code) {
         case 'missing_api_key':
@@ -105,14 +111,25 @@ function friendlyError(err: unknown): string {
         case 'rate_limited':
             return 'Rate limited by the provider — wait a moment and retry.'
         case 'network':
-            return 'Network error reaching the model provider. On the web, Kimi needs a CORS proxy; the desktop app calls it natively.'
+            return `Could not reach ${provider.label}. ${networkHint(provider)}`
         case 'server_error':
             return 'The model provider had a server error. Try again.'
         case 'bad_request':
             return e.message || 'The provider rejected the request.'
         default:
-            return e?.message || 'Something went wrong. See the console for details.'
+            return (
+                e?.message ||
+                'Something went wrong. See the console for details.'
+            )
     }
+}
+
+function networkHint(provider: ProviderDef): string {
+    if (provider.requiresKey === false)
+        return `Check the server is running and the base URL is right (${provider.baseUrl} by default).`
+    if (provider.corsBlocked && !isTauri())
+        return 'Browsers block direct calls to it (CORS) — set the base URL to a proxy, or use the desktop app, which calls it natively.'
+    return 'Check your connection and the base URL in Settings.'
 }
 
 export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
@@ -129,7 +146,8 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
     const [apiKey, setApiKey] = useState(() => loadStoredKey(provider))
     const [baseUrl, setBaseUrl] = useState(() => loadStoredBaseUrl(provider))
     const [model, setModel] = useState(
-        () => localStorage.getItem(KEY_MODEL) || PROVIDERS[provider].defaultModel
+        () =>
+            localStorage.getItem(KEY_MODEL) || PROVIDERS[provider].defaultModel
     )
     const [showSettings, setShowSettings] = useState(false)
     const [turnError, setTurnError] = useState<string | null>(null)
@@ -205,18 +223,31 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
     )
 
     // (Re)build the agent when the provider/model changes (llm/model captured
-    // at build). All providers speak the Anthropic wire format; they differ
-    // only in base URL, auth header, and the browser-access header.
+    // at build). The provider's `wire` decides which client speaks for it —
+    // logician's agent IR is Anthropic-shaped, so an Anthropic-wire provider
+    // gets it verbatim and an OpenAI-wire one gets it translated. Everything
+    // else about a provider is base URL, auth, and its model list.
     useEffect(() => {
         const p = PROVIDERS[provider]
-        const llm = new AnthropicBrowserClient({
-            apiKey: () => apiKeyRef.current || null,
-            baseUrl: baseUrl || p.baseUrl,
-            authHeader: p.auth,
-            directBrowserAccess: p.directBrowserAccess,
-            // Desktop routes through native HTTP (no CORS); web uses browser fetch.
-            fetchImpl: getFetch(),
-        })
+        // Desktop routes through native HTTP (no CORS); web uses browser fetch.
+        const fetchImpl = getFetch()
+        const apiKey = () => apiKeyRef.current || null
+        const llm =
+            p.wire === 'openai'
+                ? new OpenAiBrowserClient({
+                      apiKey,
+                      baseUrl: baseUrl || p.baseUrl,
+                      requiresKey: p.requiresKey,
+                      maxTokensParam: p.maxTokensParam,
+                      fetchImpl,
+                  })
+                : new AnthropicBrowserClient({
+                      apiKey,
+                      baseUrl: baseUrl || p.baseUrl,
+                      authHeader: p.auth,
+                      directBrowserAccess: p.directBrowserAccess,
+                      fetchImpl,
+                  })
         agentRef.current = new Agent({
             store,
             registry,
@@ -303,7 +334,7 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
     const send = useCallback(async () => {
         const text = input.trim()
         if (!text || running) return
-        if (!apiKeyRef.current) {
+        if (!apiKeyRef.current && providerRequiresKey(provider)) {
             setTurnError('Add an API key in Settings to start.')
             setShowSettings(true)
             return
@@ -327,13 +358,13 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
             } else {
                 console.error('[watson] runTurn error', err)
                 setStatus('error')
-                setTurnError(friendlyError(err))
+                setTurnError(friendlyError(err, PROVIDERS[provider]))
             }
         } finally {
             setRunning(false)
             abortRef.current = null
         }
-    }, [input, running])
+    }, [input, running, provider])
 
     // Cancel the in-flight turn. The runTurn promise rejects/aborts; `send`'s
     // catch treats an aborted signal as a clean stop, not an error.
@@ -362,10 +393,12 @@ export const Watson = ({open, onClose, workbookId}: WatsonProps) => {
         setShowSettings(false)
     }, [])
 
-    // Nudge first-time users to set their key when opened without one.
+    // Nudge first-time users to set their key when opened without one — but
+    // not when the chosen provider is a local server that never wanted one.
     useEffect(() => {
-        if (open && !apiKeyRef.current) setShowSettings(true)
-    }, [open])
+        if (open && !apiKeyRef.current && providerRequiresKey(provider))
+            setShowSettings(true)
+    }, [open, provider])
 
     return (
         <div className={styles.panel} aria-hidden={!open}>
@@ -495,15 +528,14 @@ const Bubble = ({bubble: b}: {bubble: ChatBubble}) => {
             </div>
         )
     if (b.kind === 'note')
-        return (
-            <div className={`${styles.bubble} ${styles.note}`}>{b.text}</div>
-        )
+        return <div className={`${styles.bubble} ${styles.note}`}>{b.text}</div>
     // tool
-    const statusLabel = b.user_confirm && !b.user_confirm.approved
-        ? 'declined'
-        : b.pending
-          ? '…running'
-          : b.error
+    const statusLabel =
+        b.user_confirm && !b.user_confirm.approved
+            ? 'declined'
+            : b.pending
+            ? '…running'
+            : b.error
             ? 'error'
             : `${b.duration_ms ?? 0}ms`
     const body = {
@@ -588,10 +620,10 @@ const SettingsModal = ({
                     placeholder={def.keyPlaceholder}
                 />
                 {def.note && <p className={styles.settingsNote}>{def.note}</p>}
-                {/* Providers without browser-CORS support can't be reached from
-                    a web browser directly — but the desktop app calls them
-                    natively, so only warn on the web. */}
-                {!def.directBrowserAccess && !isTauri() && (
+                {/* Providers known to send no CORS headers can't be reached
+                    from a web browser directly — but the desktop app calls
+                    them natively, so only warn on the web. */}
+                {def.corsBlocked && !isTauri() && (
                     <p className={styles.settingsWarn}>
                         Browsers block direct calls to this provider (CORS). Set
                         the base URL to a CORS-enabled proxy, or use the desktop
@@ -628,7 +660,12 @@ const SettingsModal = ({
                     <button
                         className={`${styles.btn} ${styles.btnPrimary}`}
                         onClick={() =>
-                            onSave({provider: p, apiKey: k, baseUrl: b, model: m})
+                            onSave({
+                                provider: p,
+                                apiKey: k,
+                                baseUrl: b,
+                                model: m,
+                            })
                         }
                     >
                         Save
@@ -649,24 +686,27 @@ const ConfirmModal = ({
     // Esc denies, matching the overlay-click-to-cancel convention.
     useEscapeKey(() => onDecide(false))
     return (
-    <div className={styles.modalOverlay}>
-        <div className={styles.modal}>
-            <h3>Approve tool call?</h3>
-            <p className={styles.confirmName}>{prettyTool(pending.name)}</p>
-            <pre>{JSON.stringify(pending.input, null, 2)}</pre>
-            <div className={styles.modalRow}>
-                <button className={styles.btn} onClick={() => onDecide(false)}>
-                    Deny
-                </button>
-                <button
-                    className={`${styles.btn} ${styles.btnPrimary}`}
-                    onClick={() => onDecide(true)}
-                >
-                    Approve
-                </button>
+        <div className={styles.modalOverlay}>
+            <div className={styles.modal}>
+                <h3>Approve tool call?</h3>
+                <p className={styles.confirmName}>{prettyTool(pending.name)}</p>
+                <pre>{JSON.stringify(pending.input, null, 2)}</pre>
+                <div className={styles.modalRow}>
+                    <button
+                        className={styles.btn}
+                        onClick={() => onDecide(false)}
+                    >
+                        Deny
+                    </button>
+                    <button
+                        className={`${styles.btn} ${styles.btnPrimary}`}
+                        onClick={() => onDecide(true)}
+                    >
+                        Approve
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
     )
 }
 

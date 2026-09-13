@@ -389,6 +389,16 @@ export class Workbook {
         return rpc('getTempStatusChanges', undefined, this._id)
     }
 
+    /**
+     * Whether a temp branch is currently open on this workbook. There is only
+     * one branch per workbook and `cleanupTempStatus` discards all of it, so a
+     * caller that wants a scratch branch of its own must check this first
+     * rather than assume the slot is free.
+     */
+    public isInTempMode(): Result<boolean> {
+        return rpc('isInTempMode', undefined, this._id)
+    }
+
     public getSheetId(sheetIdx: number): Result<number> {
         return rpc('getSheetId', {sheetIdx}, this._id)
     }

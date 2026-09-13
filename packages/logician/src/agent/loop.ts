@@ -10,10 +10,12 @@
  *   - WorkbookClient      (passed through to tool handlers)
  *   - host-provided confirm / log callbacks
  *
- * The Anthropic SDK is NOT imported here. Hosts wire up a concrete
- * LlmClient (the browser craft uses fetch + the Messages REST API, the
- * node CLI uses @anthropic-ai/sdk). Keeping the boundary thin lets us
- * test the loop without network and swap providers later.
+ * No LLM SDK is imported here. Hosts wire up a concrete LlmClient, and the
+ * agent IR this loop speaks (Anthropic-shaped content blocks — see
+ * projection.ts) is the canonical form: an Anthropic-wire client passes it
+ * through, an OpenAI-wire client translates it. Keeping the boundary this thin
+ * is what lets the same loop drive Claude, GPT, DeepSeek or a local Ollama,
+ * and lets us test it without a network.
  */
 
 import type {
@@ -81,7 +83,7 @@ export interface AgentOptions {
     registry: ToolRegistry
     llm: LlmClient
     workbook: WorkbookClient
-    /** Anthropic model id. Default 'claude-opus-4-8'. */
+    /** Model id, in the provider's own spelling. Default 'claude-opus-5'. */
     model?: string
     /** Cap on tokens per response. Default 4096. */
     max_tokens?: number
@@ -121,7 +123,7 @@ export class Agent {
         this.registry = opts.registry
         this.llm = opts.llm
         this.workbook = opts.workbook
-        this.model = opts.model ?? 'claude-opus-4-8'
+        this.model = opts.model ?? 'claude-opus-5'
         this.maxTokens = opts.max_tokens ?? 4096
         this.systemPrompt = opts.systemPrompt
         this.maxToolIters = opts.max_tool_iterations ?? 16
