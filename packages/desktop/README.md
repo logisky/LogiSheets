@@ -2,8 +2,10 @@
 
 A desktop build of LogiSheets, packaged with [Tauri](https://tauri.app/).
 
-> **Status: experimental / run-from-source.** This is a working dev skeleton, not
-> a packaged release yet. See [Not done yet](#not-done-yet).
+> **Status: Windows ships, macOS does not.** `yarn workspace logisheets-desktop
+> build` produces a Windows installer, and the desktop-build workflow can attach
+> one to a draft GitHub Release. macOS builds but cannot be distributed without
+> Apple signing and notarization — see [Not done yet](#not-done-yet).
 
 ## What it is
 
@@ -34,7 +36,7 @@ packages/desktop/
       commands.rs       # native engine + `handle` command (compiled only with `native-engine`)
     capabilities/
       default.json      # grants the window core IPC
-    icons/icon.png      # placeholder — replace before packaging
+    icons/                # the real logo, generated with `cargo tauri icon`
 ```
 
 ## Prerequisites
@@ -105,15 +107,108 @@ those coarse operations go native while interactive reads stay in-process WASM:
 cargo tauri dev --features native-engine   # or: cargo run --features native-engine
 ```
 
+## Build a bundle
+
+One command, from this directory. It builds the web frontend and then bundles
+it, so the installer never contains a stale `dist/`:
+
+```bash
+yarn workspace logisheets-desktop build            # the "default" distribution
+CRAFT_DIST=zh yarn workspace logisheets-desktop build   # a named one
+```
+
+`CRAFT_DIST` picks the distribution from the repo-root `crafts.config.json` —
+which crafts ship, the default UI language, and the product name / bundle id /
+window title. `en` and `zh` are the release builds; `default` is the full app.
+`build:bundle-only` skips the frontend build and bundles whatever `dist/`
+already holds (fast, and wrong if you forgot to build).
+
+Bundles land in `src-tauri/target/release/bundle/` — on Windows, `nsis/*-setup.exe`
+(the friendly installer) and `msi/*.msi` (for enterprise deployment).
+
+> `cargo tauri build` on its own also works, but it bundles whatever `dist/`
+> happens to exist: `beforeBuildCommand` is deliberately empty because CI builds
+> the frontend once on Linux and hands the same `dist/` to each OS bundler.
+> `scripts/tauri-build.mjs` is what closes that gap locally.
+
+## Releasing (Windows)
+
+**Create the release; CI builds the installers and attaches them.**
+
+```bash
+just release 1.14.2                  # bumps every version, this app included
+git commit -am "Release 1.14.2"
+git push                             # onto main
+gh release create v1.14.2 --title "…" --notes "…"   # or the web UI
+```
+
+Publishing the release (directly, or by publishing a draft) triggers
+`.github/workflows/release.yaml`: it builds **both** distributions (`en` and
+`zh`) for Windows and uploads all four installers as release assets. You write
+the notes; CI supplies the binaries. Pushing a tag on its own builds nothing.
+
+Before building, it checks two things and refuses if either fails:
+
+- **the tagged commit is on main** — asked of git (`merge-base --is-ancestor`),
+  not of the release's `target_commitish`, which is only what the UI had
+  selected;
+- **the tag matches the app version** the installer will report, so a release
+  cannot be labelled `v1.14.2` and contain `1.14.1`.
+
+Re-running after a failed build (`workflow_dispatch` with the tag) replaces the
+assets rather than erroring on the ones that already uploaded.
+
+CI appends a downloads table and the signing status to the release notes, in a
+marked block it rewrites on a re-run — your own text is left alone.
+
+Both distributions build a product called "LogiSheets" and would otherwise
+produce the same `LogiSheets_<version>_x64-setup.exe`; the release step renames
+them to `LogiSheets-<version>-{en,zh}-x64.{exe,msi}` on the way in.
+
+The **desktop build** workflow (`.github/workflows/desktop.yaml`) is still
+there for one-off manual builds, and is what `release.yaml` calls per
+distribution.
+
+**Code signing is opt-in and needs a certificate you supply.** Set two
+repository secrets:
+
+| Secret | What it is |
+| --- | --- |
+| `WINDOWS_CERTIFICATE` | Base64 of your `.pfx` — `base64 -w0 cert.pfx` (macOS: `base64 -i cert.pfx`) |
+| `WINDOWS_CERTIFICATE_PASSWORD` | The password that `.pfx` was exported with |
+
+With both present, CI imports the certificate into the runner's store and
+passes its thumbprint to Tauri, which signs via `signtool`. With either
+missing the build still succeeds and produces an **unsigned** installer —
+Windows SmartScreen then warns users on first run, and a brand-new certificate
+takes a while to build enough reputation for that warning to stop. The
+workflow summary and the draft release notes both say which one you got.
+
+An OV certificate lives in a file (what the secrets above expect); an EV
+certificate usually lives on a hardware token or in a cloud service like Azure
+Trusted Signing, which needs a different mechanism (`signCommand`) — worth
+knowing before buying one.
+
+WebView2 (the engine the app runs in) is fetched by the installer on machines
+that lack it: `bundle.windows.webviewInstallMode = downloadBootstrapper`. Most
+Windows 10 and every Windows 11 machine already has it and skips the download.
+
+## Versions
+
+The app version lives in **one** place: `src-tauri/Cargo.toml`. `tauri.conf.json`
+has no `version` key, so Tauri falls back to the crate's — and `just release`
+sets it alongside every other version in the repo. `just versions` prints it.
+
+(It used to sit in three files and drifted to `0.1.0` while the rest of the
+repo moved to 1.14.x, which is exactly the failure one source of truth avoids.)
+
 ## Not done yet
 
-Before this can produce a shippable bundle (`cargo tauri build`):
-
-- **`beforeBuildCommand`** is empty — wire an *app-only* production build. The
-  root `yarn build` runs `publish-crafts.sh`, which you don't want in a bundle.
-- **Icons** — `icons/icon.png` is a placeholder stub. Generate the real set with
-  `cargo tauri icon path/to/logo.png`.
-- **Code signing / notarization** for macOS and Windows distribution.
+- **macOS** — the bundle builds, but distributing it needs an Apple Developer
+  ID, signing, and notarization; without those, Gatekeeper refuses to open it.
+  `platforms: windows+macos` builds one for testing.
+- **Auto-update** — no updater endpoint is configured, so users update by
+  downloading a new installer.
 - A Linux-friendly `beforeDevCommand` (the current empty value assumes you start
   the web server yourself; a bare `yarn` there would resolve to global Yarn 1,
   not this repo's Yarn 4).
