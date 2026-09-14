@@ -1,4 +1,5 @@
 import React from 'react'
+import {useTranslation} from 'react-i18next'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Tabs from '@mui/material/Tabs'
@@ -28,6 +29,7 @@ export const FormatDialogContent: React.FC<FormatDialogContentProps> = ({
     onChange,
     onCancel,
 }) => {
+    const {t} = useTranslation()
     const [tab, setTab] = React.useState<TabKey>('number')
     const [state, setState] = React.useState<FormatDialogValue>(value ?? {})
     const numRef = React.useRef<NumFmtPanelHandle>(null)
@@ -87,7 +89,7 @@ export const FormatDialogContent: React.FC<FormatDialogContentProps> = ({
                 )}
                 {tab !== 'number' && tab !== 'border' && (
                     <Box sx={{p: 3, color: 'text.secondary'}}>
-                        Will be provided later
+                        {t('ui.format.providedLater')}
                     </Box>
                 )}
             </Box>
@@ -101,7 +103,7 @@ export const FormatDialogContent: React.FC<FormatDialogContentProps> = ({
                     gap: 1,
                 }}
             >
-                <Button onClick={onCancel}>Cancel</Button>
+                <Button onClick={onCancel}>{t('ui.common.cancel')}</Button>
                 <Button
                     variant="contained"
                     onClick={() => {

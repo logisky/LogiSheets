@@ -6,6 +6,7 @@
 // a rule may say or how it explains itself.
 
 import {useEffect, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Box, Chip, Stack, TextField, Typography} from '@mui/material'
 import {FieldRuleKind, validateRuleText} from './field-formula'
 
@@ -45,6 +46,7 @@ export const FieldRuleEditor = ({
     placeholder,
     autoFocus,
 }: FieldRuleEditorProps) => {
+    const {t} = useTranslation()
     const inputRef = useRef<HTMLInputElement>(null)
     const pendingCaret = useRef<number | null>(null)
 
@@ -105,7 +107,7 @@ export const FieldRuleEditor = ({
                     color="text.secondary"
                     sx={{mr: 0.5}}
                 >
-                    Insert:
+                    {t('block.rule.insert')}
                 </Typography>
                 {kind === 'validation' && (
                     <Chip
@@ -145,15 +147,25 @@ export const FieldRuleEditor = ({
     )
 }
 
+/**
+ * Translation keys, not text: these are module-level constants shared by three
+ * dialogs, and the language can change under them. Callers resolve with `t()`.
+ */
+
 /** The helper text each rule kind shows when it checks out. */
 export const RULE_HELPER_TEXT: Record<FieldRuleKind, string> = {
-    value: 'When set, this column is derived — the engine computes every row and nobody can type over it.',
-    validation:
-        'Flags a value that breaks the rule. #PLACEHOLDER is the value being checked; the block can also refuse such a write outright — see its permissions.',
+    value: 'block.rule.valueHelp',
+    validation: 'block.rule.validationHelp',
 }
 
 /** The placeholder each rule kind shows in an empty box. */
 export const RULE_PLACEHOLDER: Record<FieldRuleKind, string> = {
-    value: 'e.g., =#FIELD("amount") * #FIELD("price")',
-    validation: 'e.g., AND(#PLACEHOLDER>0, #PLACEHOLDER<100)',
+    value: 'block.rule.valuePlaceholder',
+    validation: 'block.rule.validationPlaceholder',
+}
+
+/** The dialog title for each rule kind. */
+export const RULE_TITLE: Record<FieldRuleKind, string> = {
+    value: 'block.rule.valueTitle',
+    validation: 'block.rule.validationTitle',
 }

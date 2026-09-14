@@ -1,35 +1,65 @@
 {
-  "$comment": "Single source of truth for which crafts ship. `registry` maps a craft directory (under crafts/, served at /<dir>/index.html) to its panel label. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). Consumed by Vite (the panel's craft list, via `define` in vite.config.ts), publish-crafts.sh (what lands in dist/, via scripts/craft-dist.mjs) and the desktop CI (product name/id/title, via scripts/tauri-conf.mjs). Add a craft: add it here + register nothing else. Add a distribution: add an entry here. A registry entry marked `devOnly` is offered ONLY by the dev server: it stays in `registry` (so dist/ pruning still removes it) but is filtered out of every distribution's craft list, so it is never published or bundled.",
+  "$comment": "Single source of truth for which crafts ship AND what language a build speaks. `registry` maps a craft directory (under crafts/, served at /<dir>/index.html) to its panel label; a label may be a string or a per-locale object {en, zh-CN}. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). A distribution's `locale` becomes the app's DEFAULT language (injected as __APP_LOCALE__; a language the user picks explicitly outranks it). Consumed by Vite (craft list + locale, via `define` in vite.config.ts), publish-crafts.sh (what lands in dist/, via scripts/craft-dist.mjs) and the desktop CI (product name/id/title, via `craft-dist.mjs tauri`). Add a craft: add it here + register nothing else. Add a distribution: add an entry here. A registry entry marked `devOnly` is offered ONLY by the dev server: it stays in `registry` (so dist/ pruning still removes it) but is filtered out of every distribution's craft list, so it is never published or bundled.",
   "registry": {
     "factory-simulator-zh": {
-      "label": "Factory Simulator (中文)"
+      "label": {
+        "en": "Factory Simulator (中文)",
+        "zh-CN": "工厂模拟器"
+      }
     },
     "factory-simulator-en": {
-      "label": "Factory Simulator (English)"
+      "label": {
+        "en": "Factory Simulator",
+        "zh-CN": "Factory Simulator (English)"
+      }
     },
     "what-if-calculator": {
-      "label": "What-if Calculator"
+      "label": {
+        "en": "What-if Calculator",
+        "zh-CN": "假设分析计算器"
+      }
     },
     "markdown-table-extractor": {
-      "label": "Markdown Table Extractor"
+      "label": {
+        "en": "Markdown Table Extractor",
+        "zh-CN": "Markdown 表格提取"
+      }
     },
     "fuse-beads": {
-      "label": "电子拼豆 (Fuse Beads)"
+      "label": {
+        "en": "Fuse Beads",
+        "zh-CN": "电子拼豆"
+      }
     },
     "memory-grid": {
-      "label": "记忆挑战 (Memory Grid)"
+      "label": {
+        "en": "Memory Grid",
+        "zh-CN": "记忆挑战"
+      }
     },
     "lights-out": {
-      "label": "关灯 (Lights Out)"
+      "label": {
+        "en": "Lights Out",
+        "zh-CN": "关灯"
+      }
     },
     "sudoku": {
-      "label": "数独 (Sudoku)"
+      "label": {
+        "en": "Sudoku",
+        "zh-CN": "数独"
+      }
     },
     "minesweeper": {
-      "label": "扫雷 (Minesweeper)"
+      "label": {
+        "en": "Minesweeper",
+        "zh-CN": "扫雷"
+      }
     },
     "debugger": {
-      "label": "Debugger (dev)",
+      "label": {
+        "en": "Debugger (dev)",
+        "zh-CN": "Debugger (dev)"
+      },
       "devOnly": true
     }
   },
@@ -39,7 +69,8 @@
       "identifier": "com.logisheets.desktop",
       "windowTitle": "LogiSheets",
       "defaultCraft": "factory-simulator-en",
-      "crafts": "all"
+      "crafts": "all",
+      "locale": "en"
     },
     "games": {
       "productName": "LogiSheets",
@@ -58,6 +89,43 @@
         "nsis",
         "app",
         "dmg"
+      ],
+      "locale": "zh-CN"
+    },
+    "en": {
+      "$comment": "English desktop release. Excludes the Chinese-only game crafts.",
+      "locale": "en",
+      "productName": "LogiSheets",
+      "identifier": "com.logisheets.desktop",
+      "windowTitle": "LogiSheets",
+      "defaultCraft": "factory-simulator-en",
+      "crafts": [
+        "factory-simulator-en",
+        "lights-out",
+        "what-if-calculator",
+        "markdown-table-extractor",
+        "minesweeper",
+        "sudoku",
+        "memory-grid",
+        "fuse-beads"
+      ]
+    },
+    "zh": {
+      "$comment": "Chinese desktop release. ASCII product name, so every Windows bundler (incl. MSI) works.",
+      "locale": "zh-CN",
+      "productName": "LogiSheets",
+      "identifier": "com.logisheets.desktop.zh",
+      "windowTitle": "LogiSheets",
+      "defaultCraft": "factory-simulator-zh",
+      "crafts": [
+        "factory-simulator-zh",
+        "what-if-calculator",
+        "markdown-table-extractor",
+        "fuse-beads",
+        "memory-grid",
+        "lights-out",
+        "sudoku",
+        "minesweeper"
       ]
     }
   }

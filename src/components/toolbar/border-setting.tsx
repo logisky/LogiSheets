@@ -1,6 +1,7 @@
 import {SelectedData} from 'logisheets-engine'
 import {useEngine, useOps} from '@/core/engine/provider'
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Box,
     Button,
@@ -37,6 +38,7 @@ export const BorderSettingComponent = ({
     selectedData,
     close,
 }: BorderSettingProps) => {
+    const {t} = useTranslation()
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const ops = useOps()
@@ -68,7 +70,7 @@ export const BorderSettingComponent = ({
     return (
         <Box p={3} width={300} bgcolor="Menu">
             <Typography variant="h6" mb={2}>
-                Border Settings
+                {t('ui.format.borderSettings')}
             </Typography>
 
             <Box
@@ -78,7 +80,7 @@ export const BorderSettingComponent = ({
                 justifyContent="space-between"
             >
                 <FormControl>
-                    <FormLabel>Color</FormLabel>
+                    <FormLabel>{t('toolbar.border.color')}</FormLabel>
                     <Box
                         sx={{
                             width: 36,
@@ -141,7 +143,7 @@ export const BorderSettingComponent = ({
 
             <Box mb={3}>
                 <FormControl fullWidth>
-                    <FormLabel>Border Range</FormLabel>
+                    <FormLabel>{t('toolbar.border.range')}</FormLabel>
                     <ToggleButtonGroup
                         exclusive
                         value={selectedRange}
@@ -285,7 +287,7 @@ export const BorderSettingComponent = ({
                     onClick={close}
                     sx={{marginLeft: 1}}
                 >
-                    Cancel
+                    {t('ui.common.cancel')}
                 </Button>
             </Box>
         </Box>

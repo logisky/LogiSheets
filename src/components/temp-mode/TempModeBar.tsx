@@ -13,6 +13,7 @@
  */
 
 import {observer} from 'mobx-react-lite'
+import {useTranslation} from 'react-i18next'
 import ScienceIcon from '@mui/icons-material/ScienceOutlined'
 import {globalStore} from '@/store'
 import styles from './temp-mode.module.scss'
@@ -29,35 +30,33 @@ export const TempModeBar = observer(function TempModeBar({
     onCommit,
     onDiscard,
 }: TempModeBarProps) {
+    const {t} = useTranslation()
     if (!globalStore.isTempMode) return null
 
     return (
         <div className={styles.bar} data-testid="temp-mode-bar">
             <ScienceIcon fontSize="small" className={styles.icon} />
             <span className={styles.label}>
-                <b>Temp mode</b> — edits are on a scratch branch
-                {changeCount > 0 ? (
-                    <>
-                        {' · '}
-                        {changeCount} cell{changeCount === 1 ? '' : 's'} changed
-                    </>
-                ) : null}
+                <b>{t('ui.tempMode.label')}</b> — {t('ui.tempMode.body')}
+                {changeCount > 0
+                    ? ` · ${t('ui.tempMode.changed', {count: changeCount})}`
+                    : null}
             </span>
             <button
                 type="button"
                 className={`${styles.btn} ${styles.commit}`}
                 onClick={onCommit}
-                title="Keep these edits, as a single undo step"
+                title={String(t('ui.tempMode.commitTip'))}
             >
-                Commit
+                {t('ui.tempMode.commit')}
             </button>
             <button
                 type="button"
                 className={`${styles.btn} ${styles.discard}`}
                 onClick={onDiscard}
-                title="Throw these edits away and go back to the committed values"
+                title={String(t('ui.tempMode.discardTip'))}
             >
-                Discard
+                {t('ui.tempMode.discard')}
             </button>
         </div>
     )

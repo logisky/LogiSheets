@@ -6,10 +6,12 @@
  * still work since the hidden editor keeps focus).
  */
 import {observer} from 'mobx-react-lite'
+import {useTranslation} from 'react-i18next'
 import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
 import {globalStore} from '@/store'
 
 export const FormulaEditReminder = observer(function FormulaEditReminder() {
+    const {t} = useTranslation()
     const snap = formulaEditCoordinator.snapshot
     if (!snap) return null
 
@@ -72,7 +74,7 @@ export const FormulaEditReminder = observer(function FormulaEditReminder() {
                 onClick={() => formulaEditCoordinator.commitActive()}
                 style={btnStyle('#2e7d32')}
             >
-                Confirm (Enter)
+                {t('ui.formulaEdit.confirm')}
             </button>
             <button
                 type="button"
@@ -80,7 +82,7 @@ export const FormulaEditReminder = observer(function FormulaEditReminder() {
                 onClick={() => formulaEditCoordinator.cancelActive()}
                 style={btnStyle('#b0680f')}
             >
-                Cancel (Esc)
+                {t('ui.formulaEdit.cancel')}
             </button>
         </div>
     )

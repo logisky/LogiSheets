@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {
     buildSelectedDataFromCell,
     getSelectedCellRange,
@@ -48,6 +49,7 @@ export const EditBarComponent = observer(function EditBarComponent({
     selectedData$: propSelectedData$,
     selectedDataContentChanged,
 }: EditBarProps) {
+    const {t} = useTranslation()
     const engine = useEngine()
     const dataSvc = engine.getDataService()
     const {toast} = useToast()
@@ -233,7 +235,9 @@ export const EditBarComponent = observer(function EditBarComponent({
                     setRawValue(c.getText())
                 }
             } else {
-                toast(editRefusedMessage(cell.y, cell.x, grid), {type: 'info'})
+                toast(editRefusedMessage(cell.y, cell.x, grid, t), {
+                    type: 'info',
+                })
             }
         }
         setIsEditing(false)
@@ -342,7 +346,7 @@ export const EditBarComponent = observer(function EditBarComponent({
                 <input className={styles.formula} value={rawValue} readOnly />
             )}
             <div className={styles.toggles}>
-                <Tooltip title="Show formula or value">
+                <Tooltip title={String(t('ui.editBar.showFormulaOrValue'))}>
                     <IconButton
                         size="small"
                         sx={{p: 0.4}}
@@ -360,8 +364,8 @@ export const EditBarComponent = observer(function EditBarComponent({
                 <Tooltip
                     title={
                         validationText
-                            ? 'Show validation formula'
-                            : 'No validation on this cell'
+                            ? String(t('ui.editBar.showValidation'))
+                            : String(t('ui.editBar.noValidation'))
                     }
                 >
                     <span>

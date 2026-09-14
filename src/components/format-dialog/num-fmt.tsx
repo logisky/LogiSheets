@@ -1,4 +1,5 @@
 import {useMemo, useState, forwardRef, useImperativeHandle} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useEngine, useOps} from '@/core/engine/provider'
 import {SelectedData} from 'logisheets-engine'
 import Box from '@mui/material/Box'
@@ -57,7 +58,9 @@ const presetCategories: Record<string, Preset[]> = {
         {id: 12, label: '# ?/?', fmt: '# ?/?', example: '1 1/4'},
         {id: 13, label: '# ??/??', fmt: '# ??/??', example: '1 25/100'},
     ],
-    Text: [{id: 49, label: 'Text (@)', fmt: '@', example: 'Treat as text'}],
+    Text: [
+        {id: 49, label: 'Text (@)', fmt: '@', example: 'ui.format.treatAsText'},
+    ],
     Custom: [],
 }
 
@@ -79,6 +82,7 @@ export interface NumFmtPanelHandle {
 
 export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
     ({value, onChange, width = '100%', height = 420, selectedData}, ref) => {
+        const {t} = useTranslation()
         const initCat = useMemo(() => guessCategoryByFmt(value), [value])
         const [category, setCategory] = useState<string>(initCat)
         const [fmt, setFmt] = useState<string>(value ?? 'General')
@@ -122,7 +126,9 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                             gap: 2,
                         }}
                     >
-                        <Typography variant="subtitle2">Sample</Typography>
+                        <Typography variant="subtitle2">
+                            {t('ui.format.sample')}
+                        </Typography>
                         <Box
                             sx={{
                                 height: 40,
@@ -139,13 +145,15 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                             </Typography>
                         </Box>
                         <Typography variant="subtitle2">
-                            Type a custom format
+                            {t('ui.format.customHint')}
                         </Typography>
                         <TextField
                             size="small"
                             value={fmt}
                             onChange={(e) => handlePick(e.target.value)}
-                            placeholder="e.g. #,##0.00;[Red](#,##0.00)"
+                            placeholder={String(
+                                t('ui.format.customPlaceholder')
+                            )}
                             autoFocus
                         />
                         <Typography variant="caption" color="text.secondary">
@@ -164,7 +172,9 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                         gap: 2,
                     }}
                 >
-                    <Typography variant="subtitle2">Sample</Typography>
+                    <Typography variant="subtitle2">
+                        {t('ui.format.sample')}
+                    </Typography>
                     <Box
                         sx={{
                             height: 40,
@@ -178,7 +188,9 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                     >
                         <Typography variant="body2">{fmt || '—'}</Typography>
                     </Box>
-                    <Typography variant="subtitle2">Formats</Typography>
+                    <Typography variant="subtitle2">
+                        {t('ui.format.formats')}
+                    </Typography>
                     <RadioGroup
                         value={fmt}
                         onChange={(_, v) => handlePick(v)}
@@ -193,7 +205,7 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                                 value={p.fmt}
                                 control={<Radio size="small" />}
                                 label={`${p.label}${
-                                    p.example ? ` — ${p.example}` : ''
+                                    p.example ? ` — ${t(p.example)}` : ''
                                 }`}
                             />
                         ))}
@@ -225,7 +237,9 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                         borderBottom: '1px solid #eee',
                     }}
                 >
-                    <Typography variant="subtitle1">Number</Typography>
+                    <Typography variant="subtitle1">
+                        {t('ui.format.number')}
+                    </Typography>
                 </Box>
                 <Box
                     sx={{
@@ -235,7 +249,7 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                     }}
                 >
                     <Typography variant="subtitle2" sx={{px: 2, pt: 2, pb: 1}}>
-                        Category
+                        {t('ui.format.category')}
                     </Typography>
                     <List disablePadding>
                         {categories.map((c) => (
@@ -250,7 +264,7 @@ export const NumFmtPanel = forwardRef<NumFmtPanelHandle, NumFmtPanelProps>(
                                     }
                                 }}
                             >
-                                {c}
+                                {t(`ui.format.cat.${c}`)}
                             </ListItemButton>
                         ))}
                     </List>

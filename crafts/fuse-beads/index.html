@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>电子拼豆</title>
+  <title data-i18n="title">电子拼豆</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -122,63 +122,169 @@
   </style>
 </head>
 <body>
-  <h1>电子拼豆</h1>
-  <div class="subtitle">Fuse Beads · MARD 色板 — 在表格上一格一格拼出你的像素图</div>
+  <h1 data-i18n="title">电子拼豆</h1>
+  <div class="subtitle" data-i18n="subtitle">Fuse Beads · MARD 色板 — 在表格上一格一格拼出你的像素图</div>
 
   <div class="card">
     <div class="row">
-      <label class="field">行 <input id="rows-input" type="number" min="1" value="120" /></label>
-      <label class="field">列 <input id="cols-input" type="number" min="1" value="120" /></label>
-      <label class="field">格边(px) <input id="side-input" type="number" min="6" value="22" /></label>
-      <button id="start-btn" class="btn btn-primary" type="button">开始拼豆</button>
+      <label class="field"><span data-i18n="rows">行</span> <input id="rows-input" type="number" min="1" value="120" /></label>
+      <label class="field"><span data-i18n="cols">列</span> <input id="cols-input" type="number" min="1" value="120" /></label>
+      <label class="field"><span data-i18n="cellSide">格边(px)</span> <input id="side-input" type="number" min="6" value="22" /></label>
+      <button id="start-btn" class="btn btn-primary" type="button" data-i18n="start">开始拼豆</button>
     </div>
-    <div class="hint">点击「开始拼豆」会新建一个名为「拼豆板」的表并把格子调成正方形，然后跳转过去。</div>
+    <div class="hint" data-i18n="startHint">点击「开始拼豆」会新建一个名为「拼豆板」的表并把格子调成正方形，然后跳转过去。</div>
     <div id="rebuild-confirm" class="confirm-bar" style="display:none">
-      <div class="confirm-msg">「拼豆板」已存在，<b>重制会清空现有图案</b>。确定重制？</div>
+      <div class="confirm-msg" data-i18n-html="rebuildMsg">「拼豆板」已存在，<b>重制会清空现有图案</b>。确定重制？</div>
       <div class="confirm-actions">
-        <button id="confirm-rebuild" type="button" class="btn btn-primary btn-sm">确认重制</button>
-        <button id="cancel-rebuild" type="button" class="btn btn-sm">取消</button>
+        <button id="confirm-rebuild" type="button" class="btn btn-primary btn-sm" data-i18n="rebuildYes">确认重制</button>
+        <button id="cancel-rebuild" type="button" class="btn btn-sm" data-i18n="cancel">取消</button>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <div class="section-title">色号显示</div>
+    <div class="section-title" data-i18n="codesTitle">色号显示</div>
     <div class="row">
       <button id="toggle-values" class="btn" type="button">隐藏色号</button>
-      <span class="hint" style="margin:0">拼豆时会把色号写进每个格子，可作「按号涂色」图纸；这里切换画布上是否显示色号。</span>
+      <span class="hint" style="margin:0" data-i18n="codesHint">拼豆时会把色号写进每个格子，可作「按号涂色」图纸；这里切换画布上是否显示色号。</span>
     </div>
   </div>
 
   <div class="card">
-    <div class="section-title">当前画笔</div>
+    <div class="section-title" data-i18n="brushesTitle">当前画笔</div>
     <div class="brushes">
       <div class="brush">
-        <span class="key">左键 L</span>
+        <span class="key" data-i18n="leftKey">左键 L</span>
         <div id="left-swatch" class="swatch-lg"></div>
         <div class="meta"><div id="left-name" class="name">未选</div><div id="left-code" class="code"></div></div>
       </div>
       <div class="brush">
-        <span class="key">右键 R</span>
+        <span class="key" data-i18n="rightKey">右键 R</span>
         <div id="right-swatch" class="swatch-lg"></div>
         <div class="meta"><div id="right-name" class="name">未选</div><div id="right-code" class="code"></div></div>
       </div>
     </div>
-    <div class="hint">在下方「我的工作区」里：<b>左键</b>点色块设为左键画笔，<b>右键</b>点色块设为右键画笔。<br/>在画布上：左键涂左色，右键涂右色，按住拖动可连续涂。<b>Ctrl/⌘ + 滚轮</b>（或触控板双指捏合）缩放画布。</div>
+    <div class="hint" data-i18n-html="brushHint">在下方「我的工作区」里：<b>左键</b>点色块设为左键画笔，<b>右键</b>点色块设为右键画笔。<br/>在画布上：左键涂左色，右键涂右色，按住拖动可连续涂。<b>Ctrl/⌘ + 滚轮</b>（或触控板双指捏合）缩放画布。</div>
   </div>
 
   <div class="card">
-    <div class="section-title">我的工作区</div>
+    <div class="section-title" data-i18n="workspaceTitle">我的工作区</div>
     <div id="workspace" class="ws"></div>
   </div>
 
   <div class="card">
-    <div class="section-title">选豆区</div>
+    <div class="section-title" data-i18n="paletteTitle">选豆区</div>
     <div id="palette"></div>
   </div>
 
   <script src="./fuse-beads.js"></script>
   <script>
+    // ---- language ----------------------------------------------------
+    //
+    // The host tells a craft which language it is speaking (`window.locale`,
+    // a BCP-47 tag) and offers to say so again when the user switches
+    // (`window.onLocaleChange`). Both are optional: opened standalone, or in
+    // an older host, neither exists and the craft stays in its default
+    // language — which is why `pickLocale` falls back rather than throwing.
+    //
+    // The board's SHEET NAME is deliberately not translated: it is the key
+    // this craft finds its sheet by, and renaming it per language would
+    // orphan every game already saved in a workbook.
+    var STRINGS = {
+      'zh-CN': {
+        title: '电子拼豆',
+        subtitle: 'Fuse Beads · MARD 色板 — 在表格上一格一格拼出你的像素图',
+        rows: '行', cols: '列', cellSide: '格边(px)',
+        start: '开始拼豆',
+        startHint: '点击「开始拼豆」会新建一个名为「拼豆板」的表并把格子调成正方形，然后跳转过去。',
+        rebuildMsg: '「拼豆板」已存在，<b>重制会清空现有图案</b>。确定重制？',
+        rebuildYes: '确认重制', cancel: '取消',
+        codesTitle: '色号显示',
+        codesHint: '拼豆时会把色号写进每个格子，可作「按号涂色」图纸；这里切换画布上是否显示色号。',
+        hideCodes: '隐藏色号', showCodes: '显示色号',
+        brushesTitle: '当前画笔',
+        leftKey: '左键 L', rightKey: '右键 R',
+        brushHint: '在下方「我的工作区」里：<b>左键</b>点色块设为左键画笔，<b>右键</b>点色块设为右键画笔。<br/>在画布上：左键涂左色，右键涂右色，按住拖动可连续涂。<b>Ctrl/⌘ + 滚轮</b>（或触控板双指捏合）缩放画布。',
+        workspaceTitle: '我的工作区',
+        paletteTitle: '选豆区',
+        unset: '未选', eraser: '橡皮', erase: '擦除',
+        wsEmpty: '从下面「选豆区」点选颜色，加到这里',
+        eraserTip: '橡皮：左键点设为左画笔，右键点设为右画笔',
+        beadTip: ' — 左键设左画笔，右键设右画笔',
+        removeFromWs: '从工作区移除',
+        paintFailed: '涂色失败：',
+        notReady: '工作簿尚未就绪，请稍候再试',
+        creating: '正在创建…',
+        boardReady: '拼豆板已就绪，开始拼豆吧！',
+        createFailed: '创建拼豆板失败：'
+      },
+      en: {
+        title: 'Fuse Beads',
+        subtitle: 'Fuse Beads · MARD palette — build a pixel picture one cell at a time',
+        rows: 'Rows', cols: 'Cols', cellSide: 'Cell (px)',
+        start: 'Start beading',
+        startHint: 'Pressing “Start beading” creates a sheet for the board, squares up its cells, and jumps you to it.',
+        rebuildMsg: 'The board sheet already exists, and <b>rebuilding wipes the current picture</b>. Rebuild it?',
+        rebuildYes: 'Rebuild', cancel: 'Cancel',
+        codesTitle: 'Colour codes',
+        codesHint: 'Beading writes each bead\u2019s code into its cell, so the board doubles as a colour-by-number chart; this toggles whether the codes show on the canvas.',
+        hideCodes: 'Hide codes', showCodes: 'Show codes',
+        brushesTitle: 'Current brushes',
+        leftKey: 'Left L', rightKey: 'Right R',
+        brushHint: 'In “My workspace” below: <b>left-click</b> a swatch to set the left brush, <b>right-click</b> for the right brush.<br/>On the canvas: left-click paints the left colour, right-click the right one, and dragging paints continuously. <b>Ctrl/\u2318 + wheel</b> (or a trackpad pinch) zooms.',
+        workspaceTitle: 'My workspace',
+        paletteTitle: 'Bead picker',
+        unset: 'None', eraser: 'Eraser', erase: 'Erase',
+        wsEmpty: 'Pick colours from the bead picker below to add them here',
+        eraserTip: 'Eraser: left-click to set as the left brush, right-click for the right one',
+        beadTip: ' — left-click sets the left brush, right-click the right one',
+        removeFromWs: 'Remove from the workspace',
+        paintFailed: 'Could not paint: ',
+        notReady: 'The workbook is not ready yet — try again in a moment',
+        creating: 'Creating…',
+        boardReady: 'The board is ready — start beading!',
+        createFailed: 'Could not create the board: '
+      }
+    }
+
+    // NOT `locale`: a top-level `var locale` IS `window.locale`, the
+    // property the host injects — same binding, so each would silently
+    // overwrite the other.
+    var craftLocale = 'zh-CN'
+
+    /** Nearest language we actually have, for whatever the host reports. */
+    function pickLocale(tag) {
+      if (!tag) return 'zh-CN'
+      if (STRINGS[tag]) return tag
+      var base = String(tag).replace('_', '-').split('-')[0].toLowerCase()
+      if (base === 'zh') return 'zh-CN'
+      if (base === 'en') return 'en'
+      return 'zh-CN'
+    }
+
+    /** A string, with `{{name}}` filled in from `vars`. */
+    function T(key, vars) {
+      var d = STRINGS[craftLocale] || STRINGS['zh-CN']
+      var s = d[key] != null ? d[key] : key
+      if (!vars) return s
+      return s.replace(/\{\{(\w+)\}\}/g, function (_, k) {
+        return vars[k] != null ? vars[k] : ''
+      })
+    }
+
+    function applyLocale(tag) {
+      craftLocale = pickLocale(tag)
+      document.documentElement.lang = craftLocale
+      var els = document.querySelectorAll('[data-i18n]')
+      for (var i = 0; i < els.length; i++) {
+        els[i].textContent = T(els[i].getAttribute('data-i18n'))
+      }
+      var html = document.querySelectorAll('[data-i18n-html]')
+      for (var j = 0; j < html.length; j++) {
+        html[j].innerHTML = T(html[j].getAttribute('data-i18n-html'))
+      }
+      if (typeof onLocaleApplied === 'function') onLocaleApplied()
+    }
     // ---- state -------------------------------------------------------------
     var boardSheetIdx = null
     var boardFontPt = 8       // font size for the color code written into a cell
@@ -217,11 +323,11 @@
       sw.className = 'swatch-lg'
       if (brush === null) {
         sw.style.background = ''
-        nameEl.textContent = '未选'; codeEl.textContent = ''
+        nameEl.textContent = T('unset'); codeEl.textContent = ''
       } else if (brush === 'ERASER') {
         sw.style.background = ''
         sw.classList.add('eraser-face')
-        nameEl.textContent = '橡皮'; codeEl.textContent = '擦除'
+        nameEl.textContent = T('eraser'); codeEl.textContent = T('erase')
       } else {
         var b = FuseBeads.BEAD_BY_CODE[brush]
         sw.style.background = b.hex
@@ -245,7 +351,7 @@
       if (chosen.length === 0) {
         var empty = document.createElement('div')
         empty.className = 'ws-empty'
-        empty.textContent = '从下面「选豆区」点选颜色，加到这里'
+        empty.textContent = T('wsEmpty')
         ws.appendChild(empty)
         return
       }
@@ -257,12 +363,12 @@
         sw.className = 'swatch'
         faceStyle(sw, code)
         sw.title = code === 'ERASER'
-          ? '橡皮：左键点设为左画笔，右键点设为右画笔'
+          ? T('eraserTip')
           : (FuseBeads.BEAD_BY_CODE[code].code + ' ' + FuseBeads.BEAD_BY_CODE[code].hex +
-             ' — 左键设左画笔，右键设右画笔')
+             T('beadTip'))
         var label = document.createElement('span')
         label.className = 'code'
-        label.textContent = code === 'ERASER' ? '橡皮' : FuseBeads.BEAD_BY_CODE[code].code
+        label.textContent = code === 'ERASER' ? T('eraser') : FuseBeads.BEAD_BY_CODE[code].code
         sw.appendChild(label)
 
         sw.addEventListener('click', function () { assignBrush('left', code) })
@@ -274,7 +380,7 @@
         if (code !== 'ERASER') {
           var rm = document.createElement('button')
           rm.className = 'rm'; rm.type = 'button'; rm.textContent = '×'
-          rm.title = '从工作区移除'
+          rm.title = T('removeFromWs')
           rm.addEventListener('click', function (ev) {
             ev.stopPropagation()
             chosen = chosen.filter(function (c) { return c !== code })
@@ -347,7 +453,7 @@
       if (key === lastKey) return true
       lastKey = key
       FuseBeads.paintCell(window.workbook, boardSheetIdx, row, col, hex, brushCode(brush), boardFontPt)
-        .catch(function (e) { notify('error', '涂色失败：' + (e && e.message || e)) })
+        .catch(function (e) { notify('error', T('paintFailed') + (e && e.message || e)) })
       return true
     }
 
@@ -391,7 +497,7 @@
     // ---- show / hide the written color codes -------------------------------
     function applyShowValues() {
       var btn = document.getElementById('toggle-values')
-      if (btn) btn.textContent = showValues ? '隐藏色号' : '显示色号'
+      if (btn) btn.textContent = showValues ? T('hideCodes') : T('showCodes')
       if (window.setShowCellValues) window.setShowCellValues(showValues)
     }
     function toggleValues() {
@@ -406,7 +512,7 @@
 
     // Clicking 开始拼豆: if the board already exists, ask before wiping it.
     async function start() {
-      if (!window.workbook) { notify('error', '工作簿尚未就绪，请稍候再试'); return }
+      if (!window.workbook) { notify('error', T('notReady')); return }
       var exists = false
       try {
         exists = (await FuseBeads.findSheetIdx(window.workbook, '拼豆板')) >= 0
@@ -420,7 +526,7 @@
     async function build() {
       showRebuildConfirm(false)
       var btn = document.getElementById('start-btn')
-      btn.disabled = true; var old = btn.textContent; btn.textContent = '正在创建…'
+      btn.disabled = true; var old = btn.textContent; btn.textContent = T('creating')
       try {
         var opts = {
           name: '拼豆板',
@@ -444,9 +550,9 @@
         boardSheetIdx = idx
         boardFontPt = FuseBeads.labelFontPt(opts.sidePx)
         if (window.setSelection) window.setSelection(idx, 0, 0)
-        notify('success', '拼豆板已就绪，开始拼豆吧！')
+        notify('success', T('boardReady'))
       } catch (e) {
-        notify('error', '创建拼豆板失败：' + (e && e.message || e))
+        notify('error', T('createFailed') + (e && e.message || e))
       } finally {
         btn.disabled = false; btn.textContent = old
       }
@@ -462,7 +568,23 @@
       })()
     }
 
+    // Re-render the strings this craft builds in JS when the language
+    // changes; `applyLocale` calls this after swapping the static markup.
+    function onLocaleApplied() {
+      try {
+        renderBrushes()
+        renderWorkspace()
+        // Just the label — `applyShowValues` would also re-push the setting
+        // to the host, which a language change has no business doing.
+        var btn = document.getElementById('toggle-values')
+        if (btn) btn.textContent = showValues ? T('hideCodes') : T('showCodes')
+      } catch (e) { /* before the first render there is nothing to redo */ }
+    }
+
     function init() {
+      // The page's own language, for the moment before the host has injected
+      // anything (and forever, when opened standalone).
+      applyLocale(window.locale)
       renderBrushes()
       renderWorkspace()
       renderPalette()
@@ -476,6 +598,14 @@
       // and hide the cell selection — this craft paints, it doesn't select, so
       // the selection box would just get in the way.
       whenHostReady(function () {
+        // Now that the host has injected, take its language and keep
+        // following it. This has to be here, not in `init`: the iframe's
+        // DOMContentLoaded fires before the parent's injection, so at init
+        // time `window.locale` is still undefined.
+        applyLocale(window.locale)
+        if (typeof window.onLocaleChange === 'function') {
+          window.onLocaleChange(applyLocale)
+        }
         window.onCanvasInput(canvasHandler)
         if (window.setSelectionSuppressed) window.setSelectionSuppressed(true)
         // The engine's cell-value visibility is app-global and survives a craft

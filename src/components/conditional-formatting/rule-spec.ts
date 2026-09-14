@@ -23,19 +23,21 @@ export function isEditableType(ty: string): ty is EditableType {
 }
 
 /** `cellIs` operators, with how many operands each needs. */
+// `label` is a translation key resolved at render — this list is
+// module-level and the language changes under it.
 export const CELL_IS_OPERATORS = [
-    {value: 'greaterThan', label: 'greater than', operands: 1},
-    {value: 'lessThan', label: 'less than', operands: 1},
+    {value: 'greaterThan', label: 'ui.cf.op.greaterThan', operands: 1},
+    {value: 'lessThan', label: 'ui.cf.op.lessThan', operands: 1},
     {
         value: 'greaterThanOrEqual',
-        label: 'greater than or equal to',
+        label: 'ui.cf.op.greaterThanOrEqual',
         operands: 1,
     },
-    {value: 'lessThanOrEqual', label: 'less than or equal to', operands: 1},
-    {value: 'equal', label: 'equal to', operands: 1},
-    {value: 'notEqual', label: 'not equal to', operands: 1},
-    {value: 'between', label: 'between', operands: 2},
-    {value: 'notBetween', label: 'not between', operands: 2},
+    {value: 'lessThanOrEqual', label: 'ui.cf.op.lessThanOrEqual', operands: 1},
+    {value: 'equal', label: 'ui.cf.op.equal', operands: 1},
+    {value: 'notEqual', label: 'ui.cf.op.notEqual', operands: 1},
+    {value: 'between', label: 'ui.cf.op.between', operands: 2},
+    {value: 'notBetween', label: 'ui.cf.op.notBetween', operands: 2},
 ] as const
 
 export function operandCount(operator: string): number {
@@ -95,6 +97,7 @@ export function argbToCss(argb: string): string {
 /** Build the spec to send. Returns a message instead when the form can't make a
  * valid rule — the engine rejects these too, but saying so before dispatching
  * gives a better error than a failed transaction. */
+/** `error` is a translation KEY — the caller resolves it. */
 export function formToSpec(
     form: RuleForm
 ): {spec: CfRuleSpec} | {error: string} {
@@ -130,9 +133,7 @@ export function formToSpec(
             if (ops.some((o) => o.trim() === '')) {
                 return {
                     error:
-                        n === 2
-                            ? 'Enter both values.'
-                            : 'Enter a value to compare against.',
+                        n === 2 ? 'ui.cf.err.bothValues' : 'ui.cf.err.oneValue',
                 }
             }
             return {
@@ -144,8 +145,7 @@ export function formToSpec(
             }
         }
         case 'containsText': {
-            if (form.text.trim() === '')
-                return {error: 'Enter the text to look for.'}
+            if (form.text.trim() === '') return {error: 'ui.cf.err.text'}
             return {spec: {...base, text: form.text}}
         }
         case 'colorScale': {
@@ -190,56 +190,75 @@ export function specToForm(spec: CfRuleSpec): RuleForm | null {
 }
 
 /** A one-line summary for the rule list. Covers every type the engine can load,
- * not just the editable ones, so a rule from a file is never shown as blank. */
-export function describeRule(spec: CfRuleSpec): string {
+ * not just the editable ones, so a rule from a file is never shown as blank.
+ *
+ * Takes the translator rather than reaching for a hook: this is a pure
+ * function, and the caller is the component that re-renders on a language
+ * change. */
+export function describeRule(
+    spec: CfRuleSpec,
+    t: (key: string, vars?: Record<string, unknown>) => string
+): string {
     const ops = spec.operands
     switch (spec.ty) {
         case 'cellIs': {
-            const label =
-                CELL_IS_OPERATORS.find((o) => o.value === spec.operator)
-                    ?.label ?? spec.operator
-            return `Cell value ${label} ${ops.join(' and ')}`.trim()
+            const entry = CELL_IS_OPERATORS.find(
+                (o) => o.value === spec.operator
+            )
+            return t('ui.cf.desc.cellIs', {
+                op: entry ? t(entry.label) : spec.operator,
+                operands: ops.join(' and '),
+            }).trim()
         }
         case 'expression':
-            return `Formula: ${ops[0] ?? ''}`
+            return t('ui.cf.desc.expression', {formula: ops[0] ?? ''})
         case 'containsText':
-            return `Cell contains "${spec.text ?? ''}"`
+            return t('ui.cf.desc.containsText', {text: spec.text ?? ''})
         case 'notContainsText':
-            return `Cell does not contain "${spec.text ?? ''}"`
+            return t('ui.cf.desc.notContainsText', {text: spec.text ?? ''})
         case 'beginsWith':
-            return `Cell begins with "${spec.text ?? ''}"`
+            return t('ui.cf.desc.beginsWith', {text: spec.text ?? ''})
         case 'endsWith':
-            return `Cell ends with "${spec.text ?? ''}"`
+            return t('ui.cf.desc.endsWith', {text: spec.text ?? ''})
         case 'containsBlanks':
-            return 'Cell is blank'
+            return t('ui.cf.desc.containsBlanks')
         case 'notContainsBlanks':
-            return 'Cell is not blank'
+            return t('ui.cf.desc.notContainsBlanks')
         case 'containsErrors':
-            return 'Cell has an error'
+            return t('ui.cf.desc.containsErrors')
         case 'notContainsErrors':
-            return 'Cell has no error'
+            return t('ui.cf.desc.notContainsErrors')
         case 'duplicateValues':
-            return 'Duplicate values'
+            return t('ui.cf.desc.duplicateValues')
         case 'uniqueValues':
-            return 'Unique values'
+            return t('ui.cf.desc.uniqueValues')
         case 'top10': {
             const unit = spec.percent ? '%' : ''
-            return `${spec.bottom ? 'Bottom' : 'Top'} ${spec.rank ?? 0}${unit}`
+            return t(spec.bottom ? 'ui.cf.desc.bottom' : 'ui.cf.desc.top', {
+                rank: spec.rank ?? 0,
+                unit,
+            })
         }
         case 'aboveAverage': {
-            const dir = spec.aboveAverage ? 'Above' : 'Below'
-            const eq = spec.equalAverage ? ' or equal to' : ''
-            const sd = spec.stdDev ? ` by ${Math.abs(spec.stdDev)} std dev` : ''
-            return `${dir}${eq} average${sd}`
+            const eq = spec.equalAverage ? t('ui.cf.desc.orEqualTo') : ''
+            const sd = spec.stdDev
+                ? t('ui.cf.desc.byStdDev', {n: Math.abs(spec.stdDev)})
+                : ''
+            return t(
+                spec.aboveAverage
+                    ? 'ui.cf.desc.aboveAverage'
+                    : 'ui.cf.desc.belowAverage',
+                {eq, sd}
+            )
         }
         case 'timePeriod':
-            return `Date is ${spec.timePeriod ?? ''}`
+            return t('ui.cf.desc.timePeriod', {period: spec.timePeriod ?? ''})
         case 'colorScale':
-            return `Colour scale (${spec.colors.length} colours)`
+            return t('ui.cf.desc.colorScale', {count: spec.colors.length})
         case 'dataBar':
-            return 'Data bar'
+            return t('ui.cf.desc.dataBar')
         case 'iconSet':
-            return `Icon set (${spec.iconSet ?? ''})`
+            return t('ui.cf.desc.iconSet', {name: spec.iconSet ?? ''})
         default:
             return spec.ty
     }

@@ -100,8 +100,7 @@ export function makeCraftInteractionsApi(
             w.clearNumberSliders?.(groupId),
 
         // ---- Read user results -----------------------------------------
-        getRadioSelection: (groupId: string) =>
-            w.getRadioSelection?.(groupId),
+        getRadioSelection: (groupId: string) => w.getRadioSelection?.(groupId),
         getMultiSelectSelections: (groupId: string) =>
             w.getMultiSelectSelections?.(groupId) ?? [],
         getPointPool: (groupId: string) =>

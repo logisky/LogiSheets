@@ -25,7 +25,8 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
 
     while (rest.length > 0) {
         const key = `${keyPrefix}-${k}`
-        const candidates: Array<{idx: number; len: number; node: ReactNode}> = []
+        const candidates: Array<{idx: number; len: number; node: ReactNode}> =
+            []
 
         const code = /`([^`]+)`/.exec(rest)
         if (code)
@@ -139,7 +140,11 @@ export function Markdown({text}: {text: string}) {
             const items: ReactNode[] = []
             while (i < lines.length && isUl(lines[i])) {
                 const content = lines[i].replace(/^\s*[-*]\s+/, '')
-                items.push(<li key={items.length}>{inline(content, `ul${key}-${items.length}`)}</li>)
+                items.push(
+                    <li key={items.length}>
+                        {inline(content, `ul${key}-${items.length}`)}
+                    </li>
+                )
                 i++
             }
             blocks.push(<ul key={key++}>{items}</ul>)
@@ -151,7 +156,11 @@ export function Markdown({text}: {text: string}) {
             const items: ReactNode[] = []
             while (i < lines.length && isOl(lines[i])) {
                 const content = lines[i].replace(/^\s*\d+\.\s+/, '')
-                items.push(<li key={items.length}>{inline(content, `ol${key}-${items.length}`)}</li>)
+                items.push(
+                    <li key={items.length}>
+                        {inline(content, `ol${key}-${items.length}`)}
+                    </li>
+                )
                 i++
             }
             blocks.push(<ol key={key++}>{items}</ol>)

@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import Tooltip from '@mui/material/Tooltip'
 import {GitHub as GitHubIcon, Star as StarIcon} from '@mui/icons-material'
 import styles from './toolbar.module.scss'
@@ -17,6 +18,7 @@ function formatStars(n: number): string {
 // public, unauthenticated GitHub API; if that fails (offline or rate-limited),
 // we silently fall back to just the logo.
 export const GithubStar = () => {
+    const {t} = useTranslation()
     const [stars, setStars] = useState<number | null>(null)
 
     useEffect(() => {
@@ -36,7 +38,7 @@ export const GithubStar = () => {
     }, [])
 
     return (
-        <Tooltip title="Star LogiSheets on GitHub">
+        <Tooltip title={t('toolbar.doc.starOnGithub')}>
             <a
                 className={styles.github}
                 href={REPO_URL}

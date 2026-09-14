@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Box, Select, MenuItem} from '@mui/material'
 import {isErrorMessage} from 'logisheets-engine'
 import {useEngine, useOps} from '@/core/engine/provider'
@@ -13,6 +14,7 @@ import {useEditable} from '@/core/permissions/use-editable'
 // enforced by an auto-injected COUNTIF >= 1 validation, so a dangling
 // reference surfaces as a warning indicator on top of the cell.
 export const FieldRefCell = (props: BlockCellProps) => {
+    const {t: tr} = useTranslation()
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
@@ -161,11 +163,11 @@ export const FieldRefCell = (props: BlockCellProps) => {
                 >
                     {options === null ? (
                         <MenuItem disabled value="">
-                            <em>Loading…</em>
+                            <em>{tr('block.common.loading')}</em>
                         </MenuItem>
                     ) : options.length === 0 ? (
                         <MenuItem disabled value="">
-                            <em>No values yet</em>
+                            <em>{tr('block.common.noValuesYet')}</em>
                         </MenuItem>
                     ) : (
                         options.map((opt) => (

@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Box, Select, MenuItem, Checkbox, ListItemText} from '@mui/material'
 import {isErrorMessage} from 'logisheets-engine'
 import {useEngine, useOps} from '@/core/engine/provider'
@@ -28,6 +29,7 @@ const serializeList = (items: string[]): string => items.join(SEP)
 // fetched at edit time from the target block's schema (same axis-walking
 // logic as FieldRefCell).
 export const MultiFieldRefCell = (props: BlockCellProps) => {
+    const {t: tr} = useTranslation()
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
@@ -179,11 +181,11 @@ export const MultiFieldRefCell = (props: BlockCellProps) => {
                 >
                     {options === null ? (
                         <MenuItem disabled value="">
-                            <em>Loading…</em>
+                            <em>{tr('block.common.loading')}</em>
                         </MenuItem>
                     ) : options.length === 0 ? (
                         <MenuItem disabled value="">
-                            <em>No values yet</em>
+                            <em>{tr('block.common.noValuesYet')}</em>
                         </MenuItem>
                     ) : (
                         options.map((opt) => (

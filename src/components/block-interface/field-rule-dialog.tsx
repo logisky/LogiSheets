@@ -7,6 +7,7 @@
 // re-materializes every row from the new rule.
 
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Button,
     Dialog,
@@ -19,6 +20,7 @@ import {
     FieldRuleEditor,
     RULE_HELPER_TEXT,
     RULE_PLACEHOLDER,
+    RULE_TITLE,
     ruleError,
 } from '@/components/block-composer/field-rule-editor'
 import type {FieldRuleKind} from '@/components/block-composer/field-formula'
@@ -34,11 +36,6 @@ export interface FieldRuleDialogProps {
     onClose: () => void
 }
 
-const TITLE: Record<FieldRuleKind, string> = {
-    value: 'Field formula',
-    validation: 'Validation rule',
-}
-
 export const FieldRuleDialog = ({
     kind,
     fieldName,
@@ -47,6 +44,7 @@ export const FieldRuleDialog = ({
     onSave,
     onClose,
 }: FieldRuleDialogProps) => {
+    const {t} = useTranslation()
     const [value, setValue] = useState(initialValue)
 
     // Re-seed when the dialog is pointed at a different field or rule without
@@ -61,7 +59,7 @@ export const FieldRuleDialog = ({
     return (
         <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
             <DialogTitle sx={{pb: 0.5}}>
-                {TITLE[kind]}
+                {t(RULE_TITLE[kind])}
                 <Typography variant="body2" color="text.secondary">
                     {fieldName}
                 </Typography>
@@ -74,20 +72,20 @@ export const FieldRuleDialog = ({
                     value={value}
                     onChange={setValue}
                     autoFocus
-                    placeholder={RULE_PLACEHOLDER[kind]}
+                    placeholder={String(t(RULE_PLACEHOLDER[kind]))}
                     helperText={
                         // Clearing the box is a real operation, not a no-op, so
                         // say so rather than leaving the person to guess whether
                         // an empty save sticks.
                         initialValue.trim() !== '' && value.trim() === ''
-                            ? 'Saving with the box empty removes this rule from every row.'
-                            : RULE_HELPER_TEXT[kind]
+                            ? t('block.rule.emptyRemoves')
+                            : t(RULE_HELPER_TEXT[kind])
                     }
                 />
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose} sx={{textTransform: 'none'}}>
-                    Cancel
+                    {t('block.common.cancel')}
                 </Button>
                 <Button
                     variant="contained"

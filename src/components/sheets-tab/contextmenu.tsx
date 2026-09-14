@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {createPortal} from 'react-dom'
 import {useOps} from '@/core/engine/provider'
 import {useToast} from '@/ui/notification/useToast'
@@ -27,6 +28,7 @@ export interface ContextMenuProps {
 }
 
 export const ContextMenuComponent = (props: ContextMenuProps) => {
+    const {t} = useTranslation()
     const {
         index,
         sheetnames: sheetNames,
@@ -87,9 +89,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
 
     const deleteSheet = () => {
         if (sheetNames.length === 1) {
-            toast.toast.error(
-                'Deletion failed: A spreadsheet must have at least one sheet.'
-            )
+            toast.toast.error(String(t('ui.sheet.lastSheet')))
             return
         }
         ops.deleteSheet(index)
@@ -231,7 +231,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                     onClick={openRename}
                     onMouseEnter={closeColorPopover}
                 >
-                    Rename
+                    {t('ui.common.rename')}
                 </ContextMenuItem>
                 <ContextMenuItem
                     icon={<PaletteOutlinedIcon />}
@@ -248,7 +248,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                     onClick={deleteSheet}
                     onMouseEnter={closeColorPopover}
                 >
-                    Delete
+                    {t('ui.common.delete')}
                 </ContextMenuItem>
             </ContextMenu>
             <Popover

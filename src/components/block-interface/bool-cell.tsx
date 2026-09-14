@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Box, Select, MenuItem} from '@mui/material'
 import {useOps} from '@/core/engine/provider'
 import {BlockCellProps, valueToNumber} from './cell'
@@ -6,6 +7,7 @@ import {blockEditBus} from './edit-bus'
 import {useEditable} from '@/core/permissions/use-editable'
 
 export const BoolCell = (props: BlockCellProps) => {
+    const {t} = useTranslation()
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
@@ -112,7 +114,7 @@ export const BoolCell = (props: BlockCellProps) => {
                             }}
                         >
                             <span style={{fontSize: '0.9rem'}}>✅</span>
-                            <span>True</span>
+                            <span>{t('block.cell.true')}</span>
                         </Box>
                     </MenuItem>
                     <MenuItem value="0">
@@ -124,7 +126,7 @@ export const BoolCell = (props: BlockCellProps) => {
                             }}
                         >
                             <span style={{fontSize: '0.9rem'}}>❌</span>
-                            <span>False</span>
+                            <span>{t('block.cell.false')}</span>
                         </Box>
                     </MenuItem>
                 </Select>

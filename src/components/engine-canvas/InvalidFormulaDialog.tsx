@@ -1,4 +1,5 @@
 import React from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Dialog,
     DialogTitle,
@@ -15,16 +16,17 @@ export interface InvalidFormulaDialogProps {
 export const InvalidFormulaDialog: React.FC<InvalidFormulaDialogProps> = ({
     open,
     onClose,
-}) => (
-    <Dialog open={open} onClose={onClose}>
-        <DialogTitle>Invalid Formula</DialogTitle>
-        <DialogContent>
-            The entered formula is invalid. Please check and try again.
-        </DialogContent>
-        <DialogActions>
-            <Button onClick={onClose} color="primary" autoFocus>
-                OK
-            </Button>
-        </DialogActions>
-    </Dialog>
-)
+}) => {
+    const {t} = useTranslation()
+    return (
+        <Dialog open={open} onClose={onClose}>
+            <DialogTitle>{t('ui.dialog.invalidFormulaTitle')}</DialogTitle>
+            <DialogContent>{t('ui.dialog.invalidFormulaBody')}</DialogContent>
+            <DialogActions>
+                <Button onClick={onClose} color="primary" autoFocus>
+                    OK
+                </Button>
+            </DialogActions>
+        </Dialog>
+    )
+}

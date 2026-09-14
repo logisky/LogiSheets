@@ -43,6 +43,10 @@ versions:
     for d in {{npm_dirs}}; do
         printf "  %-30s %s\n" "$(node -p "require('./$d/package.json').name")" "$(node -p "require('./$d/package.json').version")"
     done
+    # Not published anywhere, but its version is on the installer users
+    # download, so drift shows up in the wild rather than in a registry.
+    printf "desktop app:     %s  (src-tauri/Cargo.toml; tauri.conf.json has no version key)\n" \
+        "$(sed -n '/^\[package\]/,/^\[/ s/^version = "\(.*\)"/\1/p' packages/desktop/src-tauri/Cargo.toml)"
 
 # Show the LIVE published versions (npm registry + crates.io) next to local,
 # flagging drift with `*`. Needs network.
@@ -80,6 +84,15 @@ release VERSION:
 
     echo "==> npm package versions -> $v"
     for d in {{npm_dirs}}; do ( cd "$d" && npm pkg set version="$v" >/dev/null ); done
+
+    # The desktop app is not published to npm or crates.io, so neither loop
+    # above reaches it — but its installer carries a version number users see,
+    # and it drifted to 0.1.0 while the rest of the repo moved to 1.14.x.
+    # tauri.conf.json has no `version` key: Tauri falls back to this Cargo.toml,
+    # so the app version has exactly one source.
+    echo "==> desktop app -> $v"
+    ( cd packages/desktop/src-tauri && cargo set-version "$v" )
+    ( cd packages/desktop && npm pkg set version="$v" >/dev/null )
 
     echo "==> npm internal dependency ranges -> ^$v"
     ( cd packages/core     && npm pkg set "peerDependencies.logisheets-web=^$v" >/dev/null )

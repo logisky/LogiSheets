@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Dialog,
     DialogTitle,
@@ -21,6 +22,7 @@ import {useEngine} from '@/core/engine/provider'
  * Mounted once at the app root so the gate is always registered.
  */
 export const WorkbookLoadConfirm: React.FC = () => {
+    const {t} = useTranslation()
     const engine = useEngine()
     const [open, setOpen] = useState(false)
     // Resolver for the in-flight beforeLoad promise. `null` when idle.
@@ -48,17 +50,18 @@ export const WorkbookLoadConfirm: React.FC = () => {
 
     return (
         <Dialog open={open} onClose={() => settle(false)}>
-            <DialogTitle>Replace current workbook?</DialogTitle>
+            <DialogTitle>{t('ui.dialog.replaceTitle')}</DialogTitle>
             <DialogContent>
                 <DialogContentText>
-                    Loading this file will replace the workbook you have open.
-                    Any unsaved changes will be lost. Do you want to continue?
+                    {t('ui.dialog.replaceBody')}
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => settle(false)}>Cancel</Button>
+                <Button onClick={() => settle(false)}>
+                    {t('ui.common.cancel')}
+                </Button>
                 <Button onClick={() => settle(true)} color="primary" autoFocus>
-                    Replace
+                    {t('ui.dialog.replace')}
                 </Button>
             </DialogActions>
         </Dialog>

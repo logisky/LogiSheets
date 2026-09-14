@@ -1,4 +1,5 @@
 import React, {ErrorInfo} from 'react'
+import i18n from '@/core/i18n/i18n'
 import {useToast} from '@/ui/notification/useToast'
 export interface IErrorBoundaryState {
     hasError: boolean
@@ -39,7 +40,9 @@ export class ErrorBoundary extends React.Component<
     render() {
         if (this.state.hasError) {
             // You can render any custom fallback UI
-            return <h1>Something went wrong.</h1>
+            // A class component has no hooks; the i18n singleton is the
+            // escape hatch for code that cannot use `useTranslation`.
+            return <h1>{String(i18n.t('ui.common.somethingWrong'))}</h1>
         }
 
         return this.props.children

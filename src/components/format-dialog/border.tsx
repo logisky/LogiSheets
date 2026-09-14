@@ -1,4 +1,5 @@
 import {forwardRef, useImperativeHandle, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Box,
     FormControl,
@@ -47,6 +48,7 @@ export interface BorderPanelHandle {
 
 const BorderPanel = forwardRef<BorderPanelHandle, BorderPanelProps>(
     ({value, onChange, selectedData}, ref) => {
+        const {t} = useTranslation()
         const engine = useEngine()
         const dataSvc = engine.getDataService()
         const ops = useOps()
@@ -142,7 +144,7 @@ const BorderPanel = forwardRef<BorderPanelHandle, BorderPanelProps>(
 
                     <Box mt={3}>
                         <FormControl fullWidth>
-                            <FormLabel>Style</FormLabel>
+                            <FormLabel>{t('ui.format.style')}</FormLabel>
                             <Select
                                 value={style}
                                 onChange={(e) => {
@@ -177,7 +179,7 @@ const BorderPanel = forwardRef<BorderPanelHandle, BorderPanelProps>(
 
                 <Box>
                     <Typography variant="subtitle2" gutterBottom>
-                        Border Range
+                        {t('ui.format.borderRange')}
                     </Typography>
                     <ToggleButtonGroup
                         exclusive

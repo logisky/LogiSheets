@@ -1,4 +1,5 @@
 import {useMemo, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Button,
     Dialog,
@@ -38,14 +39,17 @@ export interface AnalysisDialogProps {
 }
 
 /** `''` is "leave this column blank", which is most columns on most tables. */
+// `label` is a translation key resolved at render — this list is
+// module-level and the language changes under it. `''`/`—` is the one entry
+// with nothing to translate.
 const FUNCS: ReadonlyArray<{value: AggFunc | ''; label: string}> = [
-    {value: '', label: '—'},
-    {value: 'SUM', label: 'Sum'},
-    {value: 'AVERAGE', label: 'Average'},
-    {value: 'COUNT', label: 'Count (numbers)'},
-    {value: 'COUNTA', label: 'Count (filled in)'},
-    {value: 'MIN', label: 'Min'},
-    {value: 'MAX', label: 'Max'},
+    {value: '', label: ''},
+    {value: 'SUM', label: 'block.agg.sum'},
+    {value: 'AVERAGE', label: 'block.agg.average'},
+    {value: 'COUNT', label: 'block.agg.countNumbers'},
+    {value: 'COUNTA', label: 'block.agg.countFilled'},
+    {value: 'MIN', label: 'block.agg.min'},
+    {value: 'MAX', label: 'block.agg.max'},
 ]
 
 /**
@@ -70,6 +74,7 @@ export const AnalysisDialog = ({
     onCancel,
     onConfirm,
 }: AnalysisDialogProps) => {
+    const {t} = useTranslation()
     const ordered = useMemo(
         () => [...fields].sort((a, b) => a.idx - b.idx),
         [fields]
@@ -115,8 +120,7 @@ export const AnalysisDialog = ({
             <DialogContent>
                 <Stack spacing={2} sx={{mt: 1}}>
                     <Typography variant="body2" color="text.secondary">
-                        One row under the table, one number per column. Leave a
-                        column at “—” to keep it blank.
+                        {t('block.analysis.intro')}
                     </Typography>
 
                     <Stack spacing={1.5}>
@@ -150,7 +154,7 @@ export const AnalysisDialog = ({
                                             key={fn.value}
                                             value={fn.value}
                                         >
-                                            {fn.label}
+                                            {fn.label ? t(fn.label) : '—'}
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -160,7 +164,7 @@ export const AnalysisDialog = ({
 
                     <TextField
                         size="small"
-                        label="Row label"
+                        label={t('block.analysis.rowLabel')}
                         value={label}
                         error={labelError}
                         onChange={(e) => setLabel(e.target.value)}
@@ -172,7 +176,7 @@ export const AnalysisDialog = ({
                     {!editing && (
                         <TextField
                             size="small"
-                            label="New block name"
+                            label={t('block.analysis.newBlockName')}
                             value={refName}
                             error={nameError}
                             onChange={(e) => setRefName(e.target.value)}
@@ -181,8 +185,7 @@ export const AnalysisDialog = ({
 
                     {aggregates.length === 0 && (
                         <Typography variant="caption" color="error">
-                            Nothing is being computed — choose a function for at
-                            least one column.
+                            {t('block.analysis.nothingComputed')}
                         </Typography>
                     )}
 
@@ -195,13 +198,13 @@ export const AnalysisDialog = ({
                             sx={{alignSelf: 'flex-start'}}
                             onClick={onCrossTab}
                         >
-                            One number per group instead — a pivot table…
+                            {t('block.analysis.pivotInstead')}
                         </Link>
                     )}
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onCancel}>Cancel</Button>
+                <Button onClick={onCancel}>{t('block.common.cancel')}</Button>
                 <Button
                     variant="contained"
                     disabled={!ready}
@@ -213,7 +216,9 @@ export const AnalysisDialog = ({
                         })
                     }
                 >
-                    {editing ? 'Apply' : 'Create'}
+                    {editing
+                        ? t('block.common.apply')
+                        : t('block.common.create')}
                 </Button>
             </DialogActions>
         </Dialog>

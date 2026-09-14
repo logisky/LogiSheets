@@ -1,4 +1,5 @@
 import {useState, MouseEvent} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Box,
     Dialog,
@@ -24,6 +25,7 @@ import {useEditable} from '@/core/permissions/use-editable'
 type ImageSize = '50%' | '100%'
 
 export const ImageCell = (props: BlockCellProps) => {
+    const {t} = useTranslation()
     const {x, y, width, height, value, fieldInfo, sheetIdx, rowIdx, colIdx} =
         props
 
@@ -143,7 +145,7 @@ export const ImageCell = (props: BlockCellProps) => {
                 {imageUrl ? (
                     <img
                         src={imageUrl}
-                        alt="Cell content"
+                        alt={String(t('block.cell.imageAlt'))}
                         style={{
                             maxWidth: '100%',
                             maxHeight: '100%',
@@ -204,23 +206,25 @@ export const ImageCell = (props: BlockCellProps) => {
                 maxWidth="md"
                 fullWidth
             >
-                <DialogTitle>Image Settings</DialogTitle>
+                <DialogTitle>{t('block.cell.imageSettings')}</DialogTitle>
                 <DialogContent>
                     <Stack spacing={3} sx={{mt: 1}}>
                         {/* URL Input */}
                         <TextField
                             fullWidth
-                            label="Image URL"
+                            label={t('block.cell.imageUrl')}
                             value={tempUrl}
                             onChange={(e) => setTempUrl(e.target.value)}
-                            placeholder="Enter image URL"
+                            placeholder={String(
+                                t('block.cell.imageUrlPlaceholder')
+                            )}
                             size="small"
                         />
 
                         {/* Size Selection */}
                         <FormControl component="fieldset">
                             <FormLabel component="legend">
-                                Display Size
+                                {t('block.cell.displaySize')}
                             </FormLabel>
                             <RadioGroup
                                 row
@@ -253,7 +257,7 @@ export const ImageCell = (props: BlockCellProps) => {
                                 }}
                             >
                                 <FormLabel component="legend">
-                                    Preview
+                                    {t('block.cell.previewLabel')}
                                 </FormLabel>
                                 {imageDimensions && (
                                     <Box
@@ -284,7 +288,9 @@ export const ImageCell = (props: BlockCellProps) => {
                                 {tempUrl ? (
                                     <img
                                         src={tempUrl}
-                                        alt="Preview"
+                                        alt={String(
+                                            t('block.cell.imagePreviewAlt')
+                                        )}
                                         style={{
                                             maxWidth: '100%',
                                             maxHeight: '100%',
@@ -310,7 +316,7 @@ export const ImageCell = (props: BlockCellProps) => {
                                             textAlign: 'center',
                                         }}
                                     >
-                                        Enter image URL to preview
+                                        {t('block.cell.enterUrlToPreview')}
                                     </Box>
                                 )}
                             </Box>
@@ -318,13 +324,15 @@ export const ImageCell = (props: BlockCellProps) => {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleDialogCancel}>Cancel</Button>
+                    <Button onClick={handleDialogCancel}>
+                        {t('block.common.cancel')}
+                    </Button>
                     <Button
                         onClick={handleDialogOk}
                         variant="contained"
                         disabled={!tempUrl}
                     >
-                        OK
+                        {t('block.common.ok')}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -9,7 +9,10 @@
 import {FC, useRef, useEffect, useState, useCallback} from 'react'
 import {useEngine} from '@/core/engine/provider'
 import type {Grid, SelectedData, CellLayout} from 'logisheets-engine'
-import {buildSelectedDataFromCell, getSelectedCellRange} from 'logisheets-engine'
+import {
+    buildSelectedDataFromCell,
+    getSelectedCellRange,
+} from 'logisheets-engine'
 import {FindOverlay} from '@/components/find-dialog'
 import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
 import {ViewOverlayLayer} from '@/components/spreadsheet-view/view-overlay-layer'
@@ -65,7 +68,10 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
     const setSelectionRef = useRef(selectedData$)
     setSelectionRef.current = selectedData$
     const getActiveSheet = useCallback(() => activeSheetRef.current, [])
-    const setSelection = useCallback((d: SelectedData) => setSelectionRef.current(d), [])
+    const setSelection = useCallback(
+        (d: SelectedData) => setSelectionRef.current(d),
+        []
+    )
 
     // Find overlay (Ctrl/⌘+F). The engine emits `find`; we own the UI.
     const [findOpen, setFindOpen] = useState(false)
@@ -87,7 +93,9 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
     }, [])
     const navigateToCell = useCallback(
         (row: number, col: number) =>
-            setSelectionRef.current(buildSelectedDataFromCell(row, col, 'none')),
+            setSelectionRef.current(
+                buildSelectedDataFromCell(row, col, 'none')
+            ),
         []
     )
     // The engine renders no menu — it emits `contextMenu`; the host menu below
@@ -110,7 +118,8 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             // Don't steal focus while THIS view is editing, or while ANY view
             // has an open formula edit (so clicking cells here points into it).
             getIsEditingFormula: () =>
-                editingRef.current() || formulaEditCoordinator.isFormulaEditing(),
+                editingRef.current() ||
+                formulaEditCoordinator.isFormulaEditing(),
         })
         mountedRef.current = true
         return () => {

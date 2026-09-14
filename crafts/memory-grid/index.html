@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>记忆挑战</title>
+  <title data-i18n="title">记忆挑战</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -43,8 +43,8 @@
   </style>
 </head>
 <body>
-  <h1>记忆挑战</h1>
-  <div class="subtitle">Memory Grid — 记住闪现格子的颜色和数字，共 24 关</div>
+  <h1 data-i18n="title">记忆挑战</h1>
+  <div class="subtitle" data-i18n="subtitle">Memory Grid — 记住闪现格子的颜色和数字，共 24 关</div>
 
   <div class="card">
     <div class="row" style="justify-content: space-between;">
@@ -53,10 +53,10 @@
     </div>
     <div class="bar"><div id="bar-fill"></div></div>
     <div class="row">
-      <button id="start-btn" class="btn btn-primary" type="button">开始本关</button>
-      <button id="reset-btn" class="link" type="button">重置进度</button>
+      <button id="start-btn" class="btn btn-primary" type="button" data-i18n="start">开始本关</button>
+      <button id="reset-btn" class="link" type="button" data-i18n="resetProgress">重置进度</button>
     </div>
-    <div id="allclear" class="big hidden">🎉 全部 24 关通关！</div>
+    <div id="allclear" class="big hidden" data-i18n="allClear">🎉 全部 24 关通关！</div>
   </div>
 
   <div id="play-card" class="card hidden">
@@ -64,17 +64,17 @@
     <div id="question" class="question hidden"></div>
     <div id="pick-count" class="count hidden"></div>
     <div class="row" style="margin-top: 8px;">
-      <button id="confirm-btn" class="btn btn-primary hidden" type="button">确认</button>
+      <button id="confirm-btn" class="btn btn-primary hidden" type="button" data-i18n="confirm">确认</button>
     </div>
     <div id="result" class="row hidden" style="margin-top: 8px; gap: 10px;">
       <span id="result-msg"></span>
-      <button id="next-btn" class="btn btn-primary hidden" type="button">下一关</button>
-      <button id="retry-btn" class="btn hidden" type="button">重试本关</button>
+      <button id="next-btn" class="btn btn-primary hidden" type="button" data-i18n="next">下一关</button>
+      <button id="retry-btn" class="btn hidden" type="button" data-i18n="retry">重试本关</button>
     </div>
   </div>
 
   <div class="card">
-    <div class="hint">
+    <div class="hint" data-i18n-html="hint">
       玩法：点「开始本关」后，格子会一个个闪现颜色/数字，记住它们；闪完根据问题在棋盘上<b>点选</b>对应的格子（再点一次取消），选够后点「确认」。<br/>
       答错会揭示正确答案（绿色），可重试本关；答对进入下一关，进度会自动保存。
     </div>
@@ -83,6 +83,131 @@
   <script src="./memory-grid.js"></script>
   <script>
     var MG = window.MemoryGrid
+
+    // ---- language ----------------------------------------------------
+    //
+    // The host tells a craft which language it is speaking (`window.locale`,
+    // a BCP-47 tag) and offers to say so again when the user switches
+    // (`window.onLocaleChange`). Both are optional: opened standalone, or in
+    // an older host, neither exists and the craft stays in its default
+    // language — which is why `pickLocale` falls back rather than throwing.
+    //
+    // The board's SHEET NAME is deliberately not translated: it is the key
+    // this craft finds its sheet by, and renaming it per language would
+    // orphan every game already saved in a workbook.
+    var STRINGS = {
+      'zh-CN': {
+        title: '记忆挑战',
+        subtitle: 'Memory Grid — 记住闪现格子的颜色和数字，共 24 关',
+        start: '开始本关',
+        resetProgress: '重置进度',
+        allClear: '🎉 全部 24 关通关！',
+        confirm: '确认',
+        next: '下一关',
+        retry: '重试本关',
+        hint: '玩法：点「开始本关」后，格子会一个个闪现颜色/数字，记住它们；闪完根据问题在棋盘上<b>点选</b>对应的格子（再点一次取消），选够后点「确认」。<br/>答错会揭示正确答案（绿色），可重试本关；答对进入下一关，进度会自动保存。',
+        levelLine: '第 {{level}} / {{total}} 关',
+        levelAllClear: '已全部通关',
+        bestLine: '最高通关：{{best}}',
+        picked: '已选 {{n}} / {{total}}',
+        ready: '准备…',
+        memorise: '记住！ ({{shown}} / {{total}})',
+        yourTurn: '轮到你了 👇',
+        pass: '✅ 通过！',
+        passAll: '✅ 通过！全部 24 关完成 🎉',
+        fail: '❌ 差一点！绿色是正确答案。',
+        notReady: '工作簿尚未就绪',
+        failed: '出错了：',
+        colors: ['红', '橙', '黄', '绿', '青', '蓝', '紫', '粉'],
+        qCount: '（共 {{count}} 个）',
+        qColor: '选出出现过 {{color}} 色的格子{{suffix}}',
+        qNumber: '选出出现过数字 {{number}} 的格子{{suffix}}',
+        qBoth: '选出 {{color}} 色、且数字为 {{number}} 的格子{{suffix}}'
+      },
+      en: {
+        title: 'Memory Grid',
+        subtitle: 'Memory Grid — remember the colours and numbers that flash, across 24 levels',
+        start: 'Start level',
+        resetProgress: 'Reset progress',
+        allClear: '🎉 All 24 levels cleared!',
+        confirm: 'Confirm',
+        next: 'Next level',
+        retry: 'Retry level',
+        hint: 'How to play: press “Start level” and the cells flash a colour/number one at a time — remember them. When the flashing stops, answer the question by <b>clicking</b> the matching cells on the board (click again to deselect), then press “Confirm”.<br/>A wrong answer reveals the correct cells in green and you can retry; a right one moves you on, and progress saves itself.',
+        levelLine: 'Level {{level}} / {{total}}',
+        levelAllClear: 'All levels cleared',
+        bestLine: 'Best: {{best}}',
+        picked: 'Picked {{n}} / {{total}}',
+        ready: 'Ready…',
+        memorise: 'Remember! ({{shown}} / {{total}})',
+        yourTurn: 'Your turn 👇',
+        pass: '✅ Correct!',
+        passAll: '✅ Correct! All 24 levels done 🎉',
+        fail: '❌ So close! The green cells are the answer.',
+        notReady: 'The workbook is not ready yet',
+        failed: 'Something went wrong: ',
+        colors: ['Red', 'Orange', 'Yellow', 'Green', 'Cyan', 'Blue', 'Purple', 'Pink'],
+        qCount: ' ({{count}} of them)',
+        qColor: 'Pick the cells that showed {{color}}{{suffix}}',
+        qNumber: 'Pick the cells that showed the number {{number}}{{suffix}}',
+        qBoth: 'Pick the cells that were {{color}} AND showed {{number}}{{suffix}}'
+      }
+    }
+
+    // NOT `locale`: a top-level `var locale` IS `window.locale`, the
+    // property the host injects — same binding, so each would silently
+    // overwrite the other.
+    var craftLocale = 'zh-CN'
+
+    /** Nearest language we actually have, for whatever the host reports. */
+    function pickLocale(tag) {
+      if (!tag) return 'zh-CN'
+      if (STRINGS[tag]) return tag
+      var base = String(tag).replace('_', '-').split('-')[0].toLowerCase()
+      if (base === 'zh') return 'zh-CN'
+      if (base === 'en') return 'en'
+      return 'zh-CN'
+    }
+
+    /** A string, with `{{name}}` filled in from `vars`. */
+    function T(key, vars) {
+      var d = STRINGS[craftLocale] || STRINGS['zh-CN']
+      var s = d[key] != null ? d[key] : key
+      if (!vars) return s
+      return s.replace(/\{\{(\w+)\}\}/g, function (_, k) {
+        return vars[k] != null ? vars[k] : ''
+      })
+    }
+
+    function applyLocale(tag) {
+      craftLocale = pickLocale(tag)
+      document.documentElement.lang = craftLocale
+      var els = document.querySelectorAll('[data-i18n]')
+      for (var i = 0; i < els.length; i++) {
+        els[i].textContent = T(els[i].getAttribute('data-i18n'))
+      }
+      var html = document.querySelectorAll('[data-i18n-html]')
+      for (var j = 0; j < html.length; j++) {
+        html[j].innerHTML = T(html[j].getAttribute('data-i18n-html'))
+      }
+      if (typeof onLocaleApplied === 'function') onLocaleApplied()
+    }
+
+    /**
+     * The question, in the current language.
+     *
+     * The bundle hands back a STRUCTURED question (type / colorIdx / number /
+     * count) plus a pre-built `text`; only the structure is used here, so the
+     * wording — including the colour names — lives with the rest of the UI
+     * strings instead of being frozen into the bundle at build time.
+     */
+    function questionText(q) {
+      var suffix = q.count > 1 ? T('qCount', {count: q.count}) : ''
+      var color = (T('colors') || [])[q.colorIdx]
+      if (q.type === 'color') return T('qColor', {color: color, suffix: suffix})
+      if (q.type === 'number') return T('qNumber', {number: q.number, suffix: suffix})
+      return T('qBoth', {color: color, number: q.number, suffix: suffix})
+    }
     var boardSheetIdx = null
     var progress = {level: 1, best: 0}
     var round = null
@@ -111,8 +236,9 @@
     function renderHeader() {
       var allClear = progress.level > MG.TOTAL_LEVELS
       document.getElementById('level-line').textContent = allClear
-        ? '已全部通关' : ('第 ' + progress.level + ' / ' + MG.TOTAL_LEVELS + ' 关')
-      document.getElementById('best').textContent = '最高通关：' + progress.best
+        ? T('levelAllClear')
+        : T('levelLine', {level: progress.level, total: MG.TOTAL_LEVELS})
+      document.getElementById('best').textContent = T('bestLine', {best: progress.best})
       document.getElementById('bar-fill').style.width =
         Math.round((progress.best / MG.TOTAL_LEVELS) * 100) + '%'
       document.getElementById('allclear').classList.toggle('hidden', !allClear)
@@ -133,14 +259,14 @@
         sw.style.background = MG.COLORS[q.colorIdx].hex
         el.appendChild(sw)
       }
-      text.textContent = q.text
+      text.textContent = questionText(q)
       el.appendChild(text)
       updatePickCount()
     }
 
     function updatePickCount() {
       var el = document.getElementById('pick-count')
-      el.textContent = '已选 ' + chosen.size + ' / ' + round.question.count
+      el.textContent = T('picked', {n: chosen.size, total: round.question.count})
     }
 
     // ---- board / picking --------------------------------------------
@@ -178,7 +304,7 @@
     // ---- game flow --------------------------------------------------
     async function startLevel() {
       if (busy) return
-      if (!window.workbook) { notify('error', '工作簿尚未就绪'); return }
+      if (!window.workbook) { notify('error', T('notReady')); return }
       if (progress.level > MG.TOTAL_LEVELS) return
       busy = true
       spec = MG.getLevel(progress.level)
@@ -191,7 +317,7 @@
       show('next-btn', false); show('retry-btn', false)
       document.getElementById('start-btn').disabled = true
       var statusEl = document.getElementById('status')
-      statusEl.textContent = '准备…'
+      statusEl.textContent = T('ready')
       phase = 'showing'
 
       try {
@@ -210,7 +336,7 @@
         for (var g = 0; g < groups.length; g++) {
           var cs = groups[g].map(function (idx) { return round.cells[idx] })
           shown += cs.length
-          statusEl.textContent = '记住！ (' + shown + ' / ' + round.cells.length + ')'
+          statusEl.textContent = T('memorise', {shown: shown, total: round.cells.length})
           await MG.showCells(window.workbook, boardSheetIdx, cs)
           await sleep(spec.showMs)
           await MG.clearCells(window.workbook, boardSheetIdx, cs)
@@ -219,11 +345,11 @@
 
         // Answer phase.
         phase = 'answering'
-        statusEl.textContent = '轮到你了 👇'
+        statusEl.textContent = T('yourTurn')
         renderQuestion()
         show('question', true); show('pick-count', true); show('confirm-btn', true)
       } catch (e) {
-        notify('error', '出错了：' + (e && e.message || e))
+        notify('error', T('failed') + (e && e.message || e))
         phase = 'idle'
         document.getElementById('start-btn').disabled = false
       } finally {
@@ -253,9 +379,9 @@
           saveProgress()
           renderHeader()
           msg.className = 'result-pass'
-          msg.textContent = '✅ 通过！'
+          msg.textContent = T('pass')
           if (progress.level > MG.TOTAL_LEVELS) {
-            msg.textContent = '✅ 通过！全部 24 关完成 🎉'
+            msg.textContent = T('passAll')
           } else {
             show('next-btn', true)
           }
@@ -270,7 +396,7 @@
           for (var a of round.answerCells)
             await MG.paintMark(window.workbook, boardSheetIdx, a.row, a.col, MG.RIGHT_HEX)
           msg.className = 'result-fail'
-          msg.textContent = '❌ 差一点！绿色是正确答案。'
+          msg.textContent = T('fail')
           show('retry-btn', true)
         }
         document.getElementById('status').textContent = ''
@@ -306,8 +432,20 @@
       })()
     }
 
+    // Re-render the strings this craft builds in JS when the language
+    // changes; `applyLocale` calls this after swapping the static markup.
+    function onLocaleApplied() {
+      if (MG) renderHeader()
+      // renderQuestion rebuilds the swatch + text and refreshes the pick
+      // count, so one call covers everything a language change touches.
+      if (round && round.question) renderQuestion()
+    }
+
     function init() {
       MG = window.MemoryGrid
+      // The page's own language, for the moment before the host has injected
+      // anything (and forever, when opened standalone).
+      applyLocale(window.locale)
       renderHeader()
       document.getElementById('start-btn').addEventListener('click', startLevel)
       document.getElementById('confirm-btn').addEventListener('click', confirmAnswer)
@@ -320,6 +458,14 @@
       document.getElementById('reset-btn').addEventListener('click', resetProgress)
 
       whenHostReady(function () {
+        // Now that the host has injected, take its language and keep
+        // following it. This has to be here, not in `init`: the iframe's
+        // DOMContentLoaded fires before the parent's injection, so at init
+        // time `window.locale` is still undefined.
+        applyLocale(window.locale)
+        if (typeof window.onLocaleChange === 'function') {
+          window.onLocaleChange(applyLocale)
+        }
         window.onCanvasInput(canvasHandler)
         if (window.setSelectionSuppressed) window.setSelectionSuppressed(true)
         loadProgress()

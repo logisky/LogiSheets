@@ -50,7 +50,10 @@ describe('buildMatcher', () => {
     })
 
     it('wholeCell + matchCase', () => {
-        const m = buildMatcher('Apple', OPTS({wholeCell: true, matchCase: true}))
+        const m = buildMatcher(
+            'Apple',
+            OPTS({wholeCell: true, matchCase: true})
+        )
         expect(m('Apple')).toBe(true)
         expect(m('apple')).toBe(false)
     })
@@ -100,6 +103,8 @@ describe('findAdjacentIndex', () => {
     })
 
     it('prev: wraps to the bottom when before the start', () => {
-        expect(findAdjacentIndex(matches, {row: 0, col: -1} as FindMatch, 'prev')).toBe(2)
+        expect(
+            findAdjacentIndex(matches, {row: 0, col: -1} as FindMatch, 'prev')
+        ).toBe(2)
     })
 })

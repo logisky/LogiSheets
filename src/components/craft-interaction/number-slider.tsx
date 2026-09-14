@@ -36,7 +36,8 @@ export const NumberSliderLayer = ({
 
                 // Resolve block-relative row/col to absolute sheet row/col
                 const blockInfo = grid.blockInfos?.find(
-                    (bi: BlockDisplayInfo) => bi.info.blockId === binding.blockId
+                    (bi: BlockDisplayInfo) =>
+                        bi.info.blockId === binding.blockId
                 )
                 if (!blockInfo) return null
                 const absRow = blockInfo.info.rowStart + binding.row
@@ -72,8 +73,7 @@ const NumberSliderCell = ({
     const ops = useOps()
 
     const step = binding.step ?? 1
-    const clamp = (v: number) =>
-        Math.min(binding.max, Math.max(binding.min, v))
+    const clamp = (v: number) => Math.min(binding.max, Math.max(binding.min, v))
 
     const [value, setValue] = useState<number>(
         clamp(binding.initialValue ?? binding.min)
@@ -157,7 +157,9 @@ const NumberSliderCell = ({
                 style={{
                     position: 'absolute',
                     inset: 0,
-                    background: `linear-gradient(to right, rgba(99,102,241,0.15) ${fraction * 100}%, transparent ${fraction * 100}%)`,
+                    background: `linear-gradient(to right, rgba(99,102,241,0.15) ${
+                        fraction * 100
+                    }%, transparent ${fraction * 100}%)`,
                     borderRadius: 2,
                     pointerEvents: 'none',
                 }}
