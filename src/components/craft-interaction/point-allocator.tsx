@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {
     adjustPointAllocation,
     getPointAllocation,
@@ -14,6 +15,7 @@ export const PointAllocatorLayer = ({
     activeSheet,
     resolver,
 }: PointAllocatorLayerProps) => {
+    const {t} = useTranslation()
     const bindings = getPointAllocatorBindings().filter(
         (b) => b.sheetIdx === activeSheet
     )
@@ -44,7 +46,7 @@ export const PointAllocatorLayer = ({
                 return (
                     <div
                         key={`point-${binding.groupId}-${binding.blockId}-${binding.row}-${binding.col}`}
-                        title="Left-click +1, right-click +5, hold Shift to subtract"
+                        title={String(t('ui.craft.pointHint'))}
                         style={{
                             position: 'absolute',
                             left: rect.x,

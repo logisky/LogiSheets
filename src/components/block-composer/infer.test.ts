@@ -72,12 +72,7 @@ describe('inferFields', () => {
     })
 
     it('ignores empty cells when inferring a column type', () => {
-        const grid = [
-            [str('Score')],
-            [num(10)],
-            [empty],
-            [num(20)],
-        ]
+        const grid = [[str('Score')], [num(10)], [empty], [num(20)]]
         const {fields} = inferFields(grid)
         expect(fields[0].type).toBe('number')
     })

@@ -1,10 +1,5 @@
-import {
-    Box,
-    IconButton,
-    FormControl,
-    Select,
-    MenuItem,
-} from '@mui/material'
+import {useTranslation} from 'react-i18next'
+import {Box, IconButton, FormControl, Select, MenuItem} from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useRef, useState} from 'react'
@@ -23,6 +18,7 @@ import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
 import {globalStore} from '@/store'
+import {getLocale} from '@/core/i18n/i18n'
 import {toast} from 'react-toastify'
 
 type CraftPanelProps = {
@@ -49,6 +45,12 @@ export const CraftPanel = ({
     setSelectionSuppressed,
     initialCraftSrc,
 }: CraftPanelProps) => {
+    const {t, i18n} = useTranslation()
+    // A craft's panel label in the language the host is speaking, falling back
+    // to English and then to the craft's path — a registry entry with one name
+    // for every language stores it under `en`.
+    const craftLabel = (label: Record<string, string>) =>
+        label[getLocale()] ?? label.en ?? Object.values(label)[0] ?? ''
     const [iframeSrc, setIframeSrc] = useState(
         initialCraftSrc ?? __DEFAULT_CRAFT__
     )
@@ -63,6 +65,9 @@ export const CraftPanel = ({
     // iframe navigates to a fresh page, since a reloaded craft's callbacks
     // belong to a now-dead realm.
     const selectionListeners = useRef(new Set<(s: Selection) => void>())
+    // Same lifecycle as the selection listeners, for crafts that re-render
+    // their own UI when the host's language changes.
+    const localeListeners = useRef(new Set<(locale: string) => void>())
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const BLOCK_MANAGER = engine.getBlockManager()
@@ -105,6 +110,17 @@ export const CraftPanel = ({
         win.setAnchor = (anchorX?: number, anchorY?: number) => {
             void engine.render(anchorX, anchorY)
         }
+        // The language the host is speaking, so a craft that also speaks it can
+        // follow. A craft with one language ignores both of these and keeps
+        // working — the host states a fact, the craft decides what to do with
+        // it. The value is a BCP-47 tag ('en', 'zh-CN'), the same string the
+        // host uses internally.
+        win.locale = getLocale()
+        win.onLocaleChange = (cb: (locale: string) => void) => {
+            localeListeners.current.add(cb)
+            return () => localeListeners.current.delete(cb)
+        }
+
         // Host UI controls a craft might want to toggle (e.g. switching
         // into temp mode for a series of speculative edits, or pinning
         // block overlays open while the craft sets up tables).
@@ -214,6 +230,12 @@ export const CraftPanel = ({
         // craft (or to normal spreadsheet use). A craft that wants it re-opts in
         // via win.setSelectionSuppressed after it loads.
         setSelectionSuppressed(false)
+        // A different craft is taking over: the previous page's callbacks
+        // belong to a realm that is going away. Dropped here rather than in
+        // the iframe's `onLoad`, which fires AFTER the incoming craft may
+        // already have registered its own (see whenHostReady in the crafts).
+        selectionListeners.current.clear()
+        localeListeners.current.clear()
         return () => setActiveCraft(null)
     }, [open, iframeSrc, setSelectionSuppressed])
 
@@ -227,7 +249,22 @@ export const CraftPanel = ({
         setSelectedData,
         setActiveSheet,
         iframeSrc,
+        // A language switch has to reach `win.locale` too, or a craft that
+        // reads it on demand would keep answering with the old one.
+        i18n.language,
     ])
+
+    // Tell crafts that subscribed. Separate from inject() so a craft that
+    // re-renders on the callback sees the new `win.locale` already in place.
+    useEffect(() => {
+        localeListeners.current.forEach((l) => {
+            try {
+                l(getLocale())
+            } catch {
+                /* one craft's listener throwing must not stop the others */
+            }
+        })
+    }, [i18n.language])
 
     // Push selection changes to subscribed crafts. Declared after the inject()
     // effect so it runs second — window.selection is already refreshed by the
@@ -269,9 +306,7 @@ export const CraftPanel = ({
                 <FormControl size="small" fullWidth>
                     <Select
                         value={iframeSrc}
-                        onChange={(e) =>
-                            setIframeSrc(e.target.value as string)
-                        }
+                        onChange={(e) => setIframeSrc(e.target.value as string)}
                     >
                         {tools.map((tool) => (
                             <MenuItem
@@ -279,7 +314,7 @@ export const CraftPanel = ({
                                 value={tool.value}
                                 sx={{fontSize: '0.85rem'}}
                             >
-                                {tool.label}
+                                {craftLabel(tool.label)}
                             </MenuItem>
                         ))}
                     </Select>
@@ -287,7 +322,7 @@ export const CraftPanel = ({
                 <IconButton
                     size="small"
                     color="default"
-                    aria-label="Close craft panel"
+                    aria-label={String(t('ui.craft.closePanel'))}
                     onClick={onClose}
                 >
                     <CloseIcon fontSize="small" />
@@ -304,10 +339,10 @@ export const CraftPanel = ({
                     ref={iframeRef}
                     src={iframeSrc}
                     onLoad={() => {
-                        // A fresh page: the old craft's listener closures belong
-                        // to a now-dead realm — drop them before the new page
-                        // re-subscribes.
-                        selectionListeners.current.clear()
+                        // Re-inject for the freshly loaded document. Listeners
+                        // are NOT cleared here — by now the new page may have
+                        // registered its own; the craft-change effect above is
+                        // what drops the outgoing page's.
                         inject()
                     }}
                     style={{

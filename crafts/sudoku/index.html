@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>数独</title>
+  <title data-i18n="title">数独</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -34,29 +34,29 @@
   </style>
 </head>
 <body>
-  <h1>数独</h1>
-  <div class="subtitle">Sudoku — 直接在格子里填数字，冲突由表格公式实时检查</div>
+  <h1 data-i18n="title">数独</h1>
+  <div class="subtitle" data-i18n="subtitle">Sudoku — 直接在格子里填数字，冲突由表格公式实时检查</div>
 
   <div class="card">
     <div class="row">
-      <label class="field">难度
+      <label class="field"><span data-i18n="difficulty">难度</span>
         <select id="difficulty">
-          <option value="easy">简单</option>
-          <option value="medium" selected>中等</option>
-          <option value="hard">困难</option>
+          <option value="easy" data-i18n="easy">简单</option>
+          <option value="medium" selected data-i18n="medium">中等</option>
+          <option value="hard" data-i18n="hard">困难</option>
         </select>
       </label>
-      <button id="new-btn" class="btn btn-primary" type="button">新数独</button>
+      <button id="new-btn" class="btn btn-primary" type="button" data-i18n="newPuzzle">新数独</button>
     </div>
     <div class="row" style="margin-top: 8px;">
-      <button id="clear-btn" class="btn" type="button">清空我的填写</button>
-      <button id="solve-btn" class="btn" type="button">显示答案</button>
+      <button id="clear-btn" class="btn" type="button" data-i18n="clearMine">清空我的填写</button>
+      <button id="solve-btn" class="btn" type="button" data-i18n="showSolution">显示答案</button>
     </div>
     <div id="status" class="status"></div>
   </div>
 
   <div class="card">
-    <div class="hint">
+    <div class="hint" data-i18n-html="hint">
       在右侧「数独」表里，点空格直接<b>输入 1–9</b>（你的数字显示为蓝色，题目提示是黑色加粗）。<br/>
       校验是<b>普通表格公式</b>，随你输入实时更新：<br/>
       · <code>K</code> 列 = 每行检查，第 <code>11</code> 行 = 每列检查，<code>K11:M13</code> = 每宫检查；<br/>
@@ -69,6 +69,95 @@
   <script src="./sudoku.js"></script>
   <script>
     var SD = window.Sudoku
+
+    // ---- language ----------------------------------------------------
+    //
+    // The host tells a craft which language it is speaking (`window.locale`,
+    // a BCP-47 tag) and offers to say so again when the user switches
+    // (`window.onLocaleChange`). Both are optional: opened standalone, or in
+    // an older host, neither exists and the craft stays in its default
+    // language — which is why `pickLocale` falls back rather than throwing.
+    //
+    // The board's SHEET NAME is deliberately not translated: it is the key
+    // this craft finds its sheet by, and renaming it per language would
+    // orphan every game already saved in a workbook.
+    var STRINGS = {
+      'zh-CN': {
+        title: '数独',
+        subtitle: 'Sudoku — 直接在格子里填数字，冲突由表格公式实时检查',
+        difficulty: '难度',
+        easy: '简单',
+        medium: '中等',
+        hard: '困难',
+        newPuzzle: '新数独',
+        clearMine: '清空我的填写',
+        showSolution: '显示答案',
+        hint: '在右侧「数独」表里，点空格直接<b>输入 1–9</b>（你的数字显示为蓝色，题目提示是黑色加粗）。<br/>校验是<b>普通表格公式</b>，随你输入实时更新：<br/>· <code>K</code> 列 = 每行检查，第 <code>11</code> 行 = 每列检查，<code>K11:M13</code> = 每宫检查；<br/>· 每个检查格里就是 <code>=IF((COUNTIF(区域,1)&gt;1)+…+(COUNTIF(区域,9)&gt;1)&gt;0,"❌","✅")</code> —— 数一下每个数字是否重复；<br/>· <code>K15</code> = 总状态（有冲突 / 填写中 / 完成）。<br/>题目从完整终盘挖洞而来，<b>一定有解</b>（不保证唯一解）。',
+        notReady: '工作簿尚未就绪',
+        generating: '正在生成…',
+        generated: '已生成 · 在表格里填 1–9 吧',
+        genFailed: '生成失败：',
+        cleared: '已清空你的填写',
+        solved: '已显示一个解（绿色）'
+      },
+      en: {
+        title: 'Sudoku',
+        subtitle: 'Sudoku — type digits straight into the cells; conflicts are checked by ordinary sheet formulas',
+        difficulty: 'Difficulty',
+        easy: 'Easy',
+        medium: 'Medium',
+        hard: 'Hard',
+        newPuzzle: 'New puzzle',
+        clearMine: 'Clear my entries',
+        showSolution: 'Show a solution',
+        hint: 'On the board sheet, click an empty cell and <b>type 1–9</b> (your digits show blue, the given clues are bold black).<br/>The checking is <b>ordinary sheet formulas</b>, updating as you type:<br/>· column <code>K</code> checks each row, row <code>11</code> checks each column, <code>K11:M13</code> checks each box;<br/>· each check cell is just <code>=IF((COUNTIF(range,1)&gt;1)+…+(COUNTIF(range,9)&gt;1)&gt;0,"❌","✅")</code> — count whether any digit repeats;<br/>· <code>K15</code> is the overall state (conflict / in progress / done).<br/>Puzzles are dug out of a complete grid, so one <b>always exists</b> (not necessarily unique).',
+        notReady: 'The workbook is not ready yet',
+        generating: 'Generating…',
+        generated: 'Ready · fill in 1–9 on the sheet',
+        genFailed: 'Could not generate: ',
+        cleared: 'Your entries are cleared',
+        solved: 'Showing one solution (in green)'
+      }
+    }
+
+    // NOT `locale`: a top-level `var locale` IS `window.locale`, the
+    // property the host injects — same binding, so each would silently
+    // overwrite the other.
+    var craftLocale = 'zh-CN'
+
+    /** Nearest language we actually have, for whatever the host reports. */
+    function pickLocale(tag) {
+      if (!tag) return 'zh-CN'
+      if (STRINGS[tag]) return tag
+      var base = String(tag).replace('_', '-').split('-')[0].toLowerCase()
+      if (base === 'zh') return 'zh-CN'
+      if (base === 'en') return 'en'
+      return 'zh-CN'
+    }
+
+    /** A string, with `{{name}}` filled in from `vars`. */
+    function T(key, vars) {
+      var d = STRINGS[craftLocale] || STRINGS['zh-CN']
+      var s = d[key] != null ? d[key] : key
+      if (!vars) return s
+      return s.replace(/\{\{(\w+)\}\}/g, function (_, k) {
+        return vars[k] != null ? vars[k] : ''
+      })
+    }
+
+    function applyLocale(tag) {
+      craftLocale = pickLocale(tag)
+      document.documentElement.lang = craftLocale
+      var els = document.querySelectorAll('[data-i18n]')
+      for (var i = 0; i < els.length; i++) {
+        els[i].textContent = T(els[i].getAttribute('data-i18n'))
+      }
+      var html = document.querySelectorAll('[data-i18n-html]')
+      for (var j = 0; j < html.length; j++) {
+        html[j].innerHTML = T(html[j].getAttribute('data-i18n-html'))
+      }
+      if (typeof onLocaleApplied === 'function') onLocaleApplied()
+    }
     var wb = null
     var boardSheetIdx = null
     var current = null // { puzzle, solution }
@@ -87,17 +176,17 @@
     }
 
     async function newGame() {
-      if (busy || !wb) { if (!wb) notify('error', '工作簿尚未就绪'); return }
-      setBusy(true); setStatus('正在生成…')
+      if (busy || !wb) { if (!wb) notify('error', T('notReady')); return }
+      setBusy(true); setStatus(T('generating'))
       try {
         var diff = document.getElementById('difficulty').value
         var res = await SD.setupNewGame(wb, diff)
         boardSheetIdx = res.sheetIdx
         current = res.puzzle
         if (window.setSelection) window.setSelection(boardSheetIdx, 0, 0)
-        setStatus('已生成 · 在表格里填 1–9 吧')
+        setStatus(T('generated'))
       } catch (e) {
-        notify('error', '生成失败：' + (e && e.message || e)); setStatus('')
+        notify('error', T('genFailed') + (e && e.message || e)); setStatus('')
       } finally { setBusy(false) }
     }
 
@@ -106,7 +195,7 @@
       setBusy(true)
       try {
         await SD.clearEntries(wb, boardSheetIdx, current.puzzle)
-        setStatus('已清空你的填写')
+        setStatus(T('cleared'))
       } catch (e) { notify('error', e) } finally { setBusy(false) }
     }
 
@@ -115,7 +204,7 @@
       setBusy(true)
       try {
         await SD.fillSolution(wb, boardSheetIdx, current)
-        setStatus('已显示一个解（绿色）')
+        setStatus(T('solved'))
       } catch (e) { notify('error', e) } finally { setBusy(false) }
     }
 
@@ -129,11 +218,22 @@
     }
 
     function init() {
+      // The page's own language, for the moment before the host has injected
+      // anything (and forever, when opened standalone).
+      applyLocale(window.locale)
       SD = window.Sudoku
       document.getElementById('new-btn').addEventListener('click', newGame)
       document.getElementById('clear-btn').addEventListener('click', clearMine)
       document.getElementById('solve-btn').addEventListener('click', showAnswer)
       whenHostReady(function () {
+        // Now that the host has injected, take its language and keep
+        // following it. This has to be here, not in `init`: the iframe's
+        // DOMContentLoaded fires before the parent's injection, so at init
+        // time `window.locale` is still undefined.
+        applyLocale(window.locale)
+        if (typeof window.onLocaleChange === 'function') {
+          window.onLocaleChange(applyLocale)
+        }
         wb = window.workbook
         newGame() // lay out a first puzzle right away
       })

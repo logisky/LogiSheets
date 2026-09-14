@@ -33,13 +33,14 @@ export async function inferBlockFromSelection(
     dataService: DataService,
     selectedData: SelectedData
 ): Promise<InferredBlock | {error: string}> {
+    // `error` is a translation KEY — the caller resolves it.
     const range = getSelectedCellRange(selectedData)
-    if (!range) return {error: 'Select a range of cells first.'}
+    if (!range) return {error: 'ui.menu.selectRangeFirst'}
 
     const rowCnt = range.endRow - range.startRow + 1
     const colCnt = range.endCol - range.startCol + 1
     if (rowCnt * colCnt > MAX_INFER_CELLS) {
-        return {error: 'Selection is too large to convert to a block.'}
+        return {error: 'ui.menu.selectionTooLarge'}
     }
 
     const sheetIdx = dataService.getCurrentSheetIdx()

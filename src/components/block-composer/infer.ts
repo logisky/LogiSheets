@@ -46,7 +46,9 @@ function classify(cell: InferCell): Primitive | null {
         case 'bool':
             return 'boolean'
         case 'number':
-            return looksLikeDateFormat(cell.numFmt ?? '') ? 'datetime' : 'number'
+            return looksLikeDateFormat(cell.numFmt ?? '')
+                ? 'datetime'
+                : 'number'
         case 'str':
             return 'string'
         default:
@@ -106,9 +108,9 @@ export function inferFields(grid: InferCell[][]): InferResult {
     const headerCandidate = rowCnt >= 2 && grid[0].every(isNonEmptyText)
     const bodyHasTyped =
         headerCandidate &&
-        Array.from({length: colCnt}, (_, c) =>
-            columnType(column(c, 1))
-        ).some((t) => t !== 'string')
+        Array.from({length: colCnt}, (_, c) => columnType(column(c, 1))).some(
+            (t) => t !== 'string'
+        )
     const hasHeader = headerCandidate && bodyHasTyped
 
     const dataFrom = hasHeader ? 1 : 0

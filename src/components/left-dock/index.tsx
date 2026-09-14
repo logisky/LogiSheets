@@ -23,7 +23,12 @@ interface LeftDockProps {
  * many are stacked. Each panel keeps its own header/close button; this shell is
  * pure layout.
  */
-export const LeftDock = ({watsonOpen, craftOpen, watson, craft}: LeftDockProps) => {
+export const LeftDock = ({
+    watsonOpen,
+    craftOpen,
+    watson,
+    craft,
+}: LeftDockProps) => {
     const bothOpen = watsonOpen && craftOpen
     const anyOpen = watsonOpen || craftOpen
     // Fraction of the column height given to Watson (top) when both are open.

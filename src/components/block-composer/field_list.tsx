@@ -1,4 +1,5 @@
 import {useState, useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Box,
     Button,
@@ -44,6 +45,7 @@ export const FieldList = ({
     embedded = false,
     lockFieldCount = false,
 }: FieldListProps) => {
+    const {t} = useTranslation()
     const [isDragEnabled, setIsDragEnabled] = useState(false)
 
     // Enable drag after component mounts to avoid timing issues with react-beautiful-dnd
@@ -114,7 +116,7 @@ export const FieldList = ({
                                 },
                             }}
                         >
-                            Add New Field
+                            {t('block.composer.addNewField')}
                         </Button>
                     </Box>
                 )}
@@ -232,7 +234,9 @@ export const FieldList = ({
                                                                 ) : null}
                                                                 {field.primary && (
                                                                     <Chip
-                                                                        label="Primary"
+                                                                        label={t(
+                                                                            'block.composer.primary'
+                                                                        )}
                                                                         size="small"
                                                                         color="primary"
                                                                         variant="outlined"
@@ -250,12 +254,9 @@ export const FieldList = ({
                                                                 )}
                                                             </Box>
                                                         }
-                                                        secondary={
-                                                            field.type
-                                                                .charAt(0)
-                                                                .toUpperCase() +
-                                                            field.type.slice(1)
-                                                        }
+                                                        secondary={t(
+                                                            `block.fieldType.${field.type}`
+                                                        )}
                                                         slotProps={{
                                                             primary: {
                                                                 style: {
@@ -353,7 +354,9 @@ export const FieldList = ({
                                                 ) : null}
                                                 {field.primary && (
                                                     <Chip
-                                                        label="Primary"
+                                                        label={t(
+                                                            'block.composer.primary'
+                                                        )}
                                                         size="small"
                                                         color="primary"
                                                         variant="outlined"
@@ -371,10 +374,9 @@ export const FieldList = ({
                                                 )}
                                             </Box>
                                         }
-                                        secondary={
-                                            field.type.charAt(0).toUpperCase() +
-                                            field.type.slice(1)
-                                        }
+                                        secondary={t(
+                                            `block.fieldType.${field.type}`
+                                        )}
                                         slotProps={{
                                             primary: {
                                                 style: {

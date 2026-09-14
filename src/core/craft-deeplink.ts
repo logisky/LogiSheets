@@ -4,33 +4,67 @@
 //   ?craft=factory-simulator
 //   #craft=factory-simulator-zh
 //
-// `craft` accepts either a short alias (see CRAFT_ALIASES) or a raw iframe
-// path (e.g. /what-if-calculator/index.html). When present, the host opens the
-// craft panel on that craft automatically.
+// `craft` accepts either a craft's directory name, a short alias (below), or a
+// raw iframe path (e.g. /what-if-calculator/index.html).
+//
+// What it will open is bounded by what this build actually ships. The aliases
+// used to be a hand-written table, which is a second copy of the craft
+// registry and drifted from it the way second copies do — it never learned
+// about `minesweeper`. Worse, once distributions differ by language, a table
+// that lists every craft happily deep-links a Chinese-only game inside the
+// English build, where those files were never published: an iframe pointed at
+// a 404. So the list comes from `__CRAFT_TOOLS__`, which vite already filtered
+// down to this distribution.
 
 export interface CraftDeepLink {
     iframeSrc: string
 }
 
-// Short, URL-friendly aliases → iframe src under the public root.
-const CRAFT_ALIASES: Record<string, string> = {
-    'factory-simulator': '/factory-simulator-en/index.html',
-    'factory-simulator-en': '/factory-simulator-en/index.html',
-    'factory-simulator-zh': '/factory-simulator-zh/index.html',
-    'what-if-calculator': '/what-if-calculator/index.html',
-    'markdown-table-extractor': '/markdown-table-extractor/index.html',
-    'fuse-beads': '/fuse-beads/index.html',
-    'lights-out': '/lights-out/index.html',
-    'memory-grid': '/memory-grid/index.html',
-    sudoku: '/sudoku/index.html',
+/** `/fuse-beads/index.html` → `fuse-beads` */
+function dirOf(src: string): string {
+    return src.replace(/^\//, '').replace(/\/index\.html$/, '')
+}
+
+function shippedCrafts(): Map<string, string> {
+    const tools = typeof __CRAFT_TOOLS__ !== 'undefined' ? __CRAFT_TOOLS__ : []
+    const map = new Map<string, string>()
+    for (const t of tools) map.set(dirOf(t.value), t.value)
+    return map
+}
+
+/**
+ * Names that aren't a craft directory but should still resolve, when this
+ * build ships something they can point at. `factory-simulator` is the one that
+ * matters: links to it predate the zh/en split, and each build should answer
+ * with the variant it actually carries.
+ */
+function aliasTargets(shipped: Map<string, string>): Record<string, string> {
+    const out: Record<string, string> = {}
+    const factory =
+        shipped.get('factory-simulator-en') ??
+        shipped.get('factory-simulator-zh')
+    if (factory) out['factory-simulator'] = factory
+    return out
 }
 
 function resolveCraftSrc(value: string): string | null {
     const v = value.trim()
     if (!v) return null
-    if (CRAFT_ALIASES[v]) return CRAFT_ALIASES[v]
-    // Allow passing a raw path directly, but keep it same-origin only.
-    if (v.startsWith('/')) return v
+
+    const shipped = shippedCrafts()
+
+    const direct = shipped.get(v)
+    if (direct) return direct
+
+    const alias = aliasTargets(shipped)[v]
+    if (alias) return alias
+
+    // A raw path still works, but only same-origin AND only for a craft this
+    // build published — otherwise the panel opens on nothing.
+    if (v.startsWith('/')) {
+        const byPath = shipped.get(dirOf(v))
+        if (byPath) return byPath
+    }
     return null
 }
 

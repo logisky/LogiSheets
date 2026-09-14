@@ -1,13 +1,5 @@
 {
     "lang": "English",
-    "topBar": {
-        "mainMenu": {
-            "file": "file",
-            "start": "start",
-            "view": "view",
-            "craft": "craft"
-        }
-    },
     "functions": {
         "text": {
             "description": "Formats a number and converts it to text using the given number-format code (e.g. \"0.00%\", \"yyyy-mm-dd\")."
@@ -158,7 +150,7 @@
             "description": "Performs a bitwise OR operation on two integer values and returns the result."
         },
         "gammaln.precise": {
-            "description": "Returns the natural logarithm of the Gamma function, \u0393(number)."
+            "description": "Returns the natural logarithm of the Gamma function, Γ(number)."
         },
         "permut": {
             "description": "Returns the number of permutations for a given number of objects (ordered arrangements)."
@@ -284,7 +276,7 @@
             "description": "Returns the payment on the principal for a given period for an investment."
         },
         "gammaln": {
-            "description": "Returns the natural logarithm of the Gamma function, \u0393(number).",
+            "description": "Returns the natural logarithm of the Gamma function, Γ(number).",
             "precise": {
                 "description": "Returns the natural logarithm of the gamma function."
             }
@@ -480,6 +472,608 @@
         },
         "nominal": {
             "description": "Converts an effective annual interest rate to a nominal rate."
+        }
+    },
+    "toolbar": {
+        "doc": {
+            "namePlaceholder": "Untitled",
+            "file": "File",
+            "open": "Open",
+            "save": "Save",
+            "saving": "Saving…",
+            "exportCsv": "Export as CSV",
+            "downloadTip": "Download as .xlsx",
+            "saveWorkbook": "Save workbook",
+            "toggleComments": "Toggle comments",
+            "showComments": "Show comments",
+            "hideComments": "Hide comments",
+            "starOnGithub": "Star LogiSheets on GitHub"
+        },
+        "tabs": {
+            "home": "Home",
+            "insert": "Insert",
+            "formulas": "Formulas",
+            "data": "Data",
+            "view": "View",
+            "advanced": "Advanced"
+        },
+        "view": {
+            "splitView": "Split view (2nd view)",
+            "diffLayer": "Diff layer",
+            "blockOverlays": "Block overlays always visible",
+            "showGridlines": "Show gridlines",
+            "showComments": "Show comments",
+            "zoomOut": "Zoom out",
+            "zoomIn": "Zoom in",
+            "resetZoom": "Reset",
+            "resetZoomTip": "Reset zoom to 100%",
+            "values": "Values",
+            "valuesTip": "Show or hide cell contents"
+        },
+        "insert": {
+            "chart": "Chart",
+            "chartTip": "Insert a chart from the selection",
+            "image": "Image",
+            "imageTip": "Insert an image at the selection",
+            "comment": "Comment",
+            "commentTip": "Add a comment to this cell"
+        },
+        "formulas": {
+            "autoSum": "AutoSum",
+            "autoSumTip": "Sum the numbers above or to the left",
+            "precedents": "Precedents",
+            "precedentsTip": "Show which cells this formula reads",
+            "dependents": "Dependents",
+            "dependentsTip": "Show which cells read this one",
+            "clearArrows": "Clear arrows",
+            "clearArrowsTip": "Clear the trace arrows"
+        },
+        "data": {
+            "conditionalFormatting": "Conditional formatting…",
+            "findReplace": "Find & replace"
+        },
+        "advanced": {
+            "createBlock": "CreateBlock",
+            "watson": "Watson",
+            "watsonTip": "Ask Watson",
+            "crafts": "Crafts",
+            "craftsTip": "Open the craft panel",
+            "tempMode": "Temp mode",
+            "tempModeEnterTip": "Enter temp mode (edit on a scratch branch)",
+            "tempModeExitTip": "Exit temp mode (commit the branch)",
+            "help": "Help",
+            "helpTip": "What are blocks, crafts and Watson? — opens the docs"
+        },
+        "home": {
+            "undo": "Undo",
+            "redo": "Redo",
+            "painter": "Painter",
+            "painterTip": "Copy formatting to another range",
+            "fontSize": "Font size",
+            "chooseFontSize": "Choose font size",
+            "increaseFontSize": "Increase font size",
+            "decreaseFontSize": "Decrease font size",
+            "bold": "Bold",
+            "italic": "Italic",
+            "underline": "Underline",
+            "strikethrough": "Strikethrough",
+            "textColor": "Text",
+            "textColorTip": "Text colour",
+            "fillColor": "Fill",
+            "fillColorTip": "Cell fill colour",
+            "borders": "Borders",
+            "bordersTip": "Cell borders",
+            "align": "Align",
+            "alignTip": "Alignment",
+            "wrap": "Wrap",
+            "wrapTip": "Wrap text in the cell",
+            "merge": "Merge",
+            "mergeTip": "Merge or split the selected cells",
+            "rows": "Rows",
+            "rowsTip": "Insert rows above the selection",
+            "deleteRows": "Delete rows",
+            "deleteRowsTip": "Delete the selected rows",
+            "cols": "Cols",
+            "colsTip": "Insert columns before the selection",
+            "deleteCols": "Delete columns",
+            "deleteColsTip": "Delete the selected columns",
+            "clear": "Clear",
+            "clearTip": "Clear the contents, keeping the formatting",
+            "find": "Find",
+            "findTip": "Find and replace"
+        },
+        "numberFormat": {
+            "general": "General",
+            "number": "Number",
+            "fraction": "Fraction",
+            "percent": "Percent",
+            "text": "Text",
+            "date": "Date",
+            "time": "Time"
+        },
+        "chartType": {
+            "col": "Column",
+            "bar": "Bar",
+            "line": "Line",
+            "area": "Area",
+            "pie": "Pie",
+            "doughnut": "Doughnut",
+            "scatter": "Scatter",
+            "radar": "Radar",
+            "bubble": "Bubble",
+            "stock": "Stock",
+            "ofPie": "Pie of pie",
+            "barOfPie": "Bar of pie",
+            "surface": "Surface",
+            "surface3d": "Surface (3-D)",
+            "col3d": "Column (3-D)",
+            "bar3d": "Bar (3-D)",
+            "line3d": "Line (3-D)",
+            "area3d": "Area (3-D)",
+            "pie3d": "Pie (3-D)"
+        },
+        "border": {
+            "color": "Color",
+            "range": "Border Range"
+        },
+        "toast": {
+            "optionListsUnreadable": "Could not read this file’s option lists",
+            "fileRead": "Read file {{name}}",
+            "fileReadError": "Read file error, retry later"
+        }
+    },
+    "block": {
+        "common": {
+            "cancel": "Cancel",
+            "create": "Create",
+            "apply": "Apply",
+            "loading": "Loading…",
+            "noValuesYet": "No values yet",
+            "unnamed": "Unnamed",
+            "none": "None",
+            "ok": "OK",
+            "saveChanges": "Save Changes",
+            "delete": "Delete all"
+        },
+        "agg": {
+            "sum": "Sum",
+            "average": "Average",
+            "count": "Count",
+            "countNumbers": "Count (numbers)",
+            "countFilled": "Count (filled in)",
+            "countFilledShort": "Count filled in",
+            "min": "Min",
+            "max": "Max"
+        },
+        "composer": {
+            "field": "Field",
+            "fieldName": "Field Name",
+            "fieldType": "Field Type",
+            "description": "Description",
+            "descriptionPlaceholder": "Optional field description",
+            "keyColumnFixed": "The key column is fixed when editing an existing block.",
+            "defaultValue": "Default Value",
+            "loadFromEnumSet": "Load from Enum Set",
+            "primary": "Primary",
+            "newField": "New Field",
+            "refNamePlaceholder": "e.g. customers",
+            "sheet": "Sheet",
+            "block": "Block",
+            "validation": "Validation",
+            "valueFormula": "Value formula",
+            "sampleFieldName": "Customer Status",
+            "sampleFieldDesc": "Current status of the customer",
+            "format": "Format",
+            "noFormat": "No format",
+            "customFormat": "Custom Format",
+            "customFormatPlaceholder": "e.g., #,##0.00",
+            "customFormatHelp": "Or enter a custom Excel-style format",
+            "datePlaceholder": "yyyy-mm-dd",
+            "dateHelp": "Use Excel-style date format. Default: yyyy-mm-dd",
+            "toast": {
+                "needRefName": "Please enter a block ref name.",
+                "structureUnreadable": "Could not read this block’s structure",
+                "blockUpdated": "Block updated successfully!",
+                "fieldsSaved": "Fields configured successfully!"
+            },
+            "fieldN": "Field {{n}}",
+            "basicSettings": "Basic Settings",
+            "requiredField": "Required field",
+            "enumValues": "Enum Values",
+            "defaultValueHelp": "Select which value should be pre-selected when creating new records.",
+            "dateTimeFormat": "Date/Time Format",
+            "numberFormat": "Number Format",
+            "referenceTarget": "Reference Target",
+            "noReferenceable": "No referenceable fields exist yet. Mark another field in this block as Primary or Unique, or create another block with one.",
+            "validationRule": "Validation Rule",
+            "uniqueValue": "Unique value",
+            "uniqueValueHelp": "Disallow duplicates within this field (e.g. port numbers).",
+            "deleteField": "Delete this field",
+            "addNewField": "Add New Field",
+            "blockRefName": "Block Ref Name",
+            "loadingBlock": "Loading block…",
+            "selectField": "Select a field to configure"
+        },
+        "enumSet": {
+            "createTitle": "Create New Enum Set",
+            "editTitle": "Edit Enum Set",
+            "name": "Name",
+            "namePlaceholder": "e.g., Customer Status",
+            "id": "ID",
+            "idPlaceholder": "e.g., customer-status",
+            "idHelp": "Unique identifier (lowercase, hyphen-separated)",
+            "idLocked": "ID cannot be changed",
+            "descriptionPlaceholder": "Optional description",
+            "optionLabel": "Label",
+            "toast": {
+                "idExists": "An Enum Set with this ID already exists!"
+            },
+            "variants": "Enum Variants",
+            "addVariant": "Add Variant"
+        },
+        "rule": {
+            "valueTitle": "Field formula",
+            "validationTitle": "Validation rule",
+            "valueHelp": "When set, this column is derived — the engine computes every row and nobody can type over it.",
+            "validationHelp": "Flags a value that breaks the rule. #PLACEHOLDER is the value being checked; the block can also refuse such a write outright — see its permissions.",
+            "valuePlaceholder": "e.g., =#FIELD(\"amount\") * #FIELD(\"price\")",
+            "validationPlaceholder": "e.g., AND(#PLACEHOLDER>0, #PLACEHOLDER<100)",
+            "emptyRemoves": "Saving with the box empty removes this rule from every row.",
+            "insert": "Insert:",
+            "editValueFormula": "Edit field formula…",
+            "setValueFormula": "Set field formula…",
+            "editValidation": "Edit validation rule…",
+            "setValidation": "Set validation rule…",
+            "toast": {
+                "setFailed": "Failed to set validation rule"
+            }
+        },
+        "analysis": {
+            "rowLabel": "Row label",
+            "newBlockName": "New block name",
+            "pivotInstead": "One number per group instead — a pivot table…",
+            "intro": "One row under the table, one number per column. Leave a column at “—” to keep it blank.",
+            "nothingComputed": "Nothing is being computed — choose a function for at least one column."
+        },
+        "pivot": {
+            "rows": "Rows (one per distinct value)",
+            "columns": "Columns (optional)",
+            "noColumns": "No columns — one total per row",
+            "valueField": "Value field",
+            "function": "Function",
+            "newBlockName": "New block name",
+            "newBlockNameHelp": "Formulas reference it by this name",
+            "more": "More: total column, second number, filters, row order",
+            "totalColumnName": "Total column name",
+            "totalRedundant": "Without columns, that column is already the row total",
+            "columnName": "Column name",
+            "field": "Field",
+            "condition": "Condition",
+            "conditionPlaceholder": "East or >100 or <>closed",
+            "rowOrder": "Row order",
+            "custom": "Custom",
+            "orderList": "Order (one value per line)",
+            "orderListHelp": "Values you leave out follow at the end — nothing is hidden",
+            "less": "Less",
+            "orderByValue": "By value",
+            "orderFirstSeen": "As they appear in the source",
+            "totalColumnHelp": "For example “Total”. Leave it empty to omit it. It spans every column — it is not another {{dim}}",
+            "sameField": "Rows and columns cannot be the same field.",
+            "analysisInstead": "One row for the whole table instead…"
+        },
+        "menu": {
+            "analyse": "Analyse…",
+            "editSummary": "Edit summary…",
+            "editPivot": "Edit pivot…",
+            "refreshPivot": "Refresh pivot",
+            "modify": "Modify",
+            "sourceBlock": "Source block: {{name}}",
+            "analysisBlock": "Analysis block: {{name}}",
+            "delete": "Delete",
+            "deleteWithAnalyses_one": "Delete (with {{count}} analysis block)",
+            "deleteWithAnalyses_other": "Delete (with {{count}} analysis blocks)",
+            "refreshPivotStale_one": "Refresh pivot ({{count}} group missing)",
+            "refreshPivotStale_other": "Refresh pivot ({{count}} groups missing)",
+            "sortAscending": "Sort ascending",
+            "sortDescending": "Sort descending"
+        },
+        "cell": {
+            "addNewRow": "Add new row",
+            "requiredField": "This field",
+            "required": "{{field}} is required",
+            "imageSettings": "Image Settings",
+            "imageUrl": "Image URL",
+            "imageUrlPlaceholder": "Enter image URL",
+            "imageAlt": "Cell content",
+            "imagePreviewAlt": "Preview",
+            "displaySize": "Display Size",
+            "previewLabel": "Preview",
+            "enterUrlToPreview": "Enter image URL to preview",
+            "true": "True",
+            "false": "False"
+        },
+        "toast": {
+            "moveBlocked": "Cannot move block: the target area is occupied",
+            "recipeBroken": "Recipe broken"
+        },
+        "fieldType": {
+            "unspecified": "Unspecified",
+            "enum": "Enum",
+            "multiSelect": "Multiple Selection",
+            "datetime": "DateTime",
+            "boolean": "Boolean",
+            "string": "String",
+            "number": "Number",
+            "image": "Image",
+            "fieldRef": "Reference (Field)",
+            "multiSelectRef": "Reference (Multiple)"
+        },
+        "numFmt": {
+            "integer": "Integer (0)",
+            "thousands": "Thousands (1,000)",
+            "percent": "Percentage (0%)",
+            "percent1": "Percentage + 1 decimal (0.0%)",
+            "percent2": "Percentage + 2 decimals (0.00%)"
+        }
+    },
+    "watson": {
+        "newChat": "New chat",
+        "settings": "Settings",
+        "close": "Close",
+        "stop": "Stop",
+        "send": "Send",
+        "empty": "Ask Watson to build, inspect, or edit your sheet.",
+        "working": "Watson is working…",
+        "composerPlaceholder": "Message Watson…",
+        "tempModeOn": "Temp mode is on.",
+        "tempModeBody": "Your edits are on a scratch branch. Watson can still read and preview, but it will not write until you keep or drop them.",
+        "commit": "Commit",
+        "discard": "Discard",
+        "provider": "Provider",
+        "model": "Model",
+        "baseUrl": "API base URL",
+        "keyStoredHint": "{{label}} (stored on this device)",
+        "corsWarning": "Browsers block direct calls to this provider (CORS). Set the base URL to a CORS-enabled proxy, or use the desktop app, which calls it natively — no proxy needed.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "approveTitle": "Approve tool call?",
+        "deny": "Deny",
+        "approve": "Approve",
+        "error": {
+            "needKey": "Add an API key in Settings to start.",
+            "missingKey": "No API key set. Open Settings and paste your key.",
+            "unauthorized": "The API key was rejected. Check it in Settings.",
+            "rateLimited": "Rate limited by the provider — wait a moment and retry.",
+            "serverError": "The model provider had a server error. Try again.",
+            "badRequest": "The provider rejected the request.",
+            "unknown": "Something went wrong. See the console for details.",
+            "unreachable": "Could not reach {{provider}}. {{hint}}",
+            "hintLocal": "Check the server is running and the base URL is right ({{url}} by default).",
+            "hintCors": "Browsers block direct calls to it (CORS) — set the base URL to a proxy, or use the desktop app, which calls it natively.",
+            "hintGeneric": "Check your connection and the base URL in Settings."
+        },
+        "providers": {
+            "anthropic": "Anthropic (Claude)",
+            "anthropicKey": "Anthropic API key",
+            "kimi": "Kimi (Moonshot)",
+            "kimiKey": "Moonshot API key",
+            "kimiNote": "Moonshot’s Anthropic-compatible endpoint. China site: https://api.moonshot.cn/anthropic.",
+            "openai": "OpenAI",
+            "openaiKey": "OpenAI API key",
+            "deepseek": "DeepSeek",
+            "deepseekKey": "DeepSeek API key",
+            "openrouter": "OpenRouter",
+            "openrouterKey": "OpenRouter API key",
+            "openrouterNote": "One key, many models — write the model id exactly as OpenRouter lists it (e.g. `google/gemini-2.5-pro`).",
+            "ollama": "Ollama (local)",
+            "ollamaKey": "API key (not needed for a local Ollama)",
+            "ollamaNote": "Any OpenAI-compatible local server works here — LM Studio is http://localhost:1234/v1, vLLM whatever port you started it on. The model must support tool calling."
+        }
+    },
+    "app": {
+        "language": "Language",
+        "languageName": {
+            "en": "English",
+            "zh-CN": "中文"
+        }
+    },
+    "ui": {
+        "common": {
+            "cancel": "Cancel",
+            "close": "Close",
+            "delete": "Delete",
+            "rename": "Rename",
+            "loading": "Loading…",
+            "save": "Save",
+            "create": "Create",
+            "unknown": "Unknown",
+            "somethingWrong": "Something went wrong."
+        },
+        "menu": {
+            "formatCells": "Format Cells",
+            "formatCellsShort": "Format cells",
+            "clearCells": "Clear Cells",
+            "addComment": "Add comment",
+            "linkToBlock": "Link to block…",
+            "convertToBlock": "Convert to block…",
+            "conditionalFormatting": "Conditional formatting…",
+            "editBlock": "Edit block…",
+            "tracePrecedents": "Trace precedents",
+            "traceDependents": "Trace dependents",
+            "clearTrace": "Clear trace",
+            "insertImage": "Insert image",
+            "removeImage": "Remove image",
+            "insertRowsAbove": "Insert rows above",
+            "insertRowsBelow": "Insert rows below",
+            "deleteRows": "Delete rows",
+            "insertColsLeft": "Insert columns left",
+            "insertColsRight": "Insert columns right",
+            "deleteCols": "Delete columns",
+            "count": "Count",
+            "decrease": "decrease",
+            "increase": "increase",
+            "linkToBlockTitle": "Link to block",
+            "orLinkExisting": "or link to an existing block",
+            "selectRangeFirst": "Select a range of cells first.",
+            "selectionTooLarge": "Selection is too large to convert to a block."
+        },
+        "find": {
+            "title": "Find in sheet",
+            "invalidRegex": "Invalid regex",
+            "searching": "Searching…",
+            "noResults": "No results",
+            "previous": "Previous (Shift+Enter)",
+            "next": "Next (Enter)",
+            "close": "Close (Esc)",
+            "matchCase": "Match case",
+            "wholeCell": "Whole cell"
+        },
+        "format": {
+            "category": "Category",
+            "formats": "Formats",
+            "sample": "Sample",
+            "number": "Number",
+            "customHint": "Type a custom format",
+            "customPlaceholder": "e.g. #,##0.00;[Red](#,##0.00)",
+            "style": "Style",
+            "borderRange": "Border Range",
+            "providedLater": "Will be provided later",
+            "treatAsText": "Treat as text",
+            "cat": {
+                "General": "General",
+                "Number": "Number",
+                "Accounting": "Accounting",
+                "Date": "Date",
+                "Time": "Time",
+                "Fraction": "Fraction",
+                "Text": "Text",
+                "Custom": "Custom"
+            },
+            "borderSettings": "Border Settings"
+        },
+        "cf": {
+            "title": "Conditional formatting",
+            "newRule": "New rule",
+            "editRule": "Edit rule",
+            "ruleType": "Rule type",
+            "condition": "Condition",
+            "colours": "Colours",
+            "barColour": "Bar colour",
+            "format": "Format",
+            "fill": "Fill",
+            "textColour": "Text colour",
+            "bold": "Bold",
+            "italic": "Italic",
+            "preview": "Preview",
+            "stopIfTrue": "Stop evaluating other rules when this one matches",
+            "valuePlaceholder": "value",
+            "textPlaceholder": "text to look for",
+            "type": {
+                "cellIs": "Cell value",
+                "containsText": "Text contains",
+                "colorScale": "Colour scale",
+                "dataBar": "Data bar"
+            },
+            "err": {
+                "bothValues": "Enter both values.",
+                "oneValue": "Enter a value to compare against.",
+                "text": "Enter the text to look for."
+            },
+            "op": {
+                "greaterThan": "greater than",
+                "lessThan": "less than",
+                "greaterThanOrEqual": "greater than or equal to",
+                "lessThanOrEqual": "less than or equal to",
+                "equal": "equal to",
+                "notEqual": "not equal to",
+                "between": "between",
+                "notBetween": "not between"
+            },
+            "desc": {
+                "cellIs": "Cell value {{op}} {{operands}}",
+                "expression": "Formula: {{formula}}",
+                "containsText": "Cell contains \"{{text}}\"",
+                "notContainsText": "Cell does not contain \"{{text}}\"",
+                "beginsWith": "Cell begins with \"{{text}}\"",
+                "endsWith": "Cell ends with \"{{text}}\"",
+                "containsBlanks": "Cell is blank",
+                "notContainsBlanks": "Cell is not blank",
+                "containsErrors": "Cell has an error",
+                "notContainsErrors": "Cell has no error",
+                "duplicateValues": "Duplicate values",
+                "uniqueValues": "Unique values",
+                "top": "Top {{rank}}{{unit}}",
+                "bottom": "Bottom {{rank}}{{unit}}",
+                "aboveAverage": "Above{{eq}} average{{sd}}",
+                "belowAverage": "Below{{eq}} average{{sd}}",
+                "orEqualTo": " or equal to",
+                "byStdDev": " by {{n}} std dev",
+                "timePeriod": "Date is {{period}}",
+                "colorScale": "Colour scale ({{count}} colours)",
+                "dataBar": "Data bar",
+                "iconSet": "Icon set ({{name}})"
+            },
+            "newRuleFor": "New rule for {{range}}",
+            "noRules": "No rules on this sheet. “New rule” adds one for {{range}}."
+        },
+        "comment": {
+            "comments": "Comments",
+            "newComment": "New comment",
+            "resolveThread": "Resolve thread",
+            "reopenThread": "Reopen thread",
+            "resolve": "Resolve",
+            "reopen": "Reopen",
+            "resolved": "Resolved",
+            "yourName": "Your name",
+            "reply": "Reply",
+            "comment": "Comment",
+            "replyPlaceholder": "Reply…  use @name to mention",
+            "commentPlaceholder": "Add a comment…  use @name to mention"
+        },
+        "sheet": {
+            "add": "add sheet",
+            "zoomOut": "Zoom out",
+            "zoomIn": "Zoom in",
+            "resetZoom": "Reset zoom to 100%",
+            "lastSheet": "Deletion failed: A spreadsheet must have at least one sheet."
+        },
+        "dialog": {
+            "replaceTitle": "Replace current workbook?",
+            "replaceBody": "Loading this file will replace the workbook you have open. Any unsaved changes will be lost. Do you want to continue?",
+            "replace": "Replace",
+            "invalidFormulaTitle": "Invalid Formula",
+            "invalidFormulaBody": "The entered formula is invalid. Please check and try again."
+        },
+        "formulaEdit": {
+            "confirm": "Confirm (Enter)",
+            "cancel": "Cancel (Esc)"
+        },
+        "editBar": {
+            "showFormulaOrValue": "Show formula or value",
+            "showValidation": "Show validation formula",
+            "noValidation": "No validation on this cell"
+        },
+        "craft": {
+            "closePanel": "Close craft panel",
+            "pointHint": "Left-click +1, right-click +5, hold Shift to subtract"
+        },
+        "view": {
+            "active": "Active view",
+            "inactive": "Inactive view"
+        },
+        "cell": {
+            "readOnly": "This cell is read-only.",
+            "computedColumn": "This column is computed by its field formula ({{formula}}). Change the block’s field formula to edit it."
+        },
+        "tempMode": {
+            "label": "Temp mode",
+            "body": "edits are on a scratch branch",
+            "changed_one": "{{count}} cell changed",
+            "changed_other": "{{count}} cells changed",
+            "commit": "Commit",
+            "discard": "Discard",
+            "commitTip": "Keep these edits, as a single undo step",
+            "discardTip": "Throw these edits away and go back to the committed values"
         }
     }
 }

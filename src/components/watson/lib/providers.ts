@@ -30,7 +30,6 @@ export interface ModelOption {
 
 export interface ProviderDef {
     id: ProviderId
-    label: string
     /**
      * Which HTTP API this provider speaks. `'anthropic'` is `/v1/messages`
      * (no translation needed); `'openai'` is `/chat/completions`.
@@ -58,7 +57,14 @@ export interface ProviderDef {
      * `max_completion_tokens`; everything else still takes the old name.
      */
     maxTokensParam?: 'max_tokens' | 'max_completion_tokens'
+    /**
+     * Translation KEYS, not text — this table is module-level and the language
+     * changes under it. The settings modal resolves them. Model names and key
+     * formats (`sk-ant-…`) are not translated: they are literals a user copies.
+     */
+    label: string
     keyLabel: string
+    /** A literal, not a key: it shows the SHAPE of a key (`sk-ant-…`). */
     keyPlaceholder: string
     /** Optional one-line hint shown under the key field. */
     note?: string
@@ -70,12 +76,12 @@ export interface ProviderDef {
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     anthropic: {
         id: 'anthropic',
-        label: 'Anthropic (Claude)',
+        label: 'watson.providers.anthropic',
         wire: 'anthropic',
         baseUrl: 'https://api.anthropic.com',
         auth: 'x-api-key',
         directBrowserAccess: true,
-        keyLabel: 'Anthropic API key',
+        keyLabel: 'watson.providers.anthropicKey',
         keyPlaceholder: 'sk-ant-…',
         models: [
             {id: 'claude-opus-5', label: 'Claude Opus 5'},
@@ -87,15 +93,15 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     },
     kimi: {
         id: 'kimi',
-        label: 'Kimi (Moonshot)',
+        label: 'watson.providers.kimi',
         wire: 'anthropic',
         baseUrl: 'https://api.moonshot.ai/anthropic',
         auth: 'bearer',
         directBrowserAccess: false,
         corsBlocked: true,
-        keyLabel: 'Moonshot API key',
+        keyLabel: 'watson.providers.kimiKey',
         keyPlaceholder: 'sk-…',
-        note: 'Moonshot’s Anthropic-compatible endpoint. China site: https://api.moonshot.cn/anthropic.',
+        note: 'watson.providers.kimiNote',
         models: [
             {id: 'kimi-k2-0905-preview', label: 'Kimi K2 (0905)'},
             {id: 'kimi-k2-turbo-preview', label: 'Kimi K2 Turbo'},
@@ -106,7 +112,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     },
     openai: {
         id: 'openai',
-        label: 'OpenAI',
+        label: 'watson.providers.openai',
         wire: 'openai',
         baseUrl: 'https://api.openai.com/v1',
         auth: 'bearer',
@@ -114,7 +120,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
         // Reasoning models reject `max_tokens` outright, and they are the ones
         // worth pointing an agent at, so this provider uses the newer name.
         maxTokensParam: 'max_completion_tokens',
-        keyLabel: 'OpenAI API key',
+        keyLabel: 'watson.providers.openaiKey',
         keyPlaceholder: 'sk-…',
         models: [
             {id: 'gpt-5', label: 'GPT-5'},
@@ -126,12 +132,12 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     },
     deepseek: {
         id: 'deepseek',
-        label: 'DeepSeek',
+        label: 'watson.providers.deepseek',
         wire: 'openai',
         baseUrl: 'https://api.deepseek.com',
         auth: 'bearer',
         directBrowserAccess: false,
-        keyLabel: 'DeepSeek API key',
+        keyLabel: 'watson.providers.deepseekKey',
         keyPlaceholder: 'sk-…',
         models: [
             {id: 'deepseek-chat', label: 'DeepSeek Chat'},
@@ -141,14 +147,14 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     },
     openrouter: {
         id: 'openrouter',
-        label: 'OpenRouter',
+        label: 'watson.providers.openrouter',
         wire: 'openai',
         baseUrl: 'https://openrouter.ai/api/v1',
         auth: 'bearer',
         directBrowserAccess: false,
-        keyLabel: 'OpenRouter API key',
+        keyLabel: 'watson.providers.openrouterKey',
         keyPlaceholder: 'sk-or-…',
-        note: 'One key, many models — write the model id exactly as OpenRouter lists it (e.g. `google/gemini-2.5-pro`).',
+        note: 'watson.providers.openrouterNote',
         models: [
             {id: 'anthropic/claude-opus-4.5', label: 'Claude Opus 4.5'},
             {id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro'},
@@ -159,7 +165,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     },
     ollama: {
         id: 'ollama',
-        label: 'Ollama (local)',
+        label: 'watson.providers.ollama',
         wire: 'openai',
         baseUrl: 'http://localhost:11434/v1',
         auth: 'bearer',
@@ -167,9 +173,9 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
         // A local server authenticates nobody; demanding a key here would be
         // a made-up obstacle.
         requiresKey: false,
-        keyLabel: 'API key (not needed for a local Ollama)',
-        keyPlaceholder: 'leave empty',
-        note: 'Any OpenAI-compatible local server works here — LM Studio is http://localhost:1234/v1, vLLM whatever port you started it on. The model must support tool calling.',
+        keyLabel: 'watson.providers.ollamaKey',
+        keyPlaceholder: '',
+        note: 'watson.providers.ollamaNote',
         models: [
             {id: 'qwen3:32b', label: 'Qwen3 32B'},
             {id: 'llama3.3:70b', label: 'Llama 3.3 70B'},

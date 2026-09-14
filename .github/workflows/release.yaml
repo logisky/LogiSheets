@@ -1,0 +1,178 @@
+name: release
+
+# Create a GitHub Release; this builds the Windows installers and attaches
+# them to it.
+#
+#   just release 1.14.2                     # bumps every version, desktop included
+#   git commit -am "Release 1.14.2" && git push        # onto main
+#   gh release create v1.14.2 --title "…" --notes "…"  # or the web UI
+#
+# The release is the deliberate act — you write the notes, CI supplies the
+# binaries. Nothing is built by pushing a tag on its own.
+#
+# Both distributions are built: `en` and `zh` are two products differing in
+# bundled crafts and default language. Their installers are renamed on the way
+# in, because both are called "LogiSheets" and would otherwise collide.
+#
+# macOS is not built: it needs Apple Developer signing and notarization to be
+# openable at all. See packages/desktop/README.md.
+on:
+  release:
+    # Fires when a release is published — directly, or by publishing a draft.
+    types: [published]
+  # For re-running a release whose build failed, without touching the release.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag of an existing release to build assets for (e.g. v1.14.2)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Two things have to hold before spending 20 minutes building, and both are
+  # about the release being what it claims: it must come from main, and its tag
+  # must match the version the installer will report.
+  # ---------------------------------------------------------------------------
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          # The ancestry check below needs history, not just the tagged commit.
+          fetch-depth: 0
+
+      - name: Resolve the tag, and check it is on main and matches the version
+        id: resolve
+        run: |
+          tag="${{ inputs.tag || github.event.release.tag_name }}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          # 1. Released code must be on main. `target_commitish` is only what
+          #    the UI had selected, so ask git instead: is the tagged commit
+          #    actually contained in main?
+          sha=$(git rev-list -n 1 "$tag")
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::$tag ($sha) is not on main. Release from main."
+            exit 1
+          fi
+          echo "$tag is on main"
+
+          # 2. tauri.conf.json has no `version` key on purpose — Tauri falls
+          #    back to this Cargo.toml, so the app version has one source.
+          version=$(sed -n '/^\[package\]/,/^\[/ s/^version = "\(.*\)"/\1/p' \
+            packages/desktop/src-tauri/Cargo.toml)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$tag" != "v$version" ]; then
+            echo "::error::tag $tag does not match the desktop app version $version — run 'just release $version' before releasing."
+            exit 1
+          fi
+          echo "version $version matches"
+
+  # ---------------------------------------------------------------------------
+  # One call per distribution. Each uploads its own artifact, which the job
+  # below collects — artifacts are shared across a run, reusable workflows
+  # included.
+  # ---------------------------------------------------------------------------
+  build:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        distribution: [en, zh]
+    uses: ./.github/workflows/desktop.yaml
+    with:
+      distribution: ${{ matrix.distribution }}
+      platforms: windows
+      # The release already exists; this workflow attaches to it rather than
+      # letting the called workflow create one of its own.
+      release: false
+    secrets: inherit
+
+  attach:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    env:
+      HAVE_WINDOWS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check.outputs.tag }}
+
+      - name: Download every distribution's bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: logisheets-desktop-*-windows
+          path: bundles
+
+      # Both distributions build a product called "LogiSheets", so both produce
+      # `LogiSheets_<version>_x64-setup.exe`. Tag each with the distribution it
+      # came from, or the second one silently overwrites the first.
+      - name: Collect and name the installers
+        run: |
+          mkdir -p release
+          for dist in en zh; do
+            dir="bundles/logisheets-desktop-$dist-windows"
+            [ -d "$dir" ] || { echo "::error::no bundle for '$dist'"; exit 1; }
+            find "$dir" -type f \( -name '*-setup.exe' -o -name '*.msi' \) | while read -r f; do
+              base=$(basename "$f")
+              ext="${base##*.}"
+              cp "$f" "release/LogiSheets-${{ needs.check.outputs.version }}-$dist-x64.$ext"
+            done
+          done
+          ls -la release
+          test -n "$(ls -A release)" || { echo "::error::no installers found"; exit 1; }
+
+      # `--clobber` so re-running a failed build replaces the assets instead of
+      # erroring on ones that already uploaded.
+      - name: Attach the installers to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ needs.check.outputs.tag }}" release/* --clobber
+
+      # The author's notes are theirs; this only appends a generated block, and
+      # replaces it on a re-run rather than stacking another copy. An unsigned
+      # installer trips SmartScreen, and whoever downloads it should be told why
+      # without the release author having to remember to write it.
+      - name: Append the download table to the release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ needs.check.outputs.version }}"
+          if [ "$HAVE_WINDOWS_CERT" = "true" ]; then
+            SIGNING="The installers are code-signed."
+          else
+            SIGNING="The installers are **unsigned** — Windows SmartScreen will warn on first run. Choose \"More info\" → \"Run anyway\"."
+          fi
+          BEGIN="<!-- installers:begin -->"
+          END="<!-- installers:end -->"
+          BLOCK=$(cat <<EOF
+          $BEGIN
+          ### Windows downloads
+
+          | File | For |
+          | --- | --- |
+          | \`LogiSheets-$version-en-x64.exe\` | English |
+          | \`LogiSheets-$version-zh-x64.exe\` | 中文 |
+
+          Either build switches language at runtime (View → language); the
+          distribution decides the default and which crafts ship. \`.exe\` is the
+          ordinary installer, \`.msi\` is for deployment tooling.
+
+          $SIGNING
+          $END
+          EOF
+          )
+          body=$(gh release view "${{ needs.check.outputs.tag }}" --json body -q .body)
+          # Drop any previous generated block, then append the current one.
+          stripped=$(printf '%s\n' "$body" | sed "/$BEGIN/,/$END/d")
+          printf '%s\n\n%s\n' "$stripped" "$BLOCK" > /tmp/notes.md
+          gh release edit "${{ needs.check.outputs.tag }}" --notes-file /tmp/notes.md

@@ -14,8 +14,9 @@ import * as fs from 'fs'
 // no dead code to strip. scripts/craft-dist.mjs applies the same filter, which
 // is what keeps their files out of dist/.
 function resolveCraftTools(dev: boolean): {
-    tools: {label: string; value: string}[]
+    tools: {label: Record<string, string>; value: string}[]
     defaultCraft: string
+    locale: string
 } {
     const cfg = JSON.parse(
         fs.readFileSync(path.resolve(__dirname, 'crafts.config.json'), 'utf8')
@@ -34,14 +35,25 @@ function resolveCraftTools(dev: boolean): {
             )
         )
     }
+    // A distribution's locale is the app's DEFAULT language. Every spelling of
+    // a craft's panel label ships, though, because the user can switch language
+    // at runtime — resolving the label here would freeze the craft list in the
+    // language the build was made for while the rest of the UI moved.
+    const locale: string = dist.locale ?? 'en'
+    const labelsFor = (d: string): Record<string, string> => {
+        const l = cfg.registry[d]?.label
+        // A bare string is one name for every language.
+        if (typeof l === 'string') return {en: l}
+        return (l as Record<string, string>) ?? {en: d}
+    }
     const tools = dirs.map((d: string) => ({
-        label: cfg.registry[d].label as string,
+        label: labelsFor(d),
         value: `/${d}/index.html`,
     }))
     const defaultCraft = dist.defaultCraft
         ? `/${dist.defaultCraft}/index.html`
         : tools[0]?.value ?? '/factory-simulator-en/index.html'
-    return {tools, defaultCraft}
+    return {tools, defaultCraft, locale}
 }
 
 export default defineConfig(({command}) => {
@@ -81,6 +93,7 @@ export default defineConfig(({command}) => {
         define: {
             __CRAFT_TOOLS__: JSON.stringify(craft.tools),
             __DEFAULT_CRAFT__: JSON.stringify(craft.defaultCraft),
+            __APP_LOCALE__: JSON.stringify(craft.locale),
         },
         // PORT env keeps the contract the webpack dev server had (Playwright
         // e2e passes PORT=<n>).

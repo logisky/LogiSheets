@@ -1,0 +1,1079 @@
+{
+    "lang": "中文",
+    "functions": {
+        "text": {
+            "description": "按指定的数字格式代码（如 \"0.00%\"、\"yyyy-mm-dd\"）设置数字格式并将其转换为文本。"
+        },
+        "fixed": {
+            "description": "将数字四舍五入到指定的小数位数并返回文本，可选择是否使用千位分隔符。"
+        },
+        "dollar": {
+            "description": "使用货币格式将数字转换为文本，带美元符号、千位分隔符和指定的小数位数。"
+        },
+        "usdollar": {
+            "description": "使用美元货币格式将数字转换为文本。DOLLAR 的旧版别名。"
+        },
+        "address": {
+            "description": "根据行号和列号，以文本形式创建单元格引用。"
+        },
+        "offset": {
+            "description": "返回从指定引用偏移给定行数和列数的新引用，并可指定其大小。"
+        },
+        "textjoin": {
+            "description": "使用分隔符连接多个区域或字符串中的文本，可选择忽略空值。"
+        },
+        "find": {
+            "description": "返回一个文本字符串在另一个文本字符串中的起始位置（区分大小写）。"
+        },
+        "substitute": {
+            "description": "在文本字符串中用新文本替换旧文本；可选择只替换第几次出现。"
+        },
+        "replace": {
+            "description": "根据指定的字符数，用另一文本字符串替换文本字符串中的一部分。"
+        },
+        "concat": {
+            "description": "将多个值或区域中的文本连接成一个字符串。"
+        },
+        "proper": {
+            "description": "将文本中每个单词的首字母大写，其余字母小写。"
+        },
+        "char": {
+            "description": "返回由代码数字（1-255）指定的字符。"
+        },
+        "code": {
+            "description": "返回文本字符串中第一个字符的数字代码。"
+        },
+        "value": {
+            "description": "将表示数字的文本字符串转换为数字。"
+        },
+        "xor": {
+            "description": "当为 TRUE 的参数个数为奇数时返回 TRUE。"
+        },
+        "iseven": {
+            "description": "如果数字为偶数则返回 TRUE。"
+        },
+        "isodd": {
+            "description": "如果数字为奇数则返回 TRUE。"
+        },
+        "max": {
+            "description": "返回一组数值中的最大值。"
+        },
+        "min": {
+            "description": "返回一组数值中的最小值。"
+        },
+        "product": {
+            "description": "将所有以参数形式给出的数字相乘并返回乘积。"
+        },
+        "median": {
+            "description": "返回一组数字的中位数（中间值）。"
+        },
+        "counta": {
+            "description": "计算区域中非空单元格的个数。"
+        },
+        "mod": {
+            "description": "返回两数相除的余数，结果的符号与除数相同。"
+        },
+        "int": {
+            "description": "将数字向下舍入到最接近的整数。"
+        },
+        "trunc": {
+            "description": "去除数字的小数部分（或保留指定位数），将其截尾取整。"
+        },
+        "power": {
+            "description": "返回某数的乘幂结果。"
+        },
+        "log": {
+            "description": "返回以指定底数（默认为 10）的对数。"
+        },
+        "ceiling": {
+            "description": "将数字沿绝对值增大的方向向上舍入到最接近的 significance 的倍数。"
+        },
+        "floor": {
+            "description": "将数字沿绝对值减小的方向向下舍入到最接近的 significance 的倍数。"
+        },
+        "not": {
+            "description": "对参数的逻辑值求反。"
+        },
+        "mid": {
+            "description": "从文本字符串中指定的起始位置返回指定数目的字符。"
+        },
+        "match": {
+            "description": "返回区域中与指定值匹配的项的相对位置。"
+        },
+        "sumproduct": {
+            "description": "将各数组中对应的元素相乘，并返回乘积之和。"
+        },
+        "search": {
+            "description": "返回一个文本字符串在另一个文本字符串中的起始位置（不区分大小写）。"
+        },
+        "sum": {
+            "description": "将某一单元格区域中的所有数字相加。"
+        },
+        "or": {
+            "description": "如果任一参数为 TRUE，则返回 TRUE；如果所有参数均为 FALSE，则返回 FALSE。"
+        },
+        "countblank": {
+            "description": "计算指定单元格区域中空白单元格的个数。"
+        },
+        "norm": {
+            "dist": {
+                "description": "返回指定平均值和标准偏差下的正态分布。"
+            },
+            "s": {
+                "inv": {
+                    "description": "返回标准正态累积分布函数的反函数（z 值）。"
+                }
+            }
+        },
+        "abs": {
+            "description": "返回数字的绝对值。绝对值是不带符号的数值。"
+        },
+        "acos": {
+            "description": "返回数字的反余弦值（以弧度表示），范围为 0 到 π。"
+        },
+        "acosh": {
+            "description": "返回数字的反双曲余弦值，参数必须大于或等于 1。"
+        },
+        "aggregate": {
+            "description": "返回列表或数据库中的聚合结果，可选择忽略隐藏行和错误值。"
+        },
+        "pi": {
+            "description": "返回圆周率 π 的值（3.14159265358979），精确到 15 位。"
+        },
+        "switch": {
+            "description": "根据值列表计算表达式并返回第一个与第一个匹配值对应的结果。如果没有匹配项，则返回可选默认值。"
+        },
+        "sumsq": {
+            "description": "返回所有参数的平方和。"
+        },
+        "bitor": {
+            "description": "对两个整数执行按位“或”运算并返回结果。"
+        },
+        "gammaln.precise": {
+            "description": "返回伽马函数的自然对数。"
+        },
+        "permut": {
+            "description": "返回从给定数目的对象中选取若干对象的排列数。"
+        },
+        "imcosh": {
+            "description": "返回以文本表示的复数的双曲余弦值。"
+        },
+        "negbinomdist": {
+            "description": "返回负二项式分布的概率。"
+        },
+        "isna": {
+            "description": "如果值为 #N/A 错误，则返回 TRUE，否则返回 FALSE。"
+        },
+        "imcsc": {
+            "description": "返回以文本表示的复数的余割值。"
+        },
+        "row": {
+            "description": "返回引用的行号；若省略参数，则返回包含该公式的单元格的行号。"
+        },
+        "average": {
+            "description": "返回所有参数的平均值（算术平均值）。"
+        },
+        "count": {
+            "description": "计算参数列表中包含数字的个数。"
+        },
+        "countif": {
+            "description": "计算某一区域中满足给定条件的单元格的个数。"
+        },
+        "left": {
+            "description": "根据指定的字符数，返回文本字符串中的第一个或前几个字符。"
+        },
+        "round": {
+            "description": "将数字按指定的位数进行四舍五入。"
+        },
+        "len": {
+            "description": "返回文本字符串中的字符个数。"
+        },
+        "sumif": {
+            "description": "对满足给定条件的单元格求和。"
+        },
+        "today": {
+            "description": "返回当前日期的序列号，在重新计算或打开工作表时更新。"
+        },
+        "sumifs": {
+            "description": "对区域中满足多个条件的单元格求和。"
+        },
+        "averageifs": {
+            "description": "返回满足多个条件的单元格的平均值。"
+        },
+        "maxifs": {
+            "description": "返回满足一组条件的单元格中的最大值。"
+        },
+        "hex2bin": {
+            "description": "将十六进制数转换为二进制数。"
+        },
+        "month": {
+            "description": "返回日期中的月份，介于 1 到 12 之间。"
+        },
+        "exp": {
+            "description": "返回 e 的指定次幂。"
+        },
+        "sin": {
+            "description": "返回给定角度（以弧度表示）的正弦值。"
+        },
+        "irr": {
+            "description": "返回一系列现金流的内部收益率。"
+        },
+        "second": {
+            "description": "返回时间值中的秒数，介于 0 到 59 之间。"
+        },
+        "pv": {
+            "description": "基于固定利率和等额分期付款，计算投资的现值。"
+        },
+        "odd": {
+            "description": "将数字向上舍入到最接近的奇数。"
+        },
+        "hex2dec": {
+            "description": "将十六进制数转换为十进制数。"
+        },
+        "hex2oct": {
+            "description": "将十六进制数转换为八进制数。"
+        },
+        "quotient": {
+            "description": "返回除法运算结果的整数部分。"
+        },
+        "day": {
+            "description": "返回日期中的天数，介于 1 到 31 之间。"
+        },
+        "imaginary": {
+            "description": "返回以文本表示的复数的虚部系数。"
+        },
+        "oct2hex": {
+            "description": "将八进制数转换为十六进制数。"
+        },
+        "tbilleq": {
+            "description": "返回国库券的等价债券收益率。"
+        },
+        "tbillyield": {
+            "description": "返回国库券的收益率。"
+        },
+        "tbillprice": {
+            "description": "返回面值 100 元的国库券的价格。"
+        },
+        "mode": {
+            "description": "返回一组数据或区域中出现频率最高的值。"
+        },
+        "ln": {
+            "description": "返回数字的自然对数。"
+        },
+        "year": {
+            "description": "返回某日期对应的年份。"
+        },
+        "iferror": {
+            "description": "如果公式计算出错，则返回指定的值，否则返回公式的结果。"
+        },
+        "imabs": {
+            "description": "返回以文本表示的复数的绝对值（模）。"
+        },
+        "true": {
+            "description": "返回逻辑值 TRUE。"
+        },
+        "ppmt": {
+            "description": "返回在给定期次内某项投资本金的偿还额。"
+        },
+        "gammaln": {
+            "description": "返回伽马函数的自然对数 Γ(number)。",
+            "precise": {
+                "description": "返回伽马函数的自然对数。"
+            }
+        },
+        "bitlshift": {
+            "description": "将数字的各二进制位向左移动指定的位数。"
+        },
+        "bitrshift": {
+            "description": "将数字的各二进制位向右移动指定的位数。"
+        },
+        "blockref": {
+            "description": "通过键和字段获取块单元格的值。"
+        },
+        "blockrefs": {
+            "description": "获取键和字段满足条件的块单元格的值。"
+        },
+        "rand": {
+            "description": "返回大于等于 0 且小于 1 的均匀分布随机数。"
+        },
+        "right": {
+            "description": "根据指定的字符数，返回文本字符串中的最后一个或几个字符。"
+        },
+        "lower": {
+            "description": "将文本转换为小写。"
+        },
+        "degrees": {
+            "description": "将弧度转换为角度。"
+        },
+        "gcd": {
+            "description": "返回两个或多个整数的最大公约数。"
+        },
+        "imconjugate": {
+            "description": "返回以文本表示的复数的共轭复数。"
+        },
+        "expondist": {
+            "description": "返回指数分布。"
+        },
+        "cos": {
+            "description": "返回给定角度（以弧度表示）的余弦值。"
+        },
+        "days": {
+            "description": "返回两个日期之间相隔的天数。"
+        },
+        "false": {
+            "description": "返回逻辑值 FALSE。"
+        },
+        "iserror": {
+            "description": "如果值为除 #N/A 之外的任何错误值，则返回 TRUE。"
+        },
+        "stdev": {
+            "description": "基于样本估算标准偏差。"
+        },
+        "trim": {
+            "description": "删除文本中多余的空格，仅在词之间保留一个空格。"
+        },
+        "bitxor": {
+            "description": "对两个整数执行按位“异或”运算并返回结果。"
+        },
+        "log10": {
+            "description": "返回数字以 10 为底的对数。"
+        },
+        "tan": {
+            "description": "返回给定角度（以弧度表示）的正切值。"
+        },
+        "weibull": {
+            "description": "返回韦伯分布。"
+        },
+        "gamma.dist": {
+            "description": "返回伽马分布。"
+        },
+        "imreal": {
+            "description": "返回以文本表示的复数的实部系数。"
+        },
+        "rank.eq": {
+            "description": "返回数字在一组数字中的排位；若多个值排位相同，则返回该组的最高排位。"
+        },
+        "minute": {
+            "description": "返回时间值中的分钟数，介于 0 到 59 之间。"
+        },
+        "imln": {
+            "description": "返回以文本表示的复数的自然对数。"
+        },
+        "norm.s.inv": {
+            "description": "返回标准正态累积分布函数的反函数（z 值）。"
+        },
+        "accrint": {
+            "description": "返回定期支付利息的有价证券的应计利息。"
+        },
+        "weekday": {
+            "description": "返回某日期对应的星期几，通常为 1（星期日）到 7（星期六）。"
+        },
+        "imlog2": {
+            "description": "返回以文本表示的复数以 2 为底的对数。"
+        },
+        "na": {
+            "description": "返回错误值 #N/A。"
+        },
+        "oct2bin": {
+            "description": "将八进制数转换为二进制数。"
+        },
+        "norm.dist": {
+            "description": "返回指定平均值和标准偏差下的正态分布。"
+        },
+        "rank": {
+            "description": "返回数字在一组数字中的排位（旧版 Excel 中并列取平均值）。",
+            "eq": {
+                "description": "返回数字在一组数字中的排位；若多个值排位相同，则返回该组的最高排位。"
+            }
+        },
+        "sign": {
+            "description": "返回数字的符号：正数返回 1，零返回 0，负数返回 -1。"
+        },
+        "asin": {
+            "description": "返回数字的反正弦值（以弧度表示）。"
+        },
+        "sln": {
+            "description": "返回某项资产在一个期间内的直线折旧值。"
+        },
+        "sqrtpi": {
+            "description": "返回某数乘以 π 后的平方根。"
+        },
+        "complex": {
+            "description": "根据实部和虚部系数（及可选后缀）返回以文本表示的复数。"
+        },
+        "imexp": {
+            "description": "返回以文本表示的复数的指数值。"
+        },
+        "ipmt": {
+            "description": "返回给定期次内某项投资的利息偿还额。"
+        },
+        "fv": {
+            "description": "基于固定利率和等额分期付款，返回投资的未来值。"
+        },
+        "npv": {
+            "description": "基于贴现率和一系列未来付款，计算投资的净现值。"
+        },
+        "exact": {
+            "description": "比较两个文本字符串是否完全相同（区分大小写）。"
+        },
+        "dec2oct": {
+            "description": "将十进制数转换为八进制数。"
+        },
+        "concatenate": {
+            "description": "将多个文本项合并为一个文本字符串。"
+        },
+        "harmean": {
+            "description": "返回一组数据的调和平均值。"
+        },
+        "yielddisc": {
+            "description": "返回折价发行的有价证券的年收益率。"
+        },
+        "cot": {
+            "description": "返回角度（以弧度表示）的余切值。"
+        },
+        "bin2dec": {
+            "description": "将二进制数转换为十进制数。"
+        },
+        "gamma": {
+            "description": "返回数字的伽马函数值。",
+            "dist": {
+                "description": "返回伽马分布。"
+            }
+        },
+        "time": {
+            "description": "返回特定时间的小数值。"
+        },
+        "atanh": {
+            "description": "返回数字的反双曲正切值。"
+        },
+        "normsdist": {
+            "description": "返回给定 z 值的标准正态累积分布（旧版 NORMSDIST）。"
+        },
+        "cumipmt": {
+            "description": "返回贷款在两个期间之间累计支付的利息。"
+        },
+        "imcos": {
+            "description": "返回以文本表示的复数的余弦值。"
+        },
+        "pmt": {
+            "description": "基于固定利率和等额分期付款，计算贷款的每期付款额。"
+        },
+        "imtanh": {
+            "description": "返回以文本表示的复数的双曲正切值。"
+        },
+        "rri": {
+            "description": "返回某项投资增长的等效利率。"
+        },
+        "fact": {
+            "description": "返回数字的阶乘。"
+        },
+        "date": {
+            "description": "返回特定日期的序列号。"
+        },
+        "nominal": {
+            "description": "将实际年利率转换为名义利率。"
+        }
+    },
+    "toolbar": {
+        "doc": {
+            "namePlaceholder": "未命名",
+            "file": "文件",
+            "open": "打开",
+            "save": "保存",
+            "saving": "保存中…",
+            "exportCsv": "导出为 CSV",
+            "downloadTip": "下载为 .xlsx",
+            "saveWorkbook": "保存工作簿",
+            "toggleComments": "切换批注显示",
+            "showComments": "显示批注",
+            "hideComments": "隐藏批注",
+            "starOnGithub": "在 GitHub 上给 LogiSheets 点星"
+        },
+        "tabs": {
+            "home": "开始",
+            "insert": "插入",
+            "formulas": "公式",
+            "data": "数据",
+            "view": "视图",
+            "advanced": "高级"
+        },
+        "view": {
+            "splitView": "拆分视图（第二视图）",
+            "diffLayer": "差异图层",
+            "blockOverlays": "始终显示块覆盖层",
+            "showGridlines": "显示网格线",
+            "showComments": "显示批注",
+            "zoomOut": "缩小",
+            "zoomIn": "放大",
+            "resetZoom": "重置",
+            "resetZoomTip": "缩放重置为 100%",
+            "values": "单元格内容",
+            "valuesTip": "显示或隐藏单元格内容"
+        },
+        "insert": {
+            "chart": "图表",
+            "chartTip": "用选区插入图表",
+            "image": "图片",
+            "imageTip": "在选区插入图片",
+            "comment": "批注",
+            "commentTip": "为此单元格添加批注"
+        },
+        "formulas": {
+            "autoSum": "自动求和",
+            "autoSumTip": "对上方或左侧的数字求和",
+            "precedents": "引用单元格",
+            "precedentsTip": "显示此公式读取了哪些单元格",
+            "dependents": "从属单元格",
+            "dependentsTip": "显示哪些单元格读取了此单元格",
+            "clearArrows": "清除追踪箭头",
+            "clearArrowsTip": "清除追踪箭头"
+        },
+        "data": {
+            "conditionalFormatting": "条件格式…",
+            "findReplace": "查找和替换"
+        },
+        "advanced": {
+            "createBlock": "创建块",
+            "watson": "Watson",
+            "watsonTip": "向 Watson 提问",
+            "crafts": "逻辑器",
+            "craftsTip": "打开逻辑器面板",
+            "tempMode": "暂存模式",
+            "tempModeEnterTip": "进入暂存模式（在草稿分支上编辑）",
+            "tempModeExitTip": "退出暂存模式（提交该分支）",
+            "help": "帮助",
+            "helpTip": "块、逻辑器和 Watson 是什么？—— 打开文档"
+        },
+        "home": {
+            "undo": "撤销",
+            "redo": "重做",
+            "painter": "格式刷",
+            "painterTip": "把格式复制到另一个区域",
+            "fontSize": "字号",
+            "chooseFontSize": "选择字号",
+            "increaseFontSize": "增大字号",
+            "decreaseFontSize": "减小字号",
+            "bold": "加粗",
+            "italic": "倾斜",
+            "underline": "下划线",
+            "strikethrough": "删除线",
+            "textColor": "文字",
+            "textColorTip": "文字颜色",
+            "fillColor": "填充",
+            "fillColorTip": "单元格填充色",
+            "borders": "边框",
+            "bordersTip": "单元格边框",
+            "align": "对齐",
+            "alignTip": "对齐方式",
+            "wrap": "换行",
+            "wrapTip": "单元格内文字换行",
+            "merge": "合并",
+            "mergeTip": "合并或拆分所选单元格",
+            "rows": "行",
+            "rowsTip": "在选区上方插入行",
+            "deleteRows": "删除行",
+            "deleteRowsTip": "删除所选行",
+            "cols": "列",
+            "colsTip": "在选区左侧插入列",
+            "deleteCols": "删除列",
+            "deleteColsTip": "删除所选列",
+            "clear": "清除",
+            "clearTip": "清除内容，保留格式",
+            "find": "查找",
+            "findTip": "查找和替换"
+        },
+        "numberFormat": {
+            "general": "常规",
+            "number": "数值",
+            "fraction": "分数",
+            "percent": "百分比",
+            "text": "文本",
+            "date": "日期",
+            "time": "时间"
+        },
+        "chartType": {
+            "col": "柱形图",
+            "bar": "条形图",
+            "line": "折线图",
+            "area": "面积图",
+            "pie": "饼图",
+            "doughnut": "圆环图",
+            "scatter": "散点图",
+            "radar": "雷达图",
+            "bubble": "气泡图",
+            "stock": "股价图",
+            "ofPie": "复合饼图",
+            "barOfPie": "复合条饼图",
+            "surface": "曲面图",
+            "surface3d": "曲面图（三维）",
+            "col3d": "柱形图（三维）",
+            "bar3d": "条形图（三维）",
+            "line3d": "折线图（三维）",
+            "area3d": "面积图（三维）",
+            "pie3d": "饼图（三维）"
+        },
+        "border": {
+            "color": "颜色",
+            "range": "边框范围"
+        },
+        "toast": {
+            "optionListsUnreadable": "无法读取此文件的选项列表",
+            "fileRead": "已读取文件 {{name}}",
+            "fileReadError": "读取文件出错，请稍后重试"
+        }
+    },
+    "block": {
+        "common": {
+            "cancel": "取消",
+            "create": "创建",
+            "apply": "应用",
+            "loading": "加载中…",
+            "noValuesYet": "暂无可选值",
+            "unnamed": "未命名",
+            "none": "无",
+            "ok": "确定",
+            "saveChanges": "保存更改",
+            "delete": "全部删除"
+        },
+        "agg": {
+            "sum": "求和",
+            "average": "平均值",
+            "count": "计数",
+            "countNumbers": "计数（数字）",
+            "countFilled": "计数（非空）",
+            "countFilledShort": "非空计数",
+            "min": "最小值",
+            "max": "最大值"
+        },
+        "composer": {
+            "field": "字段",
+            "fieldName": "字段名",
+            "fieldType": "字段类型",
+            "description": "说明",
+            "descriptionPlaceholder": "字段说明（可选）",
+            "keyColumnFixed": "编辑已有块时，主键列不可更改。",
+            "defaultValue": "默认值",
+            "loadFromEnumSet": "从枚举集载入",
+            "primary": "主键",
+            "newField": "新字段",
+            "refNamePlaceholder": "例如 customers",
+            "sheet": "工作表",
+            "block": "块",
+            "validation": "校验",
+            "valueFormula": "取值公式",
+            "sampleFieldName": "客户状态",
+            "sampleFieldDesc": "客户当前的状态",
+            "format": "格式",
+            "noFormat": "无格式",
+            "customFormat": "自定义格式",
+            "customFormatPlaceholder": "例如 #,##0.00",
+            "customFormatHelp": "或输入自定义的 Excel 格式代码",
+            "datePlaceholder": "yyyy-mm-dd",
+            "dateHelp": "使用 Excel 风格的日期格式。默认：yyyy-mm-dd",
+            "toast": {
+                "needRefName": "请填写块的引用名。",
+                "structureUnreadable": "无法读取此块的结构",
+                "blockUpdated": "块已更新！",
+                "fieldsSaved": "字段配置已保存！"
+            },
+            "fieldN": "字段 {{n}}",
+            "basicSettings": "基本设置",
+            "requiredField": "必填字段",
+            "enumValues": "枚举取值",
+            "defaultValueHelp": "选择新建记录时预先选中的取值。",
+            "dateTimeFormat": "日期/时间格式",
+            "numberFormat": "数字格式",
+            "referenceTarget": "引用目标",
+            "noReferenceable": "当前还没有可引用的字段。请把本块中的另一个字段标记为主键或唯一，或创建一个含此类字段的块。",
+            "validationRule": "校验规则",
+            "uniqueValue": "唯一值",
+            "uniqueValueHelp": "禁止此字段内出现重复值（例如端口号）。",
+            "deleteField": "删除此字段",
+            "addNewField": "新增字段",
+            "blockRefName": "块引用名",
+            "loadingBlock": "正在加载块…",
+            "selectField": "选择一个字段进行配置"
+        },
+        "enumSet": {
+            "createTitle": "新建枚举集",
+            "editTitle": "编辑枚举集",
+            "name": "名称",
+            "namePlaceholder": "例如 客户状态",
+            "id": "ID",
+            "idPlaceholder": "例如 customer-status",
+            "idHelp": "唯一标识（小写字母，用连字符分隔）",
+            "idLocked": "ID 不可修改",
+            "descriptionPlaceholder": "说明（可选）",
+            "optionLabel": "显示名",
+            "toast": {
+                "idExists": "已存在使用该 ID 的枚举集！"
+            },
+            "variants": "枚举项",
+            "addVariant": "添加枚举项"
+        },
+        "rule": {
+            "valueTitle": "字段公式",
+            "validationTitle": "校验规则",
+            "valueHelp": "设置后此列即为计算列 —— 引擎逐行计算，任何人都无法直接覆写。",
+            "validationHelp": "标记不符合规则的值。#PLACEHOLDER 代表被检查的值；块也可以直接拒绝这样的写入 —— 见其权限设置。",
+            "valuePlaceholder": "例如 =#FIELD(\"amount\") * #FIELD(\"price\")",
+            "validationPlaceholder": "例如 AND(#PLACEHOLDER>0, #PLACEHOLDER<100)",
+            "emptyRemoves": "留空保存会从所有行移除此规则。",
+            "insert": "插入：",
+            "editValueFormula": "编辑字段公式…",
+            "setValueFormula": "设置字段公式…",
+            "editValidation": "编辑校验规则…",
+            "setValidation": "设置校验规则…",
+            "toast": {
+                "setFailed": "设置校验规则失败"
+            }
+        },
+        "analysis": {
+            "rowLabel": "行标签",
+            "newBlockName": "新块名称",
+            "pivotInstead": "改为每组一个数值 —— 透视表…",
+            "intro": "在表格下方生成一行，每列一个数值。保持“—”则该列留空。",
+            "nothingComputed": "尚未设置任何计算 —— 至少为一列选择一种汇总方式。"
+        },
+        "pivot": {
+            "rows": "行（每个不同取值一行）",
+            "columns": "列（可选）",
+            "noColumns": "不分列 —— 每行一个合计",
+            "valueField": "值字段",
+            "function": "汇总方式",
+            "newBlockName": "新块名称",
+            "newBlockNameHelp": "公式将通过此名称引用它",
+            "more": "更多：合计列、第二个数值、筛选、行顺序",
+            "totalColumnName": "合计列名称",
+            "totalRedundant": "不分列时，该列本身就是行合计",
+            "columnName": "列名称",
+            "field": "字段",
+            "condition": "条件",
+            "conditionPlaceholder": "例如 华东 或 >100 或 <>closed",
+            "rowOrder": "行顺序",
+            "custom": "自定义",
+            "orderList": "顺序（每行一个值）",
+            "orderListHelp": "未列出的值排在最后 —— 不会被隐藏",
+            "less": "收起",
+            "orderByValue": "按值排序",
+            "orderFirstSeen": "按源数据出现顺序",
+            "totalColumnHelp": "例如“合计”。留空则不生成。它横跨所有列 —— 不是又一个{{dim}}",
+            "sameField": "行和列不能是同一个字段。",
+            "analysisInstead": "改为整表一行汇总…"
+        },
+        "menu": {
+            "analyse": "汇总分析…",
+            "editSummary": "编辑汇总…",
+            "editPivot": "编辑透视表…",
+            "refreshPivot": "刷新透视表",
+            "modify": "修改",
+            "sourceBlock": "源数据块：{{name}}",
+            "analysisBlock": "分析块：{{name}}",
+            "delete": "删除",
+            "deleteWithAnalyses_one": "删除（连同 {{count}} 个分析块）",
+            "deleteWithAnalyses_other": "删除（连同 {{count}} 个分析块）",
+            "refreshPivotStale_one": "刷新透视表（缺 {{count}} 个分组）",
+            "refreshPivotStale_other": "刷新透视表（缺 {{count}} 个分组）",
+            "sortAscending": "升序排列",
+            "sortDescending": "降序排列"
+        },
+        "cell": {
+            "addNewRow": "新增一行",
+            "requiredField": "此字段",
+            "required": "{{field}}为必填项",
+            "imageSettings": "图片设置",
+            "imageUrl": "图片链接",
+            "imageUrlPlaceholder": "输入图片链接",
+            "imageAlt": "单元格内容",
+            "imagePreviewAlt": "预览",
+            "displaySize": "显示尺寸",
+            "previewLabel": "预览",
+            "enterUrlToPreview": "输入图片链接以预览",
+            "true": "是",
+            "false": "否"
+        },
+        "toast": {
+            "moveBlocked": "无法移动块：目标区域已被占用",
+            "recipeBroken": "配方失效"
+        },
+        "fieldType": {
+            "unspecified": "未指定",
+            "enum": "枚举",
+            "multiSelect": "多选",
+            "datetime": "日期时间",
+            "boolean": "布尔值",
+            "string": "文本",
+            "number": "数字",
+            "image": "图片",
+            "fieldRef": "引用（单字段）",
+            "multiSelectRef": "引用（多字段）"
+        },
+        "numFmt": {
+            "integer": "整数 (0)",
+            "thousands": "千位分隔 (1,000)",
+            "percent": "百分比 (0%)",
+            "percent1": "百分比 + 1 位小数 (0.0%)",
+            "percent2": "百分比 + 2 位小数 (0.00%)"
+        }
+    },
+    "watson": {
+        "newChat": "新建对话",
+        "settings": "设置",
+        "close": "关闭",
+        "stop": "停止",
+        "send": "发送",
+        "empty": "让 Watson 帮你构建、查看或编辑表格。",
+        "working": "Watson 正在处理…",
+        "composerPlaceholder": "给 Watson 发消息…",
+        "tempModeOn": "暂存模式已开启。",
+        "tempModeBody": "你的改动在草稿分支上。Watson 仍可读取和预览，但在你保留或丢弃这些改动之前不会写入。",
+        "commit": "提交",
+        "discard": "丢弃",
+        "provider": "服务商",
+        "model": "模型",
+        "baseUrl": "API 基础地址",
+        "keyStoredHint": "{{label}}（保存在本机）",
+        "corsWarning": "浏览器会拦截对该服务商的直接调用（CORS）。请把基础地址改为支持 CORS 的代理，或使用桌面版 —— 它以原生方式调用，无需代理。",
+        "cancel": "取消",
+        "save": "保存",
+        "approveTitle": "是否允许此工具调用？",
+        "deny": "拒绝",
+        "approve": "允许",
+        "error": {
+            "needKey": "请先在设置中填写 API key。",
+            "missingKey": "尚未设置 API key。打开设置并粘贴你的 key。",
+            "unauthorized": "API key 被拒绝。请在设置中检查。",
+            "rateLimited": "服务商限流 —— 请稍候重试。",
+            "serverError": "服务商出现服务端错误。请重试。",
+            "badRequest": "服务商拒绝了该请求。",
+            "unknown": "出了点问题。详情见控制台。",
+            "unreachable": "无法连接 {{provider}}。{{hint}}",
+            "hintLocal": "请检查服务是否已启动、基础地址是否正确（默认 {{url}}）。",
+            "hintCors": "浏览器会拦截对它的直接调用（CORS）—— 请把基础地址改为代理，或使用桌面版，它以原生方式调用。",
+            "hintGeneric": "请检查网络连接和设置中的基础地址。"
+        },
+        "providers": {
+            "anthropic": "Anthropic（Claude）",
+            "anthropicKey": "Anthropic API key",
+            "kimi": "Kimi（月之暗面）",
+            "kimiKey": "Moonshot API key",
+            "kimiNote": "Moonshot 的 Anthropic 兼容端点。国内站：https://api.moonshot.cn/anthropic。",
+            "openai": "OpenAI",
+            "openaiKey": "OpenAI API key",
+            "deepseek": "DeepSeek",
+            "deepseekKey": "DeepSeek API key",
+            "openrouter": "OpenRouter",
+            "openrouterKey": "OpenRouter API key",
+            "openrouterNote": "一个 key 通向多种模型 —— 模型 id 需与 OpenRouter 的写法完全一致（例如 `google/gemini-2.5-pro`）。",
+            "ollama": "Ollama（本地）",
+            "ollamaKey": "API key（本地 Ollama 不需要）",
+            "ollamaNote": "任何 OpenAI 兼容的本地服务都可以 —— LM Studio 是 http://localhost:1234/v1，vLLM 用你启动时的端口。模型必须支持工具调用。"
+        }
+    },
+    "app": {
+        "language": "语言",
+        "languageName": {
+            "en": "English",
+            "zh-CN": "中文"
+        }
+    },
+    "ui": {
+        "common": {
+            "cancel": "取消",
+            "close": "关闭",
+            "delete": "删除",
+            "rename": "重命名",
+            "loading": "加载中…",
+            "save": "保存",
+            "create": "创建",
+            "unknown": "未知",
+            "somethingWrong": "出了点问题。"
+        },
+        "menu": {
+            "formatCells": "设置单元格格式",
+            "formatCellsShort": "设置单元格格式",
+            "clearCells": "清除内容",
+            "addComment": "添加批注",
+            "linkToBlock": "链接到块…",
+            "convertToBlock": "转换为块…",
+            "conditionalFormatting": "条件格式…",
+            "editBlock": "编辑块…",
+            "tracePrecedents": "追踪引用单元格",
+            "traceDependents": "追踪从属单元格",
+            "clearTrace": "清除追踪箭头",
+            "insertImage": "插入图片",
+            "removeImage": "移除图片",
+            "insertRowsAbove": "在上方插入行",
+            "insertRowsBelow": "在下方插入行",
+            "deleteRows": "删除行",
+            "insertColsLeft": "在左侧插入列",
+            "insertColsRight": "在右侧插入列",
+            "deleteCols": "删除列",
+            "count": "数量",
+            "decrease": "减少",
+            "increase": "增加",
+            "linkToBlockTitle": "链接到块",
+            "orLinkExisting": "或链接到已有的块",
+            "selectRangeFirst": "请先选择一个单元格区域。",
+            "selectionTooLarge": "所选区域太大，无法转换为块。"
+        },
+        "find": {
+            "title": "在工作表中查找",
+            "invalidRegex": "正则表达式无效",
+            "searching": "正在查找…",
+            "noResults": "无匹配结果",
+            "previous": "上一个（Shift+Enter）",
+            "next": "下一个（Enter）",
+            "close": "关闭（Esc）",
+            "matchCase": "区分大小写",
+            "wholeCell": "全字匹配"
+        },
+        "format": {
+            "category": "分类",
+            "formats": "格式",
+            "sample": "示例",
+            "number": "数字",
+            "customHint": "输入自定义格式",
+            "customPlaceholder": "例如 #,##0.00;[Red](#,##0.00)",
+            "style": "样式",
+            "borderRange": "边框范围",
+            "providedLater": "后续提供",
+            "treatAsText": "按文本处理",
+            "cat": {
+                "General": "常规",
+                "Number": "数值",
+                "Accounting": "会计专用",
+                "Date": "日期",
+                "Time": "时间",
+                "Fraction": "分数",
+                "Text": "文本",
+                "Custom": "自定义"
+            },
+            "borderSettings": "边框设置"
+        },
+        "cf": {
+            "title": "条件格式",
+            "newRule": "新建规则",
+            "editRule": "编辑规则",
+            "ruleType": "规则类型",
+            "condition": "条件",
+            "colours": "颜色",
+            "barColour": "数据条颜色",
+            "format": "格式",
+            "fill": "填充",
+            "textColour": "文字颜色",
+            "bold": "加粗",
+            "italic": "倾斜",
+            "preview": "预览",
+            "stopIfTrue": "此规则匹配时停止计算其他规则",
+            "valuePlaceholder": "数值",
+            "textPlaceholder": "要查找的文本",
+            "type": {
+                "cellIs": "单元格值",
+                "containsText": "文本包含",
+                "colorScale": "色阶",
+                "dataBar": "数据条"
+            },
+            "err": {
+                "bothValues": "请填写两个值。",
+                "oneValue": "请填写用于比较的值。",
+                "text": "请填写要查找的文本。"
+            },
+            "op": {
+                "greaterThan": "大于",
+                "lessThan": "小于",
+                "greaterThanOrEqual": "大于或等于",
+                "lessThanOrEqual": "小于或等于",
+                "equal": "等于",
+                "notEqual": "不等于",
+                "between": "介于",
+                "notBetween": "不介于"
+            },
+            "desc": {
+                "cellIs": "单元格值{{op}} {{operands}}",
+                "expression": "公式：{{formula}}",
+                "containsText": "单元格包含“{{text}}”",
+                "notContainsText": "单元格不包含“{{text}}”",
+                "beginsWith": "单元格以“{{text}}”开头",
+                "endsWith": "单元格以“{{text}}”结尾",
+                "containsBlanks": "单元格为空",
+                "notContainsBlanks": "单元格不为空",
+                "containsErrors": "单元格有错误",
+                "notContainsErrors": "单元格无错误",
+                "duplicateValues": "重复值",
+                "uniqueValues": "唯一值",
+                "top": "前 {{rank}}{{unit}}",
+                "bottom": "后 {{rank}}{{unit}}",
+                "aboveAverage": "高于平均值{{eq}}{{sd}}",
+                "belowAverage": "低于平均值{{eq}}{{sd}}",
+                "orEqualTo": "或等于",
+                "byStdDev": "（{{n}} 个标准差）",
+                "timePeriod": "日期为 {{period}}",
+                "colorScale": "色阶（{{count}} 种颜色）",
+                "dataBar": "数据条",
+                "iconSet": "图标集（{{name}}）"
+            },
+            "newRuleFor": "为 {{range}} 新建规则",
+            "noRules": "此工作表还没有规则。点击“新建规则”可为 {{range}} 添加一条。"
+        },
+        "comment": {
+            "comments": "批注",
+            "newComment": "新建批注",
+            "resolveThread": "解决此批注",
+            "reopenThread": "重新打开此批注",
+            "resolve": "解决",
+            "reopen": "重新打开",
+            "resolved": "已解决",
+            "yourName": "你的名字",
+            "reply": "回复",
+            "comment": "批注",
+            "replyPlaceholder": "回复…  用 @名字 提及某人",
+            "commentPlaceholder": "添加批注…  用 @名字 提及某人"
+        },
+        "sheet": {
+            "add": "添加工作表",
+            "zoomOut": "缩小",
+            "zoomIn": "放大",
+            "resetZoom": "缩放重置为 100%",
+            "lastSheet": "删除失败：工作簿至少要保留一个工作表。"
+        },
+        "dialog": {
+            "replaceTitle": "要替换当前工作簿吗？",
+            "replaceBody": "载入此文件会替换你当前打开的工作簿，未保存的更改将会丢失。要继续吗？",
+            "replace": "替换",
+            "invalidFormulaTitle": "公式无效",
+            "invalidFormulaBody": "输入的公式无效，请检查后重试。"
+        },
+        "formulaEdit": {
+            "confirm": "确认（Enter）",
+            "cancel": "取消（Esc）"
+        },
+        "editBar": {
+            "showFormulaOrValue": "显示公式或值",
+            "showValidation": "显示校验公式",
+            "noValidation": "此单元格没有校验规则"
+        },
+        "craft": {
+            "closePanel": "关闭逻辑器面板",
+            "pointHint": "左键 +1，右键 +5，按住 Shift 为减"
+        },
+        "view": {
+            "active": "当前视图",
+            "inactive": "非当前视图"
+        },
+        "cell": {
+            "readOnly": "此单元格为只读。",
+            "computedColumn": "此列由字段公式（{{formula}}）计算得出。要修改请改块的字段公式。"
+        },
+        "tempMode": {
+            "label": "暂存模式",
+            "body": "改动在草稿分支上",
+            "changed_one": "{{count}} 个单元格已更改",
+            "changed_other": "{{count}} 个单元格已更改",
+            "commit": "提交",
+            "discard": "丢弃",
+            "commitTip": "保留这些改动，作为一次可撤销的操作",
+            "discardTip": "丢弃这些改动，回到已提交的值"
+        }
+    }
+}

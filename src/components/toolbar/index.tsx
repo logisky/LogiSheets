@@ -1,6 +1,13 @@
 import {useEffect, useRef, useState} from 'react'
 import type {FC, ReactNode} from 'react'
 import {observer} from 'mobx-react-lite'
+import {useTranslation} from 'react-i18next'
+import {
+    getLocale,
+    setLocale,
+    SUPPORTED_LOCALES,
+    type Locale,
+} from '@/core/i18n/i18n'
 import {globalStore} from '@/store'
 import styles from './toolbar.module.scss'
 import modalStyles from '../modal.module.scss'
@@ -69,6 +76,7 @@ import MenuItem from '@mui/material/MenuItem'
 import Tabs from '@mui/material/Tabs'
 import Dialog from '@mui/material/Dialog'
 import Tab from '@mui/material/Tab'
+import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 import {
@@ -126,32 +134,38 @@ const FONT_FAMILIES = [
     '楷体',
 ]
 
-/** The chart kinds the engine can create from a selection. */
+/**
+ * The chart kinds the engine can create from a selection.
+ *
+ * `value` is the engine's kind and never moves; the label is a translation key
+ * resolved at render, because this list is module-level and the language can
+ * change under it.
+ */
 const CHART_TYPES = [
-    {value: 'col', label: 'Column'},
-    {value: 'bar', label: 'Bar'},
-    {value: 'line', label: 'Line'},
-    {value: 'area', label: 'Area'},
-    {value: 'pie', label: 'Pie'},
-    {value: 'doughnut', label: 'Doughnut'},
-    {value: 'scatter', label: 'Scatter'},
-    {value: 'radar', label: 'Radar'},
+    'col',
+    'bar',
+    'line',
+    'area',
+    'pie',
+    'doughnut',
+    'scatter',
+    'radar',
     // Reads three columns from the selection: X, Y, then bubble size.
-    {value: 'bubble', label: 'Bubble'},
+    'bubble',
     // Stock reads its series positionally: 4 columns is open/high/low/close,
     // 3 is high/low/close.
-    {value: 'stock', label: 'Stock'},
-    {value: 'ofPie', label: 'Pie of pie'},
-    {value: 'barOfPie', label: 'Bar of pie'},
-    {value: 'surface', label: 'Surface'},
-    {value: 'surface3d', label: 'Surface (3-D)'},
+    'stock',
+    'ofPie',
+    'barOfPie',
+    'surface',
+    'surface3d',
     // The 3-D forms round-trip to Excel as 3-D but are drawn flat here.
-    {value: 'col3d', label: 'Column (3-D)'},
-    {value: 'bar3d', label: 'Bar (3-D)'},
-    {value: 'line3d', label: 'Line (3-D)'},
-    {value: 'area3d', label: 'Area (3-D)'},
-    {value: 'pie3d', label: 'Pie (3-D)'},
-]
+    'col3d',
+    'bar3d',
+    'line3d',
+    'area3d',
+    'pie3d',
+] as const
 
 export interface ToolbarProps {
     setGrid: (grid: Grid | null) => void
@@ -251,6 +265,7 @@ export const Toolbar = observer(
         onToggleCraft,
         craftActive,
     }: ToolbarProps) => {
+        const {t} = useTranslation()
         const engine = useEngine()
         const DATA_SERVICE = engine.getDataService()
         const ops = useOps()
@@ -347,7 +362,7 @@ export const Toolbar = observer(
                     // The file still opens: the engine validates enum fields
                     // from its own sets either way, so the cost is a dropdown
                     // that lists nothing until the next open.
-                    toast('Could not read this file’s option lists', {
+                    toast(String(t('toolbar.toast.optionListsUnreadable')), {
                         type: 'warning',
                     })
                 }
@@ -368,9 +383,11 @@ export const Toolbar = observer(
                 // sheet 0 via the mounted component).
                 setActiveSheet(0)
                 setBookName(file.name.replace(/\.[^/.]+$/, ''))
-                toast.success(`Read file ${file.name}`)
+                toast.success(
+                    String(t('toolbar.toast.fileRead', {name: file.name}))
+                )
             } catch {
-                toast.error('Read file error, retry later')
+                toast.error(String(t('toolbar.toast.fileReadError')))
             }
         }
 
@@ -441,7 +458,9 @@ export const Toolbar = observer(
         const [chartAnchor, setChartAnchor] = useState<HTMLElement | null>(null)
         const [alignment, setAlignment] = useState<string | null>(null)
         const [wrapText, setWrapText] = useState(false)
-        const [bookName, setBookName] = useState('Untitled')
+        const [bookName, setBookName] = useState(() =>
+            t('toolbar.doc.namePlaceholder')
+        )
 
         // Merge
         const [mergedOn, setMergedOn] = useState<boolean | null>(null)
@@ -964,7 +983,7 @@ export const Toolbar = observer(
                     whiteSpace: 'nowrap',
                 }}
             >
-                CreateBlock
+                {t('toolbar.advanced.createBlock')}
             </Button>
         )
 
@@ -1172,7 +1191,7 @@ export const Toolbar = observer(
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `${bookName || 'Untitled'}.csv`
+            a.download = `${bookName || t('toolbar.doc.namePlaceholder')}.csv`
             a.click()
             URL.revokeObjectURL(url)
         }
@@ -1245,7 +1264,7 @@ export const Toolbar = observer(
                         onChange={(e) => setBookName(e.target.value)}
                         variant="standard"
                         size="small"
-                        placeholder="Untitled"
+                        placeholder={t('toolbar.doc.namePlaceholder')}
                     />
                     <Divider
                         orientation="vertical"
@@ -1259,7 +1278,7 @@ export const Toolbar = observer(
                         endIcon={<ArrowDropDownIcon fontSize="small" />}
                         onClick={openFileMenu}
                     >
-                        File
+                        {t('toolbar.doc.file')}
                     </Button>
                     <Menu
                         anchorEl={fileAnchor}
@@ -1278,7 +1297,7 @@ export const Toolbar = observer(
                                 fontSize="small"
                                 style={{marginRight: 8}}
                             />
-                            Open
+                            {t('toolbar.doc.open')}
                         </MenuItem>
                         <MenuItem
                             onClick={() => {
@@ -1291,7 +1310,7 @@ export const Toolbar = observer(
                                 fontSize="small"
                                 style={{marginRight: 8}}
                             />
-                            Save
+                            {t('toolbar.doc.save')}
                         </MenuItem>
                         <MenuItem
                             onClick={() => {
@@ -1304,7 +1323,7 @@ export const Toolbar = observer(
                                 fontSize="small"
                                 style={{marginRight: 8}}
                             />
-                            Export as CSV
+                            {t('toolbar.doc.exportCsv')}
                         </MenuItem>
                     </Menu>
                     <Tabs
@@ -1321,11 +1340,14 @@ export const Toolbar = observer(
                             },
                         }}
                     >
-                        <Tab value="home" label="Home" />
-                        <Tab value="insert" label="Insert" />
-                        <Tab value="formulas" label="Formulas" />
-                        <Tab value="data" label="Data" />
-                        <Tab value="view" label="View" />
+                        <Tab value="home" label={t('toolbar.tabs.home')} />
+                        <Tab value="insert" label={t('toolbar.tabs.insert')} />
+                        <Tab
+                            value="formulas"
+                            label={t('toolbar.tabs.formulas')}
+                        />
+                        <Tab value="data" label={t('toolbar.tabs.data')} />
+                        <Tab value="view" label={t('toolbar.tabs.view')} />
                         {/* The five above are the tabs every spreadsheet has;
                             this one is what only this spreadsheet has. It is
                             set apart by a rule and carries the accent even
@@ -1333,7 +1355,7 @@ export const Toolbar = observer(
                             turning a tab strip into a badge. */}
                         <Tab
                             value="advanced"
-                            label="Advanced"
+                            label={t('toolbar.tabs.advanced')}
                             className={styles.tabAdvanced}
                         />
                     </Tabs>
@@ -1348,13 +1370,13 @@ export const Toolbar = observer(
                     <Tooltip
                         title={
                             globalStore.showComments
-                                ? 'Hide comments'
-                                : 'Show comments'
+                                ? t('toolbar.doc.hideComments')
+                                : t('toolbar.doc.showComments')
                         }
                     >
                         <IconButton
                             size="small"
-                            aria-label="Toggle comments"
+                            aria-label={t('toolbar.doc.toggleComments')}
                             color={
                                 globalStore.showComments ? 'primary' : 'default'
                             }
@@ -1367,17 +1389,19 @@ export const Toolbar = observer(
                             <ChatBubbleOutlineIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Download as .xlsx">
+                    <Tooltip title={t('toolbar.doc.downloadTip')}>
                         <span>
                             <button
                                 type="button"
                                 className={styles.saveBtn}
-                                aria-label="Save workbook"
+                                aria-label={t('toolbar.doc.saveWorkbook')}
                                 disabled={saving}
                                 onClick={saveWorkbook}
                             >
                                 <SaveIcon fontSize="small" />
-                                {saving ? 'Saving…' : 'Save'}
+                                {saving
+                                    ? t('toolbar.doc.saving')
+                                    : t('toolbar.doc.save')}
                             </button>
                         </span>
                     </Tooltip>
@@ -1391,19 +1415,19 @@ export const Toolbar = observer(
                             <div className={styles.viewSection}>
                                 {[
                                     {
-                                        label: 'Split view (2nd view)',
+                                        label: t('toolbar.view.splitView'),
                                         checked: globalStore.splitView,
                                         onChange: (v: boolean) =>
                                             globalStore.setSplitView(v),
                                     },
                                     {
-                                        label: 'Diff layer',
+                                        label: t('toolbar.view.diffLayer'),
                                         checked: globalStore.diffLayerEnabled,
                                         onChange: (v: boolean) =>
                                             globalStore.setDiffLayerEnabled(v),
                                     },
                                     {
-                                        label: 'Block overlays always visible',
+                                        label: t('toolbar.view.blockOverlays'),
                                         checked:
                                             globalStore.alwaysShowBlockInfo,
                                         onChange: (v: boolean) =>
@@ -1412,7 +1436,7 @@ export const Toolbar = observer(
                                             ),
                                     },
                                     {
-                                        label: 'Show gridlines',
+                                        label: t('toolbar.view.showGridlines'),
                                         checked: globalStore.showGridlines,
                                         onChange: (v: boolean) => {
                                             globalStore.setShowGridlines(v)
@@ -1420,29 +1444,29 @@ export const Toolbar = observer(
                                         },
                                     },
                                     {
-                                        label: 'Show comments',
+                                        label: t('toolbar.view.showComments'),
                                         checked: globalStore.showComments,
                                         onChange: (v: boolean) =>
                                             globalStore.setShowComments(v),
                                     },
-                                ].map((t) => (
+                                ].map((item) => (
                                     <div
                                         className={styles.toggleItem}
-                                        key={t.label}
+                                        key={String(item.label)}
                                     >
                                         <FormControlLabel
                                             control={
                                                 <Switch
                                                     size="small"
-                                                    checked={t.checked}
+                                                    checked={item.checked}
                                                     onChange={(e) =>
-                                                        t.onChange(
+                                                        item.onChange(
                                                             e.target.checked
                                                         )
                                                     }
                                                 />
                                             }
-                                            label={t.label}
+                                            label={item.label}
                                             labelPlacement="start"
                                             sx={{
                                                 m: 0,
@@ -1461,13 +1485,59 @@ export const Toolbar = observer(
                                 flexItem
                                 className={styles.divider}
                             />
+                            {/* Language. A build ships with one by default (see
+                                crafts.config.json), so this is the escape hatch
+                                rather than the main road — which is why it sits
+                                with the other display preferences. The choice
+                                is remembered on the device and outranks the
+                                build's default from then on. */}
+                            <div className={styles.section}>
+                                <FormControl size="small">
+                                    <Select
+                                        size="small"
+                                        value={getLocale()}
+                                        onChange={(e) =>
+                                            void setLocale(
+                                                e.target.value as Locale
+                                            )
+                                        }
+                                        sx={{
+                                            minWidth: 110,
+                                            maxHeight: 30,
+                                            fontSize: 12,
+                                        }}
+                                        inputProps={{
+                                            'aria-label': String(
+                                                t('app.language')
+                                            ),
+                                        }}
+                                    >
+                                        {SUPPORTED_LOCALES.map((l) => (
+                                            <MenuItem
+                                                key={l}
+                                                value={l}
+                                                sx={{fontSize: 12}}
+                                            >
+                                                {t(`app.languageName.${l}`)}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
                             {/* Zoom */}
                             <div className={styles.section}>
-                                <Tooltip title="Zoom out">
+                                <Tooltip title={t('toolbar.view.zoomOut')}>
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Zoom out"
+                                            aria-label={t(
+                                                'toolbar.view.zoomOut'
+                                            )}
                                             onClick={() => engine.zoomOut()}
                                         >
                                             <ZoomOutIcon fontSize="small" />
@@ -1477,11 +1547,13 @@ export const Toolbar = observer(
                                 <span className={styles.zoomLabel}>
                                     {zoomPct}%
                                 </span>
-                                <Tooltip title="Zoom in">
+                                <Tooltip title={t('toolbar.view.zoomIn')}>
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Zoom in"
+                                            aria-label={t(
+                                                'toolbar.view.zoomIn'
+                                            )}
                                             onClick={() => engine.zoomIn()}
                                         >
                                             <ZoomInIcon fontSize="small" />
@@ -1489,8 +1561,8 @@ export const Toolbar = observer(
                                     </span>
                                 </Tooltip>
                                 <ToolButton
-                                    label="Reset"
-                                    tip="Reset zoom to 100%"
+                                    label={t('toolbar.view.resetZoom')}
+                                    tip={t('toolbar.view.resetZoomTip')}
                                     icon={
                                         <CenterFocusStrongIcon fontSize="small" />
                                     }
@@ -1505,8 +1577,8 @@ export const Toolbar = observer(
                             {/* Cell values */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Values"
-                                    tip="Show or hide cell contents"
+                                    label={t('toolbar.view.values')}
+                                    tip={t('toolbar.view.valuesTip')}
                                     icon={
                                         <VisibilityOutlinedIcon fontSize="small" />
                                     }
@@ -1532,8 +1604,8 @@ export const Toolbar = observer(
                             {/* Insert / create */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Chart"
-                                    tip="Insert a chart from the selection"
+                                    label={t('toolbar.insert.chart')}
+                                    tip={t('toolbar.insert.chartTip')}
                                     icon={<BarChartIcon fontSize="small" />}
                                     onClick={(e) =>
                                         setChartAnchor(e.currentTarget)
@@ -1545,15 +1617,15 @@ export const Toolbar = observer(
                                     open={Boolean(chartAnchor)}
                                     onClose={() => setChartAnchor(null)}
                                 >
-                                    {CHART_TYPES.map((t) => (
+                                    {CHART_TYPES.map((kind) => (
                                         <MenuItem
-                                            key={t.value}
+                                            key={kind}
                                             onClick={() => {
                                                 setChartAnchor(null)
-                                                engine.insertChart(t.value)
+                                                engine.insertChart(kind)
                                             }}
                                         >
-                                            {t.label}
+                                            {t(`toolbar.chartType.${kind}`)}
                                         </MenuItem>
                                     ))}
                                 </Menu>
@@ -1566,8 +1638,8 @@ export const Toolbar = observer(
                             {/* Objects */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Image"
-                                    tip="Insert an image at the selection"
+                                    label={t('toolbar.insert.image')}
+                                    tip={t('toolbar.insert.imageTip')}
                                     icon={
                                         <ImageOutlinedIcon fontSize="small" />
                                     }
@@ -1575,8 +1647,8 @@ export const Toolbar = observer(
                                     disabled={!hasSelectedData}
                                 />
                                 <ToolButton
-                                    label="Comment"
-                                    tip="Add a comment to this cell"
+                                    label={t('toolbar.insert.comment')}
+                                    tip={t('toolbar.insert.commentTip')}
                                     icon={
                                         <AddCommentOutlinedIcon fontSize="small" />
                                     }
@@ -1591,8 +1663,8 @@ export const Toolbar = observer(
                             {/* Function library */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="AutoSum"
-                                    tip="Sum the numbers above or to the left"
+                                    label={t('toolbar.formulas.autoSum')}
+                                    tip={t('toolbar.formulas.autoSumTip')}
                                     icon={<FunctionsIcon fontSize="small" />}
                                     onClick={autoSum}
                                     disabled={!hasSelectedData}
@@ -1606,8 +1678,8 @@ export const Toolbar = observer(
                             {/* Formula auditing */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Precedents"
-                                    tip="Show which cells this formula reads"
+                                    label={t('toolbar.formulas.precedents')}
+                                    tip={t('toolbar.formulas.precedentsTip')}
                                     icon={
                                         <NorthEastOutlinedIcon fontSize="small" />
                                     }
@@ -1615,8 +1687,8 @@ export const Toolbar = observer(
                                     disabled={!hasSelectedData}
                                 />
                                 <ToolButton
-                                    label="Dependents"
-                                    tip="Show which cells read this one"
+                                    label={t('toolbar.formulas.dependents')}
+                                    tip={t('toolbar.formulas.dependentsTip')}
                                     icon={
                                         <SouthWestOutlinedIcon fontSize="small" />
                                     }
@@ -1624,8 +1696,8 @@ export const Toolbar = observer(
                                     disabled={!hasSelectedData}
                                 />
                                 <ToolButton
-                                    label="Clear arrows"
-                                    tip="Clear the trace arrows"
+                                    label={t('toolbar.formulas.clearArrows')}
+                                    tip={t('toolbar.formulas.clearArrowsTip')}
                                     icon={
                                         <LayersClearOutlinedIcon fontSize="small" />
                                     }
@@ -1653,8 +1725,8 @@ export const Toolbar = observer(
                             <div className={styles.section}>
                                 {onToggleWatson ? (
                                     <ToolButton
-                                        label="Watson"
-                                        tip="Ask Watson"
+                                        label={t('toolbar.advanced.watson')}
+                                        tip={t('toolbar.advanced.watsonTip')}
                                         icon={
                                             <AutoAwesomeIcon fontSize="small" />
                                         }
@@ -1664,8 +1736,8 @@ export const Toolbar = observer(
                                 ) : null}
                                 {onToggleCraft ? (
                                     <ToolButton
-                                        label="Crafts"
-                                        tip="Open the craft panel"
+                                        label={t('toolbar.advanced.crafts')}
+                                        tip={t('toolbar.advanced.craftsTip')}
                                         icon={
                                             <ExtensionIcon fontSize="small" />
                                         }
@@ -1674,11 +1746,15 @@ export const Toolbar = observer(
                                     />
                                 ) : null}
                                 <ToolButton
-                                    label="Temp mode"
+                                    label={t('toolbar.advanced.tempMode')}
                                     tip={
                                         globalStore.isTempMode
-                                            ? 'Exit temp mode (commit the branch)'
-                                            : 'Enter temp mode (edit on a scratch branch)'
+                                            ? t(
+                                                  'toolbar.advanced.tempModeExitTip'
+                                              )
+                                            : t(
+                                                  'toolbar.advanced.tempModeEnterTip'
+                                              )
                                     }
                                     icon={<ScienceIcon fontSize="small" />}
                                     onClick={onToggleTempMode}
@@ -1696,7 +1772,7 @@ export const Toolbar = observer(
                                 them is the one place someone will look, so it
                                 is where the way out to the docs belongs. */}
                             <div className={styles.section}>
-                                <Tooltip title="What are blocks, crafts and Watson? — opens the docs">
+                                <Tooltip title={t('toolbar.advanced.helpTip')}>
                                     <a
                                         className={styles.helpLink}
                                         // `.html` is not optional: the docs site does not set VitePress'
@@ -1706,7 +1782,7 @@ export const Toolbar = observer(
                                         rel="noreferrer noopener"
                                     >
                                         <HelpOutlineIcon fontSize="small" />
-                                        Help
+                                        {t('toolbar.advanced.help')}
                                     </a>
                                 </Tooltip>
                             </div>
@@ -1722,7 +1798,7 @@ export const Toolbar = observer(
                                     disabled={!hasSelectedData}
                                     onClick={openConditionalFormatting}
                                 >
-                                    Conditional formatting…
+                                    {t('toolbar.data.conditionalFormatting')}
                                 </Button>
                             </div>
                             <Divider
@@ -1737,7 +1813,7 @@ export const Toolbar = observer(
                                     startIcon={<SearchIcon />}
                                     onClick={() => globalStore.requestFind()}
                                 >
-                                    Find & replace
+                                    {t('toolbar.data.findReplace')}
                                 </Button>
                             </div>
                         </>
@@ -1746,12 +1822,12 @@ export const Toolbar = observer(
                         <>
                             {/* History */}
                             <div className={styles.section}>
-                                <Tooltip title="Undo">
+                                <Tooltip title={t('toolbar.home.undo')}>
                                     <IconButton size="small" onClick={undo}>
                                         <UndoIcon fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Redo">
+                                <Tooltip title={t('toolbar.home.redo')}>
                                     <IconButton size="small" onClick={redo}>
                                         <RedoIcon fontSize="small" />
                                     </IconButton>
@@ -1766,8 +1842,8 @@ export const Toolbar = observer(
                             {/* Clipboard */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Painter"
-                                    tip="Copy formatting to another range"
+                                    label={t('toolbar.home.painter')}
+                                    tip={t('toolbar.home.painterTip')}
                                     icon={<FormatPaintIcon fontSize="small" />}
                                     onClick={onFormatPainter}
                                     disabled={!hasSelectedData}
@@ -1813,7 +1889,7 @@ export const Toolbar = observer(
                                     ref={fontSizeBoxRef}
                                 >
                                     <input
-                                        aria-label="Font size"
+                                        aria-label={t('toolbar.home.fontSize')}
                                         value={fontPtDraft ?? String(fontPt)}
                                         disabled={!hasSelectedData}
                                         onChange={(e) =>
@@ -1844,12 +1920,14 @@ export const Toolbar = observer(
                                             }
                                         }}
                                     />
-                                    <Tooltip title="Font size">
+                                    <Tooltip title={t('toolbar.home.fontSize')}>
                                         <span>
                                             <IconButton
                                                 className={styles.fontSizeCaret}
                                                 size="small"
-                                                aria-label="Choose font size"
+                                                aria-label={t(
+                                                    'toolbar.home.chooseFontSize'
+                                                )}
                                                 disabled={!hasSelectedData}
                                                 onClick={() =>
                                                     setFontSizeAnchor(
@@ -1905,11 +1983,15 @@ export const Toolbar = observer(
                                         ))}
                                     </Menu>
                                 </div>
-                                <Tooltip title="Increase font size">
+                                <Tooltip
+                                    title={t('toolbar.home.increaseFontSize')}
+                                >
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Increase font size"
+                                            aria-label={t(
+                                                'toolbar.home.increaseFontSize'
+                                            )}
                                             disabled={!hasSelectedData}
                                             onClick={() =>
                                                 applyFontSize(nextFontPt(1))
@@ -1919,11 +2001,15 @@ export const Toolbar = observer(
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Decrease font size">
+                                <Tooltip
+                                    title={t('toolbar.home.decreaseFontSize')}
+                                >
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Decrease font size"
+                                            aria-label={t(
+                                                'toolbar.home.decreaseFontSize'
+                                            )}
                                             disabled={!hasSelectedData}
                                             onClick={() =>
                                                 applyFontSize(nextFontPt(-1))
@@ -1941,11 +2027,11 @@ export const Toolbar = observer(
                             />
                             {/* Font style */}
                             <div className={styles.section}>
-                                <Tooltip title="Bold">
+                                <Tooltip title={t('toolbar.home.bold')}>
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Bold"
+                                            aria-label={t('toolbar.home.bold')}
                                             onClick={onToggleBold}
                                             color={bold ? 'primary' : 'default'}
                                             disabled={!hasSelectedData}
@@ -1954,11 +2040,13 @@ export const Toolbar = observer(
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Italic">
+                                <Tooltip title={t('toolbar.home.italic')}>
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Italic"
+                                            aria-label={t(
+                                                'toolbar.home.italic'
+                                            )}
                                             onClick={onToggleItalic}
                                             color={
                                                 italic ? 'primary' : 'default'
@@ -1969,11 +2057,13 @@ export const Toolbar = observer(
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Underline">
+                                <Tooltip title={t('toolbar.home.underline')}>
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Underline"
+                                            aria-label={t(
+                                                'toolbar.home.underline'
+                                            )}
                                             onClick={onToggleUnderline}
                                             color={
                                                 underline
@@ -1986,11 +2076,15 @@ export const Toolbar = observer(
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Strikethrough">
+                                <Tooltip
+                                    title={t('toolbar.home.strikethrough')}
+                                >
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Strikethrough"
+                                            aria-label={t(
+                                                'toolbar.home.strikethrough'
+                                            )}
                                             onClick={onToggleStrike}
                                             color={
                                                 strike ? 'primary' : 'default'
@@ -2016,8 +2110,8 @@ export const Toolbar = observer(
                             {/* Colour and borders */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Text"
-                                    tip="Text colour"
+                                    label={t('toolbar.home.textColor')}
+                                    tip={t('toolbar.home.textColorTip')}
                                     icon={
                                         <FormatColorTextIcon fontSize="small" />
                                     }
@@ -2025,8 +2119,8 @@ export const Toolbar = observer(
                                     disabled={!hasSelectedData}
                                 />
                                 <ToolButton
-                                    label="Fill"
-                                    tip="Cell fill colour"
+                                    label={t('toolbar.home.fillColor')}
+                                    tip={t('toolbar.home.fillColorTip')}
                                     icon={
                                         <FormatColorFillIcon fontSize="small" />
                                     }
@@ -2034,8 +2128,8 @@ export const Toolbar = observer(
                                     disabled={!hasSelectedData}
                                 />
                                 <ToolButton
-                                    label="Borders"
-                                    tip="Cell borders"
+                                    label={t('toolbar.home.borders')}
+                                    tip={t('toolbar.home.bordersTip')}
                                     icon={<BorderIcon fontSize="small" />}
                                     onClick={() => setBorderOpen(true)}
                                     disabled={!hasSelectedData}
@@ -2049,8 +2143,8 @@ export const Toolbar = observer(
                             {/* Alignment */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Align"
-                                    tip="Alignment"
+                                    label={t('toolbar.home.align')}
+                                    tip={t('toolbar.home.alignTip')}
                                     icon={
                                         <ArrowDropDownIcon fontSize="small" />
                                     }
@@ -2058,16 +2152,16 @@ export const Toolbar = observer(
                                     disabled={!hasSelectedData}
                                 />
                                 <ToolButton
-                                    label="Wrap"
-                                    tip="Wrap text in the cell"
+                                    label={t('toolbar.home.wrap')}
+                                    tip={t('toolbar.home.wrapTip')}
                                     icon={<WrapTextIcon fontSize="small" />}
                                     onClick={onToggleWrapText}
                                     disabled={!hasSelectedData}
                                     active={wrapText}
                                 />
                                 <ToolButton
-                                    label="Merge"
-                                    tip="Merge or split the selected cells"
+                                    label={t('toolbar.home.merge')}
+                                    tip={t('toolbar.home.mergeTip')}
                                     icon={<MergeCellsIcon />}
                                     onClick={onMergeOrSplitClick}
                                     disabled={mergedOn === null}
@@ -2098,34 +2192,34 @@ export const Toolbar = observer(
                                         value="general"
                                         sx={{fontSize: 12}}
                                     >
-                                        General
+                                        {t('toolbar.numberFormat.general')}
                                     </MenuItem>
                                     <MenuItem
                                         value="number"
                                         sx={{fontSize: 12}}
                                     >
-                                        Number
+                                        {t('toolbar.numberFormat.number')}
                                     </MenuItem>
                                     <MenuItem
                                         value="fraction"
                                         sx={{fontSize: 12}}
                                     >
-                                        Fraction
+                                        {t('toolbar.numberFormat.fraction')}
                                     </MenuItem>
                                     <MenuItem
                                         value="percent"
                                         sx={{fontSize: 12}}
                                     >
-                                        Percent
+                                        {t('toolbar.numberFormat.percent')}
                                     </MenuItem>
                                     <MenuItem value="text" sx={{fontSize: 12}}>
-                                        Text
+                                        {t('toolbar.numberFormat.text')}
                                     </MenuItem>
                                     <MenuItem value="date" sx={{fontSize: 12}}>
-                                        Date
+                                        {t('toolbar.numberFormat.date')}
                                     </MenuItem>
                                     <MenuItem value="time" sx={{fontSize: 12}}>
-                                        Time
+                                        {t('toolbar.numberFormat.time')}
                                     </MenuItem>
                                 </Select>
                             </div>
@@ -2140,19 +2234,23 @@ export const Toolbar = observer(
                                 a second label on the same word. */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Rows"
-                                    tip="Insert rows above the selection"
+                                    label={t('toolbar.home.rows')}
+                                    tip={t('toolbar.home.rowsTip')}
                                     icon={
                                         <TableRowsOutlinedIcon fontSize="small" />
                                     }
                                     onClick={() => lineOp('row', 'insert')}
                                     disabled={!hasSelectedData}
                                 />
-                                <Tooltip title="Delete the selected rows">
+                                <Tooltip
+                                    title={t('toolbar.home.deleteRowsTip')}
+                                >
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Delete rows"
+                                            aria-label={t(
+                                                'toolbar.home.deleteRows'
+                                            )}
                                             disabled={!hasSelectedData}
                                             onClick={() =>
                                                 lineOp('row', 'delete')
@@ -2163,19 +2261,23 @@ export const Toolbar = observer(
                                     </span>
                                 </Tooltip>
                                 <ToolButton
-                                    label="Cols"
-                                    tip="Insert columns before the selection"
+                                    label={t('toolbar.home.cols')}
+                                    tip={t('toolbar.home.colsTip')}
                                     icon={
                                         <ViewWeekOutlinedIcon fontSize="small" />
                                     }
                                     onClick={() => lineOp('col', 'insert')}
                                     disabled={!hasSelectedData}
                                 />
-                                <Tooltip title="Delete the selected columns">
+                                <Tooltip
+                                    title={t('toolbar.home.deleteColsTip')}
+                                >
                                     <span>
                                         <IconButton
                                             size="small"
-                                            aria-label="Delete columns"
+                                            aria-label={t(
+                                                'toolbar.home.deleteCols'
+                                            )}
                                             disabled={!hasSelectedData}
                                             onClick={() =>
                                                 lineOp('col', 'delete')
@@ -2194,15 +2296,15 @@ export const Toolbar = observer(
                             {/* Editing */}
                             <div className={styles.section}>
                                 <ToolButton
-                                    label="Clear"
-                                    tip="Clear the contents, keeping the formatting"
+                                    label={t('toolbar.home.clear')}
+                                    tip={t('toolbar.home.clearTip')}
                                     icon={<BackspaceIcon fontSize="small" />}
                                     onClick={clearCells}
                                     disabled={!hasSelectedData}
                                 />
                                 <ToolButton
-                                    label="Find"
-                                    tip="Find and replace"
+                                    label={t('toolbar.home.find')}
+                                    tip={t('toolbar.home.findTip')}
                                     icon={<SearchIcon fontSize="small" />}
                                     onClick={() => globalStore.requestFind()}
                                 />

@@ -166,7 +166,10 @@ export function useCraftInputInterception(
             if (!hasActiveCraftInputHandler()) return
             const canvas = getCanvas()
             if (!canvas || e.target !== canvas) return
-            const evt = buildKey(e.type as CraftCanvasEventType, e as KeyboardEvent)
+            const evt = buildKey(
+                e.type as CraftCanvasEventType,
+                e as KeyboardEvent
+            )
             const {handled} = dispatchCraftCanvasEvent(evt)
             if (handled) consume(e)
         }

@@ -13,6 +13,7 @@
  */
 
 import {useState, useEffect, useCallback, useRef, type ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined'
@@ -106,6 +107,7 @@ export function CanvasContextMenu({
     getActiveSheet,
     setSelection,
 }: CanvasContextMenuProps): ReactNode {
+    const {t} = useTranslation()
     const {toast} = useToast()
     const [menu, setMenu] = useState<{
         x: number
@@ -313,7 +315,7 @@ export function CanvasContextMenu({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
         >
-            <span style={{flex: 1}}>Count</span>
+            <span style={{flex: 1}}>{t('ui.menu.count')}</span>
             <Box
                 sx={{
                     display: 'flex',
@@ -325,7 +327,7 @@ export function CanvasContextMenu({
             >
                 <button
                     type="button"
-                    aria-label="decrease"
+                    aria-label={String(t('ui.menu.decrease'))}
                     onClick={() => setCount((c) => Math.max(1, c - 1))}
                     style={stepBtnStyle}
                 >
@@ -346,7 +348,7 @@ export function CanvasContextMenu({
                 />
                 <button
                     type="button"
-                    aria-label="increase"
+                    aria-label={String(t('ui.menu.increase'))}
                     onClick={() => setCount((c) => Math.min(1000, c + 1))}
                     style={stepBtnStyle}
                 >
@@ -454,7 +456,7 @@ export function CanvasContextMenu({
         close()
         const result = await inferBlockFromSelection(dataSvc, ctx.selectedData)
         if ('error' in result) {
-            toast(result.error, {type: 'info'})
+            toast(String(t(result.error)), {type: 'info'})
             return
         }
         setConvertComposer({
@@ -545,42 +547,42 @@ export function CanvasContextMenu({
                   icon={<TuneOutlinedIcon />}
                   onClick={() => openFormat(ctx)}
               >
-                  Format Cells
+                  {t('ui.menu.formatCells')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="clear"
                   icon={<BackspaceOutlinedIcon />}
                   onClick={() => clearCells(ctx)}
               >
-                  Clear Cells
+                  {t('ui.menu.clearCells')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="comment"
                   icon={<AddCommentOutlinedIcon />}
                   onClick={() => addComment(ctx)}
               >
-                  Add comment
+                  {t('ui.menu.addComment')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="link"
                   icon={<LinkOutlinedIcon />}
                   onClick={() => openLink(ctx)}
               >
-                  Link to block…
+                  {t('ui.menu.linkToBlock')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="convert-block"
                   icon={<GridOnOutlinedIcon />}
                   onClick={() => convertToBlock(ctx)}
               >
-                  Convert to block…
+                  {t('ui.menu.convertToBlock')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="conditional-formatting"
                   icon={<PaletteOutlinedIcon />}
                   onClick={() => openConditionalFormatting(ctx)}
               >
-                  Conditional formatting…
+                  {t('ui.menu.conditionalFormatting')}
               </ContextMenuItem>,
               ...(editCandidate
                   ? [
@@ -589,7 +591,7 @@ export function CanvasContextMenu({
                             icon={<EditOutlinedIcon />}
                             onClick={openEditBlock}
                         >
-                            Edit block…
+                            {t('ui.menu.editBlock')}
                         </ContextMenuItem>,
                     ]
                   : []),
@@ -599,14 +601,14 @@ export function CanvasContextMenu({
                   icon={<NorthEastOutlinedIcon />}
                   onClick={() => traceCell(ctx, 'precedents')}
               >
-                  Trace precedents
+                  {t('ui.menu.tracePrecedents')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="trace-dep"
                   icon={<SouthWestOutlinedIcon />}
                   onClick={() => traceCell(ctx, 'dependents')}
               >
-                  Trace dependents
+                  {t('ui.menu.traceDependents')}
               </ContextMenuItem>,
               ...(globalStore.traceResult
                   ? [
@@ -618,7 +620,7 @@ export function CanvasContextMenu({
                                 globalStore.clearTrace()
                             }}
                         >
-                            Clear trace
+                            {t('ui.menu.clearTrace')}
                         </ContextMenuItem>,
                     ]
                   : []),
@@ -628,14 +630,14 @@ export function CanvasContextMenu({
                   icon={<ImageOutlinedIcon />}
                   onClick={() => insertImage(ctx)}
               >
-                  Insert image
+                  {t('ui.menu.insertImage')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="remove-image"
                   icon={<HideImageOutlinedIcon />}
                   onClick={() => removeImage(ctx)}
               >
-                  Remove image
+                  {t('ui.menu.removeImage')}
               </ContextMenuItem>,
           ]
         : ctx.target === 'row'
@@ -645,14 +647,14 @@ export function CanvasContextMenu({
                   icon={<AddOutlinedIcon />}
                   onClick={() => insertLines(ctx, 'row', 'before')}
               >
-                  Insert rows above
+                  {t('ui.menu.insertRowsAbove')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="ib"
                   icon={<AddOutlinedIcon />}
                   onClick={() => insertLines(ctx, 'row', 'after')}
               >
-                  Insert rows below
+                  {t('ui.menu.insertRowsBelow')}
               </ContextMenuItem>,
               <Box key="stepper">{stepper}</Box>,
               <Divider key="d1" />,
@@ -661,7 +663,7 @@ export function CanvasContextMenu({
                   icon={<TuneOutlinedIcon />}
                   onClick={() => openFormat(ctx)}
               >
-                  Format cells
+                  {t('ui.menu.formatCellsShort')}
               </ContextMenuItem>,
               <Divider key="d2" />,
               <ContextMenuItem
@@ -670,7 +672,7 @@ export function CanvasContextMenu({
                   danger
                   onClick={() => deleteLines(ctx, 'row')}
               >
-                  Delete rows
+                  {t('ui.menu.deleteRows')}
               </ContextMenuItem>,
           ]
         : [
@@ -679,14 +681,14 @@ export function CanvasContextMenu({
                   icon={<AddOutlinedIcon />}
                   onClick={() => insertLines(ctx, 'col', 'before')}
               >
-                  Insert columns left
+                  {t('ui.menu.insertColsLeft')}
               </ContextMenuItem>,
               <ContextMenuItem
                   key="ir"
                   icon={<AddOutlinedIcon />}
                   onClick={() => insertLines(ctx, 'col', 'after')}
               >
-                  Insert columns right
+                  {t('ui.menu.insertColsRight')}
               </ContextMenuItem>,
               <Box key="stepper">{stepper}</Box>,
               <Divider key="d1" />,
@@ -695,7 +697,7 @@ export function CanvasContextMenu({
                   icon={<TuneOutlinedIcon />}
                   onClick={() => openFormat(ctx)}
               >
-                  Format cells
+                  {t('ui.menu.formatCellsShort')}
               </ContextMenuItem>,
               <Divider key="d2" />,
               <ContextMenuItem
@@ -704,7 +706,7 @@ export function CanvasContextMenu({
                   danger
                   onClick={() => deleteLines(ctx, 'col')}
               >
-                  Delete columns
+                  {t('ui.menu.deleteCols')}
               </ContextMenuItem>,
           ]
 
@@ -771,7 +773,7 @@ export function CanvasContextMenu({
                 PaperProps={{sx: {zIndex: 2000, minWidth: 320, p: 2}}}
             >
                 <Box sx={{fontWeight: 600, fontSize: 15, mb: 1}}>
-                    Link to block
+                    {t('ui.menu.linkToBlockTitle')}
                 </Box>
                 <Box sx={{fontSize: 12.5, color: '#667', mb: 1.5}}>
                     {linkTarget
@@ -788,7 +790,7 @@ export function CanvasContextMenu({
                 </MenuItem>
                 {linkBlocks.length > 0 && (
                     <Divider sx={{my: 0.5}}>
-                        or link to an existing block
+                        {t('ui.menu.orLinkExisting')}
                     </Divider>
                 )}
                 {linkBlocks.map((b) => (

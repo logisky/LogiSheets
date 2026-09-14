@@ -1,4 +1,5 @@
 import {useEffect, useState, type ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 import type {Author, Comment, CommentNote, CommentMention} from 'logisheets-web'
 import {useAuthorService} from '@/core/author'
 import styles from './comment-layer.module.scss'
@@ -81,6 +82,7 @@ export function CommentThread({
     onResolve,
     onClose,
 }: CommentThreadProps) {
+    const {t} = useTranslation()
     const authorService = useAuthorService()
     const notes = comment?.notes ?? []
     const root = notes.find((n) => !n.parentId) ?? notes[0]
@@ -130,7 +132,9 @@ export function CommentThread({
         <div className={styles.thread} onClick={(e) => e.stopPropagation()}>
             <div className={styles.header}>
                 <span className={styles.title}>
-                    {notes.length ? 'Comments' : 'New comment'}
+                    {notes.length
+                        ? t('ui.comment.comments')
+                        : t('ui.comment.newComment')}
                 </span>
                 <div className={styles.headerActions}>
                     {root && (
@@ -139,31 +143,40 @@ export function CommentThread({
                             className={styles.linkBtn}
                             onClick={() => onResolve(root.id, !resolved)}
                             title={
-                                resolved ? 'Reopen thread' : 'Resolve thread'
+                                resolved
+                                    ? String(t('ui.comment.reopenThread'))
+                                    : String(t('ui.comment.resolveThread'))
                             }
                         >
-                            {resolved ? 'Reopen' : 'Resolve'}
+                            {resolved
+                                ? t('ui.comment.reopen')
+                                : t('ui.comment.resolve')}
                         </button>
                     )}
                     <button
                         type="button"
                         className={styles.iconBtn}
                         onClick={onClose}
-                        title="Close"
+                        title={String(t('ui.common.close'))}
                     >
                         ×
                     </button>
                 </div>
             </div>
 
-            {resolved && <div className={styles.resolvedBadge}>Resolved</div>}
+            {resolved && (
+                <div className={styles.resolvedBadge}>
+                    {t('ui.comment.resolved')}
+                </div>
+            )}
 
             <div className={styles.notes}>
                 {notes.map((note) => (
                     <div key={note.id} className={styles.note}>
                         <div className={styles.noteHead}>
                             <span className={styles.author}>
-                                {note.author.displayName || 'Unknown'}
+                                {note.author.displayName ||
+                                    t('ui.common.unknown')}
                             </span>
                             <span className={styles.time}>
                                 {fmtTime(note.dt)}
@@ -185,7 +198,7 @@ export function CommentThread({
                                         className={styles.linkBtn}
                                         onClick={() => setEditingId(null)}
                                     >
-                                        Cancel
+                                        {t('ui.common.cancel')}
                                     </button>
                                     <button
                                         type="button"
@@ -217,7 +230,7 @@ export function CommentThread({
                                         className={styles.linkBtn}
                                         onClick={() => onDelete(note.id)}
                                     >
-                                        Delete
+                                        {t('ui.common.delete')}
                                     </button>
                                 </div>
                             </>
@@ -229,7 +242,7 @@ export function CommentThread({
             <div className={styles.composer}>
                 <input
                     className={styles.nameInput}
-                    placeholder="Your name"
+                    placeholder={String(t('ui.comment.yourName'))}
                     value={author.displayName}
                     onChange={(e) => setAuthorName(e.target.value)}
                 />
@@ -237,8 +250,8 @@ export function CommentThread({
                     className={styles.textarea}
                     placeholder={
                         notes.length
-                            ? 'Reply…  use @name to mention'
-                            : 'Add a comment…  use @name to mention'
+                            ? String(t('ui.comment.replyPlaceholder'))
+                            : String(t('ui.comment.commentPlaceholder'))
                     }
                     value={draft}
                     autoFocus={!notes.length}
@@ -258,7 +271,9 @@ export function CommentThread({
                         disabled={!draft.trim() || !author.displayName.trim()}
                         onClick={submit}
                     >
-                        {notes.length ? 'Reply' : 'Comment'}
+                        {notes.length
+                            ? t('ui.comment.reply')
+                            : t('ui.comment.comment')}
                     </button>
                 </div>
             </div>

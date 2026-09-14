@@ -1,4 +1,5 @@
 import {useState, useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Box,
     Typography,
@@ -92,6 +93,7 @@ export const FieldConfigPanel = ({
     canDelete = true,
     canEditPrimary = true,
 }: FieldConfigPanelProps) => {
+    const {t} = useTranslation()
     const {toast} = useToast()
     const [colorAnchorEl, setColorAnchorEl] = useState<{
         element: HTMLElement
@@ -156,7 +158,7 @@ export const FieldConfigPanel = ({
 
         // Check if ID already exists
         if (enumSetManager.has(newEnumSetId)) {
-            toast('An Enum Set with this ID already exists!', {type: 'error'})
+            toast(String(t('block.enumSet.toast.idExists')), {type: 'error'})
             return
         }
 
@@ -327,7 +329,9 @@ export const FieldConfigPanel = ({
                 }}
             >
                 <Box sx={{minWidth: 0}}>
-                    <Typography sx={sectionLabelSx}>Field</Typography>
+                    <Typography sx={sectionLabelSx}>
+                        {t('block.composer.field')}
+                    </Typography>
                     <Typography
                         variant="subtitle1"
                         fontWeight={600}
@@ -339,7 +343,7 @@ export const FieldConfigPanel = ({
                 </Box>
                 <Box display="flex" gap={1}>
                     <Button onClick={onCancel} size="small" sx={buttonSx}>
-                        Cancel
+                        {t('block.common.cancel')}
                     </Button>
                     <Button
                         onClick={onSave}
@@ -348,7 +352,7 @@ export const FieldConfigPanel = ({
                         disableElevation
                         sx={primaryButtonSx}
                     >
-                        Save Changes
+                        {t('block.common.saveChanges')}
                     </Button>
                 </Box>
             </Box>
@@ -360,12 +364,12 @@ export const FieldConfigPanel = ({
                     <Card variant="outlined" sx={cardSx}>
                         <CardContent>
                             <Typography sx={{...sectionLabelSx, mb: 2}}>
-                                Basic Settings
+                                {t('block.composer.basicSettings')}
                             </Typography>
                             <Stack spacing={2.5}>
                                 <Box sx={{display: 'flex', gap: 2}}>
                                     <TextField
-                                        label="Field Name"
+                                        label={t('block.composer.fieldName')}
                                         value={field.name}
                                         onChange={(e) =>
                                             onUpdate({
@@ -377,10 +381,14 @@ export const FieldConfigPanel = ({
                                         sx={{flex: 1}}
                                     />
                                     <FormControl size="small" sx={{flex: 1}}>
-                                        <InputLabel>Field Type</InputLabel>
+                                        <InputLabel>
+                                            {t('block.composer.fieldType')}
+                                        </InputLabel>
                                         <Select
                                             value={field.type}
-                                            label="Field Type"
+                                            label={t(
+                                                'block.composer.fieldType'
+                                            )}
                                             onChange={(e) => {
                                                 const newType = e.target
                                                     .value as FieldTypeEnum
@@ -450,34 +458,40 @@ export const FieldConfigPanel = ({
                                             }}
                                         >
                                             <MenuItem value="unspecified">
-                                                Unspecified
+                                                {t(
+                                                    'block.fieldType.unspecified'
+                                                )}
                                             </MenuItem>
                                             <MenuItem value="enum">
-                                                Enum
+                                                {t('block.fieldType.enum')}
                                             </MenuItem>
                                             <MenuItem value="multiSelect">
-                                                Multiple Selection
+                                                {t(
+                                                    'block.fieldType.multiSelect'
+                                                )}
                                             </MenuItem>
                                             <MenuItem value="datetime">
-                                                DateTime
+                                                {t('block.fieldType.datetime')}
                                             </MenuItem>
                                             <MenuItem value="boolean">
-                                                Boolean
+                                                {t('block.fieldType.boolean')}
                                             </MenuItem>
                                             <MenuItem value="string">
-                                                String
+                                                {t('block.fieldType.string')}
                                             </MenuItem>
                                             <MenuItem value="number">
-                                                Number
+                                                {t('block.fieldType.number')}
                                             </MenuItem>
                                             <MenuItem value="image">
-                                                Image
+                                                {t('block.fieldType.image')}
                                             </MenuItem>
                                             <MenuItem value="fieldRef">
-                                                Reference (Field)
+                                                {t('block.fieldType.fieldRef')}
                                             </MenuItem>
                                             <MenuItem value="multiSelectRef">
-                                                Reference (Multiple)
+                                                {t(
+                                                    'block.fieldType.multiSelectRef'
+                                                )}
                                             </MenuItem>
                                         </Select>
                                     </FormControl>
@@ -492,11 +506,15 @@ export const FieldConfigPanel = ({
                                             sx={{flex: 1}}
                                         >
                                             <InputLabel>
-                                                Load from Enum Set
+                                                {t(
+                                                    'block.composer.loadFromEnumSet'
+                                                )}
                                             </InputLabel>
                                             <Select
                                                 value={selectedEnumSetId}
-                                                label="Load from Enum Set"
+                                                label={t(
+                                                    'block.composer.loadFromEnumSet'
+                                                )}
                                                 onChange={(e) =>
                                                     handleSelectEnumSet(
                                                         e.target.value
@@ -551,7 +569,7 @@ export const FieldConfigPanel = ({
 
                                 <TextField
                                     fullWidth
-                                    label="Description"
+                                    label={t('block.composer.description')}
                                     value={field.description || ''}
                                     onChange={(e) =>
                                         onUpdate({
@@ -562,7 +580,11 @@ export const FieldConfigPanel = ({
                                     multiline
                                     rows={1}
                                     size="small"
-                                    placeholder="Optional field description"
+                                    placeholder={String(
+                                        t(
+                                            'block.composer.descriptionPlaceholder'
+                                        )
+                                    )}
                                 />
                                 <Box>
                                     <FormControlLabel
@@ -581,7 +603,9 @@ export const FieldConfigPanel = ({
                                         }
                                         label={
                                             <Typography variant="body2">
-                                                Required field
+                                                {t(
+                                                    'block.composer.requiredField'
+                                                )}
                                             </Typography>
                                         }
                                     />
@@ -589,7 +613,9 @@ export const FieldConfigPanel = ({
                                         title={
                                             canEditPrimary
                                                 ? ''
-                                                : 'The key column is fixed when editing an existing block.'
+                                                : t(
+                                                      'block.composer.keyColumnFixed'
+                                                  )
                                         }
                                         disableHoverListener={canEditPrimary}
                                     >
@@ -611,7 +637,9 @@ export const FieldConfigPanel = ({
                                             }
                                             label={
                                                 <Typography variant="body2">
-                                                    Primary
+                                                    {t(
+                                                        'block.composer.primary'
+                                                    )}
                                                 </Typography>
                                             }
                                         />
@@ -631,7 +659,7 @@ export const FieldConfigPanel = ({
                             <Card variant="outlined" sx={cardSx}>
                                 <CardContent>
                                     <Typography sx={{...sectionLabelSx, mb: 2}}>
-                                        Enum Values
+                                        {t('block.composer.enumValues')}
                                     </Typography>
                                     <Box
                                         sx={{
@@ -702,7 +730,7 @@ export const FieldConfigPanel = ({
                         <Card variant="outlined" sx={cardSx}>
                             <CardContent>
                                 <Typography sx={{...sectionLabelSx, mb: 1}}>
-                                    Default Value
+                                    {t('block.composer.defaultValue')}
                                 </Typography>
                                 <Typography
                                     variant="caption"
@@ -710,14 +738,15 @@ export const FieldConfigPanel = ({
                                     display="block"
                                     mb={2}
                                 >
-                                    Select which value should be pre-selected
-                                    when creating new records.
+                                    {t('block.composer.defaultValueHelp')}
                                 </Typography>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel>Default Value</InputLabel>
+                                    <InputLabel>
+                                        {t('block.composer.defaultValue')}
+                                    </InputLabel>
                                     <Select
                                         value={field.defaultValue || ''}
-                                        label="Default Value"
+                                        label={t('block.composer.defaultValue')}
                                         onChange={(e) =>
                                             onUpdate({
                                                 ...field,
@@ -725,7 +754,9 @@ export const FieldConfigPanel = ({
                                             })
                                         }
                                     >
-                                        <MenuItem value="">None</MenuItem>
+                                        <MenuItem value="">
+                                            {t('block.common.none')}
+                                        </MenuItem>
                                         {(() => {
                                             const enumSet = enumSetManager.get(
                                                 field.enumId!
@@ -764,12 +795,12 @@ export const FieldConfigPanel = ({
                         <Card variant="outlined" sx={cardSx}>
                             <CardContent>
                                 <Typography sx={{...sectionLabelSx, mb: 2}}>
-                                    Date/Time Format
+                                    {t('block.composer.dateTimeFormat')}
                                 </Typography>
                                 <TextField
                                     fullWidth
                                     size="small"
-                                    label="Format"
+                                    label={t('block.composer.format')}
                                     value={field.format || ''}
                                     onChange={(e) => {
                                         onUpdate({
@@ -786,8 +817,10 @@ export const FieldConfigPanel = ({
                                             })
                                         }
                                     }}
-                                    placeholder="yyyy-mm-dd"
-                                    helperText="Use Excel-style date format. Default: yyyy-mm-dd"
+                                    placeholder={String(
+                                        t('block.composer.datePlaceholder')
+                                    )}
+                                    helperText={t('block.composer.dateHelp')}
                                 />
                             </CardContent>
                         </Card>
@@ -798,14 +831,16 @@ export const FieldConfigPanel = ({
                         <Card variant="outlined" sx={cardSx}>
                             <CardContent>
                                 <Typography sx={{...sectionLabelSx, mb: 2}}>
-                                    Number Format
+                                    {t('block.composer.numberFormat')}
                                 </Typography>
                                 <Stack spacing={2}>
                                     <FormControl fullWidth size="small">
-                                        <InputLabel>Format</InputLabel>
+                                        <InputLabel>
+                                            {t('block.composer.format')}
+                                        </InputLabel>
                                         <Select
                                             value={field.format || ''}
-                                            label="Format"
+                                            label={t('block.composer.format')}
                                             onChange={(e) =>
                                                 onUpdate({
                                                     ...field,
@@ -814,10 +849,14 @@ export const FieldConfigPanel = ({
                                             }
                                         >
                                             <MenuItem value="">
-                                                <em>No format</em>
+                                                <em>
+                                                    {t(
+                                                        'block.composer.noFormat'
+                                                    )}
+                                                </em>
                                             </MenuItem>
                                             <MenuItem value="0">
-                                                Integer (0)
+                                                {t('block.numFmt.integer')}
                                             </MenuItem>
                                             <MenuItem value="0.0">
                                                 1 decimal (0.0)
@@ -826,27 +865,27 @@ export const FieldConfigPanel = ({
                                                 2 decimals (0.00)
                                             </MenuItem>
                                             <MenuItem value="#,##0">
-                                                Thousands (1,000)
+                                                {t('block.numFmt.thousands')}
                                             </MenuItem>
                                             <MenuItem value="#,##0.00">
                                                 Thousands + 2 decimals
                                                 (1,000.00)
                                             </MenuItem>
                                             <MenuItem value="0%">
-                                                Percentage (0%)
+                                                {t('block.numFmt.percent')}
                                             </MenuItem>
                                             <MenuItem value="0.0%">
-                                                Percentage + 1 decimal (0.0%)
+                                                {t('block.numFmt.percent1')}
                                             </MenuItem>
                                             <MenuItem value="0.00%">
-                                                Percentage + 2 decimals (0.00%)
+                                                {t('block.numFmt.percent2')}
                                             </MenuItem>
                                         </Select>
                                     </FormControl>
                                     <TextField
                                         fullWidth
                                         size="small"
-                                        label="Custom Format"
+                                        label={t('block.composer.customFormat')}
                                         value={field.format || ''}
                                         onChange={(e) =>
                                             onUpdate({
@@ -854,8 +893,14 @@ export const FieldConfigPanel = ({
                                                 format: e.target.value,
                                             })
                                         }
-                                        placeholder="e.g., #,##0.00"
-                                        helperText="Or enter a custom Excel-style format"
+                                        placeholder={String(
+                                            t(
+                                                'block.composer.customFormatPlaceholder'
+                                            )
+                                        )}
+                                        helperText={t(
+                                            'block.composer.customFormatHelp'
+                                        )}
                                     />
                                 </Stack>
                             </CardContent>
@@ -940,17 +985,18 @@ export const FieldConfigPanel = ({
                                         <Typography
                                             sx={{...sectionLabelSx, mb: 2}}
                                         >
-                                            Reference Target
+                                            {t(
+                                                'block.composer.referenceTarget'
+                                            )}
                                         </Typography>
                                         {noTargetsAtAll ? (
                                             <Typography
                                                 variant="body2"
                                                 color="text.secondary"
                                             >
-                                                No referenceable fields exist
-                                                yet. Mark another field in this
-                                                block as Primary or Unique, or
-                                                create another block with one.
+                                                {t(
+                                                    'block.composer.noReferenceable'
+                                                )}
                                             </Typography>
                                         ) : (
                                             <Stack spacing={2}>
@@ -963,7 +1009,9 @@ export const FieldConfigPanel = ({
                                                     </InputLabel>
                                                     <Select
                                                         value={sheetSelectValue}
-                                                        label="Sheet"
+                                                        label={t(
+                                                            'block.composer.sheet'
+                                                        )}
                                                         onChange={(e) => {
                                                             const v =
                                                                 e.target.value
@@ -1036,7 +1084,9 @@ export const FieldConfigPanel = ({
                                                                 field.refBlockId ??
                                                                 ''
                                                             }
-                                                            label="Block"
+                                                            label={t(
+                                                                'block.composer.block'
+                                                            )}
                                                             onChange={(e) =>
                                                                 onUpdate({
                                                                     ...field,
@@ -1088,7 +1138,9 @@ export const FieldConfigPanel = ({
                                                             field.refFieldName ??
                                                             ''
                                                         }
-                                                        label="Field"
+                                                        label={t(
+                                                            'block.composer.field'
+                                                        )}
                                                         onChange={(e) =>
                                                             onUpdate({
                                                                 ...field,
@@ -1134,7 +1186,7 @@ export const FieldConfigPanel = ({
                         <Card variant="outlined" sx={cardSx}>
                             <CardContent>
                                 <Typography sx={{...sectionLabelSx, mb: 2}}>
-                                    Validation Rule
+                                    {t('block.composer.validationRule')}
                                 </Typography>
                                 <Stack spacing={2}>
                                     <FormControlLabel
@@ -1154,44 +1206,50 @@ export const FieldConfigPanel = ({
                                         label={
                                             <Box>
                                                 <Typography variant="body2">
-                                                    Unique value
+                                                    {t(
+                                                        'block.composer.uniqueValue'
+                                                    )}
                                                 </Typography>
                                                 <Typography
                                                     variant="caption"
                                                     color="text.secondary"
                                                 >
-                                                    Disallow duplicates within
-                                                    this field (e.g. port
-                                                    numbers).
+                                                    {t(
+                                                        'block.composer.uniqueValueHelp'
+                                                    )}
                                                 </Typography>
                                             </Box>
                                         }
                                     />
                                     <FieldRuleEditor
                                         kind="validation"
-                                        label="Validation"
+                                        label={t('block.composer.validation')}
                                         fieldName={field.name}
                                         allFieldNames={fieldNames}
                                         value={field.validation || ''}
                                         onChange={(validation) =>
                                             onUpdate({...field, validation})
                                         }
-                                        placeholder={
-                                            RULE_PLACEHOLDER.validation
-                                        }
-                                        helperText={RULE_HELPER_TEXT.validation}
+                                        placeholder={String(
+                                            t(RULE_PLACEHOLDER.validation)
+                                        )}
+                                        helperText={t(
+                                            RULE_HELPER_TEXT.validation
+                                        )}
                                     />
                                     <FieldRuleEditor
                                         kind="value"
-                                        label="Value formula"
+                                        label={t('block.composer.valueFormula')}
                                         fieldName={field.name}
                                         allFieldNames={fieldNames}
                                         value={field.valueFormula || ''}
                                         onChange={(valueFormula) =>
                                             onUpdate({...field, valueFormula})
                                         }
-                                        placeholder={RULE_PLACEHOLDER.value}
-                                        helperText={RULE_HELPER_TEXT.value}
+                                        placeholder={String(
+                                            t(RULE_PLACEHOLDER.value)
+                                        )}
+                                        helperText={t(RULE_HELPER_TEXT.value)}
                                     />
                                 </Stack>
                             </CardContent>
@@ -1208,7 +1266,7 @@ export const FieldConfigPanel = ({
                                 onClick={onDelete}
                                 sx={{textTransform: 'none'}}
                             >
-                                Delete this field
+                                {t('block.composer.deleteField')}
                             </Button>
                         </Box>
                     )}
@@ -1290,23 +1348,25 @@ export const FieldConfigPanel = ({
                 maxWidth="md"
                 fullWidth
             >
-                <DialogTitle>Create New Enum Set</DialogTitle>
+                <DialogTitle>{t('block.enumSet.createTitle')}</DialogTitle>
                 <DialogContent>
                     <Stack spacing={2.5} sx={{pt: 1}}>
                         <Box sx={{display: 'flex', gap: 2}}>
                             <TextField
-                                label="Name"
+                                label={t('block.enumSet.name')}
                                 value={newEnumSetName}
                                 onChange={(e) =>
                                     setNewEnumSetName(e.target.value)
                                 }
-                                placeholder="e.g., Customer Status"
+                                placeholder={String(
+                                    t('block.enumSet.namePlaceholder')
+                                )}
                                 autoFocus
                                 required
                                 sx={{flex: 1}}
                             />
                             <TextField
-                                label="ID"
+                                label={t('block.enumSet.id')}
                                 value={newEnumSetId}
                                 onChange={(e) =>
                                     setNewEnumSetId(
@@ -1315,20 +1375,24 @@ export const FieldConfigPanel = ({
                                             .replace(/\s+/g, '-')
                                     )
                                 }
-                                placeholder="e.g., customer-status"
-                                helperText="Unique identifier (lowercase, hyphen-separated)"
+                                placeholder={String(
+                                    t('block.enumSet.idPlaceholder')
+                                )}
+                                helperText={t('block.enumSet.idHelp')}
                                 required
                                 sx={{flex: 1}}
                             />
                         </Box>
                         <TextField
                             fullWidth
-                            label="Description"
+                            label={t('block.composer.description')}
                             value={newEnumSetDescription}
                             onChange={(e) =>
                                 setNewEnumSetDescription(e.target.value)
                             }
-                            placeholder="Optional description"
+                            placeholder={String(
+                                t('block.enumSet.descriptionPlaceholder')
+                            )}
                             multiline
                             rows={2}
                         />
@@ -1345,7 +1409,7 @@ export const FieldConfigPanel = ({
                                     variant="subtitle2"
                                     fontWeight={600}
                                 >
-                                    Enum Variants
+                                    {t('block.enumSet.variants')}
                                 </Typography>
                                 <Button
                                     size="small"
@@ -1353,7 +1417,7 @@ export const FieldConfigPanel = ({
                                     onClick={handleAddEditingVariant}
                                     sx={{textTransform: 'none'}}
                                 >
-                                    Add Variant
+                                    {t('block.enumSet.addVariant')}
                                 </Button>
                             </Box>
                             <Box
@@ -1421,7 +1485,11 @@ export const FieldConfigPanel = ({
                                                         }
                                                     )
                                                 }
-                                                placeholder="Label"
+                                                placeholder={String(
+                                                    t(
+                                                        'block.enumSet.optionLabel'
+                                                    )
+                                                )}
                                                 InputProps={{
                                                     sx: {
                                                         fontSize: '0.875rem',
@@ -1448,7 +1516,9 @@ export const FieldConfigPanel = ({
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{p: 2.5}}>
-                    <Button onClick={handleCancelCreate}>Cancel</Button>
+                    <Button onClick={handleCancelCreate}>
+                        {t('block.common.cancel')}
+                    </Button>
                     <Button
                         onClick={handleCreateEnumSet}
                         variant="contained"
@@ -1456,7 +1526,7 @@ export const FieldConfigPanel = ({
                             !newEnumSetName.trim() || !newEnumSetId.trim()
                         }
                     >
-                        Create
+                        {t('block.common.create')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1468,26 +1538,30 @@ export const FieldConfigPanel = ({
                 maxWidth="md"
                 fullWidth
             >
-                <DialogTitle>Edit Enum Set</DialogTitle>
+                <DialogTitle>{t('block.enumSet.editTitle')}</DialogTitle>
                 <DialogContent>
                     <Stack spacing={2.5} sx={{pt: 1}}>
                         <Box sx={{display: 'flex', gap: 2}}>
                             <TextField
-                                label="Name"
+                                label={t('block.enumSet.name')}
                                 value={newEnumSetName}
                                 onChange={(e) =>
                                     setNewEnumSetName(e.target.value)
                                 }
-                                placeholder="e.g., Customer Status"
+                                placeholder={String(
+                                    t('block.enumSet.namePlaceholder')
+                                )}
                                 autoFocus
                                 required
                                 sx={{flex: 1}}
                             />
                             <TextField
-                                label="ID"
+                                label={t('block.enumSet.id')}
                                 value={newEnumSetId}
-                                placeholder="e.g., customer-status"
-                                helperText="ID cannot be changed"
+                                placeholder={String(
+                                    t('block.enumSet.idPlaceholder')
+                                )}
+                                helperText={t('block.enumSet.idLocked')}
                                 required
                                 disabled
                                 slotProps={{
@@ -1500,12 +1574,14 @@ export const FieldConfigPanel = ({
                         </Box>
                         <TextField
                             fullWidth
-                            label="Description"
+                            label={t('block.composer.description')}
                             value={newEnumSetDescription}
                             onChange={(e) =>
                                 setNewEnumSetDescription(e.target.value)
                             }
-                            placeholder="Optional description"
+                            placeholder={String(
+                                t('block.enumSet.descriptionPlaceholder')
+                            )}
                             multiline
                             rows={2}
                         />
@@ -1522,7 +1598,7 @@ export const FieldConfigPanel = ({
                                     variant="subtitle2"
                                     fontWeight={600}
                                 >
-                                    Enum Variants
+                                    {t('block.enumSet.variants')}
                                 </Typography>
                                 <Button
                                     size="small"
@@ -1530,7 +1606,7 @@ export const FieldConfigPanel = ({
                                     onClick={handleAddEditingVariant}
                                     sx={{textTransform: 'none'}}
                                 >
-                                    Add Variant
+                                    {t('block.enumSet.addVariant')}
                                 </Button>
                             </Box>
                             <Box
@@ -1598,7 +1674,11 @@ export const FieldConfigPanel = ({
                                                         }
                                                     )
                                                 }
-                                                placeholder="Label"
+                                                placeholder={String(
+                                                    t(
+                                                        'block.enumSet.optionLabel'
+                                                    )
+                                                )}
                                                 InputProps={{
                                                     sx: {
                                                         fontSize: '0.875rem',
@@ -1625,13 +1705,15 @@ export const FieldConfigPanel = ({
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{p: 2.5}}>
-                    <Button onClick={handleCancelEdit}>Cancel</Button>
+                    <Button onClick={handleCancelEdit}>
+                        {t('block.common.cancel')}
+                    </Button>
                     <Button
                         onClick={handleSaveEditEnumSet}
                         variant="contained"
                         disabled={!newEnumSetName.trim()}
                     >
-                        Save Changes
+                        {t('block.common.saveChanges')}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Box,
     Button,
@@ -62,6 +63,7 @@ export interface BlockComposerProps {
 }
 
 export const BlockComposerComponent = (props: BlockComposerProps) => {
+    const {t} = useTranslation()
     const {selectedData, close, convertRegion, initialFields, editTarget} =
         props
     const {toast} = useToast()
@@ -76,7 +78,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             : convertRegion
             ? Array.from({length: convertRegion.colCnt}, (_, i) => ({
                   id: String(i + 1),
-                  name: `Field ${i + 1}`,
+                  name: t('block.composer.fieldN', {n: i + 1}),
                   type: 'number',
                   required: false,
                   primary: i === 0,
@@ -86,9 +88,9 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             : [
                   {
                       id: '1',
-                      name: 'Customer Status',
+                      name: t('block.composer.sampleFieldName'),
                       type: 'string',
-                      description: 'Current status of the customer',
+                      description: t('block.composer.sampleFieldDesc'),
                       required: true,
                       primary: false,
                   },
@@ -154,7 +156,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             })
             if (cancelled) return
             if (isErrorMessage(info) || !info.schema) {
-                toast('Could not read this block’s structure', {
+                toast(String(t('block.composer.toast.structureUnreadable')), {
                     type: 'error',
                 })
                 close()
@@ -249,7 +251,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     const handleAddField = () => {
         const newField: FieldSetting = {
             id: Date.now().toString(),
-            name: 'New Field',
+            name: t('block.composer.newField'),
             type: 'string',
             required: false,
             primary: false,
@@ -442,7 +444,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
     // block. Returns an error message to show, or null when the name is OK.
     const validateRefName = async (): Promise<string | null> => {
         const name = refName.trim()
-        if (!name) return 'Please enter a block ref name.'
+        if (!name) return String(t('block.composer.toast.needRefName'))
         const all = await DATA_SERVICE.getWorkbook().getAllBlocks({})
         if (isErrorMessage(all)) return null // can't check — don't block save
         const clash = all.some(
@@ -504,7 +506,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             return
         }
         close()
-        toast('Block updated successfully!', {type: 'success'})
+        toast(String(t('block.composer.toast.blockUpdated')), {type: 'success'})
     }
 
     const handleSave = async () => {
@@ -571,7 +573,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         }
 
         close()
-        toast('Fields configured successfully!', {type: 'success'})
+        toast(String(t('block.composer.toast.fieldsSaved')), {type: 'success'})
     }
 
     return (
@@ -606,14 +608,16 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                             color="text.secondary"
                             sx={{display: 'block', mb: 1, lineHeight: 1.2}}
                         >
-                            Block Ref Name
+                            {t('block.composer.blockRefName')}
                         </Typography>
                         <TextField
                             value={refName}
                             onChange={(e) => setRefName(e.target.value)}
                             size="small"
                             fullWidth
-                            placeholder="e.g. customers"
+                            placeholder={String(
+                                t('block.composer.refNamePlaceholder')
+                            )}
                         />
                     </Box>
 
@@ -647,7 +651,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                             }}
                         >
                             <Typography color="text.secondary">
-                                Loading block…
+                                {t('block.composer.loadingBlock')}
                             </Typography>
                         </Box>
                     ) : selectedField ? (
@@ -682,7 +686,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                             }}
                         >
                             <Typography color="text.secondary">
-                                Select a field to configure
+                                {t('block.composer.selectField')}
                             </Typography>
                         </Box>
                     )}

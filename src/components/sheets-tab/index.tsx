@@ -1,4 +1,5 @@
 import {useState, FC, useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     getSelectedCellRange,
     Grid,
@@ -45,6 +46,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     grid,
     selectedData,
 }) => {
+    const {t} = useTranslation()
     const engine = useEngine()
     const workbook = engine.getWorkbook()
     const ops = useOps()
@@ -246,7 +248,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
             <div className={styles.addSheet}>
                 <IconButton
                     size="small"
-                    aria-label="add sheet"
+                    aria-label={String(t('ui.sheet.add'))}
                     onClick={addSheet}
                 >
                     <AddIcon fontSize="small" />
@@ -287,7 +289,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                 <span className={styles.statusDivider} />
                 <IconButton
                     size="small"
-                    aria-label="Zoom out"
+                    aria-label={String(t('ui.sheet.zoomOut'))}
                     onClick={() => engine.zoomOut()}
                 >
                     <ZoomOutIcon fontSize="small" />
@@ -295,15 +297,15 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
                 <button
                     type="button"
                     className={styles.zoomValue}
-                    aria-label="Reset zoom to 100%"
-                    title="Reset zoom to 100%"
+                    aria-label={String(t('ui.sheet.resetZoom'))}
+                    title={String(t('ui.sheet.resetZoom'))}
                     onClick={() => engine.resetZoom()}
                 >
                     {Math.round(zoom * 100)}%
                 </button>
                 <IconButton
                     size="small"
-                    aria-label="Zoom in"
+                    aria-label={String(t('ui.sheet.zoomIn'))}
                     onClick={() => engine.zoomIn()}
                 >
                     <ZoomInIcon fontSize="small" />

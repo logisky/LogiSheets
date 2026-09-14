@@ -9,6 +9,7 @@
  */
 
 import React from 'react'
+import {useTranslation} from 'react-i18next'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -90,6 +91,7 @@ function cssColor(c?: {
 export const ConditionalFormattingDialog: React.FC<
     ConditionalFormattingDialogProps
 > = ({dataSvc, sheetIdx, range, onClose}) => {
+    const {t} = useTranslation()
     const [rules, setRules] = React.useState<readonly CfRuleInfo[]>([])
     const [loading, setLoading] = React.useState(true)
     const [form, setForm] = React.useState<RuleForm | null>(null)
@@ -165,16 +167,20 @@ export const ConditionalFormattingDialog: React.FC<
     }
 
     const validation = form ? formToSpec(form) : undefined
+    // `formToSpec` reports a translation KEY, so the message is resolved here
+    // rather than baked into a module that has no language.
     const formError =
-        validation && 'error' in validation ? validation.error : undefined
+        validation && 'error' in validation
+            ? String(t(validation.error))
+            : undefined
 
     if (form) {
         return (
             <Box sx={{width: 620}}>
                 <Typography variant="h6" sx={{px: 2, pt: 2}}>
                     {editingId === null
-                        ? `New rule for ${rangeLabel(range)}`
-                        : 'Edit rule'}
+                        ? t('ui.cf.newRuleFor', {range: rangeLabel(range)})
+                        : t('ui.cf.editRule')}
                 </Typography>
                 <RuleEditor
                     value={form}
@@ -185,7 +191,11 @@ export const ConditionalFormattingDialog: React.FC<
                         setForm(null)
                         setEditingId(null)
                     }}
-                    submitLabel={editingId === null ? 'Create' : 'Save'}
+                    submitLabel={String(
+                        editingId === null
+                            ? t('ui.common.create')
+                            : t('ui.common.save')
+                    )}
                 />
                 {failure && (
                     <Typography
@@ -213,7 +223,7 @@ export const ConditionalFormattingDialog: React.FC<
                 }}
             >
                 <Typography variant="h6" sx={{flex: 1}}>
-                    Conditional formatting
+                    {t('ui.cf.title')}
                 </Typography>
                 <Button
                     size="small"
@@ -223,20 +233,19 @@ export const ConditionalFormattingDialog: React.FC<
                         setEditingId(null)
                     }}
                 >
-                    New rule
+                    {t('ui.cf.newRule')}
                 </Button>
             </Box>
             <Divider />
             <Box sx={{maxHeight: 360, overflowY: 'auto', px: 2, py: 1}}>
                 {loading && (
                     <Typography variant="body2" color="text.secondary">
-                        Loading…
+                        {t('ui.common.loading')}
                     </Typography>
                 )}
                 {!loading && rules.length === 0 && (
                     <Typography variant="body2" color="text.secondary">
-                        No rules on this sheet. “New rule” adds one for{' '}
-                        {rangeLabel(range)}.
+                        {t('ui.cf.noRules', {range: rangeLabel(range)})}
                     </Typography>
                 )}
                 {rules.map((r) => {
@@ -255,7 +264,7 @@ export const ConditionalFormattingDialog: React.FC<
                             <RulePreview rule={r} />
                             <Box sx={{flex: 1, minWidth: 0}}>
                                 <Typography variant="body2" noWrap>
-                                    {describeRule(r.spec)}
+                                    {describeRule(r.spec, t)}
                                 </Typography>
                                 <Typography
                                     variant="caption"
@@ -299,7 +308,7 @@ export const ConditionalFormattingDialog: React.FC<
             )}
             <Divider />
             <Box sx={{display: 'flex', justifyContent: 'flex-end', p: 1.5}}>
-                <Button onClick={onClose}>Close</Button>
+                <Button onClick={onClose}>{t('ui.common.close')}</Button>
             </Box>
         </Box>
     )

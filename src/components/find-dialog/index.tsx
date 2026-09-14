@@ -6,6 +6,7 @@
  */
 
 import {FC, useCallback, useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import type {Engine} from 'logisheets-engine'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
@@ -40,6 +41,7 @@ export const FindOverlay: FC<FindOverlayProps> = ({
     getActiveCell,
     onNavigate,
 }) => {
+    const {t} = useTranslation()
     const [query, setQuery] = useState('')
     const [options, setOptions] = useState<FindOptions>({
         matchCase: false,
@@ -92,7 +94,12 @@ export const FindOverlay: FC<FindOverlayProps> = ({
         setSearching(true)
         const signal = {cancelled: false}
         const timer = setTimeout(async () => {
-            const result = await findAllMatches(engine, sheetIdx, matcher, signal)
+            const result = await findAllMatches(
+                engine,
+                sheetIdx,
+                matcher,
+                signal
+            )
             if (signal.cancelled || token !== searchTokenRef.current) return
             setMatches(result)
             setCurrentIdx(-1)
@@ -150,16 +157,16 @@ export const FindOverlay: FC<FindOverlayProps> = ({
 
     const hasQuery = query !== ''
     const countLabel = regexError
-        ? 'Invalid regex'
+        ? String(t('ui.find.invalidRegex'))
         : searching
-          ? 'Searching…'
-          : !hasQuery
-            ? ''
-            : matches.length === 0
-              ? 'No results'
-              : currentIdx === -1
-                ? `${matches.length} found`
-                : `${currentIdx + 1} of ${matches.length}`
+        ? String(t('ui.find.searching'))
+        : !hasQuery
+        ? ''
+        : matches.length === 0
+        ? String(t('ui.find.noResults'))
+        : currentIdx === -1
+        ? `${matches.length} found`
+        : `${currentIdx + 1} of ${matches.length}`
 
     const navDisabled = matches.length === 0
 
@@ -168,8 +175,10 @@ export const FindOverlay: FC<FindOverlayProps> = ({
             <div className={styles.row}>
                 <input
                     ref={inputRef}
-                    className={`${styles.input} ${regexError ? styles.inputError : ''}`}
-                    placeholder="Find in sheet"
+                    className={`${styles.input} ${
+                        regexError ? styles.inputError : ''
+                    }`}
+                    placeholder={String(t('ui.find.title'))}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                 />
@@ -177,7 +186,7 @@ export const FindOverlay: FC<FindOverlayProps> = ({
                 <button
                     type="button"
                     className={styles.iconBtn}
-                    title="Previous (Shift+Enter)"
+                    title={String(t('ui.find.previous'))}
                     disabled={navDisabled}
                     onClick={() => go('prev')}
                 >
@@ -186,7 +195,7 @@ export const FindOverlay: FC<FindOverlayProps> = ({
                 <button
                     type="button"
                     className={styles.iconBtn}
-                    title="Next (Enter)"
+                    title={String(t('ui.find.next'))}
                     disabled={navDisabled}
                     onClick={() => go('next')}
                 >
@@ -195,7 +204,7 @@ export const FindOverlay: FC<FindOverlayProps> = ({
                 <button
                     type="button"
                     className={styles.iconBtn}
-                    title="Close (Esc)"
+                    title={String(t('ui.find.close'))}
                     onClick={onClose}
                 >
                     <CloseIcon fontSize="small" />
@@ -207,27 +216,36 @@ export const FindOverlay: FC<FindOverlayProps> = ({
                         type="checkbox"
                         checked={options.matchCase}
                         onChange={(e) =>
-                            setOptions((o) => ({...o, matchCase: e.target.checked}))
+                            setOptions((o) => ({
+                                ...o,
+                                matchCase: e.target.checked,
+                            }))
                         }
                     />
-                    Match case
+                    {t('ui.find.matchCase')}
                 </label>
                 <label className={styles.option}>
                     <input
                         type="checkbox"
                         checked={options.wholeCell}
                         onChange={(e) =>
-                            setOptions((o) => ({...o, wholeCell: e.target.checked}))
+                            setOptions((o) => ({
+                                ...o,
+                                wholeCell: e.target.checked,
+                            }))
                         }
                     />
-                    Whole cell
+                    {t('ui.find.wholeCell')}
                 </label>
                 <label className={styles.option}>
                     <input
                         type="checkbox"
                         checked={options.useRegex}
                         onChange={(e) =>
-                            setOptions((o) => ({...o, useRegex: e.target.checked}))
+                            setOptions((o) => ({
+                                ...o,
+                                useRegex: e.target.checked,
+                            }))
                         }
                     />
                     Regex

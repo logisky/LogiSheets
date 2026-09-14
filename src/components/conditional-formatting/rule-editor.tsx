@@ -7,6 +7,7 @@
  */
 
 import React from 'react'
+import {useTranslation} from 'react-i18next'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
@@ -24,11 +25,12 @@ import {
     operandCount,
 } from './rule-spec'
 
+// Translation keys, not text — module-level, and the language changes under it.
 const TYPE_LABELS: Record<EditableType, string> = {
-    cellIs: 'Cell value',
-    containsText: 'Text contains',
-    colorScale: 'Colour scale',
-    dataBar: 'Data bar',
+    cellIs: 'ui.cf.type.cellIs',
+    containsText: 'ui.cf.type.containsText',
+    colorScale: 'ui.cf.type.colorScale',
+    dataBar: 'ui.cf.type.dataBar',
 }
 
 /** A colour swatch that opens a picker. */
@@ -86,6 +88,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
     onCancel,
     submitLabel,
 }) => {
+    const {t} = useTranslation()
     const set = <K extends keyof RuleForm>(k: K, v: RuleForm[K]) =>
         onChange({...value, [k]: v})
 
@@ -96,7 +99,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
         <Box sx={{p: 2, display: 'flex', flexDirection: 'column', gap: 2}}>
             <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                 <Typography variant="body2" sx={{width: 90}}>
-                    Rule type
+                    {t('ui.cf.ruleType')}
                 </Typography>
                 <Select
                     size="small"
@@ -104,9 +107,9 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                     onChange={(e) => set('ty', e.target.value as EditableType)}
                     sx={{minWidth: 200}}
                 >
-                    {(Object.keys(TYPE_LABELS) as EditableType[]).map((t) => (
-                        <MenuItem key={t} value={t}>
-                            {TYPE_LABELS[t]}
+                    {(Object.keys(TYPE_LABELS) as EditableType[]).map((ty) => (
+                        <MenuItem key={ty} value={ty}>
+                            {t(TYPE_LABELS[ty])}
                         </MenuItem>
                     ))}
                 </Select>
@@ -115,7 +118,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
             {value.ty === 'cellIs' && (
                 <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                     <Typography variant="body2" sx={{width: 90}}>
-                        Condition
+                        {t('ui.cf.condition')}
                     </Typography>
                     <Select
                         size="small"
@@ -125,13 +128,13 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                     >
                         {CELL_IS_OPERATORS.map((o) => (
                             <MenuItem key={o.value} value={o.value}>
-                                {o.label}
+                                {t(o.label)}
                             </MenuItem>
                         ))}
                     </Select>
                     <TextField
                         size="small"
-                        placeholder="value"
+                        placeholder={String(t('ui.cf.valuePlaceholder'))}
                         value={value.operand1}
                         onChange={(e) => set('operand1', e.target.value)}
                         sx={{width: 110}}
@@ -141,7 +144,9 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                             <Typography variant="body2">and</Typography>
                             <TextField
                                 size="small"
-                                placeholder="value"
+                                placeholder={String(
+                                    t('ui.cf.valuePlaceholder')
+                                )}
                                 value={value.operand2}
                                 onChange={(e) =>
                                     set('operand2', e.target.value)
@@ -160,7 +165,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                     </Typography>
                     <TextField
                         size="small"
-                        placeholder="text to look for"
+                        placeholder={String(t('ui.cf.textPlaceholder'))}
                         value={value.text}
                         onChange={(e) => set('text', e.target.value)}
                         sx={{width: 260}}
@@ -171,7 +176,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
             {value.ty === 'colorScale' && (
                 <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                     <Typography variant="body2" sx={{width: 90}}>
-                        Colours
+                        {t('ui.cf.colours')}
                     </Typography>
                     {value.colors.map((c, i) => (
                         <ColorSwatch
@@ -207,7 +212,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
             {value.ty === 'dataBar' && (
                 <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                     <Typography variant="body2" sx={{width: 90}}>
-                        Bar colour
+                        {t('ui.cf.barColour')}
                     </Typography>
                     <ColorSwatch
                         value={value.colors[0]}
@@ -222,7 +227,9 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                 format would have nothing to apply. */}
             {!visual && (
                 <>
-                    <Typography variant="subtitle2">Format</Typography>
+                    <Typography variant="subtitle2">
+                        {t('ui.cf.format')}
+                    </Typography>
                     <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
                         <FormControlLabel
                             control={
@@ -234,7 +241,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                                     }
                                 />
                             }
-                            label="Fill"
+                            label={t('ui.cf.fill')}
                         />
                         {value.useFill && (
                             <ColorSwatch
@@ -252,7 +259,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                                     }
                                 />
                             }
-                            label="Text colour"
+                            label={t('ui.cf.textColour')}
                         />
                         {value.useFontColor && (
                             <ColorSwatch
@@ -272,7 +279,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                                     }
                                 />
                             }
-                            label="Bold"
+                            label={t('ui.cf.bold')}
                         />
                         <FormControlLabel
                             control={
@@ -284,7 +291,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                                     }
                                 />
                             }
-                            label="Italic"
+                            label={t('ui.cf.italic')}
                         />
                         <Box
                             sx={{
@@ -302,7 +309,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                                 fontStyle: value.italic ? 'italic' : 'normal',
                             }}
                         >
-                            Preview
+                            {t('ui.cf.preview')}
                         </Box>
                     </Box>
                 </>
@@ -316,7 +323,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                         onChange={(e) => set('stopIfTrue', e.target.checked)}
                     />
                 }
-                label="Stop evaluating other rules when this one matches"
+                label={t('ui.cf.stopIfTrue')}
             />
 
             {error && (
@@ -333,7 +340,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                     pt: 1,
                 }}
             >
-                <Button onClick={onCancel}>Cancel</Button>
+                <Button onClick={onCancel}>{t('ui.common.cancel')}</Button>
                 <Button
                     variant="contained"
                     onClick={onSubmit}

@@ -43,7 +43,10 @@ export class WebCraftStore implements InstalledCraftStore {
         this.doFetch = opts.fetchImpl ?? ((...a) => fetch(...a))
         this.doImport =
             opts.importImpl ??
-            ((url) => import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>)
+            ((url) =>
+                import(/* @vite-ignore */ url) as Promise<
+                    Record<string, unknown>
+                >)
     }
 
     private urlFor(craftId: string, file: string): string {
@@ -55,7 +58,9 @@ export class WebCraftStore implements InstalledCraftStore {
             return this.manifestCache.get(craftId)
         let manifest: CraftManifest | undefined
         try {
-            const res = await this.doFetch(this.urlFor(craftId, 'manifest.json'))
+            const res = await this.doFetch(
+                this.urlFor(craftId, 'manifest.json')
+            )
             if (res.ok) manifest = (await res.json()) as CraftManifest
         } catch {
             manifest = undefined

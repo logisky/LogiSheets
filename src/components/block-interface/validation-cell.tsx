@@ -1,10 +1,12 @@
 import {Box, Tooltip} from '@mui/material'
+import {useTranslation} from 'react-i18next'
 import {interpretValidation} from 'logisheets-core'
 import {useOps} from '@/core/engine/provider'
 import {BlockCellProps} from './cell'
 import {useToast} from '@/ui/notification/useToast'
 
 export const ValidationCell = (props: BlockCellProps) => {
+    const {t: tr} = useTranslation()
     const {
         x,
         y,
@@ -49,7 +51,7 @@ export const ValidationCell = (props: BlockCellProps) => {
         // `overrideValidation` gate cannot see — such a block enforces
         // nothing, it only warns, exactly as it did before.
         ops.setValidationRule(sheetIdx, rowIdx, colIdx, validation).catch(() =>
-            toast.error('Failed to set validation rule')
+            toast.error(String(tr('block.rule.toast.setFailed')))
         )
         // The last step will trigger re-render. So we can return null here
         return null

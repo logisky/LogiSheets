@@ -1,4 +1,5 @@
 import {RefObject, MutableRefObject, useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import type {Grid, SelectedData, DataService, Session} from 'logisheets-engine'
 import {useOps} from '@/core/engine/provider'
 import {
@@ -66,6 +67,7 @@ export function InlineCellEditor({
     setViewSheet,
     onContentChanged,
 }: InlineCellEditorProps) {
+    const {t} = useTranslation()
     const ops = useOps()
     const {toast} = useToast()
     const [invalidOpen, setInvalidOpen] = useState(false)
@@ -114,7 +116,7 @@ export function InlineCellEditor({
             canEdit: (s, r, c, g) => isCellUserEditableSync(s, r, c, g),
             onEditRefused: (_s, r, c) =>
                 latest.current.toast(
-                    editRefusedMessage(r, c, latest.current.grid),
+                    editRefusedMessage(r, c, latest.current.grid, t),
                     {type: 'info'}
                 ),
             getHighlightColor: (i) => getHighlightColor(i).css(),

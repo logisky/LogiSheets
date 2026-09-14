@@ -4,7 +4,7 @@
 # workspace-inherited) package fields and its own Cargo.lock.
 [package]
 name = "logisheets-desktop"
-version = "0.1.0"
+version = "1.14.1"
 edition = "2021"
 description = "LogiSheets desktop application (Tauri host)"
 publish = false

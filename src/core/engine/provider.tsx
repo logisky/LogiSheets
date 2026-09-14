@@ -75,10 +75,7 @@ export function useOps(): WorkbookOps {
     const engine = useEngine()
     return useMemo(
         () =>
-            new WorkbookOps(
-                engine.getWorkbook(),
-                () => globalStore.isTempMode
-            ),
+            new WorkbookOps(engine.getWorkbook(), () => globalStore.isTempMode),
         [engine]
     )
 }

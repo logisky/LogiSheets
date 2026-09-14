@@ -380,6 +380,64 @@ Everything below appears **after** the iframe loads — guard with `whenReady`.
   (async key/value) for device-scoped preferences that persist across documents.
 - **Host UI** — `window.notifyCraft('success'|'info'|'warn'|'error', msg)` shows a
   toast; `window.setCellLayouts([...])` overlays markers on cells.
+- **Language** — `window.locale` is the language the host is speaking (a BCP-47
+  tag: `'en'`, `'zh-CN'`), and `window.onLocaleChange(cb)` calls back when the
+  user switches (returns a disposer). See below.
+
+### Speaking the host's language
+
+The host states which language it is in; your craft decides what to do about it.
+A craft with one language ignores both APIs and keeps working — nothing breaks,
+it just stays as it is.
+
+To follow along, keep a dictionary and re-render on change. `crafts/lights-out`
+is the worked example: text nodes carry `data-i18n="key"`, and one function
+swaps them.
+
+```js
+var STRINGS = {
+  'zh-CN': {title: '关灯', newGame: '新游戏'},
+  en: {title: 'Lights Out', newGame: 'New game'},
+}
+// NOT `var locale`: at the top level of a craft page that IS `window.locale`,
+// the very property the host injects. Same binding, so the host's next
+// inject() would silently reassign your state without re-rendering — and your
+// applyLocale would write back over the host's value.
+var craftLocale = 'en'
+
+function applyLocale(tag) {
+  // Take the nearest language you actually have: the host may report `zh-CN`
+  // when you only wrote `zh`, and it will report languages you never wrote.
+  craftLocale = STRINGS[tag] ? tag : String(tag || '').startsWith('zh') ? 'zh-CN' : 'en'
+  document.querySelectorAll('[data-i18n]').forEach(function (el) {
+    el.textContent = STRINGS[craftLocale][el.getAttribute('data-i18n')]
+  })
+}
+
+whenReady(function () {
+  applyLocale(window.locale)
+  if (window.onLocaleChange) window.onLocaleChange(applyLocale)
+})
+```
+
+Three things worth getting right:
+
+- **Don't name your own state `locale`.** A top-level `var locale` in a craft
+  page *is* `window.locale` — the property the host injects and re-injects on
+  every pass. The two silently overwrite each other, and the symptom is a craft
+  whose text half-switches.
+- **Register inside `whenReady`, not at `DOMContentLoaded`.** The iframe's
+  DOMContentLoaded fires before the host has injected anything, so `window.locale`
+  is still `undefined` there. (Call `applyLocale` once outside it too if you want
+  the page to look right when opened standalone.)
+- **Don't translate names the workbook stores.** Sheet names, block ref names and
+  field names are how your craft finds its own data again; renaming them per
+  language orphans every document already saved. `lights-out` keeps its board
+  sheet called `关灯` in both languages for exactly this reason.
+- **Your panel label is separate.** The name in the craft picker comes from
+  `crafts.config.json`, where `label` may be a string (one name everywhere) or
+  `{"en": "...", "zh-CN": "..."}`. Both spellings ship in every build and the
+  panel picks one at render, so the list follows a language switch too.
 
 ## Face: a headless runtime
 

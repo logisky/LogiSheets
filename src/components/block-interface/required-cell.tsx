@@ -1,14 +1,16 @@
 import {Box, Tooltip} from '@mui/material'
+import {useTranslation} from 'react-i18next'
 import {BlockCellProps} from './cell'
 
 // Display-only overlay that warns when a required field is empty.
 // The dispatcher only mounts this component once it has confirmed the
 // underlying value is empty, so no value check is needed here.
 export const RequiredCell = (props: BlockCellProps) => {
+    const {t} = useTranslation()
     const {x, y, width, height, fieldInfo} = props
 
-    const fieldName = fieldInfo.name || 'This field'
-    const tooltipMessage = `${fieldName} is required`
+    const fieldName = fieldInfo.name || t('block.cell.requiredField')
+    const tooltipMessage = t('block.cell.required', {field: fieldName})
 
     return (
         <Box

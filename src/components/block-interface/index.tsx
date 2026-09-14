@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {observer} from 'mobx-react-lite'
 import {toast} from 'react-toastify'
 import {globalStore} from '@/store'
@@ -515,6 +516,7 @@ interface BlockInterfaceInternalProps {
 }
 
 const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
+    const {t} = useTranslation()
     const {
         x,
         y,
@@ -1182,7 +1184,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
             // Overlapping another block or covering a non-empty cell is not
             // allowed: warn the user and cancel rather than clobbering data.
             if (await targetCovered(master)) {
-                toast.warn('Cannot move block: the target area is occupied')
+                toast.warn(String(t('block.toast.moveBlocked')))
                 return
             }
             await ops.moveBlock(sheetIdx, blockId, master.row, master.col)
@@ -1521,7 +1523,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             {'broken' in pivotHealth ? (
                                 <>
                                     <ErrorOutlineIcon sx={{fontSize: 13}} />
-                                    Recipe broken
+                                    {t('block.toast.recipeBroken')}
                                 </>
                             ) : (
                                 <>
@@ -1557,7 +1559,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                         }}
                     >
                         {fieldInfo.map((f, idx) => {
-                            const fieldName = f.name || 'Unnamed'
+                            const fieldName =
+                                f.name || t('block.common.unnamed')
 
                             // Look up by absolute column idx — grid.columns
                             // only carries the visible window, so a column
@@ -1686,7 +1689,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             sortMenu && handleSortField(sortMenu.field, true)
                         }
                     >
-                        Sort ascending
+                        {t('block.menu.sortAscending')}
                     </ContextMenuItem>
                     <ContextMenuItem
                         icon={<ArrowDownwardIcon />}
@@ -1694,7 +1697,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             sortMenu && handleSortField(sortMenu.field, false)
                         }
                     >
-                        Sort descending
+                        {t('block.menu.sortDescending')}
                     </ContextMenuItem>
                     {/* The two rules a field can carry. Labelled by whether one
                         is already in force, so the menu says what the column
@@ -1711,8 +1714,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                         }}
                     >
                         {sortMenu && ruleOf(sortMenu.field, 'value') !== ''
-                            ? 'Edit field formula…'
-                            : 'Set field formula…'}
+                            ? t('block.rule.editValueFormula')
+                            : t('block.rule.setValueFormula')}
                     </ContextMenuItem>
                     <ContextMenuItem
                         icon={<RuleIcon />}
@@ -1726,8 +1729,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                         }}
                     >
                         {sortMenu && ruleOf(sortMenu.field, 'validation') !== ''
-                            ? 'Edit validation rule…'
-                            : 'Set validation rule…'}
+                            ? t('block.rule.editValidation')
+                            : t('block.rule.setValidation')}
                     </ContextMenuItem>
                 </ContextMenu>
 
@@ -1760,7 +1763,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             pointerEvents: 'auto',
                         }}
                     >
-                        <Tooltip title="Add new row" arrow>
+                        <Tooltip title={t('block.cell.addNewRow')} arrow>
                             <IconButton
                                 onClick={handleAddRow}
                                 onMouseDown={(e) => e.stopPropagation()}
@@ -1938,10 +1941,10 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setDeleteConfirm(false)}>
-                            Cancel
+                            {t('block.common.cancel')}
                         </Button>
                         <Button color="error" onClick={handleDelete}>
-                            Delete all
+                            {t('block.common.delete')}
                         </Button>
                     </DialogActions>
                 </Dialog>

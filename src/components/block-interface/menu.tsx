@@ -7,6 +7,7 @@ import PivotTableChartOutlinedIcon from '@mui/icons-material/PivotTableChartOutl
 import RefreshIcon from '@mui/icons-material/Refresh'
 import styles from './block-interface.module.scss'
 import React from 'react'
+import {useTranslation} from 'react-i18next'
 import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 
 export interface MenuProps {
@@ -97,6 +98,7 @@ export const ClickableList = ({
 }
 
 export const MenuComponent = (props: MenuProps) => {
+    const {t} = useTranslation()
     const {
         isOpen,
         setIsOpen,
@@ -119,7 +121,7 @@ export const MenuComponent = (props: MenuProps) => {
         onClick: () => void
     }> = [
         {
-            label: 'Modify',
+            label: t('block.menu.modify'),
             icon: <EditOutlinedIcon />,
             // Delegate to the parent — selecting an item closes (unmounts) this
             // menu, so the composer it opens must live in the parent.
@@ -131,14 +133,14 @@ export const MenuComponent = (props: MenuProps) => {
 
     if (onAnalyse) {
         items.push({
-            label: 'Analyse…',
+            label: t('block.menu.analyse'),
             icon: <FunctionsIcon />,
             onClick: onAnalyse,
         })
     }
     if (onEditAnalysis) {
         items.push({
-            label: 'Edit summary…',
+            label: t('block.menu.editSummary'),
             icon: <FunctionsIcon />,
             onClick: onEditAnalysis,
         })
@@ -148,7 +150,7 @@ export const MenuComponent = (props: MenuProps) => {
         // formula pointing at it keeps working — and it is the only way to fix
         // a recipe that has stopped resolving, which a refresh cannot.
         items.push({
-            label: 'Edit pivot…',
+            label: t('block.menu.editPivot'),
             icon: <PivotTableChartOutlinedIcon />,
             onClick: onEditPivot,
         })
@@ -160,10 +162,10 @@ export const MenuComponent = (props: MenuProps) => {
         // perfectly fine — every number in it is correct.
         items.push({
             label: pivotStaleCount
-                ? `Refresh pivot (${pivotStaleCount} group${
-                      pivotStaleCount === 1 ? '' : 's'
-                  } missing)`
-                : 'Refresh pivot',
+                ? t('block.menu.refreshPivotStale', {
+                      count: pivotStaleCount,
+                  })
+                : t('block.menu.refreshPivot'),
             icon: <RefreshIcon />,
             danger: !!pivotStaleCount,
             onClick: onRefreshPivot,
@@ -175,7 +177,7 @@ export const MenuComponent = (props: MenuProps) => {
     // from one to the other is how the relationship stays workable.
     if (analyzes && onGoToBlock) {
         items.push({
-            label: `Source block: ${analyzes.name}`,
+            label: t('block.menu.sourceBlock', {name: analyzes.name}),
             icon: <TableRowsOutlinedIcon />,
             onClick: () => onGoToBlock(analyzes.blockId),
         })
@@ -183,7 +185,7 @@ export const MenuComponent = (props: MenuProps) => {
     if (onGoToBlock) {
         for (const a of analyzedBy) {
             items.push({
-                label: `Analysis block: ${a.name}`,
+                label: t('block.menu.analysisBlock', {name: a.name}),
                 icon: <SummarizeOutlinedIcon />,
                 onClick: () => onGoToBlock(a.blockId),
             })
@@ -195,10 +197,10 @@ export const MenuComponent = (props: MenuProps) => {
         // parent opens says which blocks.
         label:
             analyzedBy.length > 0
-                ? `Delete (with ${analyzedBy.length} analysis block${
-                      analyzedBy.length === 1 ? '' : 's'
-                  })`
-                : 'Delete',
+                ? t('block.menu.deleteWithAnalyses', {
+                      count: analyzedBy.length,
+                  })
+                : t('block.menu.delete'),
         icon: <DeleteOutlinedIcon />,
         danger: true,
         onClick: onDelete,

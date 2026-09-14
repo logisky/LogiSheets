@@ -12,6 +12,8 @@
  */
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {observer} from 'mobx-react-lite'
+import {useTranslation} from 'react-i18next'
+import type {TFunction} from 'i18next'
 import {IconButton, Tooltip} from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import SendIcon from '@mui/icons-material/Send'
@@ -41,6 +43,7 @@ import {
 import {getCraftState, setCraftState} from 'logisheets-core'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {useTempModeControls} from '@/components/temp-mode'
+import {getLocale} from '@/core/i18n/i18n'
 import {useWorkbook} from '@/core/engine/provider'
 import {globalStore} from '@/store'
 import {IdbConversationStore} from './lib/storage-idb'
@@ -67,7 +70,10 @@ import styles from './watson.module.scss'
 const KEY_MODEL = 'watson.model'
 const KEY_PROVIDER = 'watson.provider'
 
-const SYSTEM_PROMPT =
+// English on purpose — the model reads this, not the user. The one thing it
+// has to learn from the UI's language is which language to answer in.
+const systemPrompt = (language: string) =>
+    `Reply in the language of the user's interface (${language}), whatever language this instruction is written in.\n\n` +
     'You are Watson, an AI assistant inside LogiSheets. ' +
     'You help users read, write, and edit spreadsheets using the available ' +
     'tools. For ordinary cells use cell get_cells / set_cells / clear_cells ' +
@@ -105,35 +111,43 @@ const prettyTool = (name: string) =>
 // provider because the useful part of a network failure is provider-specific:
 // a local server that isn't running and a remote host a browser won't call are
 // both "network", and they need opposite advice.
-function friendlyError(err: unknown, provider: ProviderDef): string {
+function friendlyError(
+    err: unknown,
+    provider: ProviderDef,
+    t: TFunction
+): string {
     const e = err as {code?: string; message?: string}
     switch (e?.code) {
         case 'missing_api_key':
-            return 'No API key set. Open Settings and paste your key.'
+            return String(t('watson.error.missingKey'))
         case 'unauthorized':
-            return 'The API key was rejected. Check it in Settings.'
+            return String(t('watson.error.unauthorized'))
         case 'rate_limited':
-            return 'Rate limited by the provider — wait a moment and retry.'
+            return String(t('watson.error.rateLimited'))
         case 'network':
-            return `Could not reach ${provider.label}. ${networkHint(provider)}`
-        case 'server_error':
-            return 'The model provider had a server error. Try again.'
-        case 'bad_request':
-            return e.message || 'The provider rejected the request.'
-        default:
-            return (
-                e?.message ||
-                'Something went wrong. See the console for details.'
+            return String(
+                t('watson.error.unreachable', {
+                    provider: t(provider.label),
+                    hint: networkHint(provider, t),
+                })
             )
+        case 'server_error':
+            return String(t('watson.error.serverError'))
+        case 'bad_request':
+            // The provider's own wording is the useful part here, and it
+            // arrives in whatever language the provider speaks.
+            return e.message || String(t('watson.error.badRequest'))
+        default:
+            return e?.message || String(t('watson.error.unknown'))
     }
 }
 
-function networkHint(provider: ProviderDef): string {
+function networkHint(provider: ProviderDef, t: TFunction): string {
     if (provider.requiresKey === false)
-        return `Check the server is running and the base URL is right (${provider.baseUrl} by default).`
+        return String(t('watson.error.hintLocal', {url: provider.baseUrl}))
     if (provider.corsBlocked && !isTauri())
-        return 'Browsers block direct calls to it (CORS) — set the base URL to a proxy, or use the desktop app, which calls it natively.'
-    return 'Check your connection and the base URL in Settings.'
+        return String(t('watson.error.hintCors'))
+    return String(t('watson.error.hintGeneric'))
 }
 
 export const Watson = observer(function Watson({
@@ -141,6 +155,7 @@ export const Watson = observer(function Watson({
     onClose,
     workbookId,
 }: WatsonProps) {
+    const {t, i18n} = useTranslation()
     const workbook = useWorkbook()
     const tempMode = useTempModeControls()
 
@@ -263,7 +278,9 @@ export const Watson = observer(function Watson({
             llm,
             workbook,
             model,
-            systemPrompt: SYSTEM_PROMPT,
+            systemPrompt: systemPrompt(
+                String(t(`app.languageName.${getLocale()}`))
+            ),
             confirm,
             craftInteractions,
             log: (msg) => console.log('[watson]', msg),
@@ -277,6 +294,10 @@ export const Watson = observer(function Watson({
         baseUrl,
         confirm,
         craftInteractions,
+        // A language switch re-issues the system prompt, so the next turn
+        // answers in the new one.
+        i18n.language,
+        t,
     ])
 
     // Boot: load or create a conversation for this workbook, subscribe to it.
@@ -291,7 +312,7 @@ export const Watson = observer(function Watson({
                 list.length > 0
                     ? list[0]
                     : await store.createConversation({
-                          title: 'New chat',
+                          title: String(t('watson.newChat')),
                           workbook_id: workbookId,
                           model,
                       })
@@ -329,7 +350,7 @@ export const Watson = observer(function Watson({
         setStatus('idle')
         stickToBottomRef.current = true
         const conv = await store.createConversation({
-            title: 'New chat',
+            title: String(t('watson.newChat')),
             workbook_id: workbookId,
             model,
         })
@@ -344,7 +365,7 @@ export const Watson = observer(function Watson({
         const text = input.trim()
         if (!text || running) return
         if (!apiKeyRef.current && providerRequiresKey(provider)) {
-            setTurnError('Add an API key in Settings to start.')
+            setTurnError(String(t('watson.error.needKey')))
             setShowSettings(true)
             return
         }
@@ -367,13 +388,13 @@ export const Watson = observer(function Watson({
             } else {
                 console.error('[watson] runTurn error', err)
                 setStatus('error')
-                setTurnError(friendlyError(err, PROVIDERS[provider]))
+                setTurnError(friendlyError(err, PROVIDERS[provider], t))
             }
         } finally {
             setRunning(false)
             abortRef.current = null
         }
-    }, [input, running, provider])
+    }, [input, running, provider, t])
 
     // Cancel the in-flight turn. The runTurn promise rejects/aborts; `send`'s
     // catch treats an aborted signal as a clean stop, not an error.
@@ -417,12 +438,12 @@ export const Watson = observer(function Watson({
                     <span className={styles.status}>{status}</span>
                 )}
                 <span className={styles.spacer} />
-                <Tooltip title="New chat">
+                <Tooltip title={t('watson.newChat')}>
                     <IconButton size="small" onClick={newChat}>
                         <AddIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
-                <Tooltip title="Settings">
+                <Tooltip title={t('watson.settings')}>
                     <IconButton
                         size="small"
                         onClick={() => setShowSettings(true)}
@@ -430,7 +451,7 @@ export const Watson = observer(function Watson({
                         <SettingsIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
-                <Tooltip title="Close">
+                <Tooltip title={t('watson.close')}>
                     <IconButton size="small" onClick={onClose}>
                         <CloseIcon fontSize="small" />
                     </IconButton>
@@ -443,15 +464,13 @@ export const Watson = observer(function Watson({
                 onScroll={onTranscriptScroll}
             >
                 {bubbles.length === 0 && !running && !turnError ? (
-                    <div className={styles.empty}>
-                        Ask Watson to build, inspect, or edit your sheet.
-                    </div>
+                    <div className={styles.empty}>{t('watson.empty')}</div>
                 ) : (
                     bubbles.map((b) => <Bubble key={b.id} bubble={b} />)
                 )}
                 {running && (
                     <div className={`${styles.bubble} ${styles.thinking}`}>
-                        Watson is working…
+                        {t('watson.working')}
                     </div>
                 )}
                 {turnError && (
@@ -473,9 +492,8 @@ export const Watson = observer(function Watson({
                 >
                     <ScienceIcon fontSize="small" />
                     <div className={styles.tempNoticeText}>
-                        <b>Temp mode is on.</b> Your edits are on a scratch
-                        branch. Watson can still read and preview, but it will
-                        not write until you keep or drop them.
+                        <b>{t('watson.tempModeOn')}</b>{' '}
+                        {t('watson.tempModeBody')}
                     </div>
                     <div className={styles.tempNoticeRow}>
                         <button
@@ -483,14 +501,14 @@ export const Watson = observer(function Watson({
                             className={`${styles.btn} ${styles.btnPrimary}`}
                             onClick={() => void tempMode.commit()}
                         >
-                            Commit
+                            {t('watson.commit')}
                         </button>
                         <button
                             type="button"
                             className={styles.btn}
                             onClick={() => void tempMode.discard()}
                         >
-                            Discard
+                            {t('watson.discard')}
                         </button>
                     </div>
                 </div>
@@ -500,7 +518,7 @@ export const Watson = observer(function Watson({
                 <textarea
                     className={styles.input}
                     value={input}
-                    placeholder="Message Watson…"
+                    placeholder={String(t('watson.composerPlaceholder'))}
                     rows={1}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -517,7 +535,7 @@ export const Watson = observer(function Watson({
                     }}
                 />
                 {running ? (
-                    <Tooltip title="Stop">
+                    <Tooltip title={t('watson.stop')}>
                         <IconButton
                             className={styles.sendBtn}
                             onClick={stop}
@@ -620,6 +638,7 @@ const SettingsModal = ({
     onSave: (draft: SettingsDraft) => void
     onClose: () => void
 }) => {
+    const {t} = useTranslation()
     const [p, setP] = useState<ProviderId>(provider)
     const [k, setK] = useState(apiKey)
     const [b, setB] = useState(baseUrl)
@@ -640,9 +659,9 @@ const SettingsModal = ({
     return (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                <h3>Settings</h3>
+                <h3>{t('watson.settings')}</h3>
 
-                <label>Provider</label>
+                <label>{t('watson.provider')}</label>
                 <select
                     value={p}
                     onChange={(e) =>
@@ -651,31 +670,33 @@ const SettingsModal = ({
                 >
                     {Object.values(PROVIDERS).map((prov) => (
                         <option key={prov.id} value={prov.id}>
-                            {prov.label}
+                            {t(prov.label)}
                         </option>
                     ))}
                 </select>
 
-                <label>{def.keyLabel} (stored on this device)</label>
+                <label>
+                    {t('watson.keyStoredHint', {label: t(def.keyLabel)})}
+                </label>
                 <input
                     type="password"
                     value={k}
                     onChange={(e) => setK(e.target.value)}
                     placeholder={def.keyPlaceholder}
                 />
-                {def.note && <p className={styles.settingsNote}>{def.note}</p>}
+                {def.note && (
+                    <p className={styles.settingsNote}>{t(def.note)}</p>
+                )}
                 {/* Providers known to send no CORS headers can't be reached
                     from a web browser directly — but the desktop app calls
                     them natively, so only warn on the web. */}
                 {def.corsBlocked && !isTauri() && (
                     <p className={styles.settingsWarn}>
-                        Browsers block direct calls to this provider (CORS). Set
-                        the base URL to a CORS-enabled proxy, or use the desktop
-                        app, which calls it natively — no proxy needed.
+                        {t('watson.corsWarning')}
                     </p>
                 )}
 
-                <label>Model</label>
+                <label>{t('watson.model')}</label>
                 <input
                     list="watson-models"
                     value={m}
@@ -690,7 +711,7 @@ const SettingsModal = ({
                     ))}
                 </datalist>
 
-                <label>API base URL</label>
+                <label>{t('watson.baseUrl')}</label>
                 <input
                     value={b}
                     onChange={(e) => setB(e.target.value)}
@@ -699,7 +720,7 @@ const SettingsModal = ({
 
                 <div className={styles.modalRow}>
                     <button className={styles.btn} onClick={onClose}>
-                        Cancel
+                        {t('watson.cancel')}
                     </button>
                     <button
                         className={`${styles.btn} ${styles.btnPrimary}`}
@@ -712,7 +733,7 @@ const SettingsModal = ({
                             })
                         }
                     >
-                        Save
+                        {t('watson.save')}
                     </button>
                 </div>
             </div>
@@ -727,12 +748,13 @@ const ConfirmModal = ({
     pending: PendingConfirm
     onDecide: (approved: boolean) => void
 }) => {
+    const {t} = useTranslation()
     // Esc denies, matching the overlay-click-to-cancel convention.
     useEscapeKey(() => onDecide(false))
     return (
         <div className={styles.modalOverlay}>
             <div className={styles.modal}>
-                <h3>Approve tool call?</h3>
+                <h3>{t('watson.approveTitle')}</h3>
                 <p className={styles.confirmName}>{prettyTool(pending.name)}</p>
                 <pre>{JSON.stringify(pending.input, null, 2)}</pre>
                 <div className={styles.modalRow}>
@@ -740,13 +762,13 @@ const ConfirmModal = ({
                         className={styles.btn}
                         onClick={() => onDecide(false)}
                     >
-                        Deny
+                        {t('watson.deny')}
                     </button>
                     <button
                         className={`${styles.btn} ${styles.btnPrimary}`}
                         onClick={() => onDecide(true)}
                     >
-                        Approve
+                        {t('watson.approve')}
                     </button>
                 </div>
             </div>

@@ -107,12 +107,12 @@ export function getCellFieldFormula(
 export function editRefusedMessage(
     row: number,
     col: number,
-    grid: Grid | null
+    grid: Grid | null,
+    t: (key: string, vars?: Record<string, unknown>) => string
 ): string {
     const formula = getCellFieldFormula(row, col, grid)
-    if (formula)
-        return `This column is computed by its field formula (${formula}). Change the block’s field formula to edit it.`
-    return 'This cell is read-only.'
+    if (formula) return t('ui.cell.computedColumn', {formula})
+    return t('ui.cell.readOnly')
 }
 
 /**

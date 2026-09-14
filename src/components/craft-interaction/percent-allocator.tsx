@@ -96,8 +96,7 @@ export const PercentAllocatorLayer = ({
             (bi: BlockDisplayInfo) => bi.info.blockId === b.blockId
         )
         if (!blockInfo) return 0
-        const cell =
-            blockInfo.info.cells[b.row * blockInfo.info.colCnt + b.col]
+        const cell = blockInfo.info.cells[b.row * blockInfo.info.colCnt + b.col]
         if (!cell) return 0
         const v = cell.value
         if (v === 'empty') return 0

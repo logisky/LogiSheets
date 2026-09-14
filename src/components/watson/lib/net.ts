@@ -78,15 +78,15 @@ async function tauriFetch(
         typeof input === 'string'
             ? input
             : input instanceof URL
-              ? input.toString()
-              : (input as Request).url
+            ? input.toString()
+            : (input as Request).url
 
     const body =
         typeof init?.body === 'string'
             ? init.body
             : init?.body == null
-              ? null
-              : String(init.body)
+            ? null
+            : String(init.body)
 
     const req = {
         url,

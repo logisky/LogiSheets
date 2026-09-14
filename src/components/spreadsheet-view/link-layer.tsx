@@ -68,7 +68,8 @@ export const LinkLayer = observer(({grid, activeSheet}: LinkLayerProps) => {
         let width = 0
         for (let c = rect.startCol; c <= rect.endCol; c++) width += colW(c) ?? 0
         let height = 0
-        for (let r = rect.startRow; r <= rect.endRow; r++) height += rowH(r) ?? 0
+        for (let r = rect.startRow; r <= rect.endRow; r++)
+            height += rowH(r) ?? 0
         return {
             left: xForColStart(rect.startCol, grid) + LeftTop.width,
             top: yForRowStart(rect.startRow, grid) + LeftTop.height,

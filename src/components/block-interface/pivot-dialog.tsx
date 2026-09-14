@@ -1,4 +1,5 @@
 import {useMemo, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
     Box,
     Button,
@@ -69,15 +70,17 @@ export interface PivotDialogProps {
     onConfirm: (spec: PivotSpecChoice) => void
 }
 
+// `label` is a translation key resolved at render — this list is
+// module-level and the language changes under it.
 const FUNCS: ReadonlyArray<{value: AggFunc; label: string}> = [
-    {value: 'SUM', label: 'Sum'},
-    {value: 'AVERAGE', label: 'Average'},
-    {value: 'COUNT', label: 'Count'},
+    {value: 'SUM', label: 'block.agg.sum'},
+    {value: 'AVERAGE', label: 'block.agg.average'},
+    {value: 'COUNT', label: 'block.agg.count'},
     // Distinct from Count wherever a column has gaps: Count counts the
     // records in a group, this counts the ones where the value is there.
-    {value: 'COUNTA', label: 'Count filled in'},
-    {value: 'MIN', label: 'Min'},
-    {value: 'MAX', label: 'Max'},
+    {value: 'COUNTA', label: 'block.agg.countFilledShort'},
+    {value: 'MIN', label: 'block.agg.min'},
+    {value: 'MAX', label: 'block.agg.max'},
 ]
 
 interface MeasureRow {
@@ -109,6 +112,7 @@ export const PivotDialog = ({
     onCancel,
     onConfirm,
 }: PivotDialogProps) => {
+    const {t} = useTranslation()
     const ordered = useMemo(
         () => [...fields].sort((a, b) => a.idx - b.idx),
         [fields]
@@ -236,9 +240,9 @@ export const PivotDialog = ({
             <DialogContent>
                 <Stack spacing={2} sx={{mt: 1}}>
                     <FormControl fullWidth size="small">
-                        <InputLabel>Rows (one per distinct value)</InputLabel>
+                        <InputLabel>{t('block.pivot.rows')}</InputLabel>
                         <Select
-                            label="Rows (one per distinct value)"
+                            label={t('block.pivot.rows')}
                             value={rowDim}
                             onChange={(e) => setRowDim(e.target.value)}
                         >
@@ -247,14 +251,14 @@ export const PivotDialog = ({
                     </FormControl>
 
                     <FormControl fullWidth size="small">
-                        <InputLabel>Columns (optional)</InputLabel>
+                        <InputLabel>{t('block.pivot.columns')}</InputLabel>
                         <Select
-                            label="Columns (optional)"
+                            label={t('block.pivot.columns')}
                             value={colDim}
                             onChange={(e) => setColDim(e.target.value)}
                         >
                             <MenuItem value="">
-                                <em>No columns — one total per row</em>
+                                <em>{t('block.pivot.noColumns')}</em>
                             </MenuItem>
                             {ordered.map(field)}
                         </Select>
@@ -262,9 +266,11 @@ export const PivotDialog = ({
 
                     <Stack direction="row" spacing={1}>
                         <FormControl fullWidth size="small">
-                            <InputLabel>Value field</InputLabel>
+                            <InputLabel>
+                                {t('block.pivot.valueField')}
+                            </InputLabel>
                             <Select
-                                label="Value field"
+                                label={t('block.pivot.valueField')}
                                 value={measure}
                                 onChange={(e) => setMeasure(e.target.value)}
                             >
@@ -272,9 +278,9 @@ export const PivotDialog = ({
                             </Select>
                         </FormControl>
                         <FormControl sx={{minWidth: 140}} size="small">
-                            <InputLabel>Function</InputLabel>
+                            <InputLabel>{t('block.pivot.function')}</InputLabel>
                             <Select
-                                label="Function"
+                                label={t('block.pivot.function')}
                                 value={func}
                                 onChange={(e) =>
                                     setFunc(e.target.value as AggFunc)
@@ -282,7 +288,7 @@ export const PivotDialog = ({
                             >
                                 {FUNCS.map((f) => (
                                     <MenuItem key={f.value} value={f.value}>
-                                        {f.label}
+                                        {t(f.label)}
                                     </MenuItem>
                                 ))}
                             </Select>
@@ -294,17 +300,17 @@ export const PivotDialog = ({
                     {!editing && (
                         <TextField
                             size="small"
-                            label="New block name"
+                            label={t('block.pivot.newBlockName')}
                             value={refName}
                             error={nameError}
                             onChange={(e) => setRefName(e.target.value)}
-                            helperText="Formulas reference it by this name"
+                            helperText={t('block.pivot.newBlockNameHelp')}
                         />
                     )}
 
                     {sameDim && (
                         <Typography variant="caption" color="error">
-                            Rows and columns cannot be the same field.
+                            {t('block.pivot.sameField')}
                         </Typography>
                     )}
                     <Typography variant="caption" color="text.secondary">
@@ -323,24 +329,23 @@ export const PivotDialog = ({
                         sx={{alignSelf: 'flex-start'}}
                         onClick={() => setMore((v) => !v)}
                     >
-                        {more
-                            ? 'Less'
-                            : 'More: total column, second number, filters, row order'}
+                        {more ? t('block.pivot.less') : t('block.pivot.more')}
                     </Link>
 
                     <Collapse in={more} unmountOnExit>
                         <Stack spacing={2}>
                             <TextField
                                 size="small"
-                                label="Total column name"
+                                label={t('block.pivot.totalColumnName')}
                                 value={rowTotal}
                                 disabled={colDim === ''}
                                 onChange={(e) => setRowTotal(e.target.value)}
                                 helperText={
                                     colDim === ''
-                                        ? 'Without columns, that column is already the row total'
-                                        : 'For example “Total”. Leave it empty to omit it. It spans every column — it is not another ' +
-                                          colDim
+                                        ? t('block.pivot.totalRedundant')
+                                        : t('block.pivot.totalColumnHelp', {
+                                              dim: colDim,
+                                          })
                                 }
                             />
 
@@ -365,7 +370,7 @@ export const PivotDialog = ({
                                     >
                                         <TextField
                                             size="small"
-                                            label="Column name"
+                                            label={t('block.pivot.columnName')}
                                             value={m.name}
                                             sx={{width: 110}}
                                             onChange={(e) =>
@@ -386,9 +391,13 @@ export const PivotDialog = ({
                                             size="small"
                                             sx={{minWidth: 110}}
                                         >
-                                            <InputLabel>Function</InputLabel>
+                                            <InputLabel>
+                                                {t('block.pivot.function')}
+                                            </InputLabel>
                                             <Select
-                                                label="Function"
+                                                label={t(
+                                                    'block.pivot.function'
+                                                )}
                                                 value={m.func}
                                                 onChange={(e) =>
                                                     setMeasures((ms) =>
@@ -416,9 +425,11 @@ export const PivotDialog = ({
                                             </Select>
                                         </FormControl>
                                         <FormControl size="small" fullWidth>
-                                            <InputLabel>Field</InputLabel>
+                                            <InputLabel>
+                                                {t('block.pivot.field')}
+                                            </InputLabel>
                                             <Select
-                                                label="Field"
+                                                label={t('block.pivot.field')}
                                                 value={m.measure}
                                                 onChange={(e) =>
                                                     setMeasures((ms) =>
@@ -490,9 +501,11 @@ export const PivotDialog = ({
                                         sx={{mb: 1}}
                                     >
                                         <FormControl size="small" fullWidth>
-                                            <InputLabel>Field</InputLabel>
+                                            <InputLabel>
+                                                {t('block.pivot.field')}
+                                            </InputLabel>
                                             <Select
-                                                label="Field"
+                                                label={t('block.pivot.field')}
                                                 value={f.field}
                                                 onChange={(e) =>
                                                     setFilters((fs) =>
@@ -514,10 +527,14 @@ export const PivotDialog = ({
                                         </FormControl>
                                         <TextField
                                             size="small"
-                                            label="Condition"
+                                            label={t('block.pivot.condition')}
                                             value={f.criteria}
                                             fullWidth
-                                            placeholder="East or >100 or <>closed"
+                                            placeholder={String(
+                                                t(
+                                                    'block.pivot.conditionPlaceholder'
+                                                )
+                                            )}
                                             onChange={(e) =>
                                                 setFilters((fs) =>
                                                     fs.map((x, j) =>
@@ -563,27 +580,31 @@ export const PivotDialog = ({
                             </Box>
 
                             <FormControl fullWidth size="small">
-                                <InputLabel>Row order</InputLabel>
+                                <InputLabel>
+                                    {t('block.pivot.rowOrder')}
+                                </InputLabel>
                                 <Select
-                                    label="Row order"
+                                    label={t('block.pivot.rowOrder')}
                                     value={order}
                                     onChange={(e) =>
                                         setOrder(e.target.value as DimOrder)
                                     }
                                 >
                                     <MenuItem value="ascending">
-                                        By value
+                                        {t('block.pivot.orderByValue')}
                                     </MenuItem>
                                     <MenuItem value="firstSeen">
-                                        As they appear in the source
+                                        {t('block.pivot.orderFirstSeen')}
                                     </MenuItem>
-                                    <MenuItem value="custom">Custom</MenuItem>
+                                    <MenuItem value="custom">
+                                        {t('block.pivot.custom')}
+                                    </MenuItem>
                                 </Select>
                             </FormControl>
                             {order === 'custom' && (
                                 <TextField
                                     size="small"
-                                    label="Order (one value per line)"
+                                    label={t('block.pivot.orderList')}
                                     multiline
                                     minRows={3}
                                     value={orderText}
@@ -591,7 +612,7 @@ export const PivotDialog = ({
                                     onChange={(e) =>
                                         setOrderText(e.target.value)
                                     }
-                                    helperText="Values you leave out follow at the end — nothing is hidden"
+                                    helperText={t('block.pivot.orderListHelp')}
                                 />
                             )}
                         </Stack>
@@ -608,12 +629,14 @@ export const PivotDialog = ({
                         sx={{mr: 'auto', ml: 1}}
                         onClick={onSummary}
                     >
-                        One row for the whole table instead…
+                        {t('block.pivot.analysisInstead')}
                     </Link>
                 )}
-                <Button onClick={onCancel}>Cancel</Button>
+                <Button onClick={onCancel}>{t('block.common.cancel')}</Button>
                 <Button variant="contained" disabled={!ready} onClick={confirm}>
-                    {editing ? 'Apply' : 'Create'}
+                    {editing
+                        ? t('block.common.apply')
+                        : t('block.common.create')}
                 </Button>
             </DialogActions>
         </Dialog>

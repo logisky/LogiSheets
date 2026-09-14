@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>关灯</title>
+  <title data-i18n="title">关灯</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -38,36 +38,36 @@
   </style>
 </head>
 <body>
-  <h1>关灯</h1>
-  <div class="subtitle">Lights Out — 点一格会翻转它和上下左右的灯，把所有灯关掉就赢</div>
+  <h1 data-i18n="title">关灯</h1>
+  <div class="subtitle" data-i18n="subtitle">Lights Out — 点一格会翻转它和上下左右的灯，把所有灯关掉就赢</div>
 
   <div class="card">
     <div class="row" style="justify-content: space-between;">
-      <span class="stat">步数 <span id="moves" class="moves">0</span></span>
-      <span class="muted">已解决 <b id="solved">0</b> 局 · 最少 <b id="best">—</b> 步</span>
+      <span class="stat"><span data-i18n="moves">步数</span> <span id="moves" class="moves">0</span></span>
+      <span class="muted"><span data-i18n="solvedPre">已解决</span> <b id="solved">0</b> <span data-i18n="solvedPost">局 · 最少</span> <b id="best">—</b> <span data-i18n="movesUnit">步</span></span>
     </div>
-    <div id="win" class="win hidden">🎉 全部关灯！</div>
+    <div id="win" class="win hidden" data-i18n="win">🎉 全部关灯！</div>
   </div>
 
   <div class="card">
     <div class="row">
-      <label class="field">难度
+      <label class="field"><span data-i18n="difficulty">难度</span>
         <select id="difficulty">
-          <option value="easy">简单</option>
-          <option value="medium" selected>中等</option>
-          <option value="hard">困难</option>
+          <option value="easy" data-i18n="easy">简单</option>
+          <option value="medium" selected data-i18n="medium">中等</option>
+          <option value="hard" data-i18n="hard">困难</option>
         </select>
       </label>
-      <button id="new-btn" class="btn btn-primary" type="button">新游戏</button>
-      <button id="replay-btn" class="btn" type="button">重玩本局</button>
+      <button id="new-btn" class="btn btn-primary" type="button" data-i18n="newGame">新游戏</button>
+      <button id="replay-btn" class="btn" type="button" data-i18n="replay">重玩本局</button>
     </div>
     <div class="row" style="margin-top: 8px;">
-      <button id="reset-btn" class="link" type="button">重置进度</button>
+      <button id="reset-btn" class="link" type="button" data-i18n="resetProgress">重置进度</button>
     </div>
   </div>
 
   <div class="card">
-    <div class="hint">
+    <div class="hint" data-i18n-html="hint">
       在右侧「关灯」表上点格子：被点的格子和它<b>上下左右</b>的灯会一起翻转（亮↔灭）。<br/>
       目标是把整块 5×5 <b>全部熄灭</b>。换难度或点「新游戏」会重新出题；进度自动保存。
     </div>
@@ -76,11 +76,93 @@
   <script src="./lights-out.js"></script>
   <script>
     var LO = window.LightsOut
+
+    // ---- language ----------------------------------------------------
+    //
+    // The host tells a craft which language it is speaking (`window.locale`,
+    // a BCP-47 tag) and offers to say so again when the user switches
+    // (`window.onLocaleChange`). Both are optional: opened standalone, or in
+    // an older host, neither exists and the craft simply stays in its default
+    // language — which is why `pickLocale` falls back rather than throwing.
+    //
+    // The board's SHEET NAME is deliberately not translated: it is the key
+    // this craft finds its sheet by, and renaming it per language would
+    // orphan every game already saved in a workbook.
+    var STRINGS = {
+      'zh-CN': {
+        title: '关灯',
+        subtitle: 'Lights Out — 点一格会翻转它和上下左右的灯，把所有灯关掉就赢',
+        moves: '步数',
+        solvedPre: '已解决',
+        solvedPost: '局 · 最少',
+        movesUnit: '步',
+        win: '🎉 全部关灯！',
+        difficulty: '难度',
+        easy: '简单',
+        medium: '中等',
+        hard: '困难',
+        newGame: '新游戏',
+        replay: '重玩本局',
+        resetProgress: '重置进度',
+        hint: '在右侧「关灯」表上点格子：被点的格子和它<b>上下左右</b>的灯会一起翻转（亮↔灭）。<br/>目标是把整块 5×5 <b>全部熄灭</b>。换难度或点「新游戏」会重新出题；进度自动保存。',
+        initFailed: '初始化失败：'
+      },
+      en: {
+        title: 'Lights Out',
+        subtitle: 'Clicking a cell flips it and its four neighbours — turn every light off to win',
+        moves: 'Moves',
+        solvedPre: 'Solved',
+        solvedPost: 'so far · best',
+        movesUnit: 'moves',
+        win: '🎉 All lights out!',
+        difficulty: 'Difficulty',
+        easy: 'Easy',
+        medium: 'Medium',
+        hard: 'Hard',
+        newGame: 'New game',
+        replay: 'Replay this one',
+        resetProgress: 'Reset progress',
+        hint: 'Click a cell on the board sheet: that cell and the ones <b>above, below, left and right</b> of it all flip (on ↔ off).<br/>The goal is the whole 5×5 <b>dark</b>. Changing difficulty or pressing “New game” deals a new puzzle; progress saves itself.',
+        initFailed: 'Could not start: '
+      }
+    }
+    // NOT `locale`: a top-level `var locale` IS `window.locale`, the
+    // property the host injects — same binding, so each would silently
+    // overwrite the other.
+    var craftLocale = 'zh-CN'
+
+    /** Nearest language we actually have, for whatever the host reports. */
+    function pickLocale(tag) {
+      if (!tag) return 'zh-CN'
+      if (STRINGS[tag]) return tag
+      var base = String(tag).replace('_', '-').split('-')[0].toLowerCase()
+      if (base === 'zh') return 'zh-CN'
+      if (base === 'en') return 'en'
+      return 'zh-CN'
+    }
+
+    function T(key) {
+      var d = STRINGS[craftLocale] || STRINGS['zh-CN']
+      return d[key] != null ? d[key] : key
+    }
+
+    function applyLocale(tag) {
+      craftLocale = pickLocale(tag)
+      document.documentElement.lang = craftLocale
+      var els = document.querySelectorAll('[data-i18n]')
+      for (var i = 0; i < els.length; i++) {
+        els[i].textContent = T(els[i].getAttribute('data-i18n'))
+      }
+      var html = document.querySelectorAll('[data-i18n-html]')
+      for (var j = 0; j < html.length; j++) {
+        html[j].innerHTML = T(html[j].getAttribute('data-i18n-html'))
+      }
+    }
     var wb = null
     var boardSheetIdx = null
     var progress = null
     var board = null       // current Board (0/1 array)
-    var startBoard = null  // this puzzle's initial state, for 重玩本局
+    var startBoard = null  // this puzzle's initial state, for the replay button
     var moves = 0
     var solved = false
     var busy = false
@@ -210,6 +292,10 @@
 
     function init() {
       LO = window.LightsOut
+
+      // The page's own language, for the moment before the host has
+      // injected anything (and forever, when opened standalone).
+      applyLocale(window.locale)
       document.getElementById('difficulty').addEventListener('change', function (e) {
         newGame(e.target.value)
       })
@@ -221,6 +307,14 @@
 
       whenHostReady(async function () {
         wb = window.workbook
+        // Now that the host has injected, take its language and keep
+        // following it. This has to be in here, not in `init`: the iframe's
+        // DOMContentLoaded fires before the parent's `onload` injection, so
+        // at init time `window.locale` is still undefined.
+        applyLocale(window.locale)
+        if (typeof window.onLocaleChange === 'function') {
+          window.onLocaleChange(applyLocale)
+        }
         window.onCanvasInput(canvasHandler)
         if (window.setSelectionSuppressed) window.setSelectionSuppressed(true)
         loadProgress()
@@ -240,7 +334,7 @@
             await newGame(progress.difficulty)
           }
         } catch (e) {
-          notify('error', '初始化失败：' + (e && e.message || e))
+          notify('error', T('initFailed') + (e && e.message || e))
         }
       })
     }
