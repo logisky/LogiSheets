@@ -7,6 +7,7 @@ description: Essays on the ideas behind LogiSheets — why the project exists, a
 Essays on why this project exists.
 
 - [**What is real AI-native?**](/ideas/what-is-real-AI-native) — Rust had the best correction loop in mainstream programming years before anyone was designing for agents. What that accident says about "AI-native".
+- [**Your AI agent doesn't need more memory**](/ideas/your-ai-agent-does-not-need-more-memory) — Memory is for intent. Everything else the software should be able to answer for itself — and the novel was already on the disk.
 
 <!--
 This page is just the index. Rewrite it however you like.
