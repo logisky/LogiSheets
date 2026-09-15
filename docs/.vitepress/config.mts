@@ -63,6 +63,10 @@ const SIDEBAR = [
                         text: 'What is real AI-native?',
                         link: '/ideas/what-is-real-AI-native',
                     },
+                    {
+                        text: "Your AI agent doesn't need more memory",
+                        link: '/ideas/your-ai-agent-does-not-need-more-memory',
+                    },
                 ],
             },
         ]
