@@ -1,11 +1,21 @@
 /**
  * Translation setup.
  *
- * Two things decide which language the app speaks, in this order:
+ * Three things decide which language the app speaks, in this order:
  *
- *   1. an explicit choice the user made, remembered on the device;
- *   2. `__APP_LOCALE__` — the locale the *distribution* was built for
+ *   1. `?lang=` (or `?locale=`) in the URL — a link that opens the app in a
+ *      given language, so nobody has to land on the wrong one and then hunt
+ *      for the switcher;
+ *   2. an explicit choice the user made, remembered on the device;
+ *   3. `__APP_LOCALE__` — the locale the *distribution* was built for
  *      (crafts.config.json → CRAFT_DIST → vite `define`).
+ *
+ * The URL wins but does NOT overwrite the remembered choice: a `?lang=en` link
+ * someone sends you is a request about that visit, not a new setting for your
+ * device. It survives reloads because it is in the address bar; drop the
+ * parameter and you are back to whatever you had chosen. Switching language
+ * in the UI while such a link is open rewrites the parameter instead of
+ * leaving it to contradict the UI on the next reload.
  *
  * The browser's own language is deliberately NOT consulted. We ship a Chinese
  * build and an English build, and a user who installed the English one on a
@@ -40,6 +50,13 @@ export const DEFAULT_LOCALE: Locale = 'en'
 /** Where a user's explicit language choice is remembered. */
 const STORAGE_KEY = 'logisheets.locale'
 
+/**
+ * Query parameters a link may use to ask for a language. `lang` is the one we
+ * document; `locale` is here because it is the other name people reach for,
+ * and a link that silently does nothing is worse than a second alias.
+ */
+const URL_PARAMS = ['lang', 'locale'] as const
+
 function isLocale(v: string | null | undefined): v is Locale {
     return SUPPORTED_LOCALES.includes(v as Locale)
 }
@@ -65,6 +82,51 @@ function distributionLocale(): Locale {
     return normalizeLocale(l) ?? DEFAULT_LOCALE
 }
 
+/**
+ * The language a query string asks for, if any. Anything we don't speak
+ * (`?lang=fr`) is treated as "not specified" rather than as English, so a typo
+ * falls through to the user's own choice instead of overriding it.
+ *
+ * Takes the query string rather than reading `location` so it can be tested
+ * without a DOM.
+ */
+export function localeFromSearch(search: string): Locale | undefined {
+    const params = new URLSearchParams(search)
+    for (const key of URL_PARAMS) {
+        const l = normalizeLocale(params.get(key))
+        if (l) return l
+    }
+    return undefined
+}
+
+function urlLocale(): Locale | undefined {
+    try {
+        return localeFromSearch(window.location.search)
+    } catch {
+        // No DOM (SSR, unit tests): there is no URL to read.
+        return undefined
+    }
+}
+
+/**
+ * Keep a `?lang=` already in the address bar in step with the UI. Only rewrites
+ * a parameter that is there — we never add one to a clean URL.
+ */
+function syncUrlLocale(locale: Locale): void {
+    try {
+        const url = new URL(window.location.href)
+        let changed = false
+        for (const key of URL_PARAMS) {
+            if (!url.searchParams.has(key)) continue
+            url.searchParams.set(key, locale)
+            changed = true
+        }
+        if (changed) window.history.replaceState(null, '', url.toString())
+    } catch {
+        // Not worth failing a language switch over.
+    }
+}
+
 function storedLocale(): Locale | undefined {
     try {
         return normalizeLocale(localStorage.getItem(STORAGE_KEY))
@@ -76,7 +138,7 @@ function storedLocale(): Locale | undefined {
 
 i18n.use(initReactI18next).init({
     debug: false,
-    lng: storedLocale() ?? distributionLocale(),
+    lng: urlLocale() ?? storedLocale() ?? distributionLocale(),
     fallbackLng: DEFAULT_LOCALE,
     interpolation: {
         escapeValue: false, // React escapes by default
@@ -95,7 +157,8 @@ export function getLocale(): Locale {
 /**
  * Switch language and remember the choice on this device. The stored value
  * outranks the distribution's locale from then on — this is the user saying
- * what they want, not a guess.
+ * what they want, not a guess. If the page was opened with `?lang=`, that
+ * parameter is rewritten too, so a reload does not undo the switch.
  */
 export async function setLocale(locale: Locale): Promise<void> {
     try {
@@ -103,6 +166,7 @@ export async function setLocale(locale: Locale): Promise<void> {
     } catch {
         // Not being able to remember it is not a reason not to do it.
     }
+    syncUrlLocale(locale)
     await i18n.changeLanguage(locale)
 }
 

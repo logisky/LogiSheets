@@ -6,7 +6,8 @@ Turn every light off to win.
 
 ## How it works (reuses the fuse-beads / memory-grid patterns)
 
-- Own worksheet `关灯`, a 5×5 square-cell board created once via `ensureBoard`
+- Own worksheet, a 5×5 square-cell board created once via `ensureBoard`
+  (named in the host's language — `关灯` / `Lights Out`, see `BOARD_NAMES`)
   (created, never deleted — reused and repainted), framed with a thin inner grid
   + a thick outer boundary.
 - Lit / unlit cells are pattern fills (`{red,green,blue}` object). Border colors

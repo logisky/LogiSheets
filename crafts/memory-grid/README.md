@@ -26,7 +26,8 @@ Levels 20–24 flash two cells simultaneously. Full per-level config in
 
 ## How it works (reuses the fuse-beads patterns)
 
-- Own worksheet `记忆挑战`, an 8×8 square-cell board created once via `ensureBoard`
+- Own worksheet (named in the host's language: `记忆挑战` / `Memory Grid`), an
+  8×8 square-cell board created once via `ensureBoard`
   (created, never deleted — levels reuse it and clear it between rounds).
 - **Flashing**: non-undoable `cellStyleUpdate` (fill) + `cellInput` (centered,
   bold, contrast-colored number), driven by a `setTimeout` chain; cleared after

@@ -1,21 +1,20 @@
 /**
- * @logicianSkill Lights Out assistant — operates the 5x5 关灯 puzzle. Use when the
+ * @logicianSkill Lights Out assistant — operates the 5x5 Lights Out puzzle. Use when the
  * user wants to start a Lights Out game, get a hint, have it solved, or check how
  * it's going.
  * @guidance The board is read straight from the sheet (the lit/dark cell fills are
  * the source of truth): solve_lights_out reads it, computes the click sequence,
  * and clears the board; start_lights_out deals a fresh puzzle; hint_lights_out
- * names one good cell to click without changing anything. If the 关灯 craft panel
+ * names one good cell to click without changing anything. If the Lights Out craft panel
  * is open, tell the user to reopen it after you change the board so its in-memory
  * view reloads from the sheet.
  */
 
 import type {Client} from 'logisheets-web'
 import {
-    BOARD_NAME,
     SIZE,
     DIFFICULTY,
-    findSheetIdx,
+    findBoardSheetIdx,
     ensureBoard,
     renderBoard,
     readBoard,
@@ -67,9 +66,9 @@ export async function solveLightsOut(ctx: Ctx): Promise<{
     reason?: string
 }> {
     const wb = ctx.workbook
-    const idx = await findSheetIdx(wb, BOARD_NAME)
+    const idx = await findBoardSheetIdx(wb)
     if (idx < 0)
-        return {solved: false, clicks: [], reason: 'No 关灯 board — start a game first.'}
+        return {solved: false, clicks: [], reason: 'No Lights Out board — start a game first.'}
 
     // Optimistic concurrency: the user could click a cell (via the craft)
     // between our read and our write, which would make the computed moves stale
@@ -108,8 +107,8 @@ export async function solveLightsOut(ctx: Ctx): Promise<{
 export async function hintLightsOut(
     ctx: Ctx
 ): Promise<{cell?: {row: number; col: number}; reason?: string}> {
-    const idx = await findSheetIdx(ctx.workbook, BOARD_NAME)
-    if (idx < 0) return {reason: 'No 关灯 board — start a game first.'}
+    const idx = await findBoardSheetIdx(ctx.workbook)
+    if (idx < 0) return {reason: 'No Lights Out board — start a game first.'}
     const board = await readBoard(ctx.workbook, idx)
     if (isSolved(board)) return {reason: 'Already solved.'}
     const moves = solve(board)
@@ -144,7 +143,7 @@ export async function lightsOutStatus(ctx: Ctx): Promise<{
     solved: boolean
     hasBoard: boolean
 }> {
-    const idx = await findSheetIdx(ctx.workbook, BOARD_NAME)
+    const idx = await findBoardSheetIdx(ctx.workbook)
     if (idx < 0) return {litCells: 0, solved: false, hasBoard: false}
     const board = await readBoard(ctx.workbook, idx)
     return {

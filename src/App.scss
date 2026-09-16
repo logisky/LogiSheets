@@ -7,3 +7,26 @@ body,
   width: 100vw;
   height: 100vh;
 }
+
+/**
+ * No browser navigation from a trackpad swipe.
+ *
+ * Two fingers left on the grid is how you scroll sideways — but the page has
+ * nothing to scroll (the grid is a canvas that moves its own viewport), so the
+ * horizontal gesture reaches the browser as overscroll, and Chrome and Safari
+ * spend it on "go back". That leaves the app, and an unsaved workbook with it,
+ * on what feels like an ordinary scroll.
+ *
+ * `overscroll-behavior: none` refuses that: no navigation gesture, no rubber
+ * banding, no pull-to-refresh. It has to be on the root (and on body, since
+ * which of the two propagates to the viewport differs by browser) —
+ * `overflow: hidden` above does NOT stand in for it; a page that cannot scroll
+ * still hands the leftover gesture to the browser.
+ *
+ * The grid's own wheel handler calls preventDefault, which stops this too, but
+ * only while the pointer is over the canvas. This covers the whole window.
+ */
+html,
+body {
+  overscroll-behavior: none;
+}

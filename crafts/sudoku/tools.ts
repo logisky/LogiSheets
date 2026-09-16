@@ -1,5 +1,5 @@
 /**
- * @logicianSkill Sudoku assistant — operates the puzzle on the 数独 sheet. Use
+ * @logicianSkill Sudoku assistant — operates the puzzle on the Sudoku board sheet. Use
  * when the user asks to solve, fill, finish, or check their Sudoku, or to start
  * a new game.
  * @guidance The board IS the sheet (the player types digits straight into the
@@ -11,10 +11,9 @@
 
 import type {Client, Value} from 'logisheets-web'
 import {
-    BOARD_NAME,
     N,
     DIFFICULTY,
-    findSheetIdx,
+    findBoardSheetIdx,
     solveGrid,
     isConsistent,
     applySolution,
@@ -65,7 +64,7 @@ async function readGrid(wb: Client, sheetIdx: number): Promise<Grid> {
 }
 
 /**
- * @tool Solve the current Sudoku on the 数独 sheet: read the grid, compute the
+ * @tool Solve the current Sudoku on the board sheet: read the grid, compute the
  * solution, and fill every blank cell. Reports if the entries conflict or have
  * no solution.
  * @mutates true
@@ -75,12 +74,12 @@ export async function solveSudoku(
     ctx: Ctx
 ): Promise<{solved: boolean; filled: number; reason?: string}> {
     const wb = ctx.workbook
-    const idx = await findSheetIdx(wb, BOARD_NAME)
+    const idx = await findBoardSheetIdx(wb)
     if (idx < 0)
         return {
             solved: false,
             filled: 0,
-            reason: 'No 数独 sheet yet — start a game with new_sudoku first.',
+            reason: 'No Sudoku board yet — start a game with new_sudoku first.',
         }
     // Optimistic concurrency: the player might type a digit between our read and
     // our write, making the solution stale (and overwriting their entry). The
@@ -110,7 +109,7 @@ export async function solveSudoku(
 }
 
 /**
- * @tool Start a fresh Sudoku puzzle on the 数独 sheet at the given difficulty.
+ * @tool Start a fresh Sudoku puzzle on the board sheet at the given difficulty.
  * @param difficulty Puzzle difficulty (fewer clues = harder).
  * @mutates true
  * @confirm always
@@ -135,7 +134,7 @@ export async function checkSudoku(ctx: Ctx): Promise<{
     hasConflicts: boolean
     complete: boolean
 }> {
-    const idx = await findSheetIdx(ctx.workbook, BOARD_NAME)
+    const idx = await findBoardSheetIdx(ctx.workbook)
     if (idx < 0)
         return {filled: 0, blanks: N * N, hasConflicts: false, complete: false}
     const grid = await readGrid(ctx.workbook, idx)

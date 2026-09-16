@@ -7,7 +7,8 @@ to win; hit a 💣 and it's over.
 
 ## How it works (reuses the game-craft patterns)
 
-- Own worksheet `扫雷`, square cells (30px), created once via `ensureSheet`; the
+- Own worksheet (named in the host's language: `扫雷` / `Minesweeper`), square
+  cells (30px), created once via `ensureSheet`; the
   whole max region (16×30) is cleared and re-bordered on each new game so a
   smaller board doesn't leave the previous one behind.
 - Cells are pattern fills (`{red,green,blue}`); numbers/💣/🚩 are cell content;

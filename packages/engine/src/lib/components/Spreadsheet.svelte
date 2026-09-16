@@ -2782,6 +2782,13 @@ let isDragging = false; // True while user is drag-selecting
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        /* A horizontal trackpad swipe is how you scroll the grid sideways.
+           `overflow: hidden` makes this a scroll container, so without this
+           line the gesture chains out to the page, where the browser spends it
+           on back/forward navigation. onWheel's preventDefault already covers
+           the canvas; this covers the rest of the widget, and means an
+           embedding page gets the behaviour without knowing to ask. */
+        overscroll-behavior: none;
     }
 
     .canvas-area {

@@ -28,8 +28,8 @@ export interface Workbook {
 }
 
 export interface BoardOptions {
-    /** Worksheet name for the board. */
-    name: string
+    /** Worksheet name for the board. Omit to use the host language's name. */
+    name?: string
     /** Number of rows to shape into squares. */
     rows: number
     /** Number of columns to shape into squares. */
@@ -38,8 +38,49 @@ export interface BoardOptions {
     sidePx: number
 }
 
+/**
+ * The board sheet's name, in each language this craft speaks.
+ *
+ * The tab is something the user reads, so it follows the host's language
+ * (`window.locale`). It is ALSO how the craft recognises a board it built
+ * before — which is why every name we have ever shipped stays in this table
+ * and why lookups go through `findBoardSheet`: a board made in Chinese must
+ * still be found (and offered for rebuild) after a switch to English, instead
+ * of being left behind while a second board appears next to it.
+ */
+export type BoardLocale = 'zh-CN' | 'en'
+export const BOARD_NAMES: Readonly<Record<BoardLocale, string>> = {
+    'zh-CN': '拼豆板',
+    en: 'Fuse Beads',
+}
+
+/** Every name a board of ours may carry. Membership is the lookup key. */
+export const BOARD_ALIASES: readonly string[] = Object.values(BOARD_NAMES)
+
+/** Nearest language we have a name for. Unknown tags stay Chinese, the
+ *  craft's own default — same rule as the UI strings in index.html. */
+function pickBoardLocale(tag: string | undefined): BoardLocale {
+    if (!tag) return 'zh-CN'
+    if (tag in BOARD_NAMES) return tag as BoardLocale
+    const base = String(tag).replace('_', '-').split('-')[0].toLowerCase()
+    return base === 'en' ? 'en' : 'zh-CN'
+}
+
+/** The language the host injected, when there is one (standalone: none). */
+function hostLocale(): string | undefined {
+    const l = (globalThis as {locale?: unknown}).locale
+    return typeof l === 'string' ? l : undefined
+}
+
+/**
+ * What a board created right now should be called. index.html passes the
+ * language it is already tracking; other callers fall through to the host's.
+ */
+export function boardName(locale?: string): string {
+    return BOARD_NAMES[pickBoardLocale(locale ?? hostLocale())]
+}
+
 export const DEFAULT_BOARD: BoardOptions = {
-    name: '拼豆板',
     rows: 120,
     cols: 120,
     sidePx: 22,
@@ -196,21 +237,43 @@ export async function findSheetIdx(
     return infos.findIndex((s) => s.name === name)
 }
 
+/** This craft's board, under whichever language's name it was created. */
+export async function findBoardSheet(
+    workbook: Workbook
+): Promise<{idx: number; name: string} | null> {
+    const infos = asSheetInfos(await workbook.getAllSheetInfo())
+    const idx = infos.findIndex((s) => BOARD_ALIASES.indexOf(s.name) >= 0)
+    return idx < 0 ? null : {idx, name: infos[idx].name}
+}
+
+/** Index of this craft's board, or -1. Locale-agnostic. */
+export async function findBoardSheetIdx(workbook: Workbook): Promise<number> {
+    const found = await findBoardSheet(workbook)
+    return found ? found.idx : -1
+}
+
 /**
- * (Re)create the bead board: if a sheet with this name exists it is deleted and
- * rebuilt, then its first `rows`×`cols` cells are shaped into squares. Returns
- * the new sheet's index. Done in a few sequential transactions so we never have
- * to reason about index shifts inside a single transaction.
+ * (Re)create the bead board: an existing board (under any of our names) is
+ * deleted and rebuilt, then its first `rows`×`cols` cells are shaped into
+ * squares. Returns the new sheet's index. Done in a few sequential transactions
+ * so we never have to reason about index shifts inside a single transaction.
+ *
+ * The new sheet takes the current language's name, so rebuilding after a
+ * language switch also renames the board.
  */
 export async function setupBoard(
     workbook: Workbook,
-    opts: BoardOptions = DEFAULT_BOARD
+    opts: BoardOptions = DEFAULT_BOARD,
+    locale?: string
 ): Promise<number> {
-    const {name, rows, cols, sidePx} = opts
+    const {rows, cols, sidePx} = opts
+    const name = opts.name ?? boardName(locale)
 
-    const existing = await findSheetIdx(workbook, name)
-    if (existing >= 0) {
-        await commit(workbook, [{type: 'deleteSheet', value: {idx: existing}}])
+    const existing = await findBoardSheet(workbook)
+    if (existing) {
+        await commit(workbook, [
+            {type: 'deleteSheet', value: {idx: existing.idx}},
+        ])
     }
 
     const infos = asSheetInfos(await workbook.getAllSheetInfo())

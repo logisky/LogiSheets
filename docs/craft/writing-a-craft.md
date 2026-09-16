@@ -430,10 +430,17 @@ Three things worth getting right:
   DOMContentLoaded fires before the host has injected anything, so `window.locale`
   is still `undefined` there. (Call `applyLocale` once outside it too if you want
   the page to look right when opened standalone.)
-- **Don't translate names the workbook stores.** Sheet names, block ref names and
-  field names are how your craft finds its own data again; renaming them per
-  language orphans every document already saved. `lights-out` keeps its board
-  sheet called `关灯` in both languages for exactly this reason.
+- **Names the workbook stores need an alias table before you translate them.**
+  A sheet name is user-visible (it is the tab the player reads), so it deserves
+  to follow the language — but it is also how your craft finds its own data
+  again. Translate it only behind a table of every name you have ever shipped,
+  look up by membership in that table, and `sheetRename` the sheet you find
+  instead of creating a second one. Drop a name from the table and every
+  document saved under it is orphaned. `lights-out` is the worked example:
+  `BOARD_NAMES` / `BOARD_ALIASES` / `boardName(locale)` / `findBoardSheet`.
+  Names a FORMULA refers to — block ref names, field names — are a harder case,
+  because saved formulas hold the old string: leave those in one language
+  unless you also rewrite every formula that mentions them.
 - **Your panel label is separate.** The name in the craft picker comes from
   `crafts.config.json`, where `label` may be a string (one name everywhere) or
   `{"en": "...", "zh-CN": "..."}`. Both spellings ship in every build and the
