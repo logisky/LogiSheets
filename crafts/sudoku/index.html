@@ -127,11 +127,30 @@
     // overwrite the other.
     var craftLocale = 'zh-CN'
 
+    /**
+     * The language this page's own URL asks for (`?lang=`), which the host
+     * puts there when it opens the craft.
+     *
+     * `window.locale` is authoritative, but it only exists once the host has
+     * injected — a beat after this page has already rendered its markup, which
+     * is written in one language. Reading it from the URL instead needs
+     * nothing but the address bar, so the first paint is already right; the
+     * host speaking English used to watch the Chinese markup flash past first.
+     */
+    function urlLocale() {
+      try {
+        return new URLSearchParams(window.location.search).get('lang') || undefined
+      } catch (e) {
+        return undefined
+      }
+    }
+
     /** Nearest language we actually have, for whatever the host reports. */
     function pickLocale(tag) {
-      if (!tag) return 'zh-CN'
-      if (STRINGS[tag]) return tag
-      var base = String(tag).replace('_', '-').split('-')[0].toLowerCase()
+      var want = tag || urlLocale()
+      if (!want) return 'zh-CN'
+      if (STRINGS[want]) return want
+      var base = String(want).replace('_', '-').split('-')[0].toLowerCase()
       if (base === 'zh') return 'zh-CN'
       if (base === 'en') return 'en'
       return 'zh-CN'
@@ -247,6 +266,14 @@
         newGame() // lay out a first puzzle right away
       })
     }
+    // Language first, before anything else can be painted. This script sits at
+    // the end of <body>, so every [data-i18n] node already exists, and running
+    // here — rather than waiting for DOMContentLoaded, let alone for the host
+    // to inject `window.locale` — is what keeps the markup's own language from
+    // showing through on a host speaking the other one. Reads `?lang=` (see
+    // urlLocale); with no parameter it is a no-op that re-applies the default.
+    applyLocale()
+
     window.addEventListener('DOMContentLoaded', init)
   </script>
 </body>

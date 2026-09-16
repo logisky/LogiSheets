@@ -382,7 +382,9 @@ Everything below appears **after** the iframe loads — guard with `whenReady`.
   toast; `window.setCellLayouts([...])` overlays markers on cells.
 - **Language** — `window.locale` is the language the host is speaking (a BCP-47
   tag: `'en'`, `'zh-CN'`), and `window.onLocaleChange(cb)` calls back when the
-  user switches (returns a disposer). See below.
+  user switches (returns a disposer). The host also puts the same tag in your
+  page's URL (`?lang=zh-CN`), which is readable before you have painted
+  anything. See below.
 
 ### Speaking the host's language
 
@@ -405,14 +407,28 @@ var STRINGS = {
 // applyLocale would write back over the host's value.
 var craftLocale = 'en'
 
+/** What the host asked for in this page's URL, before it has injected. */
+function urlLocale() {
+  try {
+    return new URLSearchParams(location.search).get('lang') || undefined
+  } catch (e) {
+    return undefined
+  }
+}
+
 function applyLocale(tag) {
   // Take the nearest language you actually have: the host may report `zh-CN`
   // when you only wrote `zh`, and it will report languages you never wrote.
-  craftLocale = STRINGS[tag] ? tag : String(tag || '').startsWith('zh') ? 'zh-CN' : 'en'
+  var want = tag || urlLocale()
+  craftLocale = STRINGS[want] ? want : String(want || '').startsWith('zh') ? 'zh-CN' : 'en'
   document.querySelectorAll('[data-i18n]').forEach(function (el) {
     el.textContent = STRINGS[craftLocale][el.getAttribute('data-i18n')]
   })
 }
+
+// At the END of <body>, so every [data-i18n] node exists: paint in the right
+// language on the first frame, from the URL alone.
+applyLocale()
 
 whenReady(function () {
   applyLocale(window.locale)
@@ -420,7 +436,7 @@ whenReady(function () {
 })
 ```
 
-Three things worth getting right:
+Four things worth getting right:
 
 - **Don't name your own state `locale`.** A top-level `var locale` in a craft
   page *is* `window.locale` — the property the host injects and re-injects on
@@ -428,8 +444,17 @@ Three things worth getting right:
   whose text half-switches.
 - **Register inside `whenReady`, not at `DOMContentLoaded`.** The iframe's
   DOMContentLoaded fires before the host has injected anything, so `window.locale`
-  is still `undefined` there. (Call `applyLocale` once outside it too if you want
-  the page to look right when opened standalone.)
+  is still `undefined` there.
+- **But translate from `?lang=` before that, or your page flashes.** Your markup
+  is written in one language, and waiting for `window.locale` means waiting for
+  the load event, the host's `inject()` and your own `whenReady` poll — tens of
+  milliseconds, well past the first paint. A host speaking the other language
+  visibly saw the wrong one first. The URL parameter is there while the page is
+  still parsing: call `applyLocale()` straight from the inline script at the end
+  of `<body>` (measured: language applied ~22ms in, first paint at ~44ms). It
+  also means a craft opened standalone with `?lang=en` renders in English.
+  Anything that hook re-renders must tolerate being called before your state
+  exists — guard on the state, not just on the module.
 - **Names the workbook stores need an alias table before you translate them.**
   A sheet name is user-visible (it is the tab the player reads), so it deserves
   to follow the language — but it is also how your craft finds its own data

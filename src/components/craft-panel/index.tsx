@@ -2,7 +2,7 @@ import {useTranslation} from 'react-i18next'
 import {Box, IconButton, FormControl, Select, MenuItem} from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
-import {useEffect, useRef, useState} from 'react'
+import {useEffect, useMemo, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
 import {buildSelectedDataFromCell} from 'logisheets-engine'
 import {
@@ -20,6 +20,18 @@ import {blockEditBus} from '@/components/block-interface/edit-bus'
 import {globalStore} from '@/store'
 import {getLocale} from '@/core/i18n/i18n'
 import {toast} from 'react-toastify'
+
+/**
+ * `/lights-out/index.html` → `/lights-out/index.html?lang=zh-CN`.
+ *
+ * The parameter is the craft's earliest notice of the host's language; the
+ * name matches the one the app itself takes (see core/i18n). A craft that does
+ * not speak the language simply ignores it.
+ */
+function withLocaleParam(src: string, locale: string): string {
+    const sep = src.includes('?') ? '&' : '?'
+    return `${src}${sep}lang=${encodeURIComponent(locale)}`
+}
 
 type CraftPanelProps = {
     open: boolean
@@ -58,6 +70,27 @@ export const CraftPanel = ({
     // DefinePlugin → resolveCraftTools), selected by the CRAFT_DIST
     // distribution. Add crafts / distributions there, not here.
     const tools = __CRAFT_TOOLS__
+    /**
+     * The URL the iframe actually loads: the craft's path plus the language
+     * the host is speaking.
+     *
+     * A craft learns the language twice. `window.locale` (injected below) is
+     * authoritative and follows a live switch, but it only lands once the
+     * iframe has loaded and `inject()` has run — a paint or two after the
+     * craft's own markup is on screen. Its markup is written in one language,
+     * so on a host speaking the other one the craft visibly flashed the wrong
+     * language before correcting itself. `?lang=` is readable while the page
+     * is still parsing, so the craft can paint right the first time.
+     *
+     * Frozen per craft (deps: `iframeSrc` only). Recomputing it on a language
+     * change would change `src` and RELOAD the running craft, throwing away
+     * its state — a switch is already delivered live through `win.locale` and
+     * the onLocaleChange listeners.
+     */
+    const iframeUrl = useMemo(
+        () => withLocaleParam(iframeSrc, getLocale()),
+        [iframeSrc]
+    )
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     // Crafts that need to react to the sheet selection subscribe here instead
     // of polling `window.selection`. The set persists across `inject()` re-runs
@@ -337,7 +370,7 @@ export const CraftPanel = ({
             >
                 <iframe
                     ref={iframeRef}
-                    src={iframeSrc}
+                    src={iframeUrl}
                     onLoad={() => {
                         // Re-inject for the freshly loaded document. Listeners
                         // are NOT cleared here — by now the new page may have
