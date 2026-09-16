@@ -11,7 +11,25 @@ import {COLORS, getLevel, TOTAL_LEVELS, type LevelSpec} from './levels'
 export {COLORS, LEVELS, TOTAL_LEVELS, getLevel} from './levels'
 export type {LevelSpec, Mode, Question, GameColor} from './levels'
 
-export const BOARD_NAME = '记忆挑战'
+/**
+ * The board sheet's name, in each language this craft speaks.
+ *
+ * The tab is something the player looks at, so it follows the host's language
+ * (`window.locale`). It is ALSO how the craft finds its board again, which is
+ * why every name we have ever shipped stays in this table and why lookups go
+ * through `findBoardSheet` rather than one literal: a game saved in Chinese
+ * has to still be found after the user switches to English, or the board is
+ * orphaned and the next "new game" silently starts a second one.
+ */
+export type BoardLocale = 'zh-CN' | 'en'
+export const BOARD_NAMES: Readonly<Record<BoardLocale, string>> = {
+    'zh-CN': '记忆挑战',
+    en: 'Memory Grid',
+}
+
+/** Every name a board of ours may carry. Membership is the lookup key. */
+export const BOARD_ALIASES: readonly string[] = Object.values(BOARD_NAMES)
+
 export const BOARD_SIZE = 8
 export const CELL_PX = 44
 
@@ -130,6 +148,81 @@ export async function findSheetIdx(
     return asSheetInfos(await workbook.getAllSheetInfo()).findIndex(
         (s) => s.name === name
     )
+}
+
+/** Nearest language we have a name for. Unknown tags stay Chinese, the
+ *  craft's own default — same rule as the UI strings in index.html. */
+function pickBoardLocale(tag: string | undefined): BoardLocale {
+    if (!tag) return 'zh-CN'
+    if (tag in BOARD_NAMES) return tag as BoardLocale
+    const base = String(tag).replace('_', '-').split('-')[0].toLowerCase()
+    return base === 'en' ? 'en' : 'zh-CN'
+}
+
+/** The language the host injected, when there is one (standalone: none). */
+function hostLocale(): string | undefined {
+    const l = (globalThis as {locale?: unknown}).locale
+    return typeof l === 'string' ? l : undefined
+}
+
+/**
+ * What a board created right now should be called. Callers that already know
+ * the language (index.html tracks it) pass it; headless callers let it fall
+ * through to whatever the host injected.
+ */
+export function boardName(locale?: string): string {
+    return BOARD_NAMES[pickBoardLocale(locale ?? hostLocale())]
+}
+
+/** This craft's board, under whichever language's name it was created. */
+export async function findBoardSheet(
+    workbook: Workbook
+): Promise<{idx: number; name: string} | null> {
+    const infos = asSheetInfos(await workbook.getAllSheetInfo())
+    const idx = infos.findIndex((s) => BOARD_ALIASES.indexOf(s.name) >= 0)
+    return idx < 0 ? null : {idx, name: infos[idx].name}
+}
+
+/** Index of this craft's board, or -1. Locale-agnostic. */
+export async function findBoardSheetIdx(workbook: Workbook): Promise<number> {
+    const found = await findBoardSheet(workbook)
+    return found ? found.idx : -1
+}
+
+/**
+ * Rename an existing board into the current language. Best-effort: if the
+ * target name is taken (the player has their own "Memory Grid" sheet) the engine
+ * rejects the rename and we keep playing on the sheet we have — a cosmetic tab
+ * label is not worth failing a game over.
+ */
+async function renameBoard(
+    workbook: Workbook,
+    idx: number,
+    from: string,
+    to: string
+): Promise<void> {
+    if (from === to) return
+    try {
+        await commit(workbook, [
+            {type: 'sheetRename', value: {idx, newName: to}} as EditPayload,
+        ])
+    } catch {
+        // Keep the old name.
+    }
+}
+
+/**
+ * Follow a language switch: rename an existing board into the new language.
+ * A no-op when there is no board yet (and best-effort — see `renameBoard`), so
+ * the UI can call it on every locale change without checking anything first.
+ */
+export async function renameBoardToLocale(
+    workbook: Workbook,
+    locale?: string
+): Promise<void> {
+    const existing = await findBoardSheet(workbook)
+    if (!existing) return
+    await renameBoard(workbook, existing.idx, existing.name, boardName(locale))
 }
 
 function fillPayload(
@@ -285,13 +378,20 @@ function boardBorderPayloads(sheetIdx: number): EditPayload[] {
  * — levels reuse the same sheet and clear it. Borders are (re)applied each call;
  * that's idempotent and cheap.
  */
-export async function ensureBoard(workbook: Workbook): Promise<number> {
-    let idx = await findSheetIdx(workbook, BOARD_NAME)
-    if (idx < 0) {
+export async function ensureBoard(
+    workbook: Workbook,
+    locale?: string
+): Promise<number> {
+    const existing = await findBoardSheet(workbook)
+    let idx: number
+    if (existing) {
+        idx = existing.idx
+        await renameBoard(workbook, idx, existing.name, boardName(locale))
+    } else {
         const infos = asSheetInfos(await workbook.getAllSheetInfo())
         idx = infos.length
         await commit(workbook, [
-            {type: 'createSheet', value: {idx, newName: BOARD_NAME}},
+            {type: 'createSheet', value: {idx, newName: boardName(locale)}},
         ])
         const {width, height} = squareDims(CELL_PX)
         const payloads: EditPayload[] = []

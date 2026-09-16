@@ -515,38 +515,39 @@
       if (!window.workbook) { notify('error', T('notReady')); return }
       var exists = false
       try {
-        exists = (await FuseBeads.findSheetIdx(window.workbook, '拼豆板')) >= 0
+        exists = (await FuseBeads.findBoardSheetIdx(window.workbook)) >= 0
       } catch (e) { /* treat as not-exists; build() will surface real errors */ }
       if (exists) { showRebuildConfirm(true); return }
       await build()
     }
 
-    // Actually (re)build the board. Rebuild deletes the old 拼豆板 and makes a
+    // Actually (re)build the board. Rebuild deletes the old board and makes a
     // fresh one — only reached for a brand-new board or after the user confirms.
+    // The new sheet is named in the host's language (FuseBeads.boardName), so a
+    // rebuild after a language switch also renames the tab.
     async function build() {
       showRebuildConfirm(false)
       var btn = document.getElementById('start-btn')
       btn.disabled = true; var old = btn.textContent; btn.textContent = T('creating')
       try {
         var opts = {
-          name: '拼豆板',
           rows: parseInt(document.getElementById('rows-input').value, 10) || 120,
           cols: parseInt(document.getElementById('cols-input').value, 10) || 120,
           sidePx: parseInt(document.getElementById('side-input').value, 10) || 22,
         }
         // If we're rebuilding an EXISTING board, move the view off it first:
-        // setupBoard deletes 拼豆板, and the canvas crashes if it's asked to
+        // setupBoard deletes the old board, and the canvas crashes if it's asked to
         // render the sheet that just disappeared. Sheet index 0 always exists.
         // Yield a couple of frames so the view actually switches before delete.
         var existingIdx = -1
-        try { existingIdx = await FuseBeads.findSheetIdx(window.workbook, '拼豆板') } catch (e) {}
+        try { existingIdx = await FuseBeads.findBoardSheetIdx(window.workbook) } catch (e) {}
         if (existingIdx >= 0 && window.setSelection) {
           window.setSelection(0, 0, 0)
           await new Promise(function (r) {
             requestAnimationFrame(function () { requestAnimationFrame(r) })
           })
         }
-        var idx = await FuseBeads.setupBoard(window.workbook, opts)
+        var idx = await FuseBeads.setupBoard(window.workbook, opts, craftLocale)
         boardSheetIdx = idx
         boardFontPt = FuseBeads.labelFontPt(opts.sidePx)
         if (window.setSelection) window.setSelection(idx, 0, 0)

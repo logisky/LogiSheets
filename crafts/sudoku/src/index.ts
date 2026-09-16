@@ -12,7 +12,25 @@
 
 import type {EditPayload, SheetInfo} from 'logisheets-web'
 
-export const BOARD_NAME = '数独'
+/**
+ * The board sheet's name, in each language this craft speaks.
+ *
+ * The tab is something the player looks at, so it follows the host's language
+ * (`window.locale`). It is ALSO how the craft finds its board again, which is
+ * why every name we have ever shipped stays in this table and why lookups go
+ * through `findBoardSheet` rather than one literal: a game saved in Chinese
+ * has to still be found after the user switches to English, or the board is
+ * orphaned and the next "new game" silently starts a second one.
+ */
+export type BoardLocale = 'zh-CN' | 'en'
+export const BOARD_NAMES: Readonly<Record<BoardLocale, string>> = {
+    'zh-CN': '数独',
+    en: 'Sudoku',
+}
+
+/** Every name a board of ours may carry. Membership is the lookup key. */
+export const BOARD_ALIASES: readonly string[] = Object.values(BOARD_NAMES)
+
 export const N = 9
 export const CELL_PX = 42
 
@@ -143,6 +161,81 @@ export async function findSheetIdx(
     )
 }
 
+/** Nearest language we have a name for. Unknown tags stay Chinese, the
+ *  craft's own default — same rule as the UI strings in index.html. */
+function pickBoardLocale(tag: string | undefined): BoardLocale {
+    if (!tag) return 'zh-CN'
+    if (tag in BOARD_NAMES) return tag as BoardLocale
+    const base = String(tag).replace('_', '-').split('-')[0].toLowerCase()
+    return base === 'en' ? 'en' : 'zh-CN'
+}
+
+/** The language the host injected, when there is one (standalone: none). */
+function hostLocale(): string | undefined {
+    const l = (globalThis as {locale?: unknown}).locale
+    return typeof l === 'string' ? l : undefined
+}
+
+/**
+ * What a board created right now should be called. Callers that already know
+ * the language (index.html tracks it) pass it; headless callers let it fall
+ * through to whatever the host injected.
+ */
+export function boardName(locale?: string): string {
+    return BOARD_NAMES[pickBoardLocale(locale ?? hostLocale())]
+}
+
+/** This craft's board, under whichever language's name it was created. */
+export async function findBoardSheet(
+    workbook: Workbook
+): Promise<{idx: number; name: string} | null> {
+    const infos = asSheetInfos(await workbook.getAllSheetInfo())
+    const idx = infos.findIndex((s) => BOARD_ALIASES.indexOf(s.name) >= 0)
+    return idx < 0 ? null : {idx, name: infos[idx].name}
+}
+
+/** Index of this craft's board, or -1. Locale-agnostic. */
+export async function findBoardSheetIdx(workbook: Workbook): Promise<number> {
+    const found = await findBoardSheet(workbook)
+    return found ? found.idx : -1
+}
+
+/**
+ * Rename an existing board into the current language. Best-effort: if the
+ * target name is taken (the player has their own "Sudoku" sheet) the engine
+ * rejects the rename and we keep playing on the sheet we have — a cosmetic tab
+ * label is not worth failing a game over.
+ */
+async function renameBoard(
+    workbook: Workbook,
+    idx: number,
+    from: string,
+    to: string
+): Promise<void> {
+    if (from === to) return
+    try {
+        await commit(workbook, [
+            {type: 'sheetRename', value: {idx, newName: to}} as EditPayload,
+        ])
+    } catch {
+        // Keep the old name.
+    }
+}
+
+/**
+ * Follow a language switch: rename an existing board into the new language.
+ * A no-op when there is no board yet (and best-effort — see `renameBoard`), so
+ * the UI can call it on every locale change without checking anything first.
+ */
+export async function renameBoardToLocale(
+    workbook: Workbook,
+    locale?: string
+): Promise<void> {
+    const existing = await findBoardSheet(workbook)
+    if (!existing) return
+    await renameBoard(workbook, existing.idx, existing.name, boardName(locale))
+}
+
 function input(sheetIdx: number, r: number, c: number, content: string): EditPayload {
     return {type: 'cellInput', value: {sheetIdx, row: r, col: c, content}} as EditPayload
 }
@@ -174,13 +267,20 @@ function boxBorderTy(r: number, c: number): object {
     }
 }
 
-async function ensureSheet(workbook: Workbook): Promise<number> {
-    let idx = await findSheetIdx(workbook, BOARD_NAME)
-    if (idx < 0) {
+async function ensureSheet(
+    workbook: Workbook,
+    locale?: string
+): Promise<number> {
+    const existing = await findBoardSheet(workbook)
+    let idx: number
+    if (existing) {
+        idx = existing.idx
+        await renameBoard(workbook, idx, existing.name, boardName(locale))
+    } else {
         const infos = asSheetInfos(await workbook.getAllSheetInfo())
         idx = infos.length
         await commit(workbook, [
-            {type: 'createSheet', value: {idx, newName: BOARD_NAME}},
+            {type: 'createSheet', value: {idx, newName: boardName(locale)}},
         ])
         const {width, height} = squareDims(CELL_PX)
         const sizing: EditPayload[] = []
@@ -212,7 +312,31 @@ const BOXCHK_C0 = 10
 const STATUS_R = 14
 const STATUS_C = 10
 
-function checkerPayloads(idx: number): EditPayload[] {
+/**
+ * The two bits of prose the checker writes INTO the sheet. They are cells the
+ * player reads, so they follow the host's language like everything else — the
+ * board's own name does (see BOARD_NAMES). A new game rewrites them, so a
+ * language switch catches up on the next puzzle.
+ */
+const STATUS_TEXT: Readonly<
+    Record<BoardLocale, {conflict: string; done: string; filling: string; label: string}>
+> = {
+    'zh-CN': {
+        conflict: '❌ 有冲突',
+        done: '🎉 完成！',
+        filling: '填写中…',
+        label: '← 总状态',
+    },
+    en: {
+        conflict: '❌ Conflict',
+        done: '🎉 Solved!',
+        filling: 'In progress…',
+        label: '← Overall status',
+    },
+}
+
+function checkerPayloads(idx: number, locale?: string): EditPayload[] {
+    const t = STATUS_TEXT[pickBoardLocale(locale ?? hostLocale())]
     const out: EditPayload[] = []
     // per-row checks (right of each row)
     for (let r = 0; r < N; r++)
@@ -239,21 +363,25 @@ function checkerPayloads(idx: number): EditPayload[] {
             idx,
             STATUS_R,
             STATUS_C,
-            `=IF(COUNTIF(${rowChk},"❌")+COUNTIF(${colChk},"❌")+COUNTIF(${boxChk},"❌")>0,"❌ 有冲突",IF(COUNTBLANK(${board})=0,"🎉 完成！","填写中…"))`
+            `=IF(COUNTIF(${rowChk},"❌")+COUNTIF(${colChk},"❌")+COUNTIF(${boxChk},"❌")>0,"${t.conflict}",IF(COUNTBLANK(${board})=0,"${t.done}","${t.filling}"))`
         )
     )
     // label next to the status cell (in a free cell — must NOT overlap the
     // box-check block at K11:M13, which is why there's no label at K11).
-    out.push(input(idx, STATUS_R, STATUS_C + 1, '← 总状态'))
+    out.push(input(idx, STATUS_R, STATUS_C + 1, t.label))
     return out
 }
 
-async function ensureBoardChrome(workbook: Workbook, idx: number): Promise<void> {
+async function ensureBoardChrome(
+    workbook: Workbook,
+    idx: number,
+    locale?: string
+): Promise<void> {
     // borders + checker formulas — static, safe to (re)apply each new game
     const payloads: EditPayload[] = []
     for (let r = 0; r < N; r++)
         for (let c = 0; c < N; c++) payloads.push(styleUpdate(idx, r, c, boxBorderTy(r, c)))
-    payloads.push(...checkerPayloads(idx))
+    payloads.push(...checkerPayloads(idx, locale))
     await commit(workbook, payloads)
 }
 
@@ -288,13 +416,14 @@ async function writeCells(
 /** Create/prepare the board and lay out a fresh puzzle. Returns the puzzle. */
 export async function setupNewGame(
     workbook: Workbook,
-    difficulty: string
+    difficulty: string,
+    locale?: string
 ): Promise<{sheetIdx: number; puzzle: Puzzle}> {
-    const idx = await ensureSheet(workbook)
+    const idx = await ensureSheet(workbook, locale)
     const clues = DIFFICULTY[difficulty] ?? DIFFICULTY.medium
     const puzzle = makePuzzle(clues)
     await writeCells(workbook, idx, puzzle.puzzle)
-    await ensureBoardChrome(workbook, idx)
+    await ensureBoardChrome(workbook, idx, locale)
     return {sheetIdx: idx, puzzle}
 }
 

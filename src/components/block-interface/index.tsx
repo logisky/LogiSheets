@@ -68,6 +68,19 @@ import {DatetimeCell} from './datetime-cell'
 import {ImageCell} from './image'
 import {FieldRefCell} from './field-ref-cell'
 import {MultiFieldRefCell} from './multi-field-ref-cell'
+import {
+    BLOCK_BORDER_ACTIVE,
+    BLOCK_BORDER_REST,
+    BLOCK_BUTTON,
+    BLOCK_BUTTON_HOVER,
+    BLOCK_FIELD_BG,
+    BLOCK_FIELD_BG_HOVER,
+    BLOCK_GHOST_FILL,
+    BLOCK_INVALID,
+    BLOCK_INVALID_FILL,
+    BLOCK_ON_SURFACE,
+    BLOCK_TITLE_BG,
+} from './chrome'
 
 export interface BlockInterfaceProps {
     grid: Grid
@@ -1310,15 +1323,18 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     sx={{
                         position: 'absolute',
                         inset: '6px',
-                        border: '2px solid',
+                        // 1px at rest, 2px once you point at it. The outer
+                        // edge stays put (border-box), so the ring thickens
+                        // inwards instead of jumping.
+                        border: `${showInfo || isPaired ? 2 : 1}px solid`,
                         borderColor:
                             showInfo || isPaired
-                                ? 'rgb(103, 58, 183)'
-                                : 'rgba(103, 58, 183, 0.5)',
+                                ? BLOCK_BORDER_ACTIVE
+                                : BLOCK_BORDER_REST,
                         boxSizing: 'border-box',
-                        transition: 'border-color 0.2s',
+                        transition: 'border-color 0.15s, border-width 0.15s',
                         pointerEvents: 'none',
-                        borderRadius: '4px',
+                        borderRadius: '3px',
                         // A dashed outline on the partner, so which one the
                         // pointer is actually on stays unambiguous.
                         ...(isPaired && !showInfo
@@ -1377,14 +1393,14 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             justifyContent: 'center',
                             background: 'white',
                             borderRadius: '50%',
-                            boxShadow: 3,
-                            border: '2px solid rgb(103, 58, 183)',
-                            color: 'rgb(103, 58, 183)',
+                            boxShadow: 2,
+                            border: `1.5px solid ${BLOCK_BUTTON}`,
+                            color: BLOCK_BUTTON,
                             cursor: 'pointer',
-                            transition: 'all 0.2s',
+                            transition: 'all 0.15s',
                             '&:hover': {
-                                background: 'rgb(103, 58, 183)',
-                                color: '#fff',
+                                background: BLOCK_BUTTON,
+                                color: BLOCK_ON_SURFACE,
                                 transform: 'scale(1.1)',
                             },
                             pointerEvents: 'auto',
@@ -1408,11 +1424,11 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             boxSizing: 'border-box',
                             border: '2px dashed',
                             borderColor: dragGhost.invalid
-                                ? 'rgb(211, 47, 47)'
-                                : 'rgb(103, 58, 183)',
+                                ? BLOCK_INVALID
+                                : BLOCK_BORDER_ACTIVE,
                             background: dragGhost.invalid
-                                ? 'rgba(211, 47, 47, 0.10)'
-                                : 'rgba(103, 58, 183, 0.10)',
+                                ? BLOCK_INVALID_FILL
+                                : BLOCK_GHOST_FILL,
                             borderRadius: '4px',
                             pointerEvents: 'none',
                         }}
@@ -1439,9 +1455,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                 0,
                                 LeftTop.width - (x + 6)
                             )}px)`,
-                            background:
-                                'linear-gradient(135deg, rgb(69, 39, 160) 0%, rgb(49, 27, 146) 100%)',
-                            borderRadius: '6px',
+                            background: BLOCK_TITLE_BG,
+                            borderRadius: '4px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -1454,8 +1469,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                         <Typography
                             variant="caption"
                             sx={{
-                                color: 'white',
-                                fontWeight: 700,
+                                color: BLOCK_ON_SURFACE,
+                                fontWeight: 600,
                                 fontSize: '0.78rem',
                                 letterSpacing: '0.02em',
                                 textAlign: 'center',
@@ -1600,9 +1615,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                         sx={{
                                             width: `${width}px`,
                                             height: '100%',
-                                            background:
-                                                'linear-gradient(135deg, rgb(103, 58, 183) 0%, rgb(81, 45, 168) 100%)',
-                                            borderRadius: '6px',
+                                            background: BLOCK_FIELD_BG,
+                                            borderRadius: '4px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -1620,14 +1634,15 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                                     ? 0.4
                                                     : 1,
                                             '&:hover': {
-                                                filter: 'brightness(1.1)',
+                                                background:
+                                                    BLOCK_FIELD_BG_HOVER,
                                             },
                                         }}
                                     >
                                         <Typography
                                             variant="caption"
                                             sx={{
-                                                color: 'white',
+                                                color: BLOCK_ON_SURFACE,
                                                 fontWeight: 600,
                                                 fontSize: '0.75rem',
                                                 textAlign: 'center',
@@ -1770,17 +1785,15 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                 sx={{
                                     width: 16,
                                     height: 16,
-                                    background:
-                                        'linear-gradient(135deg, rgb(103, 58, 183) 0%, rgb(81, 45, 168) 100%)',
-                                    color: 'white',
-                                    boxShadow: 3,
+                                    background: BLOCK_BUTTON,
+                                    color: BLOCK_ON_SURFACE,
+                                    boxShadow: 2,
                                     '&:hover': {
-                                        background:
-                                            'linear-gradient(135deg, rgb(81, 45, 168) 0%, rgb(69, 39, 160) 100%)',
+                                        background: BLOCK_BUTTON_HOVER,
                                         transform: 'scale(1.1)',
-                                        boxShadow: 4,
+                                        boxShadow: 3,
                                     },
-                                    transition: 'all 0.2s',
+                                    transition: 'all 0.15s',
                                 }}
                             >
                                 <AddIcon />

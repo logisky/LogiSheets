@@ -92,9 +92,11 @@
     // an older host, neither exists and the craft stays in its default
     // language — which is why `pickLocale` falls back rather than throwing.
     //
-    // The board's SHEET NAME is deliberately not translated: it is the key
-    // this craft finds its sheet by, and renaming it per language would
-    // orphan every game already saved in a workbook.
+    // The board's SHEET NAME follows the language too (the tab is something
+    // the player reads). It is also how the craft finds its board again, so
+    // lookups go through the module's findBoardSheet, which knows every name
+    // we ship — a game started in Chinese is still found after a switch to
+    // English, and the sheet is renamed rather than duplicated.
     var STRINGS = {
       'zh-CN': {
         title: '记忆挑战',
@@ -189,6 +191,13 @@
       var html = document.querySelectorAll('[data-i18n-html]')
       for (var j = 0; j < html.length; j++) {
         html[j].innerHTML = T(html[j].getAttribute('data-i18n-html'))
+      }
+      // The board's tab is part of the UI too, so a language switch renames
+      // the sheet. Nothing to do before the host has injected a workbook, and
+      // a failed rename just leaves the old name — never break the page over a
+      // tab label.
+      if (window.workbook && MG) {
+        MG.renameBoardToLocale(window.workbook, craftLocale).catch(function () {})
       }
       if (typeof onLocaleApplied === 'function') onLocaleApplied()
     }
@@ -321,7 +330,7 @@
       phase = 'showing'
 
       try {
-        boardSheetIdx = await MG.ensureBoard(window.workbook)
+        boardSheetIdx = await MG.ensureBoard(window.workbook, craftLocale)
         if (window.setSelection) window.setSelection(boardSheetIdx, 0, 0)
         await sleep(150)
         await MG.clearBoard(window.workbook, boardSheetIdx)

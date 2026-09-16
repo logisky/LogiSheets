@@ -6,7 +6,8 @@ on a worksheet.
 
 ## What it does
 
-- **开始拼豆** creates (or resets) a worksheet named `拼豆板` and shapes its first
+- **开始拼豆** creates (or resets) a worksheet named in the host's language
+  (`拼豆板` / `Fuse Beads`) and shapes its first
   `rows × cols` cells into squares, then jumps to it.
 - **选豆区** holds the full official MARD (咪呀) chart — all **291 colors**
   ([source](https://www.pixel-beads.com/mard-bead-color-chart)), grouped exactly
