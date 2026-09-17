@@ -108,7 +108,13 @@ function clientWith(
             schema: {
                 name: 'sales_pivot',
                 schemaType: 'row',
-                keys: [{key: 'East', idx: 0}],
+                // As the engine reports it. A key entry's `idx` is its
+                // position on the RECORD axis — which ROW — and a pivot owns
+                // its header line, so the first group sits at block row 1, not
+                // 0. Getting this wrong in the fixture is what let the key
+                // column be looked up by a row index for so long.
+                headerIdx: 0,
+                keys: [{key: 'East', idx: 1}],
                 fields: [
                     {
                         field: 'region',
@@ -456,6 +462,70 @@ describe('build__refresh_pivot', () => {
         expect(types.lastIndexOf('cellInput')).toBeLessThan(
             types.indexOf('bindFormSchema')
         )
+    })
+
+    it('leaves the key column named after the row dimension', async () => {
+        // The bug this exists for: a refresh that ADDS a row restated the key
+        // column under the name of the FIRST MEASURE column, so
+        // ["region", "Q1", "Q2"] was written back as ["Q1", "Q1", "Q2"] — into
+        // the sheet, so it went into the .xlsx too. Two fields then answer to
+        // "Q1", the key one first, and BLOCKREF("sales_pivot", "North", "Q1")
+        // resolves against the key column and hands back the group label
+        // "North" instead of the number. Silently wrong data out of the one
+        // thing a pivot-as-a-block is for.
+        //
+        // The cause was a row index used as a column index: on a row schema a
+        // key entry's `idx` says WHICH ROW, and a pivot owns its header line,
+        // so the first group's is 1 — which matched the field in COLUMN 1.
+        // A no-op refresh never showed it, because it writes nothing at all.
+        const {client, committed} = clientWith({
+            withPivotBlock: true,
+            plan: {
+                keys: ['East', 'North'],
+                fields: ['Q1', 'Q2'],
+                currentKeys: ['East'],
+                currentFields: ['Q1', 'Q2'],
+                missingKeys: ['North'],
+                missingFields: [],
+                extraKeys: [],
+                extraFields: [],
+                unassignedRecords: 0,
+                isStale: true,
+            },
+        })
+        const before = await describeBlock.handler(
+            {name: 'sales_pivot'},
+            ctxFor(client)
+        )
+        expect(before.data.fields.map((f) => f.name)).toEqual([
+            'region',
+            'Q1',
+            'Q2',
+        ])
+
+        const r = await refreshPivot.handler(
+            {name: 'sales_pivot'},
+            ctxFor(client)
+        )
+        expect(r.data.added_rows).toEqual(['North'])
+
+        // The header line, as WRITTEN: one `blockInput` per column, at
+        // block-relative row 0. Column 0 must still say "region".
+        const header = committed
+            .filter((p) => p.type === 'blockInput' && p.value.row === 0)
+            .sort((a, b) => (a.value.col as number) - (b.value.col as number))
+            .map((p) => p.value.input)
+        expect(header).toEqual(['region', 'Q1', 'Q2'])
+
+        // And the re-bind agrees with it, so the schema a later
+        // `describe_block` reports is the one the cells show.
+        const bind = committed.find((p) => p.type === 'bindFormSchema')!
+        expect(
+            (bind.value.fields as Array<{name: string}>).map((f) => f.name)
+        ).toEqual(['region', 'Q1', 'Q2'])
+        // Nothing addressable twice: "Q1" must name exactly one column, or
+        // BLOCKREF resolves to whichever comes first.
+        expect(new Set(header).size).toBe(header.length)
     })
 
     it('still reports unassigned records, which it cannot fix', async () => {
