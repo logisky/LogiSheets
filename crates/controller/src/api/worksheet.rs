@@ -1970,6 +1970,7 @@ impl<'a> Worksheet<'a> {
                             fields,
                             random_entries,
                             header_idx: header_index(s, &block_place),
+                            key_idx: key_index(s, &block_place),
                             unique_together: s
                                 .unique_together()
                                 .iter()
@@ -2751,6 +2752,7 @@ impl<'a> Worksheet<'a> {
                     fields,
                     random_entries,
                     header_idx: header_index(s, &block_place),
+                    key_idx: key_index(s, &block_place),
                     unique_together: s
                         .unique_together()
                         .iter()
@@ -3005,6 +3007,42 @@ fn header_index(
         Schema::RandomSchema(_) => return None,
     };
     lines.iter().position(|l| *l == header)
+}
+
+/// A schema's key line as a block-relative INDEX along the FIELD axis, for
+/// reporting.
+///
+/// The axis is the point. A row schema's records are rows, so its fields run
+/// along COLUMNS and its key is one of them; a column schema is the transpose.
+/// Either way this counts on the same axis as `BlockSchemaFieldEntry::idx`,
+/// which is what makes "the field sitting in the key line" a lookup a host can
+/// actually perform:
+///
+/// ```ignore
+/// schema.fields.find(|f| f.idx == schema.key_idx)
+/// ```
+///
+/// Reported because the engine was the only thing that knew it. `BlockSchema`
+/// carried `keys[].idx`, which counts along the RECORD axis (which row a key
+/// cell is on), and every host that needed the key COLUMN reached for that
+/// instead — the only key index there was. It works out to the same number
+/// for a plain table, and silently does not for a block with a header line:
+/// `build__refresh_pivot` picked the field in column 1, wrote that name over
+/// the pivot's key column, and `BLOCKREF` began answering with the group
+/// label instead of the number. Two more call sites had the same mistake
+/// waiting in them. Projecting the real thing is what retires the class.
+///
+/// `None` for a random schema, which has no key axis.
+fn key_index(
+    schema: &crate::block_manager::schema_manager::schema::Schema,
+    bp: &crate::navigator::BlockPlace,
+) -> Option<usize> {
+    use crate::block_manager::schema_manager::schema::Schema;
+    match schema {
+        Schema::RowSchema(s) => bp.cols.iter().position(|c| *c == s.key),
+        Schema::ColSchema(s) => bp.rows.iter().position(|r| *r == s.key),
+        Schema::RandomSchema(_) => None,
+    }
 }
 
 #[cfg(test)]
