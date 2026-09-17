@@ -181,7 +181,11 @@ function analysisSourceOf(info: BlockInfo): AnalysisSource | undefined {
         rowCnt: info.rowCnt,
         colStart: info.colStart,
         fields,
-        keyIdx: schema.keys[0]?.idx ?? 0,
+        // The key COLUMN, which is what `AnalysisSource.keyIdx` means. Not
+        // `keys[0].idx` — that is where the first key CELL sits along the
+        // record axis, which is a different axis and a different number for
+        // any block with a header line.
+        keyIdx: schema.keyIdx ?? 0,
     }
 }
 
@@ -321,7 +325,9 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                 numFmts: numFmtsOf(analysisSourceOf(src)),
             },
             fields: src.schema.fields,
-            keyIdx: src.schema.keys[0]?.idx,
+            // A COLUMN: compared against `field.idx` to keep the key out of
+            // the dimension pickers, and used to read the label cell.
+            keyIdx: src.schema.keyIdx,
             spec: info.pivot,
         }
     }
@@ -422,7 +428,12 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         }
                         pivotHealth={pivotHealth.get(info.blockId)}
                         isPivot={!!info.pivot}
-                        pivotKeyIdx={info.schema?.keys?.[0]?.idx}
+                        pivotKeyIdx={
+                            // A COLUMN: PivotDialog compares it against
+                            // `field.idx` to keep the key column out of the
+                            // dimension pickers. `keys[0].idx` is a row.
+                            info.schema?.keyIdx
+                        }
                         onHoverChange={(hovered) =>
                             setHoveredBlock((prev) =>
                                 hovered

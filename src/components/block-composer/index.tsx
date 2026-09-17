@@ -172,7 +172,12 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
             // stable key the schema uses — so it resolves even if sheet/block
             // ids shifted across a save/load. A field with no host entry (e.g. a
             // foreign file) falls back to a plain 'string' below.
-            const keyIdx = schema.keys[0]?.idx ?? 0
+            // The key COLUMN — compared against `fe.idx` just below, and sent
+            // back as `editFormBlock`'s `keyIdx`. `keys[0].idx` counts along
+            // the RECORD axis instead, so on a block with a header line it
+            // marked the wrong field primary and would have MOVED the key
+            // column on the next edit.
+            const keyIdx = schema.keyIdx ?? 0
             const sorted = [...schema.fields].sort((a, b) => a.idx - b.idx)
             const orig = new Map<string, FormBlockField>()
             const seedFields: FieldSetting[] = sorted.map((fe) => {

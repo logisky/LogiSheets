@@ -171,6 +171,15 @@ pub struct BlockSchema {
     /// counts lines from the block's corner and has no business knowing line
     /// ids. Absent for the blocks that have no header line, which is most.
     pub header_idx: Option<usize>,
+    /// Block-relative index of the KEY line, on the same axis `fields` are
+    /// numbered on: the key COLUMN of a row schema, the key ROW of a column
+    /// schema.
+    ///
+    /// Comparable with [`BlockSchemaFieldEntry::idx`], and deliberately NOT
+    /// with [`BlockSchemaKeyEntry::idx`], which counts along the RECORD axis —
+    /// see `api::worksheet::key_index` for what conflating the two cost.
+    /// `None` only for a random schema, which has no key axis.
+    pub key_idx: Option<usize>,
     /// Field groups whose values must not repeat in COMBINATION — the block's
     /// own rule, as opposed to the per-field ones on each entry.
     pub unique_together: Vec<crate::edit_action::UniqueTogetherGroup>,

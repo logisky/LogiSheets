@@ -43,6 +43,7 @@ import type {
     Client,
     EditPayload,
     Transaction,
+    UniqueTogetherGroup,
 } from 'logisheets-web/pure'
 import type {JSONSchema, Tool, ToolContext, ToolResult} from '../tool.js'
 import {transactionFailure} from './effect.js'
@@ -2554,6 +2555,30 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
     },
 }
 
+/**
+ * Which COLUMN of a block holds its keys — the one a `bindFormSchema` means by
+ * `keyIdx`, and the one a row label or a pivot's group key is written into.
+ *
+ * Read from `schema.keyIdx`, which the engine reports on the same axis as
+ * `field.idx`, so `fields.find((f) => f.idx === keyColumnOf(schema))` is the
+ * field sitting in it.
+ *
+ * It exists because the obvious-looking alternative is wrong in a way nothing
+ * catches. `schema.keys[i].idx` is also an index, and also about keys, but it
+ * counts along the RECORD axis — WHICH ROW a key cell is on. The two agree at
+ * 0 for a plain table and diverge for any block with a header line, where the
+ * first record is row 1. Reaching for `keys[0].idx` there returns the field in
+ * COLUMN 1 — the first measure column of a pivot — which is how a refresh came
+ * to write "Q1" over a pivot's key column and make `BLOCKREF` answer with the
+ * group label instead of the number.
+ *
+ * The fallback is for a client older than the `keyIdx` projection; every block
+ * this toolkit creates keys on its first column.
+ */
+function keyColumnOf(schema: {keyIdx?: number}): number {
+    return schema.keyIdx ?? 0
+}
+
 /** Treat empty / whitespace-only templates as "no rule declared".
  *  The engine normalizes empty → None on its side too. */
 function nonEmpty(s: string | undefined | null): string | null {
@@ -2846,7 +2871,19 @@ interface SnapField {
     writePolicy?: string
 }
 
-/** All of a block's schema, as the payload that would recreate it verbatim. */
+/**
+ * All of a block's schema, as the payload that would recreate it verbatim.
+ *
+ * "Verbatim" is the whole contract, and it is not a nicety: `BindFormSchema`
+ * states a block's ENTIRE interpretation, and the engine builds a fresh
+ * `RowSchema` from the payload alone rather than merging with what was there
+ * (`schema_manager::executor`). So a field this shape omits is not left alone
+ * — it is erased, by a tool whose only job was to change a name.
+ *
+ * That is what happened to the two below. Both were added to the schema after
+ * this snapshot was last shaped, and neither reached it, so until it was fixed
+ * every `rename_block` / `rename_field` silently dropped them.
+ */
 interface SchemaSnapshot {
     sheetIdx: number
     blockId: number
@@ -2855,6 +2892,17 @@ interface SchemaSnapshot {
     keyIdx: number
     row: boolean
     fields: SnapField[]
+    /**
+     * The line holding field NAMES rather than a record, when the block has
+     * one. Losing it does not merely forget a label: the header line becomes
+     * a RECORD, keyed by whatever the key column's title happens to be — so a
+     * pivot renamed by an agent grew a phantom group called "region", and its
+     * next refresh tried to drop it and failed the transaction.
+     */
+    headerIdx?: number
+    /** The block's own rule, as opposed to the per-field ones on each entry.
+     *  `build__create_block` sets these; a rename used to take them away. */
+    uniqueTogether: readonly UniqueTogetherGroup[]
 }
 
 function snapshot(b: BlockInfo): SchemaSnapshot | undefined {
@@ -2865,13 +2913,23 @@ function snapshot(b: BlockInfo): SchemaSnapshot | undefined {
         sheetIdx: b.sheetIdx,
         blockId: b.blockId,
         refName: schema.name,
-        // `fieldFrom` / `keyIdx` are not reported back, and both are 0 for every
-        // block this toolkit creates (fields start at the first column, the key
-        // is the first field). A block bound by another host with a different
-        // layout would be re-bound wrongly, so those are refused below.
+        // The key column is READ, not assumed: a rename that re-binds it as 0
+        // would MOVE the key column of any block that keys on another one —
+        // silently, since the cells do not move with it.
+        keyIdx: keyColumnOf(schema),
+        // These two are still assumed, because the engine does not report
+        // them. Both hold for every block this toolkit creates (fields start
+        // at the first column; records run along rows). A block laid out
+        // differently by another host is re-bound wrongly — there is no
+        // `schemaType` guard here despite what this comment used to claim, and
+        // that is a known gap rather than a handled case.
         fieldFrom: 0,
-        keyIdx: 0,
         row: true,
+        // Carried through untouched — see the note on SchemaSnapshot. Neither
+        // is derivable from the fields, so neither can be reconstructed if it
+        // is dropped here.
+        headerIdx: schema.headerIdx,
+        uniqueTogether: schema.uniqueTogether ?? [],
         fields: ordered.map((f) => ({
             name: f.field,
             renderId: f.renderId,
@@ -2889,14 +2947,19 @@ function snapshot(b: BlockInfo): SchemaSnapshot | undefined {
 }
 
 function bindPayload(s: SchemaSnapshot): EditPayload {
+    const b = new BindFormSchemaBuilder()
+    // Only when there is one: the builder takes a number, and a block with no
+    // header line must not be told it has one at row 0.
+    if (s.headerIdx !== undefined) b.headerIdx(s.headerIdx)
     return {
         type: 'bindFormSchema',
-        value: new BindFormSchemaBuilder()
+        value: b
             .refName(s.refName)
             .sheetIdx(s.sheetIdx)
             .blockId(s.blockId)
             .fieldFrom(s.fieldFrom)
             .keyIdx(s.keyIdx)
+            .uniqueTogether(s.uniqueTogether)
             .fields(
                 s.fields.map((f) => ({
                     name: f.name,
@@ -3127,9 +3190,43 @@ export const renameField: Tool<
         )
         rewriteTemplates(snap, (t) => t.replace(own, `$1"${input.to}"`))
 
+        // A header line holds the field names IN THE GRID, so a rename that
+        // only re-binds the schema leaves the two disagreeing: describe_block
+        // reports "territory" while the cell still shows "region". Nobody can
+        // put that right by hand either — the engine makes a header cell
+        // read-only, so the rename is the only thing that can write it.
+        //
+        // Block-relative, and before the bind, for the same reasons the pivot
+        // payload sequence is (see WorkbookOps.refreshPivot). Only for a row
+        // schema: on a column schema the header runs the other way, and this
+        // tool re-binds every block as `row: true` regardless, which is a
+        // separate problem — better to leave the cell alone than add a second
+        // wrong write on top of it.
+        const payloads: EditPayload[] = []
+        const renamedField = target.schema?.fields.find(
+            (f) => f.field === input.from
+        )
+        if (
+            target.schema?.headerIdx !== undefined &&
+            target.schema.schemaType === 'row' &&
+            renamedField
+        ) {
+            payloads.push({
+                type: 'blockInput',
+                value: new BlockInputBuilder()
+                    .sheetIdx(target.sheetIdx)
+                    .blockId(target.blockId)
+                    .row(target.schema.headerIdx)
+                    .col(renamedField.idx)
+                    .input(input.to)
+                    .build(),
+            })
+        }
+        payloads.push(bindPayload(snap))
+
         await commitTransaction(
             client,
-            [bindPayload(snap)],
+            payloads,
             `rename_field("${input.block}"."${input.from}" -> "${input.to}")`
         )
         return {
@@ -3804,6 +3901,9 @@ export const createAnalysisBlock: Tool<
             )
         }
         const label = input.label ?? 'TOTAL'
+        // An analysis block mirrors its source's columns one for one, so its
+        // key column is the source's. Read off the schema: see `keyColumnOf`.
+        const keyCol = keyColumnOf(schema)
 
         const ordered = [...schema.fields].sort((a, b) => a.idx - b.idx)
         // Default: SUM every field the source DECLARES as a number. The
@@ -3872,7 +3972,7 @@ export const createAnalysisBlock: Tool<
                         sheetIdx: source.sheetIdx,
                         blockId,
                         fieldFrom: 0,
-                        keyIdx: 0,
+                        keyIdx: keyCol,
                         row: true,
                         fields: ordered.map((f, i) => {
                             const func = chosen.get(f.field)
@@ -3887,14 +3987,17 @@ export const createAnalysisBlock: Tool<
                         }),
                     },
                 },
-                // The label is the key the result is addressed by.
+                // The label is the key the result is addressed by, so it goes
+                // in the key column — the SAME one the bind just declared.
+                // These two used to disagree: the bind said 0 and the label
+                // was written at `schema.keys[0].idx`, a RECORD-axis index.
                 {
                     type: 'blockInput',
                     value: {
                         sheetIdx: source.sheetIdx,
                         blockId,
                         row: 0,
-                        col: schema.keys[0]?.idx ?? 0,
+                        col: keyCol,
                         input: label,
                     },
                 },
@@ -4073,7 +4176,7 @@ export const editAnalysisBlock: Tool<
                         isNumber: f.fieldType?.kind === 'number',
                         numFmt: numFmtOf(f.renderId),
                     })),
-                keyIdx: source.schema.keys?.[0]?.idx ?? 0,
+                keyIdx: keyColumnOf(source.schema),
             },
             aggregates,
             label: input.label,
@@ -4615,13 +4718,17 @@ export const refreshPivot: Tool<
                 `block "${input.name}" is not a pivot, so there is no shape to refresh`
             )
         }
-        const keyField = block.schema?.keys?.length
-            ? // The key column holds the row dimension; its FIELD name is what
-              // the re-bind has to restate.
-              block.schema.fields.find(
-                  (f) => f.idx === block.schema!.keys[0].idx
-              )?.field ?? block.pivot.rowDim
-            : block.pivot.rowDim
+        // The key column holds the row dimension, and its FIELD name is what
+        // the re-bind has to restate — read off the schema rather than taken
+        // from the recipe, so a pivot whose key column was RENAMED keeps the
+        // name it has instead of being reset to the dimension's.
+        //
+        // Found BY COLUMN, via `keyColumnOf` — which is the whole point of
+        // that helper, and where the trap it exists for is written down.
+        const keyField =
+            block.schema?.fields.find(
+                (f) => f.idx === keyColumnOf(block.schema!)
+            )?.field ?? block.pivot.rowDim
 
         // The source carries the number formats a refreshed column inherits.
         // Absent (a pivot whose source was removed) the refresh still runs and
