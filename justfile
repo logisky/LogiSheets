@@ -99,6 +99,7 @@ release VERSION:
     ( cd packages/engine   && npm pkg set "dependencies.logisheets-web=^$v" >/dev/null )
     ( cd packages/runtime  && npm pkg set "dependencies.logisheets=^$v" "dependencies.logisheets-core=^$v" >/dev/null )
     ( cd packages/logician && npm pkg set "dependencies.logisheets-core=^$v" "dependencies.logisheets-web=^$v" >/dev/null )
+    yarn install
 
     echo "Done. Review with: git diff"
 
