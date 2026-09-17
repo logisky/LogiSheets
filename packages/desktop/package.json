@@ -1,6 +1,6 @@
 {
   "name": "logisheets-desktop",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "private": true,
   "description": "LogiSheets desktop app (Tauri host; reuses the web frontend)",
   "scripts": {
