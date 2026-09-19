@@ -102,6 +102,15 @@ pub struct BlockSchemaExecutor {
     pub dirty_blocks: HashSet<(SheetId, BlockId)>,
 }
 
+/// Field-formula templates are a row/column-schema feature; a random schema has
+/// no field list to attach them to.
+fn no_field_formulas(block_id: BlockId) -> Error {
+    Error::PayloadError(format!(
+        "UpsertFieldFormulas: block {block_id} uses RandomSchema, which does not support \
+         field-formula templates"
+    ))
+}
+
 impl BlockSchemaExecutor {
     pub fn new(manager: SchemaManager) -> Self {
         Self {
@@ -271,9 +280,8 @@ impl BlockSchemaExecutor {
                         .into());
                     }
                 }
-                let old_schema = manager.schemas.get(&(sheet_id, block_id));
-                if old_schema.is_some() {
-                    let old_ref = old_schema.unwrap().get_ref_name();
+                if let Some(old_schema) = manager.schemas.get(&(sheet_id, block_id)) {
+                    let old_ref = old_schema.get_ref_name();
                     manager.refs.remove(&old_ref);
                 }
                 manager.schemas.insert((sheet_id, block_id), schema);
@@ -305,16 +313,7 @@ impl BlockSchemaExecutor {
                 let field_count = match existing {
                     Schema::RowSchema(s) => s.fields.len(),
                     Schema::ColSchema(s) => s.fields.len(),
-                    Schema::RandomSchema(_) => {
-                        // RandomSchema doesn't carry templates in v1 —
-                        // reject loudly instead of silently dropping.
-                        return Err(BasicError::InvalidFormula(format!(
-                            "UpsertFieldFormulas: block {} uses RandomSchema, \
-                             which does not support field-formula templates",
-                            block_id
-                        ))
-                        .into());
-                    }
+                    Schema::RandomSchema(_) => return Err(no_field_formulas(block_id)),
                 };
 
                 // `[]` for any rule vec means "leave this rule kind
@@ -354,7 +353,7 @@ impl BlockSchemaExecutor {
                                 )
                             })
                             .collect(),
-                        Schema::RandomSchema(_) => unreachable!(),
+                        Schema::RandomSchema(_) => return Err(no_field_formulas(block_id)),
                     };
 
                 let field_formulas = apply_rule_update(
@@ -398,7 +397,7 @@ impl BlockSchemaExecutor {
                 let declared_names: std::collections::HashSet<String> = match existing {
                     Schema::RowSchema(s) => s.fields.iter().map(|(n, _)| n.clone()).collect(),
                     Schema::ColSchema(s) => s.fields.iter().map(|(n, _)| n.clone()).collect(),
-                    Schema::RandomSchema(_) => unreachable!(),
+                    Schema::RandomSchema(_) => return Err(no_field_formulas(block_id)),
                 };
                 validate_field_refs(&field_formulas, &declared_names, "field_formulas")?;
                 validate_field_refs(&validation_formulas, &declared_names, "validation_formulas")?;
@@ -414,7 +413,9 @@ impl BlockSchemaExecutor {
                 let normalized_validation = normalize_formula_vec(validation_formulas);
                 let normalized_editability = normalize_formula_vec(editability_formulas);
 
-                let schema_mut = manager.schemas.get(&(sheet_id, block_id)).unwrap().clone();
+                let Some(schema_mut) = manager.schemas.get(&(sheet_id, block_id)).cloned() else {
+                    return Err(BasicError::BlockIdDoesNotExist(block_id).into());
+                };
                 let updated = match schema_mut {
                     Schema::RowSchema(mut s) => {
                         for (i, entry) in s.fields.iter_mut().enumerate() {
@@ -432,7 +433,7 @@ impl BlockSchemaExecutor {
                         }
                         Schema::ColSchema(s)
                     }
-                    Schema::RandomSchema(_) => unreachable!(),
+                    Schema::RandomSchema(_) => return Err(no_field_formulas(block_id)),
                 };
                 manager.schemas.insert((sheet_id, block_id), updated);
                 // Mark dirty so the formula_manager re-walks every
@@ -481,9 +482,8 @@ impl BlockSchemaExecutor {
                         .into());
                     }
                 }
-                let old_schema = manager.schemas.get(&(sheet_id, block_id));
-                if old_schema.is_some() {
-                    let old_ref = old_schema.unwrap().get_ref_name();
+                if let Some(old_schema) = manager.schemas.get(&(sheet_id, block_id)) {
+                    let old_ref = old_schema.get_ref_name();
                     manager.refs.remove(&old_ref);
                 }
                 manager.schemas.insert((sheet_id, block_id), schema);

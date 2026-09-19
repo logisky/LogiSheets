@@ -17,9 +17,11 @@ export default defineConfig({
         // (without their setup) would only produce false failures. Also skip
         // the Playwright e2e specs (run via `yarn test:e2e`) and the
         // direnv/Nix input tree + Rust build output so their vendored test
-        // files aren't collected.
+        // files aren't collected. `.claude/` holds agent worktrees: whole
+        // second checkouts of this repo, suites and all.
         exclude: [
             ...configDefaults.exclude,
+            '.claude/**',
             '.direnv/**',
             'target/**',
             'e2e/**',

@@ -20,14 +20,15 @@ pub fn new_workbook(mgr: &mut Manager) -> usize {
     mgr.new_workbook()
 }
 
-pub fn read_file(mgr: &mut Manager, id: usize, name: String, buf: &[u8]) -> u8 {
-    match Workbook::from_file(buf, name) {
-        Ok(c) => {
-            mgr.replace_workbook(id, c);
-            0
-        }
-        Err(_) => 1,
-    }
+pub fn read_file(
+    mgr: &mut Manager,
+    id: usize,
+    name: String,
+    buf: &[u8],
+) -> Result<(), ErrorMessage> {
+    let wb = Workbook::from_file(buf, name).map_err(ErrorMessage::from)?;
+    mgr.replace_workbook(id, wb);
+    Ok(())
 }
 
 pub fn save_file(
@@ -35,84 +36,59 @@ pub fn save_file(
     id: usize,
     app_data: String,
     resolve_block_refs: bool,
-) -> SaveFileResult {
-    let ctrl = mgr.get_mut_workbook(&id);
-    if ctrl.is_none() {
-        return SaveFileResult {
-            code: 1,
-            data: vec![],
-        };
-    }
-    let ctrl = ctrl.unwrap();
+) -> Result<SaveFileResult, ErrorMessage> {
+    let ctrl = mgr.workbook_mut(id)?;
     ctrl.set_app_data(vec![AppData {
         name: "logisheets".to_string(),
-        data: app_data.clone(),
+        data: app_data,
     }]);
     let format = if resolve_block_refs {
         logisheets_controller::FormulaFormat::Coordinates
     } else {
         logisheets_controller::FormulaFormat::Named
     };
-    if let Ok(data) = ctrl.save_with_format(format) {
-        SaveFileResult { data, code: 0 }
-    } else {
-        SaveFileResult {
-            data: vec![],
-            code: 1,
-        }
-    }
+    let data = ctrl.save_with_format(format).map_err(ErrorMessage::from)?;
+    Ok(SaveFileResult { data })
 }
 
-pub fn get_app_data(mgr: &Manager, id: usize) -> Vec<AppData> {
-    mgr.get_workbook(&id)
-        .map(|ctrl| ctrl.get_app_data())
-        .unwrap_or_default()
+pub fn get_app_data(mgr: &Manager, id: usize) -> Result<Vec<AppData>, ErrorMessage> {
+    Ok(mgr.workbook(id)?.get_app_data())
 }
 
 pub fn release(mgr: &mut Manager, id: usize) {
     mgr.remove(id)
 }
 
-pub fn undo(mgr: &mut Manager, id: usize) -> bool {
-    if let Some(ctrl) = mgr.get_mut_workbook(&id) {
-        ctrl.undo()
-    } else {
-        false
-    }
+pub fn undo(mgr: &mut Manager, id: usize) -> Result<bool, ErrorMessage> {
+    Ok(mgr.workbook_mut(id)?.undo())
 }
 
-pub fn redo(mgr: &mut Manager, id: usize) -> bool {
-    if let Some(ctrl) = mgr.get_mut_workbook(&id) {
-        ctrl.redo()
-    } else {
-        false
-    }
+pub fn redo(mgr: &mut Manager, id: usize) -> Result<bool, ErrorMessage> {
+    Ok(mgr.workbook_mut(id)?.redo())
 }
 
-pub fn clean_history(mgr: &mut Manager, id: usize) {
-    if let Some(ctrl) = mgr.get_mut_workbook(&id) {
-        ctrl.clear_history();
-    }
+pub fn clean_history(mgr: &mut Manager, id: usize) -> Result<(), ErrorMessage> {
+    mgr.workbook_mut(id)?.clear_history();
+    Ok(())
 }
 
-pub fn commit_temp_status(mgr: &mut Manager, id: usize) {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
-    wb.commit_temp_status()
+pub fn commit_temp_status(mgr: &mut Manager, id: usize) -> Result<(), ErrorMessage> {
+    mgr.workbook_mut(id)?.commit_temp_status();
+    Ok(())
 }
 
-pub fn clean_temp_status(mgr: &mut Manager, id: usize) {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
-    wb.clean_temp_status();
+pub fn clean_temp_status(mgr: &mut Manager, id: usize) -> Result<(), ErrorMessage> {
+    mgr.workbook_mut(id)?.clean_temp_status();
+    Ok(())
 }
 
-pub fn is_in_temp_mode(mgr: &Manager, id: usize) -> bool {
-    let wb = mgr.get_workbook(&id).unwrap();
-    wb.is_in_temp_mode()
+pub fn is_in_temp_mode(mgr: &Manager, id: usize) -> Result<bool, ErrorMessage> {
+    Ok(mgr.workbook(id)?.is_in_temp_mode())
 }
 
-pub fn toggle_status(mgr: &mut Manager, id: usize, use_temp: bool) {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
-    wb.toggle_status(use_temp);
+pub fn toggle_status(mgr: &mut Manager, id: usize, use_temp: bool) -> Result<(), ErrorMessage> {
+    mgr.workbook_mut(id)?.toggle_status(use_temp);
+    Ok(())
 }
 
 pub fn batch_get_cell_info_by_id(
@@ -120,7 +96,7 @@ pub fn batch_get_cell_info_by_id(
     id: usize,
     ids: Vec<SheetCellId>,
 ) -> Result<Vec<CellInfo>, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.batch_get_cell_info_by_id(ids)
         .map_err(ErrorMessage::from)
 }
@@ -130,7 +106,7 @@ pub fn batch_get_cell_coordinate_with_sheet_by_id(
     id: usize,
     ids: Vec<SheetCellId>,
 ) -> Result<Vec<CellCoordinateWithSheet>, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.batch_get_cell_coordinate_with_sheet_by_id(ids)
         .map_err(ErrorMessage::from)
 }
@@ -140,28 +116,24 @@ pub fn get_sheet_name_by_idx(
     id: usize,
     idx: usize,
 ) -> Result<String, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.get_sheet_name_by_idx(idx).map_err(ErrorMessage::from)
 }
 
-pub fn get_sheet_count(mgr: &Manager, id: usize) -> usize {
-    let wb = mgr.get_workbook(&id).unwrap();
-    wb.get_sheet_count()
+pub fn get_sheet_count(mgr: &Manager, id: usize) -> Result<usize, ErrorMessage> {
+    Ok(mgr.workbook(id)?.get_sheet_count())
 }
 
-pub fn get_version(mgr: &Manager, id: usize) -> u32 {
-    let wb = mgr.get_workbook(&id).unwrap();
-    wb.get_version()
+pub fn get_version(mgr: &Manager, id: usize) -> Result<u32, ErrorMessage> {
+    Ok(mgr.workbook(id)?.get_version())
 }
 
-pub fn get_all_sheet_info(mgr: &Manager, id: usize) -> Vec<SheetInfo> {
-    let wb = mgr.get_workbook(&id).unwrap();
-    wb.get_all_sheet_info()
+pub fn get_all_sheet_info(mgr: &Manager, id: usize) -> Result<Vec<SheetInfo>, ErrorMessage> {
+    Ok(mgr.workbook(id)?.get_all_sheet_info())
 }
 
-pub fn get_formula_function_names(mgr: &Manager, id: usize) -> Vec<String> {
-    let wb = mgr.get_workbook(&id).unwrap();
-    wb.get_formula_function_names()
+pub fn get_formula_function_names(mgr: &Manager, id: usize) -> Result<Vec<String>, ErrorMessage> {
+    Ok(mgr.workbook(id)?.get_formula_function_names())
 }
 
 pub fn get_row_info(
@@ -170,16 +142,15 @@ pub fn get_row_info(
     sheet_idx: usize,
     row_idx: usize,
 ) -> Result<RowInfo, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
     Ok(ws
         .get_row_info(row_idx)
         .unwrap_or(RowInfo::default(row_idx)))
 }
 
-pub fn check_formula(mgr: &Manager, id: usize, f: String) -> bool {
-    let wb = mgr.get_workbook(&id).unwrap();
-    wb.check_formula(f)
+pub fn check_formula(mgr: &Manager, id: usize, f: String) -> Result<bool, ErrorMessage> {
+    Ok(mgr.workbook(id)?.check_formula(f))
 }
 
 pub fn calc_condition(
@@ -188,7 +159,7 @@ pub fn calc_condition(
     sheet_idx: usize,
     f: String,
 ) -> Result<bool, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.calc_condition(sheet_idx, f).map_err(ErrorMessage::from)
 }
 
@@ -199,7 +170,7 @@ pub fn get_cell_id_by_block_ref(
     key: String,
     field: String,
 ) -> Result<SheetCellId, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.get_cell_id_by_block_ref(&ref_name, &key, &field)
         .map_err(ErrorMessage::from)
 }
@@ -211,13 +182,13 @@ pub fn export_block_data(
     key_filter: Option<Vec<String>>,
     field_filter: Option<Vec<String>>,
 ) -> Result<Vec<BlockDataRow>, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.export_block_data(&ref_name, key_filter, field_filter)
         .map_err(ErrorMessage::from)
 }
 
 pub fn get_temp_status_changes(mgr: &Manager, id: usize) -> Result<TempStatusDiff, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.get_temp_status_changes().map_err(ErrorMessage::from)
 }
 
@@ -228,10 +199,11 @@ pub fn check_bind_block(
     block_id: usize,
     row_count: usize,
     col_count: usize,
-) -> bool {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
-    wb.check_bind_block(sheet_idx, block_id, row_count, col_count)
-        .is_ok()
+) -> Result<bool, ErrorMessage> {
+    Ok(mgr
+        .workbook_mut(id)?
+        .check_bind_block(sheet_idx, block_id, row_count, col_count)
+        .is_ok())
 }
 
 pub fn get_available_block_id(
@@ -239,7 +211,7 @@ pub fn get_available_block_id(
     id: usize,
     sheet_idx: usize,
 ) -> Result<BlockId, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.get_available_block_id(sheet_idx)
         .map_err(ErrorMessage::from)
 }
@@ -249,12 +221,12 @@ pub fn get_sheet_id(
     id: usize,
     sheet_idx: usize,
 ) -> Result<SheetId, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.get_worksheet_id(sheet_idx).map_err(ErrorMessage::from)
 }
 
 pub fn get_sheet_idx(mgr: &Manager, id: usize, sheet_id: SheetId) -> Result<usize, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.get_sheet_idx_by_id(sheet_id).map_err(ErrorMessage::from)
 }
 
@@ -266,7 +238,7 @@ pub fn get_block_values(
     row_ids: Vec<RowId>,
     col_ids: Vec<ColId>,
 ) -> Result<Vec<String>, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.get_block_values(sheet_id, block_id, &row_ids, &col_ids)
         .map_err(ErrorMessage::from)
 }
@@ -279,7 +251,7 @@ pub fn get_block_sort_order(
     field: String,
     asc: bool,
 ) -> Result<BlockSortOrder, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.get_block_sort_order(sheet_idx, block_id, &field, asc)
         .map_err(ErrorMessage::from)
 }
@@ -296,7 +268,7 @@ pub fn pivot_plan(
     sheet_idx: usize,
     block_id: BlockId,
 ) -> Result<PivotPlan, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.pivot_plan(sheet_idx, block_id)
         .map_err(ErrorMessage::from)
 }
@@ -312,7 +284,7 @@ pub fn pivot_excel_note(
     sheet_idx: usize,
     block_id: BlockId,
 ) -> Result<PivotExcelNote, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.pivot_excel_note(sheet_idx, block_id)
         .map_err(ErrorMessage::from)
 }
@@ -327,7 +299,7 @@ pub fn pivot_plan_for(
     source_block: BlockId,
     spec: PivotSpecParts,
 ) -> Result<PivotPlan, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.pivot_plan_for(sheet_idx, source_block, &spec)
         .map_err(ErrorMessage::from)
 }
@@ -345,7 +317,7 @@ pub fn may_modify_block(
     op: crate::BlockOp,
     actor: crate::BlockActor,
 ) -> Result<bool, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.may_modify_block(sheet_idx, block_id, op, &actor)
         .map_err(ErrorMessage::from)
 }
@@ -366,7 +338,7 @@ pub fn check_field_validation(
     col: usize,
     proposed: String,
 ) -> Result<logisheets_controller::FieldValidationVerdict, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.check_field_validation(sheet_idx, row, col, proposed)
         .map_err(ErrorMessage::from)
 }
@@ -381,7 +353,7 @@ pub fn get_block_modify_info(
     sheet_idx: usize,
     block_id: BlockId,
 ) -> Result<crate::BlockModifyInfo, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.get_block_modify_info(sheet_idx, block_id)
         .map_err(ErrorMessage::from)
 }
@@ -393,7 +365,7 @@ pub fn get_block_row_id(
     block_id: BlockId,
     row_idx: usize,
 ) -> Result<RowId, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     let ws = wb.get_sheet_by_id(sheet_id).map_err(ErrorMessage::from)?;
     ws.get_block_row_id(block_id, row_idx)
         .map_err(ErrorMessage::from)
@@ -406,7 +378,7 @@ pub fn get_block_col_id(
     block_id: BlockId,
     col_idx: usize,
 ) -> Result<ColId, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     let ws = wb.get_sheet_by_id(sheet_id).map_err(ErrorMessage::from)?;
     ws.get_block_col_id(block_id, col_idx)
         .map_err(ErrorMessage::from)
@@ -418,7 +390,7 @@ pub fn get_display_window_for_block(
     sheet_id: SheetId,
     block_id: BlockId,
 ) -> Result<DisplayWindow, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     let ws = wb.get_sheet_by_id(sheet_id).map_err(ErrorMessage::from)?;
     ws.get_display_window_for_block(block_id)
         .map_err(ErrorMessage::from)
@@ -432,7 +404,7 @@ pub fn get_shadow_cell_id(
     col_idx: usize,
     kind: crate::ShadowKind,
 ) -> Result<SheetCellId, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.get_shadow_cell_id(sheet_idx, row_idx, col_idx, kind)
         .map_err(ErrorMessage::from)
 }
@@ -445,7 +417,7 @@ pub fn get_shadow_cell_ids(
     col_idx: Vec<usize>,
     kind: crate::ShadowKind,
 ) -> Result<Vec<SheetCellId>, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.get_shawdow_cell_ids(sheet_idx, row_idx, col_idx, kind)
         .map_err(ErrorMessage::from)
 }
@@ -455,7 +427,7 @@ pub fn get_shadow_info_by_id(
     id: usize,
     shadow_id: u64,
 ) -> Result<ShadowCellInfo, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.get_shadow_info_by_id(shadow_id)
         .map_err(ErrorMessage::from)
 }
@@ -467,7 +439,7 @@ pub fn get_cell_id(
     row_idx: usize,
     col_idx: usize,
 ) -> Result<SheetCellId, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     let sheet_id = wb.get_worksheet_id(sheet_idx).map_err(ErrorMessage::from)?;
     let ws = wb.get_sheet_by_id(sheet_id).map_err(ErrorMessage::from)?;
     let cell_id = ws
@@ -477,7 +449,7 @@ pub fn get_cell_id(
 }
 
 pub fn get_all_block_fields(mgr: &mut Manager, id: usize) -> Result<Vec<BlockField>, ErrorMessage> {
-    let wb = mgr.get_mut_workbook(&id).unwrap();
+    let wb = mgr.workbook_mut(id)?;
     wb.get_all_block_fields().map_err(ErrorMessage::from)
 }
 
@@ -498,7 +470,7 @@ pub fn get_block_op_for_payloads(
     mgr: &Manager,
     id: usize,
 ) -> Result<Vec<crate::BlockOpForPayload>, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     Ok(wb.get_block_op_for_payloads())
 }
 
@@ -512,7 +484,7 @@ pub fn get_block_op_policies(
     sheet_idx: usize,
     block_id: BlockId,
 ) -> Result<Vec<crate::BlockOpPolicy>, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     wb.get_block_op_policies(sheet_idx, block_id)
         .map_err(ErrorMessage::from)
 }
@@ -525,7 +497,7 @@ pub fn get_block_op_policies(
 /// which is the state every headless host was in while the sets lived in the
 /// browser's AppData blob.
 pub fn get_enum_sets(mgr: &Manager, id: usize) -> Result<Vec<crate::EnumSetInfo>, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     Ok(wb.get_enum_sets())
 }
 
@@ -533,11 +505,15 @@ pub fn duplicate_block_keys(
     mgr: &Manager,
     id: usize,
 ) -> Result<Vec<crate::DuplicateBlockKey>, ErrorMessage> {
-    let wb = mgr.get_workbook(&id).unwrap();
+    let wb = mgr.workbook(id)?;
     Ok(wb.duplicate_block_keys())
 }
 
-pub fn handle_transaction(mgr: &mut Manager, id: usize, transaction: Transaction) -> ActionEffect {
+pub fn handle_transaction(
+    mgr: &mut Manager,
+    id: usize,
+    transaction: Transaction,
+) -> Result<ActionEffect, ErrorMessage> {
     // Process all payloads at once
     let payloads_action = PayloadsAction {
         payloads: transaction.payloads,
@@ -545,12 +521,12 @@ pub fn handle_transaction(mgr: &mut Manager, id: usize, transaction: Transaction
         init: false,
     };
 
-    let wb = mgr.get_mut_workbook(&id).unwrap();
-    if transaction.temp {
+    let wb = mgr.workbook_mut(id)?;
+    Ok(if transaction.temp {
         wb.handle_action_in_temp_status(payloads_action)
     } else {
         wb.handle_action(EditAction::Payloads(payloads_action))
-    }
+    })
 }
 
 // ---- Formula helpers (no workbook state) ----------------------------------

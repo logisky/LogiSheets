@@ -103,8 +103,8 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         content: Uint8Array
         name: string
     }): Result<void> {
-        this._workbookImpl?.load(params.content, params.name)
-        return
+        // The engine's reason for refusing a file travels back to the host.
+        return this._workbookImpl?.load(params.content, params.name)
     }
 
     public save(params: any): Result<any> {
@@ -607,13 +607,15 @@ export class WorkbookWorkerService implements IWorkbookWorker {
     // ========================================================================
 
     public commitTempStatus(): Result<void> {
-        this.workbook.commitTempStatus()
+        const result = this.workbook.commitTempStatus()
         this._ctx.postMessage({id: WorkerUpdate.CellAndSheet})
+        return result
     }
 
     public cleanupTempStatus(): Result<void> {
-        this.workbook.cleanupTempStatus()
+        const result = this.workbook.cleanupTempStatus()
         this._ctx.postMessage({id: WorkerUpdate.CellAndSheet})
+        return result
     }
 
     public isInTempMode(): Result<boolean> {

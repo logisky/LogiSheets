@@ -1068,6 +1068,7 @@ version = "1.15.1"
 dependencies = [
  "console_error_panic_hook",
  "getrandom 0.2.15",
+ "js-sys",
  "logisheets-rs",
  "serde",
  "serde-wasm-bindgen",

@@ -3,11 +3,12 @@ use logisheets_base::{BlockId, DiyCellId};
 
 use crate::{Appendix, Style, Value, controller::style::Color, style_manager::RawStyle};
 
+/// The .xlsx bytes of a saved workbook. A save that produced none comes back
+/// as an `ErrorMessage`, so there is no status code to check.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "save_file_result.ts", rename_all = "camelCase")]
 pub struct SaveFileResult {
     pub data: Vec<u8>,
-    pub code: u8,
 }
 
 #[derive(Debug, Clone, TS)]

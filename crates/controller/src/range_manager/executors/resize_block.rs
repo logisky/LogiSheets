@@ -1,3 +1,4 @@
+use crate::Error;
 use crate::range_manager::{ctx::RangeExecCtx, executors::occupy_addr_range};
 
 use super::{RangeExecutor, RangeUpdateType};
@@ -10,12 +11,12 @@ pub fn resize_block<C>(
     new_row_cnt: Option<usize>,
     new_col_cnt: Option<usize>,
     ctx: &C,
-) -> RangeExecutor
+) -> Result<RangeExecutor, Error>
 where
     C: RangeExecCtx,
 {
-    let master_cell = ctx.get_master_cell(sheet_id, block).unwrap();
-    let (old_row_cnt, old_col_cnt) = ctx.get_block_size(sheet_id, block).unwrap();
+    let master_cell = ctx.get_master_cell(sheet_id, block)?;
+    let (old_row_cnt, old_col_cnt) = ctx.get_block_size(sheet_id, block)?;
 
     let new_row_cnt = new_row_cnt.unwrap_or(old_row_cnt);
     let new_col_cnt = new_col_cnt.unwrap_or(old_col_cnt);
@@ -33,25 +34,21 @@ where
     let mut result = exec_ctx;
 
     if new_row_cnt > old_row_cnt || new_col_cnt > old_col_cnt {
-        let (master_row, master_col) = ctx
-            .fetch_normal_cell_index(&sheet_id, &master_cell)
-            .unwrap();
-        let end_cell = ctx
-            .fetch_norm_cell_id(
-                &sheet_id,
-                master_row + new_row_cnt - 1,
-                master_col + new_col_cnt - 1,
-            )
-            .unwrap();
+        let (master_row, master_col) = ctx.fetch_normal_cell_index(&sheet_id, &master_cell)?;
+        let end_cell = ctx.fetch_norm_cell_id(
+            &sheet_id,
+            master_row + new_row_cnt - 1,
+            master_col + new_col_cnt - 1,
+        )?;
         // If the new block is larger than the old block, we need to occupy the new block
-        result = occupy_addr_range(result, sheet_id, master_cell, end_cell, ctx);
+        result = occupy_addr_range(result, sheet_id, master_cell, end_cell, ctx)?;
     }
 
-    let mut func = |range: &BlockRange, _: &RangeId| -> RangeUpdateType {
-        match range {
+    let mut func = |range: &BlockRange, _: &RangeId| -> Result<RangeUpdateType, Error> {
+        Ok(match range {
             BlockRange::Single(c) => {
                 if c.block_id == block {
-                    let (row, col) = ctx.fetch_block_cell_index(&sheet_id, c).unwrap();
+                    let (row, col) = ctx.fetch_block_cell_index(&sheet_id, c)?;
                     if row >= row_min || col >= col_min {
                         RangeUpdateType::Removed
                     } else {
@@ -63,7 +60,7 @@ where
             }
             BlockRange::AddrRange(start, end) => {
                 if start.block_id == block && end.block_id == block {
-                    let (end_row, end_col) = ctx.fetch_block_cell_index(&sheet_id, end).unwrap();
+                    let (end_row, end_col) = ctx.fetch_block_cell_index(&sheet_id, end)?;
                     if end_row >= row_min || end_col >= col_min {
                         RangeUpdateType::Removed
                     } else {
@@ -73,8 +70,7 @@ where
                     RangeUpdateType::None
                 }
             }
-        }
+        })
     };
-    let result = result.block_range_update(&sheet_id, &mut func);
-    result
+    result.block_range_update(&sheet_id, &mut func)
 }

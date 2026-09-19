@@ -479,12 +479,8 @@ export class WorkbookClient implements Client {
         return this._call(MethodName.CleanHistory) as Resp<void>
     }
 
-    // The underlying worker (mirroring logisheets-web's Workbook) does not
-    // surface the ActionEffect for a commit; the promise resolves with no
-    // payload. Typed per the Client contract; callers must not depend on the
-    // resolved value here.
-    commitTempStatus(): Resp<ActionEffect> {
-        return this._call(MethodName.CommitTempStatus) as Resp<ActionEffect>
+    commitTempStatus(): Resp<void> {
+        return this._call(MethodName.CommitTempStatus) as Resp<void>
     }
 
     cleanupTempStatus(): Resp<void> {

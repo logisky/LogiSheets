@@ -319,10 +319,8 @@ describe('an analysis block, driven the way a host drives it', () => {
         // Both declarations are persisted attributes, and the total is
         // regenerated from them rather than restored as a saved string.
         const saved = rpc('saveWorkbook', {appData: '{}'}, bookId) as {
-            code: number
             data: number[] | Uint8Array
         }
-        expect(saved.code).toBe(0)
         const bytes = Array.isArray(saved.data)
             ? saved.data
             : Array.from(saved.data)

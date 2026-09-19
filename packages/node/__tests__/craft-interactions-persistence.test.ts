@@ -34,7 +34,6 @@ interface AppDataEntry {
 }
 
 interface SaveResult {
-    code: number
     data: number[] | Uint8Array
 }
 
@@ -63,7 +62,6 @@ describe('craft-interactions persistence (xlsx round-trip)', () => {
             {appData: envelope},
             bookId
         ) as SaveResult
-        expect(saved.code).toBe(0)
         expect(
             Array.isArray(saved.data) || saved.data instanceof Uint8Array
         ).toBe(true)
@@ -81,7 +79,8 @@ describe('craft-interactions persistence (xlsx round-trip)', () => {
             {content: bytes, name: 'roundtrip.xlsx'},
             restoredBookId
         )
-        expect(loadResult).toBeDefined()
+        // A successful load returns nothing, a failure an ErrorMessage.
+        expect(loadResult?.msg).toBeUndefined()
 
         const appData = rpc(
             'getAppData',
@@ -126,7 +125,6 @@ describe('craft-interactions persistence (xlsx round-trip)', () => {
             {appData: envelope},
             bookId
         ) as SaveResult
-        expect(saved.code).toBe(0)
 
         const restoredBookId = rpc('newWorkbook') as number
         rpc(
@@ -161,7 +159,6 @@ describe('craft-interactions persistence (xlsx round-trip)', () => {
             {appData: legacyPayload},
             bookId
         ) as SaveResult
-        expect(saved.code).toBe(0)
 
         const restoredBookId = rpc('newWorkbook') as number
         rpc(

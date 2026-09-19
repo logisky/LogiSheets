@@ -7,98 +7,154 @@ use crate::{
 
 pub type Result<T> = std::result::Result<T, BasicError>;
 
+/// Failures from the engine's lookup and addressing layer. Every message says
+/// which addressing scheme a number belongs to — an index (a position, which
+/// moves) or an id (stable) — never just "sheet 3", since confusing the two is
+/// what causes most of these. Where it happened comes from the context around
+/// it, not from here.
 #[derive(Debug, Error)]
 pub enum BasicError {
-    #[error("Failed to fetch row id by the row index: {0}")]
+    #[error("no row exists at row index {0}")]
     RowIdNotFound(usize),
-    #[error("Failed to fetch col id by the col index: {0}")]
+    #[error("no column exists at column index {0}")]
     ColIdNotFound(usize),
-    #[error("Failed to fetch cell id by the row index and col index: {0}, {0}")]
+    #[error("no cell exists at row index {0}, column index {1}")]
     CellIdNotFound(usize, usize),
-    #[error("Failed to fetch row index by the row id: {0}")]
+    #[error("row id {0} is not in this sheet, so it has no row index")]
     RowIndexUnavailable(RowId),
-    #[error("Failed to fetch col index by the col id: {0}")]
+    #[error("column id {0} is not in this sheet, so it has no column index")]
     ColIndexUnavailable(ColId),
-    #[error("Failed to fetch block by the block id: {1} in sheet {0}")]
+    #[error("sheet id {0} has no block with block id {1}")]
     BlockIdNotFound(SheetId, BlockId),
-    #[error("Failed to fetch block cell by the block id: {1}, row: {2}, col: {3} in sheet {0}")]
+    #[error(
+        "block id {1} on sheet id {0} has no cell at row index {2}, column index {3} (both indices are relative to the block, not to the sheet)"
+    )]
     BlockCellIdNotFound(SheetId, BlockId, usize, usize),
-    #[error("Failed to fetch block row id by the block id: {1}, row index: {2} in sheet {0}")]
+    #[error(
+        "block id {1} on sheet id {0} has no row at row index {2} (the index is relative to the block, not to the sheet)"
+    )]
     BlockRowIdNotFound(SheetId, BlockId, usize),
-    #[error("Failed to fetch block col id by the block id: {1}, col index: {2} in sheet {0}")]
+    #[error(
+        "block id {1} on sheet id {0} has no column at column index {2} (the index is relative to the block, not to the sheet)"
+    )]
     BlockColIdNotFound(SheetId, BlockId, usize),
     #[error(
-        "block ref name {0:?} is already used by block {2} on sheet {1}. Ref names \
+        "block ref name {0:?} is already used by block id {2} on sheet id {1}. Ref names \
          are how formulas reach a block, so they must be unique across the \
          workbook — reusing one would silently redirect every existing \
          BLOCKREF to the new block"
     )]
     BlockRefNameTaken(String, SheetId, BlockId),
-    #[error("Failed to create block because the block id is already existed")]
+    #[error("cannot create a block with block id {0}: that id is already taken on this sheet")]
     BlockIdHasAlreadyExisted(BlockId),
-    #[error("Failed to create block because the block id is not existed")]
+    #[error("no block with block id {0} exists on this sheet")]
     BlockIdDoesNotExist(BlockId),
-    #[error("Failed to fetch sheet by the sheet id: {0}")]
+    #[error("no sheet exists with sheet id {0}")]
     SheetIdNotFound(SheetId),
     #[error(
-        "cannot fetch idx in the block with sheet:{0}, block_id: {1}, row id:{2} and col id: {3}"
+        "block id {1} on sheet id {0} has no cell with row id {2} and column id {3}; the ids belong to another block or were removed"
     )]
     CannotFindIdxInBlock(SheetId, BlockId, RowId, ColId),
 
-    #[error("text id not found: {0}")]
+    #[error("no interned text with text id {0}")]
     TextIdNotFound(TextId),
-    #[error("func id not found: {0}")]
+    #[error("no registered function with func id {0}")]
     FuncIdNotFound(FuncId),
-    #[error("ext book id not found: {0}")]
+    #[error("no external workbook with book id {0}")]
     BookIdNotFound(ExtBookId),
-    #[error("name id not found: {0}")]
+    #[error("no defined name with name id {0}")]
     NameNotFound(NameId),
-    #[error("range id not found: {0}")]
+    #[error("no range with range id {0}")]
     RangeIdNotFound(RangeId),
-    #[error("cube id not found: {0}")]
+    #[error("no cube with cube id {0}")]
     CubeIdNotFound(CubeId),
 
-    #[error("sheet name not found: {0}")]
+    #[error("no sheet is named {0:?}")]
     SheetNameNotFound(String),
-    #[error("sheet name already exists: {0}")]
+    #[error("a sheet named {0:?} already exists; sheet names must be unique in a workbook")]
     SheetNameAlreadyExists(String),
-    #[error("sheet idx exceeds the maximum: {0}")]
+    #[error("sheet index {0} is out of range; the workbook has fewer sheets than that")]
     SheetIdxExceed(usize),
-    #[error("creating block on an existed block: {0}")]
+    #[error("cannot create a block here: block id {0} already covers one of these cells")]
     CreatingBlockOn(BlockId),
-    #[error("a block must be anchored on a grid cell, not an ephemeral one: {0}")]
+    #[error(
+        "a block must be anchored on a grid cell, not on ephemeral cell id {0} (ephemeral cells are scratch cells and are never saved)"
+    )]
     CreatingBlockOnEphemeral(EphemeralId),
     #[error(
-        "block of {0} rows x {1} cols is too large: at most {2} rows, {3} cols and {4} cells"
+        "a block of {0} rows x {1} columns is too large: the limits are {2} rows, {3} columns and {4} cells"
     )]
     BlockTooLarge(u32, u32, u32, u32, u64),
-    #[error("{0} lines at index {1} is out of range: a sheet holds at most {2}")]
+    #[error("{0} line(s) at index {1} run past the end of the sheet, which holds at most {2}")]
     LineRangeOutOfSheet(u32, usize, u32),
-    #[error("line range [{0}, +{1}) is outside block {2}, which has {3} line(s)")]
+    #[error(
+        "{1} line(s) starting at index {0} run past the end of block id {2}, which has {3} line(s)"
+    )]
     LineRangeOutOfBlock(usize, u32, BlockId, usize),
-    #[error("reorder of block {0} must be a permutation of its {1} line(s)")]
+    #[error(
+        "the new order for block id {0} must be a permutation of its {1} line(s): every index exactly once"
+    )]
     BadBlockLineOrder(BlockId, usize),
-    #[error("ext ref id not found: {0}")]
+    #[error("no external reference with ext ref id {0}")]
     ExtRefIdNotFound(ExtRefId),
-    #[error("ephemeral cell in reference is not allowed: {0}")]
+    #[error(
+        "ephemeral cell id {0} cannot appear in a reference: ephemeral cells are scratch cells with no address on the grid"
+    )]
     EphemeralCellInReference(EphemeralId),
 
-    #[error("invalid formula: {0}")]
+    #[error("{0:?} is not a valid formula")]
     InvalidFormula(String),
-    #[error("bind block size mismatch: {0}, {1}, {2}")]
+    #[error(
+        "cannot bind a form of {1} rows x {2} columns to block id {0}: the form is larger than the block"
+    )]
     BindBlockSizeMismatch(BlockId, usize, usize),
-    #[error("sheet id not found: {0}")]
+    #[error("no sheet exists with sheet id {0}")]
     UnavailableSheetId(SheetId),
-    #[error("no appendix is found")]
-    NoAppendix,
-    #[error("checkpoint not found: {0}")]
+    #[error(
+        "no appendix tagged {tag} for craft {craft_id:?} was found at or above this cell in block id {block_id}"
+    )]
+    NoAppendix {
+        block_id: BlockId,
+        craft_id: String,
+        tag: u8,
+    },
+    #[error("no checkpoint is saved under the label {0:?}")]
     CheckpointNotFound(String),
-    #[error("incomplete row col length: {0}, {1}")]
+    #[error(
+        "row indices and column indices must pair up one to one, but {0} row index(es) came with {1} column index(es)"
+    )]
     IncompleteRowColLength(usize, usize),
-    #[error("referencing ephemeral cell")]
-    ReferencingEphemeralCell,
-    #[error("invalid shadow id: {0}")]
+    #[error(
+        "ephemeral cell id {0} has no position on the grid, so it cannot be addressed by row and column"
+    )]
+    ReferencingEphemeralCell(EphemeralId),
+    #[error("no shadow cell with shadow id {0}")]
     InvalidShadowId(u64),
-    #[error("invalid payload")]
-    InvalidPayload,
+    #[error("the payload is missing {0}")]
+    IncompletePayload(&'static str),
+
+    /// What the engine was doing when the failure inside happened. An id
+    /// several layers from the coordinate it came from means nothing on its
+    /// own — and a block cell's lookup can fail on its block's anchor, a
+    /// different cell from the one asked about.
+    #[error("{doing}: {source}")]
+    While {
+        doing: String,
+        source: Box<BasicError>,
+    },
+}
+
+/// Attach what was being attempted to a failure on its way up. Lazy, so a
+/// request that succeeds pays nothing for the description.
+pub trait Context<T> {
+    fn context(self, doing: impl FnOnce() -> String) -> Result<T>;
+}
+
+impl<T> Context<T> for Result<T> {
+    fn context(self, doing: impl FnOnce() -> String) -> Result<T> {
+        self.map_err(|source| BasicError::While {
+            doing: doing(),
+            source: Box::new(source),
+        })
+    }
 }

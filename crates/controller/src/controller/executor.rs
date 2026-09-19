@@ -71,33 +71,13 @@ pub struct Executor<'a> {
 impl<'a> Executor<'a> {
     pub fn execute_and_calc(self, payload_action: PayloadsAction) -> Result<Self, Error> {
         let mut result = self;
-        for payload in payload_action.clone().payloads.into_iter() {
-            // Removing a block removes the blocks that analyse it. Expanded
-            // into extra `RemoveBlock` payloads rather than handled inside the
-            // navigator's arm, so the cells, the schema and the nav state all
-            // go the way they do for any other removal — and one undo brings
-            // the whole set back. Computed against the status as it stands, so
-            // a transaction that creates and then removes in sequence sees
-            // what it just did.
-            if let EditPayload::RemoveBlock(ref rb) = payload {
-                if let Some(sheet_id) = result.status.sheet_info_manager.get_sheet_id(rb.sheet_idx)
-                {
-                    let cascade = crate::block_manager::analysis::remove_cascade(
-                        &result.status.navigator,
-                        sheet_id,
-                        rb.id,
-                    );
-                    for analysis in cascade {
-                        result = result.execute_payload(EditPayload::RemoveBlock(
-                            crate::edit_action::RemoveBlock {
-                                sheet_idx: rb.sheet_idx,
-                                id: analysis,
-                            },
-                        ))?;
-                    }
-                }
-            }
-            result = result.execute_payload(payload)?;
+        let total = payload_action.payloads.len();
+        for (index, payload) in payload_action.payloads.iter().enumerate() {
+            // Applied all or nothing, so a rejection has to name the payload
+            // that caused it.
+            result = result
+                .apply(payload)
+                .map_err(|e| e.at_payload(index, total, payload))?;
         }
 
         // Row keys are the block's addressing scheme, so a duplicate corrupts
@@ -132,6 +112,35 @@ impl<'a> Executor<'a> {
             );
         }
         Ok(result)
+    }
+
+    /// Apply one payload of a transaction, plus whatever it implies.
+    fn apply(mut self, payload: &EditPayload) -> Result<Self, Error> {
+        // Removing a block removes the blocks that analyse it. Expanded
+        // into extra `RemoveBlock` payloads rather than handled inside the
+        // navigator's arm, so the cells, the schema and the nav state all
+        // go the way they do for any other removal — and one undo brings
+        // the whole set back. Computed against the status as it stands, so
+        // a transaction that creates and then removes in sequence sees
+        // what it just did.
+        if let EditPayload::RemoveBlock(rb) = payload {
+            if let Some(sheet_id) = self.status.sheet_info_manager.get_sheet_id(rb.sheet_idx) {
+                let cascade = crate::block_manager::analysis::remove_cascade(
+                    &self.status.navigator,
+                    sheet_id,
+                    rb.id,
+                );
+                for analysis in cascade {
+                    self = self.execute_payload(EditPayload::RemoveBlock(
+                        crate::edit_action::RemoveBlock {
+                            sheet_idx: rb.sheet_idx,
+                            id: analysis,
+                        },
+                    ))?;
+                }
+            }
+        }
+        self.execute_payload(payload.clone())
     }
 
     fn execute_payload(self, payload: EditPayload) -> Result<Self, Error> {

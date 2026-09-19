@@ -75,7 +75,10 @@ pub trait NameFetcherTrait {
         _sheet_id: SheetId,
         _block_id: BlockId,
         _field_id: BlockFieldId,
-    ) -> Option<(((usize, usize), (usize, usize)), ((usize, usize), (usize, usize)))> {
+    ) -> Option<(
+        ((usize, usize), (usize, usize)),
+        ((usize, usize), (usize, usize)),
+    )> {
         None
     }
 

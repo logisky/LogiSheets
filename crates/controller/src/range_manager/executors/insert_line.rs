@@ -2,6 +2,7 @@ use logisheets_base::{NormalRange, RangeId, SheetId};
 
 use super::utils::get_lower_upper_bound_of_range;
 use super::{RangeExecCtx, RangeExecutor, RangeUpdateType};
+use crate::Error;
 
 pub fn insert_line<C>(
     exec_ctx: RangeExecutor,
@@ -10,22 +11,21 @@ pub fn insert_line<C>(
     idx: usize,
     _cnt: u32,
     ctx: &C,
-) -> RangeExecutor
+) -> Result<RangeExecutor, Error>
 where
     C: RangeExecCtx,
 {
-    let mut func = |range: &NormalRange, _: &RangeId| -> RangeUpdateType {
+    let mut func = |range: &NormalRange, _: &RangeId| -> Result<RangeUpdateType, Error> {
         if let NormalRange::Single(_) = range {
-            return RangeUpdateType::None;
+            return Ok(RangeUpdateType::None);
         }
 
-        let (lower, upper) = get_lower_upper_bound_of_range(sheet, range, !row, ctx);
-        if lower >= idx || upper < idx {
+        let (lower, upper) = get_lower_upper_bound_of_range(sheet, range, !row, ctx)?;
+        Ok(if lower >= idx || upper < idx {
             RangeUpdateType::None
         } else {
             RangeUpdateType::Dirty
-        }
+        })
     };
-    let result = exec_ctx.normal_range_update(&sheet, &mut func);
-    result
+    exec_ctx.normal_range_update(&sheet, &mut func)
 }

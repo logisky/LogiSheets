@@ -1,5 +1,6 @@
 use logisheets_base::{BlockCellId, BlockId, BlockRange, NormalRange, Range, RangeId, SheetId};
 
+use crate::Error;
 use crate::range_manager::{
     RangeExecutor,
     ctx::RangeExecCtx,
@@ -15,7 +16,7 @@ pub fn convert_to_block<C>(
     row_cnt: usize,
     col_cnt: usize,
     ctx: &C,
-) -> RangeExecutor
+) -> Result<RangeExecutor, Error>
 where
     C: RangeExecCtx,
 {
@@ -26,8 +27,10 @@ where
         row: row as u32,
         col: col as u32,
     };
-    let mut func = |range: &NormalRange, range_id: &RangeId| -> RangeUpdateType {
-        match range {
+    // Walks every range on the sheet, so one with unresolvable endpoints is
+    // skipped: stale state this operation neither reads nor repairs.
+    let mut func = |range: &NormalRange, range_id: &RangeId| -> Result<RangeUpdateType, Error> {
+        Ok(match range {
             NormalRange::Single(normal_cell_id) => {
                 if let Ok((row, col)) = ctx.fetch_normal_cell_index(&sheet_id, normal_cell_id) {
                     if (row >= master_row && row < master_row + row_cnt)
@@ -35,10 +38,10 @@ where
                     {
                         let block_cell_id =
                             get_block_cell_id(&block_id, row - master_row, col - master_col);
-                        return RangeUpdateType::UpdateToBlock(
+                        return Ok(RangeUpdateType::UpdateToBlock(
                             range.clone(),
                             BlockRange::Single(block_cell_id),
-                        );
+                        ));
                     }
                 }
                 RangeUpdateType::None
@@ -62,7 +65,7 @@ where
                 let end_idx = ctx.fetch_normal_cell_index(&sheet_id, end);
                 let ((start_row, start_col), (end_row, end_col)) = match (start_idx, end_idx) {
                     (Ok(s), Ok(e)) => (s, e),
-                    _ => return RangeUpdateType::None,
+                    _ => return Ok(RangeUpdateType::None),
                 };
                 let start_in = start_row >= master_row
                     && start_row < master_row + row_cnt
@@ -127,7 +130,7 @@ where
                     }
                 }
             }
-        }
+        })
     };
     exec_ctx.normal_range_update(&sheet_id, &mut func)
 }

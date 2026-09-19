@@ -26,24 +26,32 @@ pub(crate) fn init() {
     *init = true;
 }
 
-/// Input: AsyncFuncResult
-/// Output: ActionAffect
+/// Deliver the values the host computed for this workbook's async functions:
+/// an `AsyncFuncResult` in, an `ActionEffect` or an `ErrorMessage` out. Like
+/// `rpc::handle`, this must never panic.
 #[wasm_bindgen]
 pub fn input_async_result(id: usize, result: JsValue) -> JsValue {
     init();
-    let r: AsyncFuncResult = serde_wasm_bindgen::from_value(result).unwrap();
+    let r: AsyncFuncResult = match serde_wasm_bindgen::from_value(result) {
+        Ok(r) => r,
+        Err(e) => {
+            return crate::rpc::client_error::<()>(format!(
+                "the async function results could not be read as an AsyncFuncResult: {e}"
+            ));
+        }
+    };
     let values = r
         .values
         .into_iter()
         .map(parse_async_value)
         .collect::<Vec<_>>();
     let tasks = r.tasks;
-    let result = MANAGER
-        .get_mut()
-        .get_mut_workbook(&id)
-        .unwrap()
-        .handle_async_calc_results(tasks, values);
-    serde_wasm_bindgen::to_value(&result).unwrap()
+    let mut mgr = MANAGER.get_mut();
+    let effect = match mgr.workbook_mut(id) {
+        Ok(wb) => wb.handle_async_calc_results(tasks, values),
+        Err(e) => return crate::rpc::res_to_js::<()>(Err(e)),
+    };
+    crate::rpc::ok_to_js(&effect)
 }
 
 /// Render a number with an Excel number-format code, natively via `ssf-rs`

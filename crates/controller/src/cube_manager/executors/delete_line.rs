@@ -1,5 +1,7 @@
 use logisheets_base::{Cube, CubeId, SheetId};
 
+use crate::Error;
+
 use super::{CubeExecCtx, CubeExecutor, CubeUpdateType, utils::get_lower_upper_bound_of_cross};
 
 pub fn delete_line<C>(
@@ -9,23 +11,23 @@ pub fn delete_line<C>(
     idx: usize,
     cnt: u32,
     old_ctx: &C,
-) -> CubeExecutor
+) -> Result<CubeExecutor, Error>
 where
     C: CubeExecCtx,
 {
-    let mut func = |cube: &Cube, _: &CubeId| -> CubeUpdateType {
-        let from_idx = old_ctx.fetch_sheet_index(&cube.from_sheet).unwrap();
-        let to_idx = old_ctx.fetch_sheet_index(&cube.to_sheet).unwrap();
-        let curr_idx = old_ctx.fetch_sheet_index(&sheet).unwrap();
+    let mut func = |cube: &Cube, _: &CubeId| -> Result<CubeUpdateType, Error> {
+        let from_idx = old_ctx.fetch_sheet_index(&cube.from_sheet)?;
+        let to_idx = old_ctx.fetch_sheet_index(&cube.to_sheet)?;
+        let curr_idx = old_ctx.fetch_sheet_index(&sheet)?;
         if curr_idx < from_idx || curr_idx > to_idx {
-            return CubeUpdateType::None;
+            return Ok(CubeUpdateType::None);
         }
 
         let (lower, upper) = get_lower_upper_bound_of_cross(&cube.cross, is_horizontal);
         if lower > idx + cnt as usize - 1 || upper < idx {
-            CubeUpdateType::None
+            Ok(CubeUpdateType::None)
         } else {
-            CubeUpdateType::Dirty
+            Ok(CubeUpdateType::Dirty)
         }
     };
     exec_ctx.cube_update(&mut func)

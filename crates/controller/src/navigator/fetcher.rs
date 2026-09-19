@@ -2,7 +2,8 @@ use crate::lock::{Locked, locked_read, locked_write};
 
 use super::sheet_nav::{Cache, Data};
 use logisheets_base::{
-    BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId, errors::BasicError,
+    BlockCellId, CellId, ColId, NormalCellId, RowId, SheetId,
+    errors::{BasicError, Context},
 };
 
 type Result<T> = std::result::Result<T, BasicError>;
@@ -114,7 +115,9 @@ impl<'a> Fetcher<'a> {
         let mut res: Option<CellId> = None;
         for (id, bp) in self.data.blocks.iter() {
             let master = &bp.master;
-            let (ridx, cidx) = self.get_norm_cell_idx(master)?;
+            let (ridx, cidx) = self
+                .get_norm_cell_idx(master)
+                .context(|| format!("locating block {id}'s anchor cell, {master}"))?;
             if row < ridx || col < cidx {
                 continue;
             } else {
@@ -162,7 +165,10 @@ impl<'a> Fetcher<'a> {
             .get(&bid)
             .ok_or(BasicError::BlockIdNotFound(self.sheet_id, bid))?;
         let master = &bp.master;
-        let (m_row, m_col) = self.get_norm_cell_idx(master)?;
+        // This lookup is about the anchor, not the cell that was asked for.
+        let (m_row, m_col) = self
+            .get_norm_cell_idx(master)
+            .context(|| format!("locating block {bid}'s anchor cell, {master}"))?;
         let (row_idx, col_idx) = bp
             .get_inner_idx(block_cell_id.row, block_cell_id.col)
             .ok_or(BasicError::CannotFindIdxInBlock(

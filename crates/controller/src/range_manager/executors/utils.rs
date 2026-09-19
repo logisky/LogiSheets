@@ -1,21 +1,21 @@
 use logisheets_base::{CellId, NormalRange, SheetId};
 
-use crate::range_manager::ctx::RangeExecCtx;
+use crate::{Error, range_manager::ctx::RangeExecCtx};
 
 pub fn get_lower_upper_bound_of_range<C>(
     sheet_id: SheetId,
     range: &NormalRange,
     horizontal: bool,
     context: &C,
-) -> (usize, usize)
+) -> Result<(usize, usize), Error>
 where
     C: RangeExecCtx,
 {
-    match range {
+    let bounds = match range {
         NormalRange::RowRange(start, end) => {
             if horizontal {
-                let start_idx = context.fetch_row_index(&sheet_id, start).unwrap();
-                let end_idx = context.fetch_row_index(&sheet_id, end).unwrap();
+                let start_idx = context.fetch_row_index(&sheet_id, start)?;
+                let end_idx = context.fetch_row_index(&sheet_id, end)?;
                 (start_idx, end_idx)
             } else {
                 (usize::MIN, usize::MAX)
@@ -25,18 +25,16 @@ where
             if horizontal {
                 (usize::MIN, usize::MAX)
             } else {
-                let start_idx = context.fetch_col_index(&sheet_id, start).unwrap();
-                let end_idx = context.fetch_col_index(&sheet_id, end).unwrap();
+                let start_idx = context.fetch_col_index(&sheet_id, start)?;
+                let end_idx = context.fetch_col_index(&sheet_id, end)?;
                 (start_idx, end_idx)
             }
         }
         NormalRange::AddrRange(start, end) => {
-            let (row_start, col_start) = context
-                .fetch_cell_index(&sheet_id, &CellId::NormalCell(*start))
-                .unwrap();
-            let (row_end, col_end) = context
-                .fetch_cell_index(&sheet_id, &CellId::NormalCell(*end))
-                .unwrap();
+            let (row_start, col_start) =
+                context.fetch_cell_index(&sheet_id, &CellId::NormalCell(*start))?;
+            let (row_end, col_end) =
+                context.fetch_cell_index(&sheet_id, &CellId::NormalCell(*end))?;
             if horizontal {
                 (row_start, row_end)
             } else {
@@ -44,10 +42,11 @@ where
             }
         }
         NormalRange::Single(cell) => {
-            let (row, col) = context.fetch_normal_cell_index(&sheet_id, cell).unwrap();
+            let (row, col) = context.fetch_normal_cell_index(&sheet_id, cell)?;
             if horizontal { (row, row) } else { (col, col) }
         }
-    }
+    };
+    Ok(bounds)
 }
 
 pub fn cut_and_get_new_bound(

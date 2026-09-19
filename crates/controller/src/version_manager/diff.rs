@@ -400,7 +400,9 @@ fn convert_diff<C: VersionExecCtx>(
             let sheet_id = if let Some(id) = p.sheet_id {
                 id
             } else {
-                let idx = p.sheet_idx.ok_or(BasicError::InvalidPayload)?;
+                let idx = p
+                    .sheet_idx
+                    .ok_or(BasicError::IncompletePayload("a sheetId or a sheetIdx"))?;
                 ctx.fetch_sheet_id_by_index(idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?
             };
@@ -416,7 +418,9 @@ fn convert_diff<C: VersionExecCtx>(
             let sheet_id = if let Some(id) = p.sheet_id {
                 id
             } else {
-                let idx = p.sheet_idx.ok_or(BasicError::InvalidPayload)?;
+                let idx = p
+                    .sheet_idx
+                    .ok_or(BasicError::IncompletePayload("a sheetId or a sheetIdx"))?;
                 ctx.fetch_sheet_id_by_index(idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?
             };

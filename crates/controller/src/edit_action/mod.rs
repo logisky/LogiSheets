@@ -1662,30 +1662,18 @@ pub struct ActionEffect {
     /// invalidating cell content.
     pub header_updated: Vec<u32>,
 
-    /// Why the action failed, when `status` is `Err`.
-    ///
-    /// The error codes are a placeholder — every rejection is currently code 1 —
-    /// so the code alone tells a caller nothing. The executor's real message was
-    /// already being captured, but only to be printed: `println!` goes nowhere
-    /// under wasm, and the wasm layer merely forwarded it to the browser
-    /// console. Carrying it here means every host (Node, tests, an agent tool
-    /// layer) gets the reason, atomically with the failure it belongs to.
+    /// Why the action failed, when `status` is `Err`. The status code is a
+    /// placeholder — every rejection is code 1 — so this is the only part a
+    /// caller can act on. A rejected transaction names and quotes the payload
+    /// it stopped at.
     pub error_message: Option<String>,
 }
 
 impl ActionEffect {
-    pub fn from_err(e: u8) -> Self {
+    pub fn rejected(reason: String) -> Self {
         ActionEffect {
-            status: StatusCode::Err(e),
-            ..Default::default()
-        }
-    }
-
-    /// A failure that carries the executor's own explanation.
-    pub fn from_err_with_message(e: u8, message: Option<String>) -> Self {
-        ActionEffect {
-            status: StatusCode::Err(e),
-            error_message: message,
+            status: StatusCode::Err(1),
+            error_message: Some(reason),
             ..Default::default()
         }
     }

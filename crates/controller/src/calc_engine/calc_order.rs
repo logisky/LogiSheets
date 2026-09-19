@@ -394,7 +394,9 @@ mod tests {
 
         // A vertex with no self-edge stays an ordinary node.
         assert!(
-            order.iter().any(|unit| matches!(unit, CalcUnit::Node(n) if *n == 2)),
+            order
+                .iter()
+                .any(|unit| matches!(unit, CalcUnit::Node(n) if *n == 2)),
             "a vertex without a self-edge must stay a plain Node"
         );
     }

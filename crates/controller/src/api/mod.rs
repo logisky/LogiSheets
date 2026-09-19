@@ -2,7 +2,7 @@ pub use crate::{
     Comment, MergeCell, Style, Value,
     controller::display::{ColInfo, RowInfo},
     edit_action::EditAction,
-    errors::{Error, ErrorMessage, Result},
+    errors::{Context, Error, ErrorMessage, Result},
 };
 mod block_policy;
 mod cell_positioner;

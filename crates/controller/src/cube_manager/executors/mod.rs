@@ -42,7 +42,7 @@ impl CubeExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                Ok(input(self, sheet_id, cell_input.row, cell_input.col, ctx))
+                input(self, sheet_id, cell_input.row, cell_input.col, ctx)
             }
             EditPayload::ReproduceCells(p) => {
                 if p.cells.is_empty() {
@@ -62,7 +62,7 @@ impl CubeExecutor {
                         cell.coordinate.row - anchor_x + p.start_row,
                         cell.coordinate.col - anchor_y + p.start_col,
                         ctx,
-                    );
+                    )?;
                 }
                 Ok(res)
             }
@@ -71,96 +71,94 @@ impl CubeExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                Ok(input(self, sheet_id, cell_clear.row, cell_clear.col, ctx))
+                input(self, sheet_id, cell_clear.row, cell_clear.col, ctx)
             }
             EditPayload::InsertCols(insert_cols) => {
                 let sheet_idx = insert_cols.sheet_idx;
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                Ok(insert_line(
+                insert_line(
                     self,
                     sheet_id,
                     false,
                     insert_cols.start,
                     insert_cols.count as u32,
                     ctx,
-                ))
+                )
             }
             EditPayload::DeleteCols(delete_cols) => {
                 let sheet_idx = delete_cols.sheet_idx;
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                Ok(delete_line(
+                delete_line(
                     self,
                     sheet_id,
                     false,
                     delete_cols.start,
                     delete_cols.count as u32,
                     ctx,
-                ))
+                )
             }
             EditPayload::InsertRows(insert_rows) => {
                 let sheet_idx = insert_rows.sheet_idx;
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                Ok(insert_line(
+                insert_line(
                     self,
                     sheet_id,
                     true,
                     insert_rows.start,
                     insert_rows.count as u32,
                     ctx,
-                ))
+                )
             }
             EditPayload::DeleteRows(delete_rows) => {
                 let sheet_idx = delete_rows.sheet_idx;
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                Ok(delete_line(
+                delete_line(
                     self,
                     sheet_id,
                     true,
                     delete_rows.start,
                     delete_rows.count as u32,
                     ctx,
-                ))
+                )
             }
             EditPayload::DeleteSheet(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = delete_sheet(self, sheet_id, ctx);
-                Ok(res)
+                delete_sheet(self, sheet_id, ctx)
             }
             _ => Ok(self),
         }
     }
 
-    pub fn cube_update<F>(self, func: &mut F) -> Self
+    pub fn cube_update<F>(self, func: &mut F) -> Result<Self, Error>
     where
-        F: FnMut(&Cube, &CubeId) -> CubeUpdateType,
+        F: FnMut(&Cube, &CubeId) -> Result<CubeUpdateType, Error>,
     {
         let mut dirty_cubes = self.dirty_cubes;
         let removed_cubes = self.removed_cubes;
         let new_manager = self.manager.clone();
-        self.manager
-            .cube_to_id
-            .iter()
-            .for_each(|(c, id)| match func(c, id) {
+        for (c, id) in self.manager.cube_to_id.iter() {
+            match func(c, id)? {
                 CubeUpdateType::Dirty => {
                     dirty_cubes.insert(*id);
                 }
                 CubeUpdateType::None => {}
-            });
-        CubeExecutor {
+            }
+        }
+        Ok(CubeExecutor {
             manager: new_manager,
             dirty_cubes,
             removed_cubes,
-        }
+        })
     }
 }
 
