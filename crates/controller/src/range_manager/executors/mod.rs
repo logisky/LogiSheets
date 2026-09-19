@@ -66,37 +66,30 @@ impl RangeExecutor {
                 ) {
                     Ok(self)
                 } else {
-                    let start = ctx
-                        .fetch_norm_cell_id(
-                            &sheet_id,
-                            move_block.new_master_row,
-                            move_block.new_master_col,
-                        )
-                        .unwrap();
-                    let end = ctx
-                        .fetch_norm_cell_id(
-                            &sheet_id,
-                            move_block.new_master_row + row_cnt - 1,
-                            move_block.new_master_col + col_cnt - 1,
-                        )
-                        .unwrap();
-                    let res = occupy_addr_range(self, sheet_id, start, end, ctx);
-                    Ok(res)
+                    let start = ctx.fetch_norm_cell_id(
+                        &sheet_id,
+                        move_block.new_master_row,
+                        move_block.new_master_col,
+                    )?;
+                    let end = ctx.fetch_norm_cell_id(
+                        &sheet_id,
+                        move_block.new_master_row + row_cnt - 1,
+                        move_block.new_master_col + col_cnt - 1,
+                    )?;
+                    occupy_addr_range(self, sheet_id, start, end, ctx)
                 }
             }
             EditPayload::ResizeBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = resize_block(self, sheet_id, p.id, p.new_row_cnt, p.new_col_cnt, ctx);
-                Ok(res)
+                resize_block(self, sheet_id, p.id, p.new_row_cnt, p.new_col_cnt, ctx)
             }
             EditPayload::RemoveBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = remove_block(self, sheet_id, p.id);
-                Ok(res)
+                remove_block(self, sheet_id, p.id)
             }
             EditPayload::CreateBlock(create_block) => {
                 let sheet_id = ctx
@@ -112,14 +105,13 @@ impl RangeExecutor {
                     create_block.master_row + create_block.row_cnt - 1,
                     create_block.master_col + create_block.col_cnt - 1,
                 )?;
-                let result = occupy_addr_range(self, sheet_id, start, end, ctx);
-                Ok(result)
+                occupy_addr_range(self, sheet_id, start, end, ctx)
             }
             EditPayload::ConvertBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = convert_to_block(
+                convert_to_block(
                     self,
                     sheet_id,
                     p.id,
@@ -128,8 +120,7 @@ impl RangeExecutor {
                     p.row_cnt,
                     p.col_cnt,
                     ctx,
-                );
-                Ok(res)
+                )
             }
             EditPayload::CreateLink(p) => {
                 // Source range is on `sheet_id`; the backing block may be on a
@@ -170,15 +161,18 @@ impl RangeExecutor {
                 // after, in the formula executor's `CreateLink` arm.
                 exec.manager.add_link(&sheet_id, source, tgt_sheet, target);
                 let nav = crate::range_manager::link::CtxLink(ctx);
-                let mut func = |range: &NormalRange, _id: &RangeId| -> RangeUpdateType {
-                    match crate::range_manager::link::classify(
-                        &nav, sheet_id, tgt_sheet, &source, &target, range,
-                    ) {
-                        Some(_) => RangeUpdateType::Dirty,
-                        None => RangeUpdateType::None,
-                    }
-                };
-                Ok(exec.normal_range_update(&sheet_id, &mut func))
+                let mut func =
+                    |range: &NormalRange, _id: &RangeId| -> Result<RangeUpdateType, Error> {
+                        Ok(
+                            match crate::range_manager::link::classify(
+                                &nav, sheet_id, tgt_sheet, &source, &target, range,
+                            ) {
+                                Some(_) => RangeUpdateType::Dirty,
+                                None => RangeUpdateType::None,
+                            },
+                        )
+                    };
+                exec.normal_range_update(&sheet_id, &mut func)
             }
             EditPayload::CellInput(p) => {
                 let sheet_id = ctx
@@ -252,70 +246,65 @@ impl RangeExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = delete_sheet(self, sheet_id, ctx);
-                Ok(res)
+                delete_sheet(self, sheet_id, ctx)
             }
             EditPayload::InsertCols(insert_cols) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(insert_cols.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let result = insert_line(
+                insert_line(
                     self,
                     sheet_id,
                     false,
                     insert_cols.start,
                     insert_cols.count as u32,
                     ctx,
-                );
-                Ok(result)
+                )
             }
             EditPayload::DeleteCols(delete_cols) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(delete_cols.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let result = delete_line(
+                delete_line(
                     self,
                     sheet_id,
                     false,
                     delete_cols.start,
                     delete_cols.count as u32,
                     ctx,
-                );
-                Ok(result)
+                )
             }
             EditPayload::InsertRows(insert_rows) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(insert_rows.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let result = insert_line(
+                insert_line(
                     self,
                     sheet_id,
                     true,
                     insert_rows.start,
                     insert_rows.count as u32,
                     ctx,
-                );
-                Ok(result)
+                )
             }
             EditPayload::DeleteRows(delete_rows) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(delete_rows.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let result = delete_line(
+                delete_line(
                     self,
                     sheet_id,
                     true,
                     delete_rows.start,
                     delete_rows.count as u32,
                     ctx,
-                );
-                Ok(result)
+                )
             }
             EditPayload::InsertColsInBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = insert_block_line(
+                insert_block_line(
                     self,
                     sheet_id,
                     p.block_id,
@@ -323,14 +312,13 @@ impl RangeExecutor {
                     p.start as u32,
                     p.cnt as u32,
                     ctx,
-                );
-                Ok(res)
+                )
             }
             EditPayload::DeleteColsInBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = delete_block_line(
+                delete_block_line(
                     self,
                     sheet_id,
                     p.block_id,
@@ -338,14 +326,13 @@ impl RangeExecutor {
                     p.start as u32,
                     p.cnt as u32,
                     ctx,
-                );
-                Ok(res)
+                )
             }
             EditPayload::InsertRowsInBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = insert_block_line(
+                insert_block_line(
                     self,
                     sheet_id,
                     p.block_id,
@@ -353,14 +340,13 @@ impl RangeExecutor {
                     p.start as u32,
                     p.cnt as u32,
                     ctx,
-                );
-                Ok(res)
+                )
             }
             EditPayload::DeleteRowsInBlock(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
-                let res = delete_block_line(
+                delete_block_line(
                     self,
                     sheet_id,
                     p.block_id,
@@ -368,16 +354,15 @@ impl RangeExecutor {
                     p.start as u32,
                     p.cnt as u32,
                     ctx,
-                );
-                Ok(res)
+                )
             }
             _ => Ok(self),
         }
     }
 
-    pub fn normal_range_update<F>(mut self, sheet_id: &SheetId, func: &mut F) -> Self
+    pub fn normal_range_update<F>(mut self, sheet_id: &SheetId, func: &mut F) -> Result<Self, Error>
     where
-        F: FnMut(&NormalRange, &RangeId) -> RangeUpdateType,
+        F: FnMut(&NormalRange, &RangeId) -> Result<RangeUpdateType, Error>,
     {
         let mut to_update = HashSet::new();
         let mut to_remove = HashSet::new();
@@ -385,10 +370,8 @@ impl RangeExecutor {
         let mut dirty_ranges = self.dirty_ranges;
         let mut removed_ranges = self.removed_ranges;
         let mut to_convert = HashSet::new();
-        manager
-            .normal_range_to_id
-            .iter()
-            .for_each(|(range, range_id)| match func(range, range_id) {
+        for (range, range_id) in manager.normal_range_to_id.iter() {
+            match func(range, range_id)? {
                 RangeUpdateType::Dirty => {
                     dirty_ranges.insert((*sheet_id, *range_id));
                 }
@@ -405,12 +388,12 @@ impl RangeExecutor {
                     dirty_ranges.insert((*sheet_id, *range_id));
                     to_convert.insert((normal_range, block_range));
                 }
-            });
+            }
+        }
         to_update.into_iter().for_each(|new_range| {
             if let Range::Normal(range) = new_range.range {
-                let old_range = manager.id_to_normal_range.get(&new_range.id);
-                if old_range.is_some() {
-                    manager.normal_range_to_id.remove(old_range.unwrap());
+                if let Some(old_range) = manager.id_to_normal_range.get(&new_range.id) {
+                    manager.normal_range_to_id.remove(old_range);
                 }
                 manager
                     .id_to_normal_range
@@ -428,27 +411,25 @@ impl RangeExecutor {
         to_convert.into_iter().for_each(|(original, block_range)| {
             manager.convert_normal_range_to_block_range(original, block_range);
         });
-        RangeExecutor {
+        Ok(RangeExecutor {
             manager: self.manager,
             removed_ranges,
             dirty_ranges,
             trigger: self.trigger,
-        }
+        })
     }
 
-    pub fn block_range_update<F>(mut self, sheet_id: &SheetId, func: &mut F) -> Self
+    pub fn block_range_update<F>(mut self, sheet_id: &SheetId, func: &mut F) -> Result<Self, Error>
     where
-        F: FnMut(&BlockRange, &RangeId) -> RangeUpdateType,
+        F: FnMut(&BlockRange, &RangeId) -> Result<RangeUpdateType, Error>,
     {
         let mut dirty_ranges = self.dirty_ranges;
         let mut removed_ranges = self.removed_ranges;
         let mut to_update = HashSet::new();
         let mut to_remove = HashSet::new();
         let manager = self.manager.get_sheet_range_manager(sheet_id);
-        manager
-            .block_range_to_id
-            .iter()
-            .for_each(|(range, range_id)| match func(range, range_id) {
+        for (range, range_id) in manager.block_range_to_id.iter() {
+            match func(range, range_id)? {
                 RangeUpdateType::Dirty => {
                     dirty_ranges.insert((*sheet_id, *range_id));
                 }
@@ -461,7 +442,8 @@ impl RangeExecutor {
                     to_remove.insert(range_id.clone());
                 }
                 RangeUpdateType::UpdateToBlock(_, _) => {}
-            });
+            }
+        }
         to_update.into_iter().for_each(|new_range| {
             if let Range::Block(range) = new_range.range {
                 manager
@@ -483,12 +465,12 @@ impl RangeExecutor {
                 }
             }
         });
-        RangeExecutor {
+        Ok(RangeExecutor {
             manager: self.manager,
             dirty_ranges,
             removed_ranges,
             trigger: self.trigger,
-        }
+        })
     }
 }
 

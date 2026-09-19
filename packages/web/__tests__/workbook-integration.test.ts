@@ -259,13 +259,13 @@ describe('Workbook integration (real WASM)', () => {
 
         const envelope = JSON.stringify({version: 1, payload: 'test'})
         const saved = book.save(envelope)
-        expect(saved.code).toBe(0)
+        expect(isErrorMessage(saved)).toBe(false)
+        if (isErrorMessage(saved)) throw new Error(saved.msg)
         expect(saved.data.length).toBeGreaterThan(0)
 
         const restored = new Workbook()
         const bytes = new Uint8Array(saved.data as unknown as number[])
-        const loadCode = restored.load(bytes, 'roundtrip.xlsx')
-        expect(loadCode).toBe(0)
+        expect(restored.load(bytes, 'roundtrip.xlsx')).toBeUndefined()
 
         const sheet = restored.getWorksheet(0)
         expect(sheet.getValue(0, 0)).toEqual({type: 'str', value: 'persist'})

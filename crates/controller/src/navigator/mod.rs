@@ -1,6 +1,7 @@
 use imbl::HashMap;
 use logisheets_base::{
-    BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId, errors::BasicError,
+    BlockCellId, BlockId, CellId, ColId, NormalCellId, RowId, SheetId, a1_notation,
+    errors::{BasicError, Context},
 };
 
 pub use self::{block::BlockPlace, sheet_nav::SheetNav};
@@ -18,6 +19,22 @@ pub struct Navigator {
     pub sheet_navs: HashMap<SheetId, SheetNav>,
 }
 
+// The navigator is the only place indices and ids convert, so every failure
+// here is a failed conversion and records the address it started from. The id
+// in the innermost message is often not one the caller passed: resolving a
+// block cell goes through the block's anchor first.
+fn on_sheet(sheet_id: SheetId) -> String {
+    format!("on sheet id {sheet_id}")
+}
+
+fn converting_cell(sheet_id: SheetId, row: usize, col: usize) -> String {
+    format!(
+        "converting cell {} (row index {row}, column index {col}) {} to a cell id",
+        a1_notation(row, col),
+        on_sheet(sheet_id)
+    )
+}
+
 impl Navigator {
     pub fn fetch_row_id(&self, sheet_id: &SheetId, row: usize) -> Result<RowId, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
@@ -26,7 +43,9 @@ impl Navigator {
 
     pub fn fetch_row_idx(&self, sheet_id: &SheetId, row: &RowId) -> Result<usize, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        fetcher.get_row_idx(*row)
+        fetcher
+            .get_row_idx(*row)
+            .context(|| format!("locating row id {row} {}", on_sheet(*sheet_id)))
     }
 
     pub fn fetch_col_id(&self, sheet_id: &SheetId, col: usize) -> Result<ColId, BasicError> {
@@ -36,7 +55,9 @@ impl Navigator {
 
     pub fn fetch_col_idx(&self, sheet_id: &SheetId, col: &ColId) -> Result<usize, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        fetcher.get_col_idx(*col)
+        fetcher
+            .get_col_idx(*col)
+            .context(|| format!("locating column id {col} {}", on_sheet(*sheet_id)))
     }
 
     pub fn fetch_cell_id(
@@ -46,7 +67,9 @@ impl Navigator {
         col: usize,
     ) -> Result<CellId, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        fetcher.get_cell_id(row, col)
+        fetcher
+            .get_cell_id(row, col)
+            .context(|| converting_cell(*sheet_id, row, col))
     }
 
     pub fn fetch_block_cell_id(
@@ -109,7 +132,9 @@ impl Navigator {
         col: usize,
     ) -> Result<NormalCellId, BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        fetcher.get_norm_cell_id(row, col)
+        fetcher
+            .get_norm_cell_id(row, col)
+            .context(|| converting_cell(*sheet_id, row, col))
     }
 
     pub fn fetch_cell_idx(
@@ -118,7 +143,12 @@ impl Navigator {
         cell_id: &CellId,
     ) -> Result<(usize, usize), BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        fetcher.get_cell_idx(&cell_id)
+        fetcher.get_cell_idx(cell_id).context(|| {
+            format!(
+                "resolving the position of {cell_id} {}",
+                on_sheet(*sheet_id)
+            )
+        })
     }
 
     pub fn fetch_normal_cell_idx(
@@ -127,7 +157,12 @@ impl Navigator {
         cell_id: &NormalCellId,
     ) -> Result<(usize, usize), BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        fetcher.get_norm_cell_idx(cell_id)
+        fetcher.get_norm_cell_idx(cell_id).context(|| {
+            format!(
+                "resolving the position of {cell_id} {}",
+                on_sheet(*sheet_id)
+            )
+        })
     }
 
     pub fn fetch_block_cell_idx(
@@ -136,7 +171,12 @@ impl Navigator {
         cell_id: &BlockCellId,
     ) -> Result<(usize, usize), BasicError> {
         let fetcher = self.get_sheet_nav(sheet_id)?.get_fetcher();
-        fetcher.get_block_cell_idx(cell_id)
+        fetcher.get_block_cell_idx(cell_id).context(|| {
+            format!(
+                "resolving the position of {cell_id} {}",
+                on_sheet(*sheet_id)
+            )
+        })
     }
 
     pub fn create_block(

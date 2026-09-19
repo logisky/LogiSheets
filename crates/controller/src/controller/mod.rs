@@ -23,10 +23,10 @@ use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId};
 use logisheets_workbook::logisheets::AppData;
 use logisheets_workbook::prelude::{read, write};
 pub mod block_key_guard;
-mod pivot_guard;
-mod rename_propagation;
 pub mod display;
 mod executor;
+mod pivot_guard;
+mod rename_propagation;
 pub mod status;
 pub mod style;
 use crate::checkpoint_manager::CheckpointManager;
@@ -361,7 +361,7 @@ impl Controller {
             }
             Err(e) => {
                 record_last_error(&e);
-                ActionEffect::from_err_with_message(1, Some(e.to_string()))
+                ActionEffect::rejected(e.to_string())
             }
         }
     }
@@ -494,7 +494,7 @@ impl Controller {
                     }
                     Err(e) => {
                         record_last_error(&e);
-                        ActionEffect::from_err_with_message(1, Some(e.to_string()))
+                        ActionEffect::rejected(e.to_string())
                     }
                 }
             }
@@ -564,7 +564,7 @@ impl Controller {
                     },
                     Err(e) => {
                         record_last_error(&e);
-                        ActionEffect::from_err_with_message(1, Some(e.to_string()))
+                        ActionEffect::rejected(e.to_string())
                     }
                 }
             }

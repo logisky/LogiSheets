@@ -50,14 +50,16 @@ pub mod prelude {
     pub use super::writer::*;
 }
 
+/// Failures reading or writing the .xlsx container. Every variant carries its
+/// cause: that underlying zip/XML message is what diagnoses an unopenable file.
 #[derive(Debug, Error)]
 pub enum SerdeErr {
-    #[error("zip error")]
+    #[error("the .xlsx archive could not be read: {0}")]
     ZipError(#[from] zip::result::ZipError),
-    #[error("io error")]
+    #[error("reading the .xlsx archive failed: {0}")]
     IoError(#[from] std::io::Error),
-    #[error("xml error")]
+    #[error("the XML inside the .xlsx archive is malformed: {0}")]
     XmlError(#[from] quick_xml::Error),
-    #[error("custom error")]
+    #[error("{0}")]
     Custom(String),
 }

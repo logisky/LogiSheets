@@ -602,8 +602,11 @@ fn delete_rows(sheet_nav: SheetNav, idx: usize, cnt: u32) -> (SheetNav, Vec<RowI
     let new_blocks = {
         let mut old_blocks = result.data.blocks.clone();
         old_blocks.iter_mut().for_each(|(_, bp)| {
-            let master = &bp.master;
-            let (row, col) = result.get_fetcher().get_norm_cell_idx(master).unwrap();
+            // One stale block is not a reason to abandon the deletion; leave
+            // it where it is, as the new-anchor lookup below already does.
+            let Ok((row, col)) = result.get_fetcher().get_norm_cell_idx(&bp.master) else {
+                return;
+            };
             if row >= idx && row <= idx + cnt as usize - 1 {
                 let new_row = idx + cnt as usize;
                 if let Ok(new_master_id) = result.get_fetcher().get_norm_cell_id(new_row, col) {
@@ -640,8 +643,10 @@ fn delete_cols(sheet_nav: SheetNav, idx: usize, cnt: u32) -> (SheetNav, Vec<ColI
     let new_blocks = {
         let mut old_blocks = result.data.blocks.clone();
         old_blocks.iter_mut().for_each(|(_, bp)| {
-            let master = &bp.master;
-            let (row, col) = result.get_fetcher().get_norm_cell_idx(master).unwrap();
+            // See `delete_rows`.
+            let Ok((row, col)) = result.get_fetcher().get_norm_cell_idx(&bp.master) else {
+                return;
+            };
             if col >= idx && col <= idx + cnt as usize - 1 {
                 let new_col = idx + cnt as usize;
                 if let Ok(new_master_id) = result.get_fetcher().get_norm_cell_id(row, new_col) {

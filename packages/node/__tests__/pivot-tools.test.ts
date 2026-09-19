@@ -369,10 +369,8 @@ describe('build__refresh_pivot against the real engine', () => {
         await refreshPivot.handler({name: 'by_region'}, ctxFor(client))
 
         const saved = rpc('saveWorkbook', {appData: ''}, bookId) as {
-            code: number
             data: number[] | Uint8Array
         }
-        expect(saved.code).toBe(0)
         const bytes = Array.isArray(saved.data)
             ? saved.data
             : Array.from(saved.data)

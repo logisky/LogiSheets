@@ -150,10 +150,8 @@ describe('a block schema carries its fields semantics', () => {
         // transport was already there. While it lived in the host's AppData
         // blob, every host but the browser lost it on open.
         const saved = rpc('saveWorkbook', {appData: ''}, bookId) as {
-            code: number
             data: number[] | Uint8Array
         }
-        expect(saved.code).toBe(0)
         const bytes = Array.isArray(saved.data)
             ? saved.data
             : Array.from(saved.data)
@@ -318,10 +316,8 @@ describe('the workbook carries its enum sets', () => {
             'Order status'
         )
         const saved = rpc('saveWorkbook', {appData: ''}, bookId) as {
-            code: number
             data: number[] | Uint8Array
         }
-        expect(saved.code).toBe(0)
         const bytes = Array.isArray(saved.data)
             ? saved.data
             : Array.from(saved.data)
@@ -452,10 +448,8 @@ describe('write policy is declared in the engine, not in a host store', () => {
 
     it('survives a save/load round-trip', () => {
         const saved = rpc('saveWorkbook', {appData: ''}, bookId) as {
-            code: number
             data: number[] | Uint8Array
         }
-        expect(saved.code).toBe(0)
         const bytes = Array.isArray(saved.data)
             ? saved.data
             : Array.from(saved.data)

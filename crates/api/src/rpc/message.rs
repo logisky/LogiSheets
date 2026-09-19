@@ -1035,7 +1035,9 @@ pub struct WorkbookMethods {
     pub toggle_status:
         fn(params: ToggleStatusParams, book_id: Option<usize>) -> Result<(), ErrorMessage>,
     pub cleanup_temp_status: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
-    pub commit_temp_status: fn(book_id: Option<usize>) -> Result<ActionEffect, ErrorMessage>,
+    // The cells were already reported as they were written to the branch, so
+    // the commit has no second effect to hand back.
+    pub commit_temp_status: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
 
     // Workbook operations
     pub load_workbook:

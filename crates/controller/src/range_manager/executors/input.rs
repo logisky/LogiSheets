@@ -1,3 +1,5 @@
+use crate::Error;
+
 use super::{RangeExecCtx, RangeExecutor, RangeUpdateType};
 use logisheets_base::{
     BlockRange, EphemeralId, NormalRange, Range, RangeId, SheetId, errors::BasicError,
@@ -9,12 +11,12 @@ pub fn input<C>(
     row: usize,
     col: usize,
     ctx: &C,
-) -> Result<RangeExecutor, BasicError>
+) -> Result<RangeExecutor, Error>
 where
     C: RangeExecCtx,
 {
-    let mut normal_func = |range: &NormalRange, _: &RangeId| -> RangeUpdateType {
-        match range {
+    let mut normal_func = |range: &NormalRange, _: &RangeId| -> Result<RangeUpdateType, Error> {
+        Ok(match range {
             NormalRange::Single(_) => RangeUpdateType::None,
             NormalRange::RowRange(start, end) => {
                 // Stale-endpoint defense: deleted row/col ids leave
@@ -23,10 +25,10 @@ where
                 // `Removed` so the range_manager GCs them on this pass
                 // instead of carrying the dead entry forward.
                 let Ok(start_idx) = ctx.fetch_row_index(&sheet, start) else {
-                    return RangeUpdateType::Removed;
+                    return Ok(RangeUpdateType::Removed);
                 };
                 let Ok(end_idx) = ctx.fetch_row_index(&sheet, end) else {
-                    return RangeUpdateType::Removed;
+                    return Ok(RangeUpdateType::Removed);
                 };
                 if start_idx <= row && row <= end_idx {
                     RangeUpdateType::Dirty
@@ -36,10 +38,10 @@ where
             }
             NormalRange::ColRange(start, end) => {
                 let Ok(start_idx) = ctx.fetch_col_index(&sheet, start) else {
-                    return RangeUpdateType::Removed;
+                    return Ok(RangeUpdateType::Removed);
                 };
                 let Ok(end_idx) = ctx.fetch_col_index(&sheet, end) else {
-                    return RangeUpdateType::Removed;
+                    return Ok(RangeUpdateType::Removed);
                 };
                 if start_idx <= row && row <= end_idx {
                     RangeUpdateType::Dirty
@@ -49,10 +51,10 @@ where
             }
             NormalRange::AddrRange(start, end) => {
                 let Ok((start_row, start_col)) = ctx.fetch_normal_cell_index(&sheet, start) else {
-                    return RangeUpdateType::Removed;
+                    return Ok(RangeUpdateType::Removed);
                 };
                 let Ok((end_row, end_col)) = ctx.fetch_normal_cell_index(&sheet, end) else {
-                    return RangeUpdateType::Removed;
+                    return Ok(RangeUpdateType::Removed);
                 };
                 if start_row <= row && row <= end_row && start_col <= col && col <= end_col {
                     RangeUpdateType::Dirty
@@ -60,12 +62,14 @@ where
                     RangeUpdateType::None
                 }
             }
-        }
+        })
     };
-    let exec_ctx = exec_ctx.normal_range_update(&sheet, &mut normal_func);
+    let exec_ctx = exec_ctx.normal_range_update(&sheet, &mut normal_func)?;
 
-    let mut block_range_func = |range: &BlockRange, _: &RangeId| -> RangeUpdateType {
-        match range {
+    let mut block_range_func = |range: &BlockRange,
+                                _: &RangeId|
+     -> Result<RangeUpdateType, Error> {
+        Ok(match range {
             BlockRange::Single(_) => RangeUpdateType::None,
             BlockRange::AddrRange(start, end) => {
                 // `DeleteRowsInBlock` (and column siblings) remove the
@@ -75,10 +79,10 @@ where
                 // the stale range — it can no longer correspond to a
                 // live cell so no formula can reach it.
                 let Ok((start_row, start_col)) = ctx.fetch_block_cell_index(&sheet, start) else {
-                    return RangeUpdateType::Removed;
+                    return Ok(RangeUpdateType::Removed);
                 };
                 let Ok((end_row, end_col)) = ctx.fetch_block_cell_index(&sheet, end) else {
-                    return RangeUpdateType::Removed;
+                    return Ok(RangeUpdateType::Removed);
                 };
                 if start_row <= row && row <= end_row && start_col <= col && col <= end_col {
                     RangeUpdateType::Dirty
@@ -86,9 +90,9 @@ where
                     RangeUpdateType::None
                 }
             }
-        }
+        })
     };
-    let mut result = exec_ctx.block_range_update(&sheet, &mut block_range_func);
+    let mut result = exec_ctx.block_range_update(&sheet, &mut block_range_func)?;
     let this_cell_id = ctx.fetch_cell_id(&sheet, row, col)?;
     let range_id = result
         .manager

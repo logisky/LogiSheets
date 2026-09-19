@@ -38,7 +38,7 @@ pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
     let root = "_rels/.rels";
     let relationships = de_relationships(root, &mut archive)?;
     let mut xl = Err(SerdeErr::Custom(String::from(
-        "Cannot find the workbook part",
+        "the .xlsx archive has no workbook part (xl/workbook.xml); it is not a spreadsheet",
     )));
     let mut doc_prop_core = Option::<DocPropCore>::None;
     let mut doc_prop_custom = Option::<DocPropCustom>::None;
@@ -128,7 +128,9 @@ fn de_external_link<R: Read + Seek>(
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
-        return Err(SerdeErr::Custom(String::from("path buf to str error")));
+        return Err(SerdeErr::Custom(format!(
+            "the relationships path of {path:?} is not valid UTF-8"
+        )));
     }
     let rels = rels.unwrap();
     let relationships = de_relationships(rels, archive)?;
@@ -162,7 +164,9 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
-        return Err(SerdeErr::Custom(String::from("path buf to str error")));
+        return Err(SerdeErr::Custom(format!(
+            "the relationships path of {path:?} is not valid UTF-8"
+        )));
     }
     let rels = rels.unwrap();
     let relationships = de_relationships(rels, archive)?;
@@ -311,7 +315,9 @@ fn de_worksheet<R: Read + Seek>(
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
     if rels.is_none() {
-        return Err(SerdeErr::Custom(String::from("path buf to str error")));
+        return Err(SerdeErr::Custom(format!(
+            "the relationships path of {path:?} is not valid UTF-8"
+        )));
     }
     let rels = rels.unwrap();
     let result = de_relationships(rels, archive);
@@ -549,7 +555,10 @@ fn collect_unknown_part<R: Read + Seek>(
     ctypes: &ContentTypeIndex,
 ) -> Option<crate::workbook::UnknownPart> {
     // An external target is a URL, not a part in this package.
-    if matches!(rel.target_mode, crate::ooxml::simple_types::StTargetMode::External) {
+    if matches!(
+        rel.target_mode,
+        crate::ooxml::simple_types::StTargetMode::External
+    ) {
         return None;
     }
     let root = get_target_abs_path(owner_rels_path, &rel.target)
@@ -649,7 +658,9 @@ macro_rules! define_de_func {
             let result = xml_deserialize_from_reader::<$t, _>(reader);
             match result {
                 Ok(r) => Ok(r),
-                Err(s) => Err(SerdeErr::Custom(s)),
+                Err(s) => Err(SerdeErr::Custom(format!(
+                    "parsing the part {path:?} of the .xlsx archive failed: {s}"
+                ))),
             }
         }
     };
@@ -683,10 +694,7 @@ define_de_func!(
     crate::ooxml::pivot_table::PivotTableDefinition
 );
 define_de_func!(de_table, crate::ooxml::table::Table);
-define_de_func!(
-    de_content_types,
-    crate::ooxml::content_types::ContentTypes
-);
+define_de_func!(de_content_types, crate::ooxml::content_types::ContentTypes);
 
 /// Read a pivot cache: `pivotCacheDefinitionN.xml` plus (via its `.rels`) the
 /// `pivotCacheRecordsN.xml` it points to.

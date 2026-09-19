@@ -17,5 +17,5 @@ mod message;
 pub mod controller;
 pub mod ws;
 
-pub use manager::Manager;
+pub use manager::{CLIENT_ERROR, Manager};
 pub use message::*;

@@ -14,7 +14,8 @@
 import {readFile, writeFile} from 'node:fs/promises'
 import {basename, resolve} from 'node:path'
 import {createRequire} from 'node:module'
-import type {Value, Client, SaveFileResult} from 'logisheets-web'
+import type {Value, Client, SaveFileResult, ErrorMessage} from 'logisheets-web'
+import {isErrorMessage} from 'logisheets-web'
 import {WorkbookOps} from 'logisheets-core'
 
 // Re-export the core surface so consumers import everything from one place.
@@ -177,9 +178,9 @@ export class Workbook {
         const r = handle(
             {method: 'saveWorkbook', value: {appData, resolveBlockRefs}},
             this.id
-        ) as SaveFileResult
-        if (r.code !== 0) {
-            throw new Error(`failed to save workbook (code ${r.code})`)
+        ) as SaveFileResult | ErrorMessage
+        if (isErrorMessage(r)) {
+            throw new Error(`failed to save workbook: ${r.msg}`)
         }
         // The wasm boundary hands back either a typed array or a plain number
         // array depending on the serializer path; normalize so callers can
@@ -300,16 +301,16 @@ export class SpreadsheetRuntime {
         const bookId = handle('newWorkbook') as number
         // The engine's deserializer expects a plain number array, not a
         // typed array / Buffer — mirror the browser SDK's `Array.from(buf)`.
-        const code = handle(
+        const res = handle(
             {
                 method: 'loadWorkbook',
                 value: {content: Array.from(content), name},
             },
             bookId
-        ) as number
-        if (code !== 0) {
+        )
+        if (isErrorMessage(res)) {
             handle('release', bookId)
-            throw new Error(`failed to load workbook "${name}" (code ${code})`)
+            throw new Error(`failed to load workbook "${name}": ${res.msg}`)
         }
         const wb = new Workbook(bookId, path)
         this.open.add(wb)

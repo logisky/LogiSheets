@@ -266,7 +266,6 @@ describe('MemoryCraftRegistry + loadCrafts round-trip (real WASM engine)', () =>
         })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const save = await (wb.client as any).saveWorkbook({appData})
-        expect(save.code).toBe(0)
         const wb2 = rt.loadWorkbookFromBytes(new Uint8Array(save.data), 'x.xlsx')
 
         let seenState: unknown

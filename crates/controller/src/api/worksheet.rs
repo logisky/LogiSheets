@@ -148,6 +148,36 @@ pub struct Worksheet<'a> {
 }
 
 impl<'a> Worksheet<'a> {
+    /// This sheet as the caller names it, for error context. The engine
+    /// addresses sheets by id; nobody outside it does.
+    pub fn describe(&self) -> String {
+        let name = self
+            .controller
+            .status
+            .sheet_id_manager
+            .get_string(&self.sheet_id);
+        let idx = self
+            .controller
+            .status
+            .sheet_info_manager
+            .get_sheet_idx(&self.sheet_id);
+        match (name, idx) {
+            (Some(name), Some(idx)) => format!("sheet {name:?} (sheet index {idx})"),
+            (Some(name), None) => format!("sheet {name:?}"),
+            (None, Some(idx)) => format!("sheet index {idx}"),
+            (None, None) => format!("sheet id {}", self.sheet_id),
+        }
+    }
+
+    /// One cell of this sheet as the caller names it.
+    pub fn describe_cell(&self, row: usize, col: usize) -> String {
+        format!(
+            "{} of {}",
+            logisheets_base::a1_notation(row, col),
+            self.describe()
+        )
+    }
+
     pub fn get_value_by_id(&self, cell_id: &CellId) -> Result<Value> {
         if let Some(cell) = self
             .controller

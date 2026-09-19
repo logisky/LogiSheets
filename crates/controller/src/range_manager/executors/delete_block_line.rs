@@ -1,7 +1,8 @@
 use logisheets_base::{BlockId, BlockRange, CellId, Range, RangeId};
 
+use crate::{Error, SheetId, range_manager::ctx::RangeExecCtx};
+
 use super::{NewRange, RangeUpdateType};
-use crate::{SheetId, range_manager::ctx::RangeExecCtx};
 
 use super::{RangeExecutor, utils::cut_and_get_new_bound};
 
@@ -13,23 +14,23 @@ pub fn delete_block_line<C>(
     idx: u32,
     cnt: u32,
     ctx: &C,
-) -> RangeExecutor
+) -> Result<RangeExecutor, Error>
 where
     C: RangeExecCtx,
 {
     let delete_start = idx as usize;
     let delete_end = (idx + cnt - 1) as usize;
-    let mut func = |range: &BlockRange, range_id: &RangeId| -> RangeUpdateType {
+    let mut func = |range: &BlockRange, range_id: &RangeId| -> Result<RangeUpdateType, Error> {
         let (start, end) = match range {
             BlockRange::Single(s) => (s, s),
             BlockRange::AddrRange(s, e) => (s, e),
         };
         if start.block_id != block && end.block_id != block {
-            return RangeUpdateType::None;
+            return Ok(RangeUpdateType::None);
         }
         if start.block_id != end.block_id {
             // This should not be reachable
-            return RangeUpdateType::Dirty;
+            return Ok(RangeUpdateType::Dirty);
         }
         // Either endpoint's cell may be ORPHANED at this point: a
         // BlockCellId carries a stable RowId/ColId that the navigator
@@ -48,48 +49,49 @@ where
         let end_idx = ctx.fetch_cell_index(&sheet, &CellId::BlockCell(end.clone()));
         let ((start_row, start_col), (end_row, end_col)) = match (start_idx, end_idx) {
             (Ok(s), Ok(e)) => (s, e),
-            _ => return RangeUpdateType::Removed,
+            _ => return Ok(RangeUpdateType::Removed),
         };
         let (range_start, range_end) = if horizontal {
             (start_row, end_row)
         } else {
             (start_col, end_col)
         };
-        match cut_and_get_new_bound(range_start, range_end, delete_start, delete_end) {
-            Some((new_start, new_end)) => {
-                let (new_start_row, new_start_col, new_end_row, new_end_col) = if horizontal {
-                    (new_start, start_col, new_end, end_col)
-                } else {
-                    (start_row, new_start, end_row, new_end)
-                };
-                let new_range_start = ctx
-                    .fetch_cell_id(&sheet, new_start_row, new_start_col)
-                    .unwrap();
-
-                if new_start_row == new_end_row && new_start_col == new_end_col {
-                    if let CellId::BlockCell(bc) = new_range_start {
-                        return RangeUpdateType::UpdateTo(NewRange {
-                            id: range_id.clone(),
-                            range: Range::Block(BlockRange::Single(bc)),
-                        });
+        Ok(
+            match cut_and_get_new_bound(range_start, range_end, delete_start, delete_end) {
+                Some((new_start, new_end)) => {
+                    let (new_start_row, new_start_col, new_end_row, new_end_col) = if horizontal {
+                        (new_start, start_col, new_end, end_col)
                     } else {
-                        unreachable!()
+                        (start_row, new_start, end_row, new_end)
+                    };
+                    let new_range_start =
+                        ctx.fetch_cell_id(&sheet, new_start_row, new_start_col)?;
+
+                    if new_start_row == new_end_row && new_start_col == new_end_col {
+                        return Ok(match new_range_start {
+                            CellId::BlockCell(bc) => RangeUpdateType::UpdateTo(NewRange {
+                                id: *range_id,
+                                range: Range::Block(BlockRange::Single(bc)),
+                            }),
+                            // No longer inside the block, so it has no
+                            // block-range form; drop it.
+                            _ => RangeUpdateType::Removed,
+                        });
+                    }
+                    let new_range_end = ctx.fetch_cell_id(&sheet, new_end_row, new_end_col)?;
+                    match (new_range_start, new_range_end) {
+                        (CellId::BlockCell(s), CellId::BlockCell(e)) => {
+                            RangeUpdateType::UpdateTo(NewRange {
+                                id: *range_id,
+                                range: Range::Block(BlockRange::AddrRange(s, e)),
+                            })
+                        }
+                        _ => RangeUpdateType::Removed,
                     }
                 }
-                let new_range_end = ctx.fetch_cell_id(&sheet, new_end_row, new_end_col).unwrap();
-                match (new_range_start, new_range_end) {
-                    (CellId::BlockCell(s), CellId::BlockCell(e)) => {
-                        RangeUpdateType::UpdateTo(NewRange {
-                            id: range_id.clone(),
-                            range: Range::Block(BlockRange::AddrRange(s, e)),
-                        })
-                    }
-                    _ => unreachable!(),
-                }
-            }
-            None => RangeUpdateType::None,
-        }
+                None => RangeUpdateType::None,
+            },
+        )
     };
-    let result = exec_ctx.block_range_update(&sheet, &mut func);
-    result
+    exec_ctx.block_range_update(&sheet, &mut func)
 }

@@ -330,7 +330,10 @@ impl<'a> NameFetcherTrait for Saver<'a> {
         sheet_id: SheetId,
         block_id: BlockId,
         field_id: logisheets_base::BlockFieldId,
-    ) -> Option<(((usize, usize), (usize, usize)), ((usize, usize), (usize, usize)))> {
+    ) -> Option<(
+        ((usize, usize), (usize, usize)),
+        ((usize, usize), (usize, usize)),
+    )> {
         if !self.resolve_block_refs {
             return None;
         }
@@ -400,12 +403,18 @@ impl<'a> NameFetcherTrait for Saver<'a> {
             .get_all_key_cell_ids_by_block(sheet_id, block_id, &bp)?;
         let first = keys.first()?;
         let last = keys.last()?;
-        let top = self
-            .block_schema_manager
-            .partially_resolve_by_block(sheet_id, block_id, *first, &field.to_string())?;
-        let bottom = self
-            .block_schema_manager
-            .partially_resolve_by_block(sheet_id, block_id, *last, &field.to_string())?;
+        let top = self.block_schema_manager.partially_resolve_by_block(
+            sheet_id,
+            block_id,
+            *first,
+            &field.to_string(),
+        )?;
+        let bottom = self.block_schema_manager.partially_resolve_by_block(
+            sheet_id,
+            block_id,
+            *last,
+            &field.to_string(),
+        )?;
         let top = self
             .navigator
             .fetch_cell_idx(&sheet_id, &CellId::BlockCell(top))
@@ -435,9 +444,8 @@ impl<'a> Saver<'a> {
         let ids = self
             .block_schema_manager
             .get_all_key_cell_ids_by_block(sheet_id, block_id, &bp)?;
-        let text = |id: logisheets_base::TextId| {
-            self.text_id_manager.get_string(&id).unwrap_or_default()
-        };
+        let text =
+            |id: logisheets_base::TextId| self.text_id_manager.get_string(&id).unwrap_or_default();
         ids.into_iter().find_map(|id| {
             let cell = self.container.get_cell(sheet_id, &CellId::BlockCell(id))?;
             if cell.value.to_string(&text) == key {

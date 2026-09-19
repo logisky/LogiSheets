@@ -988,8 +988,8 @@ impl Workbook {
         sheet_id: SheetId,
         cell_id: CellId,
     ) -> Result<(CellPosition, CellPosition)> {
-        if let CellId::EphemeralCell(_) = cell_id {
-            return Err(BasicError::ReferencingEphemeralCell.into());
+        if let CellId::EphemeralCell(e) = cell_id {
+            return Err(BasicError::ReferencingEphemeralCell(e).into());
         }
 
         let (row, col) = self

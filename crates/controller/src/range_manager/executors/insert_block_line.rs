@@ -1,3 +1,5 @@
+use crate::Error;
+
 use super::{RangeExecutor, RangeUpdateType};
 use logisheets_base::{
     BlockId, BlockRange, RangeId, SheetId, id_fetcher::IdFetcherTrait,
@@ -12,12 +14,12 @@ pub fn insert_block_line<C>(
     _idx: u32,
     _cnt: u32,
     _ctx: &C,
-) -> RangeExecutor
+) -> Result<RangeExecutor, Error>
 where
     C: IdFetcherTrait + IndexFetcherTrait,
 {
-    let mut func = |range: &BlockRange, _: &RangeId| -> RangeUpdateType {
-        match range {
+    let mut func = |range: &BlockRange, _: &RangeId| -> Result<RangeUpdateType, Error> {
+        Ok(match range {
             BlockRange::Single(_) => RangeUpdateType::None,
             BlockRange::AddrRange(start, end) => {
                 if start.block_id != block && end.block_id != block {
@@ -30,8 +32,7 @@ where
                     RangeUpdateType::Dirty
                 }
             }
-        }
+        })
     };
-    let result = exec_ctx.block_range_update(&sheet, &mut func);
-    result
+    exec_ctx.block_range_update(&sheet, &mut func)
 }

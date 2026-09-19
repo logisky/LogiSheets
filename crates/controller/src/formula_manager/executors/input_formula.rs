@@ -61,7 +61,9 @@ pub fn input_ephemeral_formula<C: FormulaExecCtx>(
                 Range::Normal(NormalRange::Single(normal_cell_id))
             }
             CellId::BlockCell(block_cell_id) => Range::Block(BlockRange::Single(block_cell_id)),
-            CellId::EphemeralCell(_) => unreachable!(),
+            // A shadow cell derives from a grid cell, so this should not
+            // happen — but say so rather than trap the engine.
+            CellId::EphemeralCell(e) => return Err(BasicError::EphemeralCellInReference(e)),
         };
         let range_id = ctx.fetch_range_id(&sheet_id, &range);
         let placeholder_node = ast::Node {

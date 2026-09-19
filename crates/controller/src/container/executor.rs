@@ -175,8 +175,7 @@ impl ContainerExecutor {
                 let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                     .into_iter()
                     .map(|(r, c)| ctx.fetch_cell_id(&sheet_id, r, c))
-                    .filter(|c| c.is_ok())
-                    .map(|c| c.unwrap())
+                    .filter_map(|c| c.ok())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
 
@@ -437,8 +436,7 @@ impl ContainerExecutor {
                 let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                     .into_iter()
                     .map(|(r, c)| ctx.fetch_cell_id(&sheet_id, r, c))
-                    .filter(|c| c.is_ok())
-                    .map(|c| c.unwrap())
+                    .filter_map(|c| c.ok())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
                 let mut cells_removed = self.cells_removed;
@@ -468,8 +466,7 @@ impl ContainerExecutor {
                 let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                     .into_iter()
                     .map(|(r, c)| ctx.fetch_cell_id(&sheet_id, r, c))
-                    .filter(|c| c.is_ok())
-                    .map(|c| c.unwrap())
+                    .filter_map(|c| c.ok())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
                 let mut cells_removed = self.cells_removed;
@@ -499,8 +496,7 @@ impl ContainerExecutor {
                 let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                     .into_iter()
                     .map(|(r, c)| ctx.fetch_cell_id(&sheet_id, r, c))
-                    .filter(|c| c.is_ok())
-                    .map(|c| c.unwrap())
+                    .filter_map(|c| c.ok())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
                 let mut cells_removed = self.cells_removed;
@@ -530,8 +526,7 @@ impl ContainerExecutor {
                 let cells = cross_product_usize(start_row, end_row, start_col, end_col)
                     .into_iter()
                     .map(|(r, c)| ctx.fetch_cell_id(&sheet_id, r, c))
-                    .filter(|c| c.is_ok())
-                    .map(|c| c.unwrap())
+                    .filter_map(|c| c.ok())
                     .collect::<Vec<_>>();
                 let container = self.container.delete_cells(sheet_id, &cells);
                 let mut cells_removed = self.cells_removed;
@@ -784,12 +779,10 @@ impl ContainerExecutor {
         cnt: usize,
         is_row: bool,
     ) -> Vec<NormalCellId> {
-        let sheet_container = self.container.data.get(sheet_id);
-        if sheet_container.is_none() {
+        let Some(sheet_container) = self.container.data.get(sheet_id) else {
             return Vec::new();
-        }
+        };
         let mut result = Vec::<NormalCellId>::new();
-        let sheet_container = sheet_container.unwrap();
         sheet_container.cells.iter().for_each(|(cid, _)| match cid {
             CellId::NormalCell(nc) => {
                 let cidx = ctx.fetch_cell_index(&sheet_id, cid);

@@ -1,6 +1,11 @@
 use std::collections::{HashMap, hash_map::Entry};
 
-use crate::{EditPayload, Workbook};
+use crate::{EditPayload, ErrorMessage, Workbook};
+
+/// `ErrorMessage::ty` for a request the engine could not even attempt: the
+/// caller's mistake, not the workbook's state. Same code as
+/// `Error::PayloadError`, which says the same thing.
+pub const CLIENT_ERROR: usize = 6;
 
 #[derive(Default)]
 pub struct Manager {
@@ -24,12 +29,23 @@ impl Manager {
         self.payloads.insert(id, vec![]);
     }
 
-    pub fn get_workbook(&self, id: &usize) -> Option<&Workbook> {
-        self.books.get(id)
+    /// The workbook `id` names, or an error saying why there isn't one. The
+    /// only way in: a panicking lookup takes the whole wasm instance with it.
+    pub fn workbook(&self, id: usize) -> Result<&Workbook, ErrorMessage> {
+        self.books.get(&id).ok_or_else(|| Self::no_workbook(id))
     }
 
-    pub fn get_mut_workbook(&mut self, id: &usize) -> Option<&mut Workbook> {
-        self.books.get_mut(id)
+    pub fn workbook_mut(&mut self, id: usize) -> Result<&mut Workbook, ErrorMessage> {
+        self.books.get_mut(&id).ok_or_else(|| Self::no_workbook(id))
+    }
+
+    fn no_workbook(id: usize) -> ErrorMessage {
+        ErrorMessage {
+            msg: format!(
+                "no workbook is open with book id {id}; it was never created, or it has been released"
+            ),
+            ty: CLIENT_ERROR,
+        }
     }
 
     pub fn add_payload(&mut self, id: usize, payload: EditPayload) {
@@ -55,8 +71,6 @@ impl Manager {
     }
 
     pub fn get_payloads(&mut self, id: &usize) -> Vec<EditPayload> {
-        let (k, result) = self.payloads.remove_entry(id).unwrap();
-        self.payloads.insert(k, vec![]);
-        result
+        self.payloads.insert(*id, vec![]).unwrap_or_default()
     }
 }

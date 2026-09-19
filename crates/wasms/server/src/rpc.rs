@@ -1,68 +1,78 @@
 use logisheets_rs::ErrorMessage;
-use logisheets_rs::rpc::{Message, controller, ws};
+use logisheets_rs::rpc::{CLIENT_ERROR, Message, controller, ws};
 use wasm_bindgen::prelude::*;
 
 use crate::state;
 
-// ============================================================================
-// Serialization edge. The logic functions in `controller`/`ws` return typed
-// Rust values (`Result<T, ErrorMessage>` or `T`); these adapters serialize them
-// for the browser (`JsValue`). A native transport (Tauri) provides its own
-// equivalents while calling the exact same logic functions.
-// ============================================================================
+// Serialization edge: `controller`/`ws` return typed Rust values, these
+// adapters serialize them for the browser. A native transport (Tauri) has its
+// own equivalents over the same logic functions.
+//
+// Nothing here may panic — a panic poisons the wasm instance, and every later
+// call traps. Every failure leaves as an `ErrorMessage`.
 
-fn ok_to_js<T: serde::Serialize>(v: &T) -> JsValue {
+pub(crate) fn ok_to_js<T: serde::Serialize>(v: &T) -> JsValue {
     serde_wasm_bindgen::to_value(v).unwrap()
 }
 
-fn res_to_js<T: serde::Serialize>(r: Result<T, ErrorMessage>) -> JsValue {
+pub(crate) fn res_to_js<T: serde::Serialize>(r: Result<T, ErrorMessage>) -> JsValue {
+    // Untagged wire format: both are emitted bare, and the JS SDK tells them
+    // apart by shape (`isErrorMessage`).
     match r {
-        // Preserve the historical wire format: on success the value is emitted
-        // bare, on failure the `ErrorMessage` is emitted bare (NOT a tagged
-        // `Result`). The JS SDK distinguishes them by shape.
         Ok(v) => serde_wasm_bindgen::to_value(&v).unwrap(),
         Err(e) => serde_wasm_bindgen::to_value(&e).unwrap(),
     }
 }
 
+pub(crate) fn client_error<T: serde::Serialize>(msg: String) -> JsValue {
+    res_to_js::<T>(Err(ErrorMessage {
+        msg,
+        ty: CLIENT_ERROR,
+    }))
+}
+
+/// The `method` an unparseable request claimed, so a rejection can name it.
+/// A unit variant arrives as a bare string, everything else as `{method, value}`.
+fn requested_method(msg: &JsValue) -> String {
+    if let Some(name) = msg.as_string() {
+        return name;
+    }
+    js_sys::Reflect::get(msg, &JsValue::from_str("method"))
+        .ok()
+        .and_then(|m| m.as_string())
+        .unwrap_or_else(|| "<no method field>".to_string())
+}
+
 #[wasm_bindgen]
 pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
     state::init();
-    // A malformed or unknown message must NOT panic. A panic here poisons the
-    // whole wasm instance — every subsequent call traps with `unreachable`, so
-    // one bad request from a client would take the engine down for good. Return
-    // a bare `ErrorMessage` instead (the same wire shape the logic functions use
-    // on failure; the JS SDK distinguishes success/error by shape).
-    let msg: Message = match serde_wasm_bindgen::from_value(msg) {
+    let msg: Message = match serde_wasm_bindgen::from_value(msg.clone()) {
         Ok(m) => m,
         Err(e) => {
-            return res_to_js::<()>(Err(ErrorMessage {
-                msg: format!("invalid request message: {e}"),
-                ty: 6,
-            }));
+            return client_error::<()>(format!(
+                "no RPC method {:?} takes these params: {e}",
+                requested_method(&msg)
+            ));
         }
     };
 
-    // Handle messages that don't require a book_id
+    // `newWorkbook` mints the book id, so it is the one message without one.
+    let mut mgr = state::MANAGER.get_mut();
     if let Message::NewWorkbook = &msg {
-        let mut mgr = state::MANAGER.get_mut();
         return ok_to_js(&controller::new_workbook(&mut mgr));
     }
 
-    // Every remaining message needs a book id; a missing one is a client error,
-    // not a reason to panic.
     let id = match book_id {
         Some(id) => id,
         None => {
-            return res_to_js::<()>(Err(ErrorMessage {
-                msg: "missing book id".to_string(),
-                ty: 6,
-            }));
+            return client_error::<()>(
+                "this request needs a book id; call newWorkbook first and pass the id it returns"
+                    .to_string(),
+            );
         }
     };
-    let mut mgr = state::MANAGER.get_mut();
     match msg {
-        Message::NewWorkbook => unreachable!(),
+        Message::NewWorkbook => ok_to_js(&controller::new_workbook(&mut mgr)),
         Message::GetSheetDimension(params) => {
             res_to_js(ws::get_sheet_dimension(&mgr, id, params.sheet_id))
         }
@@ -98,7 +108,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.row,
             params.col,
         )),
-        Message::GetCellListValidation(params) => ok_to_js(&ws::get_cell_list_validation(
+        Message::GetCellListValidation(params) => res_to_js(ws::get_cell_list_validation(
             &mgr,
             id,
             params.sheet_idx,
@@ -191,30 +201,32 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             res_to_js(ws::get_col_width(&mgr, id, params.sheet_id, params.col_idx))
         }
         Message::HandleTransaction(params) => {
-            let effect = controller::handle_transaction(&mut mgr, id, params.transaction);
-            // The reason now travels on the effect itself (`error_message`), so
-            // every host gets it. Still mirror it to the browser console, where
-            // it is the thing a developer actually reads, and drain
-            // `take_last_error` either way so a rejection can't leak into the
-            // next transaction's report.
-            if let logisheets_rs::StatusCode::Err(_) = effect.status {
-                let msg = effect
+            let result = controller::handle_transaction(&mut mgr, id, params.transaction);
+            // The reason already travels on the effect, so every host gets it;
+            // mirror it to the console for whoever is watching. Drain
+            // `take_last_error` either way so it cannot leak into the next
+            // transaction's report.
+            let reason = match &result {
+                Ok(effect) if matches!(effect.status, logisheets_rs::StatusCode::Err(_)) => effect
                     .error_message
                     .clone()
-                    .or_else(logisheets_rs::take_last_error);
-                if let Some(msg) = msg {
-                    web_sys::console::error_1(
-                        &format!("[handle_transaction] engine error: {}", msg).into(),
-                    );
+                    .or_else(logisheets_rs::take_last_error),
+                Ok(_) => {
+                    let _ = logisheets_rs::take_last_error();
+                    None
                 }
-            } else {
-                let _ = logisheets_rs::take_last_error();
+                Err(e) => {
+                    let _ = logisheets_rs::take_last_error();
+                    Some(e.msg.clone())
+                }
+            };
+            if let Some(reason) = reason {
+                web_sys::console::error_1(&format!("[handleTransaction] {reason}").into());
             }
-            ok_to_js(&effect)
+            res_to_js(result)
         }
         Message::ToggleStatus(params) => {
-            controller::toggle_status(&mut mgr, id, params.use_temp);
-            JsValue::NULL
+            res_to_js(controller::toggle_status(&mut mgr, id, params.use_temp))
         }
         Message::BatchGetCellInfoById(params) => res_to_js(controller::batch_get_cell_info_by_id(
             &mut mgr, id, params.ids,
@@ -225,13 +237,13 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         Message::GetSheetNameByIdx(params) => {
             res_to_js(controller::get_sheet_name_by_idx(&mut mgr, id, params.idx))
         }
-        Message::LoadWorkbook(params) => ok_to_js(&controller::read_file(
+        Message::LoadWorkbook(params) => res_to_js(controller::read_file(
             &mut mgr,
             id,
             params.name,
             &params.content,
         )),
-        Message::SaveWorkbook(params) => ok_to_js(&controller::save_file(
+        Message::SaveWorkbook(params) => res_to_js(controller::save_file(
             &mut mgr,
             id,
             params.app_data,
@@ -244,7 +256,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.row_idx,
             params.col_idx,
         )),
-        Message::GetMergedCells(params) => ok_to_js(&ws::get_merged_cells(
+        Message::GetMergedCells(params) => res_to_js(ws::get_merged_cells(
             &mgr,
             id,
             params.sheet_idx,
@@ -253,13 +265,13 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.end_row,
             params.end_col,
         )),
-        Message::GetComments(params) => ok_to_js(&ws::get_comments(&mgr, id, params.sheet_idx)),
+        Message::GetComments(params) => res_to_js(ws::get_comments(&mgr, id, params.sheet_idx)),
         Message::GetCellImages(params) => {
-            ok_to_js(&ws::get_cell_images(&mgr, id, params.sheet_idx))
+            res_to_js(ws::get_cell_images(&mgr, id, params.sheet_idx))
         }
-        Message::GetCharts(params) => ok_to_js(&ws::get_charts(&mgr, id, params.sheet_idx)),
-        Message::GetConditionalFormattingRules(params) => ok_to_js(
-            &ws::get_conditional_formatting_rules(&mgr, id, params.sheet_idx),
+        Message::GetCharts(params) => res_to_js(ws::get_charts(&mgr, id, params.sheet_idx)),
+        Message::GetConditionalFormattingRules(params) => res_to_js(
+            ws::get_conditional_formatting_rules(&mgr, id, params.sheet_idx),
         ),
         Message::CalcCondition(params) => res_to_js(controller::calc_condition(
             &mut mgr,
@@ -282,7 +294,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.field_filter,
         )),
         Message::GetTempStatusChanges => res_to_js(controller::get_temp_status_changes(&mgr, id)),
-        Message::IsInTempMode => ok_to_js(&controller::is_in_temp_mode(&mgr, id)),
+        Message::IsInTempMode => res_to_js(controller::is_in_temp_mode(&mgr, id)),
         Message::GetBlockDisplayWindow(params) => {
             res_to_js(controller::get_display_window_for_block(
                 &mut mgr,
@@ -389,7 +401,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             id,
             params.shadow_id,
         )),
-        Message::GetDiyCellIdWithBlockId(params) => ok_to_js(&ws::get_diy_cell_id_with_block_id(
+        Message::GetDiyCellIdWithBlockId(params) => res_to_js(ws::get_diy_cell_id_with_block_id(
             &mgr,
             id,
             params.sheet_id,
@@ -438,7 +450,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.sheet_idx,
         )),
         Message::CheckFormula(params) => {
-            ok_to_js(&controller::check_formula(&mgr, id, params.formula))
+            res_to_js(controller::check_formula(&mgr, id, params.formula))
         }
         Message::GetBlockInfo(params) => res_to_js(ws::get_block_info(
             &mgr,
@@ -455,12 +467,9 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.end_row,
             params.end_col,
         )),
-        Message::Undo => ok_to_js(&controller::undo(&mut mgr, id)),
-        Message::Redo => ok_to_js(&controller::redo(&mut mgr, id)),
-        Message::CleanHistory => {
-            controller::clean_history(&mut mgr, id);
-            JsValue::NULL
-        }
+        Message::Undo => res_to_js(controller::undo(&mut mgr, id)),
+        Message::Redo => res_to_js(controller::redo(&mut mgr, id)),
+        Message::CleanHistory => res_to_js(controller::clean_history(&mut mgr, id)),
         Message::GetAllBlockFields => res_to_js(controller::get_all_block_fields(&mut mgr, id)),
         Message::DuplicateBlockKeys => res_to_js(controller::duplicate_block_keys(&mgr, id)),
         Message::GetEnumSets => res_to_js(controller::get_enum_sets(&mgr, id)),
@@ -477,19 +486,16 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             controller::release(&mut mgr, id);
             JsValue::NULL
         }
-        Message::GetSheetCount => ok_to_js(&controller::get_sheet_count(&mgr, id)),
-        Message::GetVersion => ok_to_js(&controller::get_version(&mgr, id)),
-        Message::GetAllSheetInfo => ok_to_js(&controller::get_all_sheet_info(&mgr, id)),
+        Message::GetSheetCount => res_to_js(controller::get_sheet_count(&mgr, id)),
+        Message::GetVersion => res_to_js(controller::get_version(&mgr, id)),
+        Message::GetAllSheetInfo => res_to_js(controller::get_all_sheet_info(&mgr, id)),
         Message::GetFormulaFunctionNames => {
-            ok_to_js(&controller::get_formula_function_names(&mgr, id))
+            res_to_js(controller::get_formula_function_names(&mgr, id))
         }
-        Message::GetAppData => ok_to_js(&controller::get_app_data(&mgr, id)),
-        Message::CleanupTempStatus => {
-            controller::clean_temp_status(&mut mgr, id);
-            JsValue::NULL
-        }
-        Message::CommitTempStatus => ok_to_js(&controller::commit_temp_status(&mut mgr, id)),
-        Message::CheckBindBlock(params) => ok_to_js(&controller::check_bind_block(
+        Message::GetAppData => res_to_js(controller::get_app_data(&mgr, id)),
+        Message::CleanupTempStatus => res_to_js(controller::clean_temp_status(&mut mgr, id)),
+        Message::CommitTempStatus => res_to_js(controller::commit_temp_status(&mut mgr, id)),
+        Message::CheckBindBlock(params) => res_to_js(controller::check_bind_block(
             &mut mgr,
             id,
             params.sheet_idx,
@@ -544,15 +550,15 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.col_cnt,
         )),
         Message::GetLinks(params) => res_to_js(ws::get_links(&mgr, id, params.sheet_idx)),
-        Message::SaveCheckpoint(params) => ok_to_js(&ws::save_checkpoint(
+        Message::SaveCheckpoint(params) => res_to_js(ws::save_checkpoint(
             &mut mgr,
             id,
             params.label,
             params.description,
         )),
         Message::DeleteCheckpoint(params) => {
-            ok_to_js(&ws::delete_checkpoint(&mut mgr, id, params.label))
+            res_to_js(ws::delete_checkpoint(&mut mgr, id, params.label))
         }
-        Message::ListCheckpoints => ok_to_js(&ws::list_checkpoints(&mgr, id)),
+        Message::ListCheckpoints => res_to_js(ws::list_checkpoints(&mgr, id)),
     }
 }

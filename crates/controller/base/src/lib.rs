@@ -27,9 +27,6 @@ pub enum CellId {
     EphemeralCell(EphemeralId),
 }
 
-impl CellId {
-}
-
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]
 #[ts(file_name = "normal_cell_id.ts")]
 pub struct NormalCellId {
@@ -494,6 +491,42 @@ pub fn index_to_column_label(index: usize) -> String {
         left = ((left / 26_i32) as i32) - 1_i32;
     }
     result.iter().collect()
+}
+
+/// A zero-based `(row, col)` as the A1 address a person reads: `(0, 0)` -> `A1`.
+pub fn a1_notation(row: usize, col: usize) -> String {
+    format!("{}{}", index_to_column_label(col), row + 1)
+}
+
+// An id shown to a person says what kind of id it is and whose it is.
+impl std::fmt::Display for NormalCellId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "the cell with row id {} and column id {}",
+            self.row, self.col
+        )
+    }
+}
+
+impl std::fmt::Display for BlockCellId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "the cell with row id {} and column id {} inside block {}",
+            self.row, self.col, self.block_id
+        )
+    }
+}
+
+impl std::fmt::Display for CellId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CellId::NormalCell(c) => write!(f, "{c}"),
+            CellId::BlockCell(c) => write!(f, "{c}"),
+            CellId::EphemeralCell(e) => write!(f, "the ephemeral cell with id {e}"),
+        }
+    }
 }
 
 #[cfg(test)]

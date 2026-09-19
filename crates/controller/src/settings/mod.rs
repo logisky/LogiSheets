@@ -2,18 +2,16 @@ use std::collections::{HashMap, HashSet};
 
 use logisheets_base::SheetId;
 use logisheets_workbook::prelude::{
-    CtAutoFilter, CtCellWatches, CtConditionalFormatting, CtControls, CtCustomProperties,
-    CtCustomSheetViews, CtDataConsolidate, CtHeaderFooter, CtHyperlinks, CtIgnoredErrors,
-    CtPageBreak, CtPageMargins, CtPageSetup, CtPhoneticPr, CtPrintOptions, CtProtectedRanges,
-    CtBookViews, CtCustomWorkbookViews, CtDefinedNames, CtFileRecoveryPr,
-    CtFileSharing, CtFileVersion, CtFunctionGroups, CtOleSize, CtPivotCaches, CtScenarios,
-    CtSheetCalcPr, CtSheetFormatPr, CtSheetProtection, CtSheetViews, CtSmartTagPr,
-    CtSmartTagTypes, CtSmartTags, CtSortState, CtTableParts, CtWebPublishing,
-    CtWebPublishItems, CtWorkbookPr, CtWorkbookProtection,
+    CtAutoFilter, CtBookViews, CtCellWatches, CtConditionalFormatting, CtControls,
+    CtCustomProperties, CtCustomSheetViews, CtCustomWorkbookViews, CtDataConsolidate,
+    CtDefinedNames, CtFileRecoveryPr, CtFileSharing, CtFileVersion, CtFunctionGroups,
+    CtHeaderFooter, CtHyperlinks, CtIgnoredErrors, CtOleSize, CtPageBreak, CtPageMargins,
+    CtPageSetup, CtPhoneticPr, CtPivotCaches, CtPrintOptions, CtProtectedRanges, CtScenarios,
+    CtSheetCalcPr, CtSheetFormatPr, CtSheetProtection, CtSheetViews, CtSmartTagPr, CtSmartTagTypes,
+    CtSmartTags, CtSortState, CtTableParts, CtWebPublishItems, CtWebPublishing, CtWorkbookPr,
+    CtWorkbookProtection,
 };
-use logisheets_workbook::workbook::{
-    DocProps, PivotCache, PivotTablePart, TablePart, UnknownPart,
-};
+use logisheets_workbook::workbook::{DocProps, PivotCache, PivotTablePart, TablePart, UnknownPart};
 
 use crate::theme_manager::ThemeManager;
 

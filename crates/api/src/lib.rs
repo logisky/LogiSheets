@@ -55,7 +55,7 @@ pub use logisheets_controller::edit_action::{
 pub use logisheets_controller::controller::style::{PatternFill, from_hex_str};
 
 // Re-export error types (via api module re-exports)
-pub use logisheets_controller::{Error, ErrorMessage, Result, take_last_error};
+pub use logisheets_controller::{Context, Error, ErrorMessage, Result, take_last_error};
 
 // Re-export shadow-cell kind so RPC payloads and host code can tag
 // which derived computation each shadow cell represents.

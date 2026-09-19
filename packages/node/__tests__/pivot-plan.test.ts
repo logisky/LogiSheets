@@ -271,10 +271,8 @@ describe('a pivot, driven the way a host drives it', () => {
 
     it('survives a real .xlsx round trip, recipe and all', () => {
         const saved = rpc('saveWorkbook', {appData: '{}'}, bookId) as {
-            code: number
             data: number[] | Uint8Array
         }
-        expect(saved.code).toBe(0)
         const bytes = Array.isArray(saved.data)
             ? saved.data
             : Array.from(saved.data)

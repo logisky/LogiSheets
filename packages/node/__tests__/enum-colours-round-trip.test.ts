@@ -65,10 +65,8 @@ describe('AppData round-trip (real .xlsx)', () => {
         // 2. Save to real .xlsx bytes and load them into a fresh workbook.
         const bookId = rpc('newWorkbook') as number
         const saved = rpc('saveWorkbook', {appData: envelope}, bookId) as {
-            code: number
             data: number[] | Uint8Array
         }
-        expect(saved.code).toBe(0)
         const bytes = Array.isArray(saved.data)
             ? saved.data
             : Array.from(saved.data)

@@ -60,8 +60,6 @@ function newGuid(): string {
     return `{${crypto.randomUUID()}}`
 }
 
-export type ReturnCode = number
-
 export type Callback = () => void
 export type CellIdCallback = (cellId: SheetCellId) => void
 
@@ -494,16 +492,16 @@ export class Workbook {
         this._registerCellValueChangedCallback(cellId, callback)
     }
 
-    public commitTempStatus() {
-        rpc('commitTempStatus', undefined, this._id)
+    public commitTempStatus(): Result<void> {
+        return rpc('commitTempStatus', undefined, this._id)
     }
 
-    public cleanupTempStatus() {
-        rpc('cleanupTempStatus', undefined, this._id)
+    public cleanupTempStatus(): Result<void> {
+        return rpc('cleanupTempStatus', undefined, this._id)
     }
 
-    public toggleStatus(useTemp: boolean) {
-        rpc('toggleStatus', {useTemp}, this._id)
+    public toggleStatus(useTemp: boolean): Result<void> {
+        return rpc('toggleStatus', {useTemp}, this._id)
     }
 
     public batchGetCellInfoById(
@@ -575,12 +573,16 @@ export class Workbook {
         return result
     }
 
-    public load(buf: Uint8Array, bookName: string): ReturnCode {
+    /**
+     * Replace this workbook's contents with a parsed .xlsx. An unreadable file
+     * comes back as an {@link ErrorMessage} and leaves this workbook as it was.
+     */
+    public load(buf: Uint8Array, bookName: string): Result<void> {
         return rpc(
             'loadWorkbook',
             {content: Array.from(buf), name: bookName},
             this._id
-        ) as ReturnCode
+        ) as Result<void>
     }
 
     /**
