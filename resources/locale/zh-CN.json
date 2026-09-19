@@ -1054,6 +1054,12 @@
             "noValidation": "此单元格没有校验规则"
         },
         "craft": {
+            "aiBusy": "正在询问 AI",
+            "aiBusyTip": "此挂件正在等待 AI 回复",
+            "aiConsentAllow": "允许",
+            "aiConsentBody": "挂件“{{craft}}”想要向 AI 提问，模型可能会读取该挂件的数据来作答。它会这样说：",
+            "aiConsentDeny": "暂不",
+            "aiConsentTitle": "允许此挂件使用 AI？",
             "closePanel": "关闭逻辑器面板",
             "pointHint": "左键 +1，右键 +5，按住 Shift 为减"
         },

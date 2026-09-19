@@ -552,6 +552,84 @@ export default {
 `craftsmith build` compiles `runtime.ts` to `runtime.js` and records it in the
 manifest automatically; there's nothing else to wire.
 
+## Face: asking the AI (`@aiRole`)
+
+The other three faces all run inward — something else calls your craft. This
+one runs outward: your craft puts a question to a model and gets a
+schema-valid answer back. A board asking for the opponent's move, a simulator
+asking what to look at.
+
+Declare the question on the interface that describes the **reply**:
+
+```ts
+/**
+ * @aiRole coach
+ * @system You are a Lights Out coach. Read the current status and the
+ *   solver's suggested cell with the tools available to you, then explain in
+ *   two or three sentences why clicking that cell helps.
+ */
+export interface CoachExplanation {
+    /** Two or three sentences, addressed to the player. */
+    explanation: string
+    cell?: {row: number; col: number}
+}
+```
+
+Then ask, from your UI:
+
+```js
+const status = await window.craftAi.available()
+if (!status.ok) return disableAiFeature(status.reason) // 'no-key' | 'denied' | …
+
+const {explanation} = await window.craftAi.ask('coach', 'What should I click?')
+```
+
+### The model reads through your tools
+
+You do **not** serialize state into the question. `input` is the question; the
+model reaches for your craft's own `@tool` exports to read whatever it decides
+it needs, then answers. So a craft that already exposes tools gets this for
+free — the declaration above is the entire addition.
+
+It is offered your `@mutates none` tools and nothing else: no mutating tool, no
+workbook surface, none of Watson's. **The model gathers; your craft acts.** That
+is what keeps an `ask` safe to abandon halfway — and it means the answer is a
+proposal your craft still validates:
+
+```js
+if (!isLegal(uci)) return notifyCraft('warn', `The AI proposed ${uci}.`)
+```
+
+| Annotation | Where | Meaning |
+| --- | --- | --- |
+| `@aiRole <name>` | on an exported interface / type alias | Declares a question. `<name>` is what `ask()` selects; kebab-case. |
+| `@system <text>` | with `@aiRole` | Who the model is while answering. Sent verbatim. |
+
+The reply schema comes from the declaration itself, and each property's doc
+comment becomes that field's description — that is how the model learns what
+to put in it, so write them.
+
+### Why it is declared and not passed
+
+`system` could have been an argument to `ask()`. Declaring it means the consent
+prompt can show the user the exact words your craft will send, `craftsmith
+check` can validate it, and `craftsmith build` can emit `craft-roles.d.ts` so
+`ask('coach', …)` is typed as `CoachExplanation` without you restating it.
+
+::: warning There is no conversation
+Each `ask` is independent — nothing is remembered between calls. That is
+deliberate: your craft's state is already in the workbook, so the model reads
+the live position every time instead of replaying a history that can go stale.
+To correct a bad answer, ask again with the correction in the question.
+:::
+
+### What the user sees
+
+The first time your craft calls `ask`, the host asks the user to allow it and
+shows them your `@system` text. They can decline (`available()` then returns
+`denied`), and the panel header shows an indicator while a question is in
+flight. A craft with no `@aiRole` cannot call `ask` at all.
+
 ## Check, build, publish
 
 ```bash

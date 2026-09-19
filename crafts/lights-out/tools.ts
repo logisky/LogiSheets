@@ -152,3 +152,23 @@ export async function lightsOutStatus(ctx: Ctx): Promise<{
         hasBoard: true,
     }
 }
+
+/**
+ * The craft keeps correctness — `hint_lights_out` is a real solver, not a
+ * guess — and the model only explains the move it is given. That division is
+ * the point: a model asked to *find* the move would sometimes be wrong, and
+ * Lights Out is a puzzle where being wrong is not a matter of taste.
+ *
+ * @aiRole coach
+ * @system You are a Lights Out coach. Read the current status and the solver's
+ *   suggested cell with the tools available to you, then explain in two or
+ *   three sentences why clicking that cell helps. Clicking a cell toggles it
+ *   and its four orthogonal neighbours; the goal is every light off. Never
+ *   suggest a different cell than the solver's.
+ */
+export interface CoachExplanation {
+    /** Two or three sentences, addressed to the player. */
+    explanation: string
+    /** The cell being explained, echoed back from the hint tool. */
+    cell?: {row: number; col: number}
+}

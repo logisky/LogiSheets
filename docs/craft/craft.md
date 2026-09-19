@@ -41,7 +41,8 @@ workbook), then add a **thin interface** for each surface you want:
 
 - an **`index.html`** to give it a UI in the browser,
 - a few **conventional functions** to run it headless in a runtime,
-- some **JSDoc** to expose it to the AI assistant.
+- some **JSDoc** to expose it to the AI assistant,
+- and an **`@aiRole`** if the craft wants to ask the AI something itself.
 
 None of these re-implement the logic — they're thin adapters over the same core.
 
@@ -96,6 +97,9 @@ UI-only; most crafts pick two or three. One rule: a craft needs at least one of
   turns them into a capability manifest the built-in AI assistant uses to
   discover your craft and call it. The manifest is generated from your code, so
   it can never drift.
+- **Asking the AI** — the other three run inward; this one runs outward. Declare
+  an `@aiRole` and your craft can put a question to a model (a game asking for
+  the opponent's move), which answers by reading through the very same tools.
 
 ## One implementation, no drift
 

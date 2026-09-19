@@ -15,6 +15,7 @@ import type {
     CraftManifest,
     ManifestTool,
     ManifestSkill,
+    ManifestRole,
     ConfirmationPolicy,
     MutatesPolicy,
 } from './manifest.js'
@@ -406,6 +407,85 @@ function extractSkill(sf: ts.SourceFile): ManifestSkill | undefined {
     return undefined
 }
 
+// ---- AI roles --------------------------------------------------------------
+
+/**
+ * A role hangs off the declaration of its REPLY type, because that is the only
+ * part of it with a code form. `collectCandidates` above walks functions; roles
+ * need interfaces and type aliases, which it does not visit.
+ */
+interface RoleCandidate {
+    decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration
+    name: string
+    exported: boolean
+}
+
+function collectRoleCandidates(sf: ts.SourceFile): RoleCandidate[] {
+    const out: RoleCandidate[] = []
+    for (const stmt of sf.statements) {
+        if (ts.isInterfaceDeclaration(stmt) || ts.isTypeAliasDeclaration(stmt))
+            out.push({
+                decl: stmt,
+                name: stmt.name.text,
+                exported: isExported(stmt),
+            })
+    }
+    return out
+}
+
+function extractRole(
+    cand: RoleCandidate,
+    roleTag: ts.JSDocTag,
+    checker: ts.TypeChecker,
+    diags: Diagnostic[]
+): ManifestRole | undefined {
+    const file = cand.decl.getSourceFile().fileName
+    const line = lineOf(cand.decl)
+    const err = (message: string) =>
+        diags.push({level: 'error', message, file, line})
+
+    const name = tagText(roleTag)
+    if (!name) {
+        err(`@aiRole on "${cand.name}" needs a name, e.g. "@aiRole opponent"`)
+        return undefined
+    }
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
+        err(`role name "${name}" must be kebab-case (a-z, 0-9, "-")`)
+        return undefined
+    }
+    if (!cand.exported) {
+        err(
+            `"${cand.name}" carries @aiRole ${name} but is not exported — the ` +
+                `generated role map has to reference it by name`
+        )
+        return undefined
+    }
+
+    const system = tagText(tagNamed(cand.decl, 'system'))
+    if (!system) {
+        err(
+            `@aiRole ${name} needs an @system telling the model who it is; ` +
+                `nothing else in the manifest says what this craft will send`
+        )
+        return undefined
+    }
+
+    const replySchema = typeToSchema(
+        checker.getTypeAtLocation(cand.decl.name),
+        checker,
+        cand.decl
+    )
+    if (replySchema.type !== 'object' || !replySchema.properties) {
+        err(
+            `@aiRole ${name}: "${cand.name}" must be an object shape the model ` +
+                `can fill in — a bare ${String(replySchema.type)} gives it nothing to answer with`
+        )
+        return undefined
+    }
+
+    return {name, system, replySchema, replyType: cand.name}
+}
+
 // ---- Entry -----------------------------------------------------------------
 
 export function extract(root: string): ExtractResult {
@@ -463,8 +543,28 @@ export function extract(root: string): ExtractResult {
                 file: paths.toolsTs,
             })
 
+        const roles: ManifestRole[] = []
+        for (const cand of collectRoleCandidates(sf)) {
+            const roleTag = tagNamed(cand.decl, 'aiRole')
+            if (!roleTag) continue
+            const role = extractRole(cand, roleTag, checker, diags)
+            if (role) roles.push(role)
+        }
+
+        // A role's whole point is that the model reads the craft's state for
+        // itself; with no read tool to reach for, it can only guess.
+        if (roles.length && !tools.some((t) => t.mutates === 'none'))
+            diags.push({
+                level: 'error',
+                message:
+                    'this craft declares an @aiRole but exports no read-only ' +
+                    '@tool, so the model would have nothing to read',
+                file: paths.toolsTs,
+            })
+
         if (skill) manifest.skill = skill
         if (tools.length) manifest.tools = tools
+        if (roles.length) manifest.roles = roles
 
         // Duplicate tool names collide in the LLM namespace.
         const seen = new Set<string>()
@@ -476,6 +576,18 @@ export function extract(root: string): ExtractResult {
                     file: paths.toolsTs,
                 })
             seen.add(t.name)
+        }
+
+        // Duplicate role names make `ask(name)` ambiguous.
+        const seenRoles = new Set<string>()
+        for (const r of roles) {
+            if (seenRoles.has(r.name))
+                diags.push({
+                    level: 'error',
+                    message: `duplicate role name "${r.name}"`,
+                    file: paths.toolsTs,
+                })
+            seenRoles.add(r.name)
         }
     }
 

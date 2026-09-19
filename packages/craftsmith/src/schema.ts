@@ -113,7 +113,18 @@ export function typeToSchema(
             const {optional} = stripNullish(propType)
             const isOptional =
                 optional || (prop.flags & ts.SymbolFlags.Optional) !== 0
-            properties[prop.name] = typeToSchema(propType, checker, node)
+            const propSchema = typeToSchema(propType, checker, node)
+            // A property's own doc comment is how the model learns what goes
+            // in it. Tool inputs get this from @param; a declared shape has
+            // nowhere else to say it.
+            const doc = ts.displayPartsToString(
+                prop.getDocumentationComment(checker)
+            )
+                .replace(/\s+/g, ' ')
+                .trim()
+            if (doc && propSchema.description === undefined)
+                propSchema.description = doc
+            properties[prop.name] = propSchema
             if (!isOptional) required.push(prop.name)
         }
         const schema: JSONSchema = {type: 'object', properties}

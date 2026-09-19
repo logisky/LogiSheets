@@ -158,3 +158,50 @@ export interface CraftRuntime<S extends CraftState = CraftState, W = SkillWorkbo
     onValidate?: (s: S, wb: W) => MaybePromise<Result<readonly Violation[]>>
     onResponse: (resp: JsonRpcResponse, s: S, wb: W) => MaybePromise<Result<void>>
 }
+
+// ---- Asking the AI (the craft→AI direction) --------------------------------
+
+/**
+ * A question this craft can put to a model, declared on the interface that
+ * describes the reply:
+ *
+ *   /** @aiRole opponent
+ *    *  @system You play chess as Black. Read the position with the tools
+ *    *    available to you, then answer by calling `reply` with one legal
+ *    *    move in UCI. *␟/
+ *   export interface OpponentMove { uci: string; comment?: string }
+ *
+ * `craftsmith build` turns that into a manifest role and emits
+ * `craft-roles.d.ts`, which types `window.craftAi` with your role names.
+ *
+ * While answering, the model may call this craft's own `@mutates none` tools
+ * to read whatever it needs — it is not handed a serialized state blob. It
+ * gets no mutating tool and no workbook surface: it gathers, the craft acts.
+ */
+export type AiUnavailable = 'no-key' | 'denied' | 'offline' | 'unsupported'
+
+export type AiAvailability = {ok: true} | {ok: false; reason: AiUnavailable}
+
+export interface AskOpts {
+    /** Which tier the host should spend on. Default `'default'`. */
+    tier?: 'fast' | 'default'
+    signal?: AbortSignal
+}
+
+/**
+ * Injected on `window` as `craftAi`, for a craft whose manifest declares at
+ * least one role. `Roles` is the generated map from `craft-roles.d.ts`.
+ */
+export interface CraftAi<Roles = Record<string, unknown>> {
+    /** Whether a model is reachable. Check before offering the feature. */
+    available(): Promise<AiAvailability>
+    /**
+     * Ask one declared role a question. `input` is the question, not the
+     * state — the model reads state through this craft's tools.
+     */
+    ask<K extends keyof Roles & string>(
+        role: K,
+        input: string,
+        opts?: AskOpts
+    ): Promise<Roles[K]>
+}

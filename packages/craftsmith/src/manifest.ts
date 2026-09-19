@@ -55,6 +55,31 @@ export interface ManifestSkill {
     guidance?: string
 }
 
+/**
+ * One question this craft can put to a model — the craft→AI direction.
+ *
+ * A `@tool` is "the AI calls the craft with this schema"; a role is "the craft
+ * asks, and the model answers with this schema", reading whatever it needs
+ * through the craft's own read-only tools on the way.
+ */
+export interface ManifestRole {
+    /** The name `craftAi.ask(role, …)` selects. */
+    name: string
+    /**
+     * System prompt, sent verbatim.
+     *
+     * The one manifest field not derived from a signature: a prompt has no code
+     * form, so nothing can check it against reality. It is declared rather than
+     * passed at call time so the consent prompt can show the user exactly what
+     * the craft will say.
+     */
+    system: string
+    /** JSON Schema the reply must satisfy, from the annotated declaration. */
+    replySchema: JSONSchema
+    /** That declaration's exported name, for the generated role→type map. */
+    replyType: string
+}
+
 export interface CraftManifest {
     schemaVersion: 1
     craftId: string
@@ -68,4 +93,6 @@ export interface CraftManifest {
     skill?: ManifestSkill
     /** One per @tool. Empty/absent for UI-only crafts. */
     tools?: ManifestTool[]
+    /** One per @aiRole. Its presence is what permits `craftAi.ask`. */
+    roles?: ManifestRole[]
 }

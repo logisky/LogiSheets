@@ -34,6 +34,14 @@ export interface ManifestSkill {
     guidance?: string
 }
 
+/** One question the craft can put to a model — see logician's `askAi`. */
+export interface ManifestRole {
+    name: string
+    system: string
+    replySchema: JSONSchema
+    replyType: string
+}
+
 export interface CraftManifest {
     schemaVersion: 1
     craftId: string
@@ -43,4 +51,5 @@ export interface CraftManifest {
     rtJs?: string
     skill?: ManifestSkill
     tools?: ManifestTool[]
+    roles?: ManifestRole[]
 }

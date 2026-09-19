@@ -1054,6 +1054,12 @@
             "noValidation": "No validation on this cell"
         },
         "craft": {
+            "aiBusy": "Asking the AI",
+            "aiBusyTip": "This craft is waiting on the AI",
+            "aiConsentAllow": "Allow",
+            "aiConsentBody": "The craft \"{{craft}}\" wants to ask the AI questions, and the model may read this craft’s data to answer. It will say:",
+            "aiConsentDeny": "Not now",
+            "aiConsentTitle": "Let this craft use the AI?",
             "closePanel": "Close craft panel",
             "pointHint": "Left-click +1, right-click +5, hold Shift to subtract"
         },
