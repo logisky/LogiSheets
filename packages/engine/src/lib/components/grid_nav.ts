@@ -102,7 +102,12 @@ export function fillRanges(
             }
         if (startRow === 0) return null
         return {
-            src: {startRow: startRow - 1, startCol, endRow: startRow - 1, endCol},
+            src: {
+                startRow: startRow - 1,
+                startCol,
+                endRow: startRow - 1,
+                endCol,
+            },
             dst: {startRow, startCol, endRow, endCol},
         }
     }
@@ -170,7 +175,10 @@ export function expandRangeToMerges(
 }
 
 /** The rect spanned by an extension anchor and focus. */
-export function rangeFromCorners(anchor: CellPoint, focus: CellPoint): CellRect {
+export function rangeFromCorners(
+    anchor: CellPoint,
+    focus: CellPoint
+): CellRect {
     return {
         startRow: Math.min(anchor.row, focus.row),
         startCol: Math.min(anchor.col, focus.col),

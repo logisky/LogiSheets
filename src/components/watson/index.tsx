@@ -42,14 +42,14 @@ import {
 } from 'logisheets-logician'
 import {getCraftState, setCraftState} from 'logisheets-core'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
+import {craftIdFromSrc} from '@/core/craft-ai'
 import {useTempModeControls} from '@/components/temp-mode'
 import {getLocale} from '@/core/i18n/i18n'
 import {useWorkbook} from '@/core/engine/provider'
 import {globalStore} from '@/store'
 import {IdbConversationStore} from './lib/storage-idb'
-import {AnthropicBrowserClient} from './lib/llm-anthropic'
-import {OpenAiBrowserClient} from './lib/llm-openai'
-import {getFetch, isTauri} from './lib/net'
+import {makeLlmClient} from './lib/llm-factory'
+import {isTauri} from './lib/net'
 import {WebCraftStore} from './lib/craft-store-web'
 import {makeCraftInteractionsApi} from './lib/craft-interactions-adapter'
 import {Markdown} from './lib/markdown'
@@ -204,10 +204,13 @@ export const Watson = observer(function Watson({
             ...CHART_TOOLS,
             ...CRAFT_INTERACTION_TOOLS,
         ])
+        // `t.value` is the panel's iframe path (`/lights-out/index.html`), not
+        // a craft id — the store builds `/<craftId>/manifest.json` from this,
+        // so passing the path made every manifest fetch a malformed URL.
         const installedIds = (
             typeof __CRAFT_TOOLS__ !== 'undefined' ? __CRAFT_TOOLS__ : []
         )
-            .map((t) => t.value)
+            .map((t) => craftIdFromSrc(t.value))
             .filter((id) => id !== 'watson')
         // Give craft-skill tools scoped read/write to their own craftState, so
         // they can operate a craft's stateful feature (e.g. a game board) and
@@ -252,26 +255,11 @@ export const Watson = observer(function Watson({
     // gets it verbatim and an OpenAI-wire one gets it translated. Everything
     // else about a provider is base URL, auth, and its model list.
     useEffect(() => {
-        const p = PROVIDERS[provider]
-        // Desktop routes through native HTTP (no CORS); web uses browser fetch.
-        const fetchImpl = getFetch()
-        const apiKey = () => apiKeyRef.current || null
-        const llm =
-            p.wire === 'openai'
-                ? new OpenAiBrowserClient({
-                      apiKey,
-                      baseUrl: baseUrl || p.baseUrl,
-                      requiresKey: p.requiresKey,
-                      maxTokensParam: p.maxTokensParam,
-                      fetchImpl,
-                  })
-                : new AnthropicBrowserClient({
-                      apiKey,
-                      baseUrl: baseUrl || p.baseUrl,
-                      authHeader: p.auth,
-                      directBrowserAccess: p.directBrowserAccess,
-                      fetchImpl,
-                  })
+        const llm = makeLlmClient(
+            provider,
+            baseUrl,
+            () => apiKeyRef.current || null
+        )
         agentRef.current = new Agent({
             store,
             registry,

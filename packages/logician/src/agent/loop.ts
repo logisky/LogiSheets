@@ -61,7 +61,12 @@ export interface AgentSystemBlock {
 export interface LlmResponse {
     /** Anthropic-style response content. */
     content: AgentContentBlock[]
-    stop_reason: 'end_turn' | 'tool_use' | 'max_tokens' | 'stop_sequence' | string
+    stop_reason:
+        | 'end_turn'
+        | 'tool_use'
+        | 'max_tokens'
+        | 'stop_sequence'
+        | string
     usage?: {
         input_tokens: number
         output_tokens: number
@@ -129,8 +134,7 @@ export class Agent {
         this.maxToolIters = opts.max_tool_iterations ?? 16
         // Default confirm: auto-approve. Browser host overrides with a
         // real modal. CLI host can override with stdin prompt.
-        this.confirm =
-            opts.confirm ?? (async () => ({approved: true}))
+        this.confirm = opts.confirm ?? (async () => ({approved: true}))
         this.log = opts.log ?? (() => {})
         this.craftInteractions = opts.craftInteractions
     }
@@ -306,7 +310,9 @@ export class Agent {
                     ts: nowMs(),
                     tool_use_id: call.id,
                     output: null,
-                    error: `User declined${decision.reason ? `: ${decision.reason}` : '.'}`,
+                    error: `User declined${
+                        decision.reason ? `: ${decision.reason}` : '.'
+                    }`,
                     duration_ms: nowMs() - start,
                 }
                 await this.store.appendEvent(e)
@@ -319,7 +325,11 @@ export class Agent {
             workbook: this.workbook,
             signal: signal ?? new AbortController().signal,
             confirm: async (msg, detail) => {
-                const d = await this.confirm(call.name, {message: msg, detail}, 'always')
+                const d = await this.confirm(
+                    call.name,
+                    {message: msg, detail},
+                    'always'
+                )
                 return d.approved
             },
             log: (msg) => this.log(`[${call.name}] ${msg}`),

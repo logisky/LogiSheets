@@ -71,6 +71,18 @@ export interface ProviderDef {
     /** Suggested models (free text is still allowed via the datalist). */
     models: ModelOption[]
     defaultModel: string
+    /**
+     * The model to use when a caller asks for the `fast` tier — a cheap,
+     * quick model on the same provider and key.
+     *
+     * A craft says which of its questions are low-stakes (`askAi({tier:
+     * 'fast'})`); it never names a model, because it has no business knowing
+     * which provider the user configured. This is the host's half of that
+     * bargain. Omitted where the provider has no obvious cheap tier, in which
+     * case a `fast` call simply runs on the configured model — the tier is a
+     * hint, not a guarantee.
+     */
+    fastModel?: string
 }
 
 export const PROVIDERS: Record<ProviderId, ProviderDef> = {
@@ -90,6 +102,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
             {id: 'claude-opus-4-8', label: 'Claude Opus 4.8'},
         ],
         defaultModel: 'claude-opus-5',
+        fastModel: 'claude-haiku-4-5',
     },
     kimi: {
         id: 'kimi',
@@ -109,6 +122,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
             {id: 'kimi-latest', label: 'Kimi Latest'},
         ],
         defaultModel: 'kimi-k2-0905-preview',
+        fastModel: 'kimi-k2-turbo-preview',
     },
     openai: {
         id: 'openai',
@@ -129,6 +143,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
             {id: 'o4-mini', label: 'o4-mini'},
         ],
         defaultModel: 'gpt-5',
+        fastModel: 'gpt-5-mini',
     },
     deepseek: {
         id: 'deepseek',
@@ -144,6 +159,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
             {id: 'deepseek-reasoner', label: 'DeepSeek Reasoner'},
         ],
         defaultModel: 'deepseek-chat',
+        fastModel: 'deepseek-chat',
     },
     openrouter: {
         id: 'openrouter',
@@ -214,6 +230,19 @@ export function loadStoredKey(p: ProviderId): string {
     if (k != null) return k
     if (p === 'anthropic') return localStorage.getItem(LEGACY_KEY) || ''
     return ''
+}
+
+/**
+ * The model for a tier. `fast` falls back to the configured model when the
+ * provider declares no cheap one, so a caller always gets an answer.
+ */
+export function modelForTier(
+    p: ProviderId,
+    configured: string,
+    tier: 'fast' | 'default' | undefined
+): string {
+    if (tier !== 'fast') return configured
+    return PROVIDERS[p].fastModel ?? configured
 }
 
 /** Current provider's base URL, falling back to its built-in default. */

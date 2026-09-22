@@ -182,10 +182,10 @@ export function cycleReferenceAbsolute(text: string): string | null {
         !first.colAbs && !first.rowAbs
             ? 0
             : first.colAbs && first.rowAbs
-              ? 1
-              : !first.colAbs && first.rowAbs
-                ? 2
-                : 3
+            ? 1
+            : !first.colAbs && first.rowAbs
+            ? 2
+            : 3
     const [colAbs, rowAbs] = [
         [false, false],
         [true, true],
@@ -194,7 +194,9 @@ export function cycleReferenceAbsolute(text: string): string | null {
     ][(state + 1) % 4]
 
     const rebuilt = parsed
-        .map((p) => `${colAbs ? '$' : ''}${p!.col}${rowAbs ? '$' : ''}${p!.row}`)
+        .map(
+            (p) => `${colAbs ? '$' : ''}${p!.col}${rowAbs ? '$' : ''}${p!.row}`
+        )
         .join(':')
     return prefix + rebuilt
 }

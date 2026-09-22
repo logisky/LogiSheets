@@ -1,9 +1,24 @@
 import {useTranslation} from 'react-i18next'
-import {Box, IconButton, FormControl, Select, MenuItem} from '@mui/material'
+import {
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    FormControl,
+    IconButton,
+    MenuItem,
+    Select,
+    Tooltip,
+} from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesomeOutlined'
 import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
+import {hydrateEnumSetsFromWorkbook} from '@/core/blocks/enum-hydrate'
 import {buildSelectedDataFromCell} from 'logisheets-engine'
 import {
     callerRegistry,
@@ -15,6 +30,9 @@ import {
     type CraftInputHandler,
 } from 'logisheets-core'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
+import {makeCraftAi, craftIdFromSrc} from '@/core/craft-ai'
+import {WebCraftStore} from '@/components/watson/lib/craft-store-web'
+import type {AiRole} from 'logisheets-logician'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
 import {globalStore} from '@/store'
@@ -70,6 +88,24 @@ export const CraftPanel = ({
     // DefinePlugin → resolveCraftTools), selected by the CRAFT_DIST
     // distribution. Add crafts / distributions there, not here.
     const tools = __CRAFT_TOOLS__
+    // One store over the whole distribution, so a craft's manifest and tool
+    // module are fetched and cached once.
+    const craftStore = useMemo(
+        () =>
+            new WebCraftStore({
+                installedIds: tools.map((t) => craftIdFromSrc(t.value)),
+            }),
+        [tools]
+    )
+    // A craft is asking the AI right now; the header shows it.
+    const [aiBusy, setAiBusy] = useState(false)
+    // Pending consent request, if a craft has asked and the user has not
+    // answered yet. Asked once per craft, and it shows what the craft will say.
+    const [aiConsent, setAiConsent] = useState<{
+        craftId: string
+        roles: readonly AiRole[]
+        resolve: (ok: boolean) => void
+    } | null>(null)
     /**
      * The URL the iframe actually loads: the craft's path plus the language
      * the host is speaking.
@@ -122,7 +158,17 @@ export const CraftPanel = ({
         } as Selection
         win.workbook = wrapWorkbookForCraft(
             DATA_SERVICE.getWorkbook(),
-            craftUuid
+            craftUuid,
+            async () => {
+                try {
+                    await hydrateEnumSetsFromWorkbook(
+                        DATA_SERVICE.getWorkbook() as never,
+                        BLOCK_MANAGER.enumSetManager
+                    )
+                } catch {
+                    // Only labels are at stake; the write itself succeeded.
+                }
+            }
         )
         win.__craftUuid = craftUuid
         // The ids of all crafts shipped in this distribution — so a craft (e.g.
@@ -212,6 +258,20 @@ export const CraftPanel = ({
         // ride the workbook — it persists across documents on this machine.
         // Bound to craftId so a craft only ever sees its own namespace.
         win.craftStorage = makeCraftStorage(craftId)
+        // The craft→AI channel: the craft asks one of its declared @aiRoles a
+        // question, and the model reads what it needs through the craft's own
+        // read-only tools. Rebuilt per craft so consent and the busy indicator
+        // are scoped to the one asking.
+        win.craftAi = makeCraftAi({
+            craftId: craftIdFromSrc(craftId),
+            store: craftStore,
+            workbook: DATA_SERVICE.getWorkbook(),
+            requestConsent: (id, roles) =>
+                new Promise<boolean>((resolve) =>
+                    setAiConsent({craftId: id, roles, resolve})
+                ),
+            onBusy: setAiBusy,
+        })
         // Canvas input capability: the craft registers a handler that runs —
         // synchronously — before the engine handles a mouse/keyboard event on
         // any spreadsheet canvas, and decides whether the engine should still
@@ -352,6 +412,15 @@ export const CraftPanel = ({
                         ))}
                     </Select>
                 </FormControl>
+                {aiBusy && (
+                    <Tooltip title={String(t('ui.craft.aiBusyTip'))}>
+                        <AutoAwesomeIcon
+                            fontSize="small"
+                            color="primary"
+                            aria-label={String(t('ui.craft.aiBusy'))}
+                        />
+                    </Tooltip>
+                )}
                 <IconButton
                     size="small"
                     color="default"
@@ -361,6 +430,62 @@ export const CraftPanel = ({
                     <CloseIcon fontSize="small" />
                 </IconButton>
             </Box>
+            {aiConsent && (
+                <Dialog
+                    open
+                    onClose={() => {
+                        aiConsent.resolve(false)
+                        setAiConsent(null)
+                    }}
+                >
+                    <DialogTitle>{t('ui.craft.aiConsentTitle')}</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText sx={{mb: 1}}>
+                            {t('ui.craft.aiConsentBody', {
+                                craft: aiConsent.craftId,
+                            })}
+                        </DialogContentText>
+                        {/* The exact prompt, so "allow this craft to use AI"
+                            is a decision the user can actually make. */}
+                        {aiConsent.roles.map((r) => (
+                            <Box
+                                key={r.name}
+                                component="blockquote"
+                                sx={{
+                                    m: 0,
+                                    mt: 1,
+                                    pl: 1.5,
+                                    borderLeft: '3px solid #e0e0e0',
+                                    fontSize: '0.8rem',
+                                    color: 'text.secondary',
+                                    whiteSpace: 'pre-wrap',
+                                }}
+                            >
+                                {r.system}
+                            </Box>
+                        ))}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={() => {
+                                aiConsent.resolve(false)
+                                setAiConsent(null)
+                            }}
+                        >
+                            {t('ui.craft.aiConsentDeny')}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                aiConsent.resolve(true)
+                                setAiConsent(null)
+                            }}
+                        >
+                            {t('ui.craft.aiConsentAllow')}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
             <Box
                 sx={{
                     flex: 1,
@@ -396,9 +521,20 @@ const TX_METHODS = new Set([
 ])
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/** Whether a transaction created or removed an option list. */
+function touchesEnumSets(params: Record<string, unknown>): boolean {
+    const tx = params?.transaction as
+        | {payloads?: readonly {type?: string}[]}
+        | undefined
+    return !!tx?.payloads?.some(
+        (p) => p?.type === 'upsertEnumSet' || p?.type === 'removeEnumSet'
+    )
+}
+
 function wrapWorkbookForCraft<T extends object>(
     workbook: T,
-    craftUuid: string
+    craftUuid: string,
+    onEnumSetsChanged: () => Promise<void>
 ): T {
     return new Proxy(workbook, {
         get(target, prop, receiver) {
@@ -408,11 +544,22 @@ function wrapWorkbookForCraft<T extends object>(
                 typeof prop === 'string' &&
                 TX_METHODS.has(prop)
             ) {
-                return (params: Record<string, unknown>) =>
-                    (original as (p: unknown) => unknown).call(target, {
+                return async (params: Record<string, unknown>) => {
+                    const out = await (
+                        original as (p: unknown) => unknown
+                    ).call(target, {
                         ...params,
                         [CALLER_UUID_PARAM_KEY]: craftUuid,
                     })
+                    // The host's registry is hydrated from the workbook on
+                    // FILE OPEN, which never happens for a set a craft creates
+                    // while running: the engine then validates the field
+                    // correctly and the cell still renders its raw id, because
+                    // only the registry knows the label. Re-hydrate when a
+                    // transaction touched the sets.
+                    if (touchesEnumSets(params)) await onEnumSetsChanged()
+                    return out
+                }
             }
             return typeof original === 'function'
                 ? original.bind(target)

@@ -29,6 +29,15 @@ export const EnumCell = (props: BlockCellProps) => {
 
     const editable = useEditable(fieldInfo, sheetIdx, rowIdx, colIdx)
 
+    // The canvas paints the cell's STORED value underneath this overlay, and
+    // this overlay paints the variant's label. Usually those are the same
+    // string — a set inferred from a column omits the label entirely — and the
+    // two coincide harmlessly. When a set gives a variant a different label
+    // (`fire` shown as `火`), leaving the overlay transparent shows both at
+    // once, overlapping. Cover the canvas in exactly that case, and only then,
+    // so a cell whose id and label agree keeps its own fill.
+    const replacesCanvasText = !!displayValue && displayValue !== variantId
+
     const handleClick = () => {
         if (!editable) return
         setIsEditing(true)
@@ -64,7 +73,11 @@ export const EnumCell = (props: BlockCellProps) => {
                 height: `${height}px`,
                 border: '1px solid',
                 borderColor: isEditing ? 'primary.main' : 'divider',
-                bgcolor: isEditing ? 'background.paper' : 'transparent',
+                bgcolor: isEditing
+                    ? 'background.paper'
+                    : replacesCanvasText
+                    ? 'background.paper'
+                    : 'transparent',
                 boxSizing: 'border-box',
                 cursor: editable ? 'pointer' : 'not-allowed',
                 opacity: editable ? 1 : 0.6,

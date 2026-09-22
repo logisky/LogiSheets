@@ -28,6 +28,40 @@ export interface WebCraftStoreOptions {
     importImpl?: (url: string) => Promise<Record<string, unknown>>
 }
 
+/**
+ * Import a built craft bundle by URL.
+ *
+ * Fetched as text and imported as a blob rather than `import(url)` directly:
+ * crafts are served out of `public/`, and Vite's dev server refuses to hand a
+ * `public/` file to the module pipeline ("should not be imported from source
+ * code ... can only be referenced via HTML tags"), so a direct dynamic import
+ * 500s in dev and every craft tool comes back as an error the model then
+ * retries against. A craft bundle is self-contained by construction —
+ * `craftsmith build` bundles it with no bare imports — so there is nothing for
+ * the pipeline to resolve, and going through a blob behaves the same in dev and
+ * in production.
+ *
+ * The cost is that the module's stack frames say `blob:` rather than the craft
+ * file; the URL is revoked once imported, so nothing accumulates.
+ */
+async function importSelfContained(
+    url: string
+): Promise<Record<string, unknown>> {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`craft module ${url}: HTTP ${res.status}`)
+    const blobUrl = URL.createObjectURL(
+        new Blob([await res.text()], {type: 'text/javascript'})
+    )
+    try {
+        return (await import(/* @vite-ignore */ blobUrl)) as Record<
+            string,
+            unknown
+        >
+    } finally {
+        URL.revokeObjectURL(blobUrl)
+    }
+}
+
 export class WebCraftStore implements InstalledCraftStore {
     private ids: readonly string[]
     private base: string
@@ -41,12 +75,7 @@ export class WebCraftStore implements InstalledCraftStore {
         this.ids = opts.installedIds
         this.base = (opts.baseUrl ?? '/').replace(/\/+$/, '') + '/'
         this.doFetch = opts.fetchImpl ?? ((...a) => fetch(...a))
-        this.doImport =
-            opts.importImpl ??
-            ((url) =>
-                import(/* @vite-ignore */ url) as Promise<
-                    Record<string, unknown>
-                >)
+        this.doImport = opts.importImpl ?? importSelfContained
     }
 
     private urlFor(craftId: string, file: string): string {

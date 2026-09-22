@@ -25,7 +25,11 @@ import {createFormulaEditor, type FormulaEditorHandle} from './editor'
 import {createEngineFormulaSource, type EngineFormulaServices} from './engine'
 import {builtinFormulaFunctions} from './functions'
 import {measureText} from './utils'
-import {getCellRefColor, type FormulaEditorConfig, type FormulaFunction} from './types'
+import {
+    getCellRefColor,
+    type FormulaEditorConfig,
+    type FormulaFunction,
+} from './types'
 import {
     getCellRect,
     isCellInGridWindow,
@@ -114,7 +118,12 @@ export interface InlineCellEditorOptions {
     /** Header panel offsets (engine config leftTopWidth/Height). Default 32/24. */
     origin?: {x: number; y: number}
     /** Permission gate before opening. Default: always editable. */
-    canEdit?: (sheetIdx: number, row: number, col: number, grid: Grid) => boolean
+    canEdit?: (
+        sheetIdx: number,
+        row: number,
+        col: number,
+        grid: Grid
+    ) => boolean
     /**
      * Called instead of opening the editor when {@link canEdit} refuses.
      * Without it a keystroke on a read-only cell does nothing at all, which
@@ -238,13 +247,22 @@ export function createInlineCellEditor(
     function renderHighlights() {
         clearHighlights()
         if (!grid) return
-        const rects = getReferenceHighlightRects(cellRefs, grid, getSheetName(), {
-            originX: origin.x,
-            originY: origin.y,
-        })
+        const rects = getReferenceHighlightRects(
+            cellRefs,
+            grid,
+            getSheetName(),
+            {
+                originX: origin.x,
+                originY: origin.y,
+            }
+        )
         for (const r of rects) {
             const el = document.createElement('div')
-            el.style.cssText = `position:absolute;pointer-events:none;opacity:0.3;z-index:0;left:${r.x}px;top:${r.y}px;width:${r.width}px;height:${r.height}px;background-color:${getHighlightColor(r.colorIndex)};`
+            el.style.cssText = `position:absolute;pointer-events:none;opacity:0.3;z-index:0;left:${
+                r.x
+            }px;top:${r.y}px;width:${r.width}px;height:${
+                r.height
+            }px;background-color:${getHighlightColor(r.colorIndex)};`
             container.appendChild(el)
             highlightEls.push(el)
         }
@@ -293,7 +311,10 @@ export function createInlineCellEditor(
         } else {
             editorHandle.insertText(ref)
         }
-        prevInsertion = {text: ref, startPos: prevInsertion?.startPos ?? cursorPos}
+        prevInsertion = {
+            text: ref,
+            startPos: prevInsertion?.startPos ?? cursorPos,
+        }
     }
 
     /**
@@ -340,7 +361,12 @@ export function createInlineCellEditor(
         if (!ctx) return
         const sheetIdx = getViewSheetIdx()
         const from = pointCell ?? {row: ctx.row, col: ctx.col}
-        const params = {sheetIdx, rowIdx: from.row, colIdx: from.col, direction: dir}
+        const params = {
+            sheetIdx,
+            rowIdx: from.row,
+            colIdx: from.col,
+            direction: dir,
+        }
         const wb = dataService.getWorkbook()
         const resp = ctrl
             ? await wb.getDataBoundary(params)
@@ -437,7 +463,13 @@ export function createInlineCellEditor(
             defaultHeight: 25,
         })
         editorText = initialText
-        ctx = {sheetName: getSheetName(), sheetIdx: editSheetIdx, row, col, position}
+        ctx = {
+            sheetName: getSheetName(),
+            sheetIdx: editSheetIdx,
+            row,
+            col,
+            position,
+        }
         editing = true
         onEditingChange?.(true)
 

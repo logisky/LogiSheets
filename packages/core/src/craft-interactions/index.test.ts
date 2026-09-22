@@ -102,14 +102,8 @@ describe('craft-interactions persistence', () => {
             col: 0,
         })
         setPointPool('p1', 10)
-        adjustPointAllocation(
-            {groupId: 'p1', blockId: 1, row: 0, col: 0},
-            3
-        )
-        adjustPointAllocation(
-            {groupId: 'p1', blockId: 1, row: 1, col: 0},
-            2
-        )
+        adjustPointAllocation({groupId: 'p1', blockId: 1, row: 0, col: 0}, 3)
+        adjustPointAllocation({groupId: 'p1', blockId: 1, row: 1, col: 0}, 2)
 
         const snapshot = getPersistentInteractions()
         expect(snapshot.pointAllocations.p1).toEqual(
@@ -126,9 +120,7 @@ describe('craft-interactions persistence', () => {
         setPointPool('p1', 10)
         loadPersistentInteractions(snapshot)
 
-        const restored = getPointAllocations('p1').sort(
-            (a, b) => a.row - b.row
-        )
+        const restored = getPointAllocations('p1').sort((a, b) => a.row - b.row)
         expect(restored).toEqual([
             {blockId: 1, row: 0, col: 0, points: 3},
             {blockId: 1, row: 1, col: 0, points: 2},

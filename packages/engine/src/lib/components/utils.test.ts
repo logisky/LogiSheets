@@ -52,9 +52,9 @@ describe('yForRowStartUnclamped', () => {
         // window: clamped, both edges land on the window edge and it has no
         // height at all.
         expect(yForRowStart(6, g) - yForRowStart(2, g)).toBe(0)
-        expect(
-            yForRowStartUnclamped(6, g) - yForRowStartUnclamped(2, g)
-        ).toBe(80)
+        expect(yForRowStartUnclamped(6, g) - yForRowStartUnclamped(2, g)).toBe(
+            80
+        )
     })
 
     it('uses the size of the row nearest the edge it passes', () => {
@@ -74,7 +74,9 @@ describe('yForRowStartUnclamped', () => {
     })
 
     it('returns 0 when the grid has no rows laid out yet', () => {
-        expect(yForRowStartUnclamped(3, grid({rows: []} as Partial<Grid>))).toBe(0)
+        expect(
+            yForRowStartUnclamped(3, grid({rows: []} as Partial<Grid>))
+        ).toBe(0)
     })
 })
 
@@ -97,8 +99,8 @@ describe('xForColStartUnclamped', () => {
     })
 
     it('returns 0 when the grid has no columns laid out yet', () => {
-        expect(xForColStartUnclamped(3, grid({columns: []} as Partial<Grid>))).toBe(
-            0
-        )
+        expect(
+            xForColStartUnclamped(3, grid({columns: []} as Partial<Grid>))
+        ).toBe(0)
     })
 })

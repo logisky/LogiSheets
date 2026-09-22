@@ -186,7 +186,9 @@ function fillPayload(
             sheetIdx,
             row,
             col,
-            ty: {setPatternFill: {patternType: 'solid', fgColor: hexToRgb(hex)}},
+            ty: {
+                setPatternFill: {patternType: 'solid', fgColor: hexToRgb(hex)},
+            },
         },
     } as EditPayload
 }
@@ -285,7 +287,9 @@ export async function readBoard(
     for (let i = 0; i < infos.length && i < SIZE * SIZE; i++) {
         const fill = infos[i]?.style?.fill
         const fg =
-            fill && fill.type === 'patternFill' ? fill.value?.fgColor : undefined
+            fill && fill.type === 'patternFill'
+                ? fill.value?.fgColor
+                : undefined
         board[i] =
             fg &&
             fg.red === ON_RGB.red &&
@@ -307,7 +311,12 @@ export async function renderBoard(
     for (let r = 0; r < SIZE; r++)
         for (let c = 0; c < SIZE; c++)
             payloads.push(
-                fillPayload(sheetIdx, r, c, board[r * SIZE + c] ? ON_HEX : OFF_HEX)
+                fillPayload(
+                    sheetIdx,
+                    r,
+                    c,
+                    board[r * SIZE + c] ? ON_HEX : OFF_HEX
+                )
             )
     await commit(workbook, payloads)
 }

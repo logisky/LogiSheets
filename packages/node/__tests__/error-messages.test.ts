@@ -120,14 +120,18 @@ describe('error messages', () => {
         it('keeps the requested cell when the engine trips on another index', () => {
             // This clamps to the sheet's last row, so it fails on an index the
             // caller never passed — unframed, the message is about 1048576.
+            // Kept just past the maximum: the engine walks to the clamp, and a
+            // far-off row turns a fast check into a multi-second one.
             const err = rpc(
                 'getCellPosition',
-                {sheetIdx: 0, row: 9_000_000, col: 0},
+                {sheetIdx: 0, row: 1_100_000, col: 0},
                 bookId
             )
-            expect(err.msg).toContain('reading the position of A9000001')
+            expect(err.msg).toContain('reading the position of A1100001')
             expect(err.msg).toContain('sheet "Sales"')
-        })
+            // Resolving a position past the last row walks to the clamp, which
+            // takes seconds. This asserts the message, not the speed.
+        }, 30_000)
 
         it('names the payload and the cell inside it on a write', () => {
             const effect = rpc(

@@ -135,10 +135,14 @@ function shuffle<T>(a: T[]): T[] {
 // reveal always opens an area (classic first-click-safe).
 function placeMines(g: Game, safe: number): void {
     const forbidden = new Set<number>([safe, ...neighbors(g, safe)])
-    let candidates = [...Array(g.rows * g.cols).keys()].filter((i) => !forbidden.has(i))
+    let candidates = [...Array(g.rows * g.cols).keys()].filter(
+        (i) => !forbidden.has(i)
+    )
     if (candidates.length < g.mines) {
         // Board too dense to spare the neighbor ring; only spare the click.
-        candidates = [...Array(g.rows * g.cols).keys()].filter((i) => i !== safe)
+        candidates = [...Array(g.rows * g.cols).keys()].filter(
+            (i) => i !== safe
+        )
     }
     shuffle(candidates)
     g.mineSet = new Set(candidates.slice(0, g.mines))
@@ -178,7 +182,8 @@ export function reveal(g: Game, r: number, c: number): number[] {
         if (g.revealed[i] || g.flagged[i]) continue
         g.revealed[i] = true
         changed.push(i)
-        if (g.adjacent[i] === 0) for (const nb of neighbors(g, i)) stack.push(nb)
+        if (g.adjacent[i] === 0)
+            for (const nb of neighbors(g, i)) stack.push(nb)
     }
     if (isWin(g)) g.won = true
     return changed
@@ -195,7 +200,8 @@ export function toggleFlag(g: Game, r: number, c: number): number {
 
 function isWin(g: Game): boolean {
     let revealedCount = 0
-    for (let i = 0; i < g.revealed.length; i++) if (g.revealed[i]) revealedCount++
+    for (let i = 0; i < g.revealed.length; i++)
+        if (g.revealed[i]) revealedCount++
     return revealedCount === g.rows * g.cols - g.mines
 }
 
@@ -241,7 +247,10 @@ function cellPayloads(g: Game, i: number, sheetIdx: number): EditPayload[] {
                 row: r,
                 col: c,
                 ty: {
-                    setPatternFill: {patternType: 'solid', fgColor: hexToRgb(fill)},
+                    setPatternFill: {
+                        patternType: 'solid',
+                        fgColor: hexToRgb(fill),
+                    },
                     setFontColor: font,
                     setFontBold: true,
                     setFontSize: 14,
@@ -249,7 +258,10 @@ function cellPayloads(g: Game, i: number, sheetIdx: number): EditPayload[] {
                 },
             },
         } as EditPayload,
-        {type: 'cellInput', value: {sheetIdx, row: r, col: c, content}} as EditPayload,
+        {
+            type: 'cellInput',
+            value: {sheetIdx, row: r, col: c, content},
+        } as EditPayload,
     ]
 }
 
@@ -377,9 +389,15 @@ async function ensureSheet(
     const {width, height} = squareDims(CELL_PX)
     const sizing: EditPayload[] = []
     for (let c = 0; c < MAX_COLS; c++)
-        sizing.push({type: 'setColWidth', value: {sheetIdx: idx, col: c, width}} as EditPayload)
+        sizing.push({
+            type: 'setColWidth',
+            value: {sheetIdx: idx, col: c, width},
+        } as EditPayload)
     for (let r = 0; r < MAX_ROWS; r++)
-        sizing.push({type: 'setRowHeight', value: {sheetIdx: idx, row: r, height}} as EditPayload)
+        sizing.push({
+            type: 'setRowHeight',
+            value: {sheetIdx: idx, row: r, height},
+        } as EditPayload)
     await commit(workbook, sizing)
     return idx
 }
@@ -405,7 +423,10 @@ function clearRegionPayloads(sheetIdx: number): EditPayload[] {
                     },
                 },
             } as EditPayload)
-            out.push({type: 'cellInput', value: {sheetIdx, row: r, col: c, content: ''}} as EditPayload)
+            out.push({
+                type: 'cellInput',
+                value: {sheetIdx, row: r, col: c, content: ''},
+            } as EditPayload)
         }
     return out
 }
@@ -449,7 +470,8 @@ export async function setupBoard(
     const idx = await ensureSheet(workbook, locale)
     const payloads: EditPayload[] = clearRegionPayloads(idx)
     payloads.push(...borderPayloads(g, idx))
-    for (let i = 0; i < g.rows * g.cols; i++) payloads.push(...cellPayloads(g, i, idx))
+    for (let i = 0; i < g.rows * g.cols; i++)
+        payloads.push(...cellPayloads(g, i, idx))
     await commit(workbook, payloads)
     return idx
 }
@@ -472,7 +494,10 @@ export interface Progress {
     best: Record<string, number | null> // best time (seconds) per difficulty
 }
 export function parseProgress(json: string | undefined): Progress {
-    const dflt: Progress = {difficulty: 'easy', best: {easy: null, medium: null, hard: null}}
+    const dflt: Progress = {
+        difficulty: 'easy',
+        best: {easy: null, medium: null, hard: null},
+    }
     if (!json) return dflt
     try {
         const p = JSON.parse(json)

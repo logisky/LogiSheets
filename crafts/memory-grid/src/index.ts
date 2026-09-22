@@ -234,7 +234,10 @@ function fillPayload(
     const ty = hex
         ? {setPatternFill: {patternType: 'solid', fgColor: hexToRgb(hex)}}
         : {setPatternFill: {patternType: 'none'}}
-    return {type: 'cellStyleUpdate', value: {sheetIdx, row, col, ty}} as EditPayload
+    return {
+        type: 'cellStyleUpdate',
+        value: {sheetIdx, row, col, ty},
+    } as EditPayload
 }
 
 function numberStylePayload(
@@ -265,7 +268,10 @@ function inputPayload(
     col: number,
     content: string
 ): EditPayload {
-    return {type: 'cellInput', value: {sheetIdx, row, col, content}} as EditPayload
+    return {
+        type: 'cellInput',
+        value: {sheetIdx, row, col, content},
+    } as EditPayload
 }
 
 /** Payloads to light one cell up with its color/number. */
@@ -274,12 +280,20 @@ export function showCellPayloads(
     cell: RoundCell
 ): EditPayload[] {
     const out: EditPayload[] = []
-    const bgHex =
-        cell.color !== undefined ? COLORS[cell.color].hex : '#ECEFF1' // pale for number-only
+    const bgHex = cell.color !== undefined ? COLORS[cell.color].hex : '#ECEFF1' // pale for number-only
     out.push(fillPayload(sheetIdx, cell.row, cell.col, bgHex))
     if (cell.number !== undefined) {
-        out.push(numberStylePayload(sheetIdx, cell.row, cell.col, contrastText(bgHex)))
-        out.push(inputPayload(sheetIdx, cell.row, cell.col, String(cell.number)))
+        out.push(
+            numberStylePayload(
+                sheetIdx,
+                cell.row,
+                cell.col,
+                contrastText(bgHex)
+            )
+        )
+        out.push(
+            inputPayload(sheetIdx, cell.row, cell.col, String(cell.number))
+        )
     }
     return out
 }
@@ -290,7 +304,10 @@ export function clearCellPayloads(
     row: number,
     col: number
 ): EditPayload[] {
-    return [fillPayload(sheetIdx, row, col, null), inputPayload(sheetIdx, row, col, '')]
+    return [
+        fillPayload(sheetIdx, row, col, null),
+        inputPayload(sheetIdx, row, col, ''),
+    ]
 }
 
 /** Show a group of cells at once. */
@@ -299,7 +316,10 @@ export async function showCells(
     sheetIdx: number,
     cells: RoundCell[]
 ): Promise<void> {
-    await commit(workbook, cells.flatMap((c) => showCellPayloads(sheetIdx, c)))
+    await commit(
+        workbook,
+        cells.flatMap((c) => showCellPayloads(sheetIdx, c))
+    )
 }
 
 /** Clear a group of cells. */
@@ -464,7 +484,9 @@ export function generateRound(spec: LevelSpec): Round {
                 cell.color = isAns ? targetColor : otherColor(targetColor, P)
                 cell.number = 1 + randInt(R)
             } else if (spec.question === 'number') {
-                cell.number = isAns ? targetNumber : otherNumber(targetNumber, R)
+                cell.number = isAns
+                    ? targetNumber
+                    : otherNumber(targetNumber, R)
                 cell.color = randInt(P)
             } else {
                 if (isAns) {

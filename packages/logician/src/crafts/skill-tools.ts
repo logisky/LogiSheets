@@ -14,12 +14,7 @@
  */
 
 import {toolId} from '../tool.js'
-import type {
-    CraftStateAccess,
-    JSONSchema,
-    Tool,
-    ToolRegistry,
-} from '../tool.js'
+import type {CraftStateAccess, JSONSchema, Tool, ToolRegistry} from '../tool.js'
 import type {InstalledCraftStore} from './store.js'
 import type {ManifestTool} from './manifest.js'
 
@@ -77,7 +72,7 @@ export function craftToolFromManifest(
 const DISCOVER_DESCRIPTION =
     'List installed crafts and what each is good at. Call this FIRST when a task ' +
     'might be handled by a craft/plugin, then call skills__use to load the ' +
-    'chosen craft\'s tools. Optional `query` filters by keyword.'
+    "chosen craft's tools. Optional `query` filters by keyword."
 
 const USE_DESCRIPTION =
     "Load an installed craft's tools into this conversation so you can call them. " +

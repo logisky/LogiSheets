@@ -920,8 +920,8 @@ export function createFormulaEditor(
             cursor !== undefined
                 ? cursor
                 : initialCursorPosition === 'end'
-                  ? initialValue.length
-                  : 0
+                ? initialValue.length
+                : 0
 
         const state = EditorState.create({
             doc: initialValue,
@@ -982,8 +982,10 @@ export function createFormulaEditor(
             if ('onSubmit' in opts) live.onSubmit = opts.onSubmit
             if ('onCancel' in opts) live.onCancel = opts.onCancel
             if ('onArrowKey' in opts) live.onArrowKey = opts.onArrowKey
-            if (opts.getDisplayUnits) live.getDisplayUnits = opts.getDisplayUnits
-            if (opts.formulaFunctions) live.formulaFunctions = opts.formulaFunctions
+            if (opts.getDisplayUnits)
+                live.getDisplayUnits = opts.getDisplayUnits
+            if (opts.formulaFunctions)
+                live.formulaFunctions = opts.formulaFunctions
             if (opts.sheetName !== undefined) live.sheetName = opts.sheetName
             if (opts.className !== undefined) options.className = opts.className
             if (opts.style !== undefined) options.style = opts.style

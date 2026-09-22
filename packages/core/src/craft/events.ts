@@ -130,7 +130,8 @@ export function dispatchCraftCanvasEvent(evt: CraftCanvasEvent): {
     try {
         const r = handler(evt)
         const handled =
-            r === true || (typeof r === 'object' && r !== null && r.handled === true)
+            r === true ||
+            (typeof r === 'object' && r !== null && r.handled === true)
         return {handled}
     } catch (e) {
         // eslint-disable-next-line no-console

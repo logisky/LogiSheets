@@ -16,59 +16,59 @@
  * `engine.createSession()`.
  */
 
-import type { SheetInfo, SelectedData, CellLayout } from "logisheets-web";
-import type {ChartUpdate} from "./chart/types";
-import { isErrorMessage } from "logisheets-web";
-import type { DataService } from "./clients/service";
-import { isLoadCancelled } from "./clients/service";
-import type { Grid, EngineConfig, ZoomOrigin } from "$types/index";
-import { mount, unmount } from "svelte";
-import Spreadsheet from "./components/Spreadsheet.svelte";
-import type { ContextMenuContext } from "./components/contextMenuTypes";
+import type {SheetInfo, SelectedData, CellLayout} from 'logisheets-web'
+import type {ChartUpdate} from './chart/types'
+import {isErrorMessage} from 'logisheets-web'
+import type {DataService} from './clients/service'
+import {isLoadCancelled} from './clients/service'
+import type {Grid, EngineConfig, ZoomOrigin} from '$types/index'
+import {mount, unmount} from 'svelte'
+import Spreadsheet from './components/Spreadsheet.svelte'
+import type {ContextMenuContext} from './components/contextMenuTypes'
 
 /** Events scoped to a single view. */
 export type SessionEventType =
-  | "selectionChange"
-  | "gridChange"
-  | "activeSheetChange"
-  | "startEdit"
-  | "invalidFormula"
-  | "find"
-  | "contextMenu"
-  | "error";
+    | 'selectionChange'
+    | 'gridChange'
+    | 'activeSheetChange'
+    | 'startEdit'
+    | 'invalidFormula'
+    | 'find'
+    | 'contextMenu'
+    | 'error'
 
 export interface SessionEventMap {
-  selectionChange: SelectedData;
-  gridChange: Grid | null;
-  activeSheetChange: number;
-  startEdit: { row: number; col: number; initialText: string };
-  invalidFormula: void;
-  find: void;
-  /**
-   * The user opened the context menu (right-clicked a cell or a row/column
-   * header). The engine renders NO menu of its own — the host listens for
-   * this and renders whatever menu it likes at `(x, y)` (viewport
-   * coordinates), using `context` to decide the items.
-   */
-  contextMenu: { context: ContextMenuContext; x: number; y: number };
-  error: Error;
+    selectionChange: SelectedData
+    gridChange: Grid | null
+    activeSheetChange: number
+    startEdit: {row: number; col: number; initialText: string}
+    invalidFormula: void
+    find: void
+    /**
+     * The user opened the context menu (right-clicked a cell or a row/column
+     * header). The engine renders NO menu of its own — the host listens for
+     * this and renders whatever menu it likes at `(x, y)` (viewport
+     * coordinates), using `context` to decide the items.
+     */
+    contextMenu: {context: ContextMenuContext; x: number; y: number}
+    error: Error
 }
 
 type SessionEventCallback<T extends SessionEventType> = (
-  data: SessionEventMap[T],
-) => void;
+    data: SessionEventMap[T]
+) => void
 
 export interface SessionMountOptions {
-  /** Show sheet tabs at bottom */
-  showSheetTabs?: boolean;
-  /** Show scrollbars */
-  showScrollbars?: boolean;
-  /** Cell layouts for custom rendering */
-  cellLayouts?: CellLayout[];
-  /** Getter for whether a formula is being edited (prevents canvas from taking focus) */
-  getIsEditingFormula?: () => boolean;
-  /** Callback when an invalid formula is entered */
-  onInvalidFormula?: () => void;
+    /** Show sheet tabs at bottom */
+    showSheetTabs?: boolean
+    /** Show scrollbars */
+    showScrollbars?: boolean
+    /** Cell layouts for custom rendering */
+    cellLayouts?: CellLayout[]
+    /** Getter for whether a formula is being edited (prevents canvas from taking focus) */
+    getIsEditingFormula?: () => boolean
+    /** Callback when an invalid formula is entered */
+    onInvalidFormula?: () => void
 }
 
 /**
@@ -76,402 +76,414 @@ export interface SessionMountOptions {
  * and bubble workbook-level changes back up to the Engine's shared listeners.
  */
 export interface SessionHost {
-  /** Current cached sheet info (shared across all sessions). */
-  getSheets(): readonly SheetInfo[];
-  /** Bubble a sheet-list change up to the Engine's shared `sheetChange`. */
-  notifySheetsChange(sheets: readonly SheetInfo[]): void;
-  /** Tell the Engine this session is destroyed so it can drop it. */
-  releaseSession(session: Session): void;
-  /**
-   * A view saw a zoom gesture (Ctrl/⌘ + wheel, pinch, or a zoom shortcut).
-   * Zoom is engine-global — the Engine clamps, applies and re-renders every
-   * view. `origin` is the viewport point to keep fixed.
-   */
-  requestZoom(factor: number, origin?: ZoomOrigin): void;
+    /** Current cached sheet info (shared across all sessions). */
+    getSheets(): readonly SheetInfo[]
+    /** Bubble a sheet-list change up to the Engine's shared `sheetChange`. */
+    notifySheetsChange(sheets: readonly SheetInfo[]): void
+    /** Tell the Engine this session is destroyed so it can drop it. */
+    releaseSession(session: Session): void
+    /**
+     * A view saw a zoom gesture (Ctrl/⌘ + wheel, pinch, or a zoom shortcut).
+     * Zoom is engine-global — the Engine clamps, applies and re-renders every
+     * view. `origin` is the viewport point to keep fixed.
+     */
+    requestZoom(factor: number, origin?: ZoomOrigin): void
 }
 
 // Each Session renders to its own OffscreenCanvas in the shared worker,
 // keyed by a process-unique canvasId. Start at 1 so the legacy single-canvas
 // default of 0 never collides with a real session.
-let _nextCanvasId = 1;
+let _nextCanvasId = 1
 
 export class Session {
-  private _currentSheetIdx = 0;
-  private _grid: Grid | null = null;
-  private _selectedData: SelectedData = { source: "none" };
+    private _currentSheetIdx = 0
+    private _grid: Grid | null = null
+    private _selectedData: SelectedData = {source: 'none'}
 
-  // Mount state
-  private _mountedComponent: ReturnType<typeof mount> | null = null;
-  private _mountContainer: HTMLElement | null = null;
+    // Mount state
+    private _mountedComponent: ReturnType<typeof mount> | null = null
+    private _mountContainer: HTMLElement | null = null
 
-  // Event listeners (per-view)
-  private _listeners: Map<SessionEventType, Set<SessionEventCallback<any>>> =
-    new Map();
+    // Event listeners (per-view)
+    private _listeners: Map<SessionEventType, Set<SessionEventCallback<any>>> =
+        new Map()
 
-  // Unique id for this view's OffscreenCanvas in the shared worker. Shared
-  // with the mounted Spreadsheet component so engine-side render() and the
-  // component's own render target the same canvas.
-  private readonly _canvasId = _nextCanvasId++;
+    // Unique id for this view's OffscreenCanvas in the shared worker. Shared
+    // with the mounted Spreadsheet component so engine-side render() and the
+    // component's own render target the same canvas.
+    private readonly _canvasId = _nextCanvasId++
 
-  // Whether this is the primary view. Only the primary keeps the data
-  // service's legacy "active view" sheet pointer in sync — secondary views
-  // switch their own sheet without clobbering what app-level consumers
-  // (toolbar, edit bar) read for the main view.
-  private _isPrimary = false;
+    // Whether this is the primary view. Only the primary keeps the data
+    // service's legacy "active view" sheet pointer in sync — secondary views
+    // switch their own sheet without clobbering what app-level consumers
+    // (toolbar, edit bar) read for the main view.
+    private _isPrimary = false
 
-  /** Mark this session as the primary view. Called by the Engine for its
-   *  default session. */
-  markPrimary(): void {
-    this._isPrimary = true;
-  }
-
-  constructor(
-    private readonly _dataService: DataService,
-    private readonly _config: EngineConfig,
-    private readonly _host: SessionHost,
-  ) {
-    (
-      [
-        "selectionChange",
-        "gridChange",
-        "activeSheetChange",
-        "startEdit",
-        "invalidFormula",
-        "find",
-        "contextMenu",
-        "error",
-      ] as SessionEventType[]
-    ).forEach((type) => {
-      this._listeners.set(type, new Set());
-    });
-  }
-
-  // ========================================================================
-  // Mount / Unmount (UI)
-  // ========================================================================
-
-  /**
-   * Mount the spreadsheet UI to a container element.
-   */
-  mount(container: HTMLElement, options: SessionMountOptions = {}): void {
-    if (this._mountedComponent) {
-      console.warn("Session is already mounted. Call unmount() first.");
-      return;
+    /** Mark this session as the primary view. Called by the Engine for its
+     *  default session. */
+    markPrimary(): void {
+        this._isPrimary = true
     }
 
-    this._mountContainer = container;
-
-    this._mountedComponent = mount(Spreadsheet, {
-      target: container,
-      props: {
-        canvasId: this._canvasId,
-        selectedData: this._selectedData,
-        activeSheet: this._currentSheetIdx,
-        cellLayouts: options.cellLayouts ?? [],
-        config: this._config,
-        showSheetTabs: options.showSheetTabs ?? true,
-        showScrollbars: options.showScrollbars ?? true,
-        getIsEditingFormula: options.getIsEditingFormula,
-        onSelectedDataChange: (data: SelectedData) => {
-          this._selectedData = data;
-          this._emit("selectionChange", data);
-        },
-        onActiveSheetChange: (sheet: number) => {
-          this._currentSheetIdx = sheet;
-          this._emit("activeSheetChange", sheet);
-        },
-        onGridChange: (grid: Grid | null) => {
-          this._grid = grid;
-          this._emit("gridChange", grid);
-        },
-        onSheetsChange: (sheets: readonly SheetInfo[]) => {
-          this._host.notifySheetsChange(sheets);
-        },
-        // Engine renders no menu — surface the trigger so the host can.
-        onContextMenu: (context: ContextMenuContext, x: number, y: number) => {
-          this._emit("contextMenu", { context, x, y });
-        },
-        onStartEdit: (row: number, col: number, initialText: string) => {
-          this._emit("startEdit", { row, col, initialText });
-        },
-        onInvalidFormula: () => {
-          this._emit("invalidFormula", undefined);
-          options.onInvalidFormula?.();
-        },
-        onFind: () => {
-          this._emit("find", undefined);
-        },
-        // Zoom is engine-global; hand the gesture up rather than applying it
-        // to this view alone.
-        onZoomRequest: (factor: number, origin?: ZoomOrigin) => {
-          this._host.requestZoom(factor, origin);
-        },
-        // Pass data service for internal use
-        dataService: this._dataService,
-      },
-    });
-  }
-
-  /**
-   * Unmount the spreadsheet UI.
-   */
-  unmount(): void {
-    if (this._mountedComponent) {
-      unmount(this._mountedComponent);
-      this._mountedComponent = null;
-      this._mountContainer = null;
+    constructor(
+        private readonly _dataService: DataService,
+        private readonly _config: EngineConfig,
+        private readonly _host: SessionHost
+    ) {
+        ;(
+            [
+                'selectionChange',
+                'gridChange',
+                'activeSheetChange',
+                'startEdit',
+                'invalidFormula',
+                'find',
+                'contextMenu',
+                'error',
+            ] as SessionEventType[]
+        ).forEach((type) => {
+            this._listeners.set(type, new Set())
+        })
     }
-  }
 
-  isMounted(): boolean {
-    return this._mountedComponent !== null;
-  }
+    // ========================================================================
+    // Mount / Unmount (UI)
+    // ========================================================================
 
-  getMountContainer(): HTMLElement | null {
-    return this._mountContainer;
-  }
+    /**
+     * Mount the spreadsheet UI to a container element.
+     */
+    mount(container: HTMLElement, options: SessionMountOptions = {}): void {
+        if (this._mountedComponent) {
+            console.warn('Session is already mounted. Call unmount() first.')
+            return
+        }
 
-  /**
-   * Initialize offscreen canvas for headless rendering (no mounted UI).
-   */
-  async initOffscreen(canvas: HTMLCanvasElement): Promise<void> {
-    if ("transferControlToOffscreen" in canvas) {
-      const offscreen = canvas.transferControlToOffscreen();
-      await this._dataService.initOffscreen(offscreen, this._canvasId);
+        this._mountContainer = container
+
+        this._mountedComponent = mount(Spreadsheet, {
+            target: container,
+            props: {
+                canvasId: this._canvasId,
+                selectedData: this._selectedData,
+                activeSheet: this._currentSheetIdx,
+                cellLayouts: options.cellLayouts ?? [],
+                config: this._config,
+                showSheetTabs: options.showSheetTabs ?? true,
+                showScrollbars: options.showScrollbars ?? true,
+                getIsEditingFormula: options.getIsEditingFormula,
+                onSelectedDataChange: (data: SelectedData) => {
+                    this._selectedData = data
+                    this._emit('selectionChange', data)
+                },
+                onActiveSheetChange: (sheet: number) => {
+                    this._currentSheetIdx = sheet
+                    this._emit('activeSheetChange', sheet)
+                },
+                onGridChange: (grid: Grid | null) => {
+                    this._grid = grid
+                    this._emit('gridChange', grid)
+                },
+                onSheetsChange: (sheets: readonly SheetInfo[]) => {
+                    this._host.notifySheetsChange(sheets)
+                },
+                // Engine renders no menu — surface the trigger so the host can.
+                onContextMenu: (
+                    context: ContextMenuContext,
+                    x: number,
+                    y: number
+                ) => {
+                    this._emit('contextMenu', {context, x, y})
+                },
+                onStartEdit: (
+                    row: number,
+                    col: number,
+                    initialText: string
+                ) => {
+                    this._emit('startEdit', {row, col, initialText})
+                },
+                onInvalidFormula: () => {
+                    this._emit('invalidFormula', undefined)
+                    options.onInvalidFormula?.()
+                },
+                onFind: () => {
+                    this._emit('find', undefined)
+                },
+                // Zoom is engine-global; hand the gesture up rather than applying it
+                // to this view alone.
+                onZoomRequest: (factor: number, origin?: ZoomOrigin) => {
+                    this._host.requestZoom(factor, origin)
+                },
+                // Pass data service for internal use
+                dataService: this._dataService,
+            },
+        })
     }
-  }
 
-  /**
-   * Destroy this view. Does NOT terminate the shared worker — that belongs
-   * to the Engine.
-   */
-  destroy(): void {
-    this.unmount();
-    this._listeners.forEach((set) => set.clear());
-    this._host.releaseSession(this);
-  }
-
-  // ========================================================================
-  // Event Handling (per-view)
-  // ========================================================================
-
-  on<T extends SessionEventType>(
-    type: T,
-    callback: SessionEventCallback<T>,
-  ): void {
-    this._listeners.get(type)?.add(callback);
-  }
-
-  off<T extends SessionEventType>(
-    type: T,
-    callback: SessionEventCallback<T>,
-  ): void {
-    this._listeners.get(type)?.delete(callback);
-  }
-
-  private _emit<T extends SessionEventType>(
-    type: T,
-    data: SessionEventMap[T],
-  ): void {
-    this._listeners.get(type)?.forEach((cb) => cb(data));
-  }
-
-  // ========================================================================
-  // File / Render
-  // ========================================================================
-
-  /**
-   * Load a workbook from a file buffer and refresh this view.
-   *
-   * When the UI is mounted, delegate to the Spreadsheet component's own
-   * `loadWorkbook` so it can call `updateDocumentDimensions` and refresh its
-   * internal Svelte state. Going through `dataService.loadWorkbook` directly
-   * paints the worker side but leaves the Svelte component with stale
-   * dimensions/anchors from the previous workbook — visible as blank
-   * canvases when switching sheets after a file load.
-   */
-  async loadFile(buffer: Uint8Array, filename: string): Promise<Grid | null> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mounted = this._mountedComponent as any;
-    if (mounted && typeof mounted.loadWorkbook === "function") {
-      // The mounted component returns false when the beforeLoad gate vetoed
-      // the load (nothing changed) — propagate that as a null result so the
-      // host skips its post-load bookkeeping.
-      const loaded = await mounted.loadWorkbook(buffer, filename);
-      if (!loaded) return null;
-      return this._grid;
+    /**
+     * Unmount the spreadsheet UI.
+     */
+    unmount(): void {
+        if (this._mountedComponent) {
+            unmount(this._mountedComponent)
+            this._mountedComponent = null
+            this._mountContainer = null
+        }
     }
-    const result = await this._dataService.loadWorkbook(
-      buffer,
-      filename,
-      this._canvasId,
-    );
-    if (isErrorMessage(result)) {
-      // A gate veto is a user-initiated cancellation, not a failure — stay
-      // silent instead of emitting an error.
-      if (!isLoadCancelled(result)) this._emit("error", new Error(result.msg));
-      return null;
+
+    isMounted(): boolean {
+        return this._mountedComponent !== null
     }
-    this._grid = result;
-    this._emit("gridChange", result);
-    return result;
-  }
 
-  /**
-   * Insert a chart from the current selection (each selected column becomes a
-   * series). Requires a mounted UI. `chartType` is
-   * col|bar|line|area|pie|doughnut|scatter.
-   */
-  insertChart(chartType: string = "col"): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mounted = this._mountedComponent as any;
-    if (mounted && typeof mounted.insertChart === "function") {
-      mounted.insertChart(chartType);
+    getMountContainer(): HTMLElement | null {
+        return this._mountContainer
     }
-  }
 
-  /**
-   * Reconfigure an existing chart: type, title, legend, axis titles, data
-   * labels, number format, or the data references themselves. Requires a
-   * mounted UI.
-   */
-  updateChart(id: string, opts: ChartUpdate): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mounted = this._mountedComponent as any;
-    if (mounted && typeof mounted.updateChart === "function") {
-      mounted.updateChart(id, opts);
+    /**
+     * Initialize offscreen canvas for headless rendering (no mounted UI).
+     */
+    async initOffscreen(canvas: HTMLCanvasElement): Promise<void> {
+        if ('transferControlToOffscreen' in canvas) {
+            const offscreen = canvas.transferControlToOffscreen()
+            await this._dataService.initOffscreen(offscreen, this._canvasId)
+        }
     }
-  }
 
-  /**
-   * Render the spreadsheet. When UI is mounted, rendering is handled
-   * automatically by the component.
-   */
-  async render(anchorX = 0, anchorY = 0): Promise<Grid | null> {
-    const sheetId = this._dataService.getSheetIdByIdx(this._currentSheetIdx);
-    const result = await this._dataService.render(
-      sheetId,
-      anchorX,
-      anchorY,
-      this._canvasId,
-    );
-    if (isErrorMessage(result)) {
-      this._emit("error", new Error(result.msg));
-      return null;
+    /**
+     * Destroy this view. Does NOT terminate the shared worker — that belongs
+     * to the Engine.
+     */
+    destroy(): void {
+        this.unmount()
+        this._listeners.forEach((set) => set.clear())
+        this._host.releaseSession(this)
     }
-    this._grid = result;
-    this._emit("gridChange", result);
-    return result;
-  }
 
-  /**
-   * Resize the canvas. When UI is mounted, resizing is handled automatically.
-   */
-  async resize(width: number, height: number): Promise<Grid | null> {
-    const result = await this._dataService.resize(
-      width,
-      height,
-      window.devicePixelRatio,
-      this._canvasId,
-    );
-    if (isErrorMessage(result)) {
-      this._emit("error", new Error(result.msg));
-      return null;
+    // ========================================================================
+    // Event Handling (per-view)
+    // ========================================================================
+
+    on<T extends SessionEventType>(
+        type: T,
+        callback: SessionEventCallback<T>
+    ): void {
+        this._listeners.get(type)?.add(callback)
     }
-    this._grid = result;
-    this._emit("gridChange", result);
-    return result;
-  }
 
-  // ========================================================================
-  // State Accessors
-  // ========================================================================
-
-  getGrid(): Grid | null {
-    return this._grid;
-  }
-
-  getSelection(): SelectedData {
-    return this._selectedData;
-  }
-
-  setSelection(selection: SelectedData): void {
-    this._selectedData = selection;
-    this._emit("selectionChange", selection);
-    // Push the new value into the mounted Svelte component so its selector
-    // overlay re-renders and its auto-scroll $effect fires. Without this
-    // delegation, the engine's internal state and the canvas-side state
-    // diverge.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mounted = this._mountedComponent as any;
-    if (mounted && typeof mounted.setSelectedData === "function") {
-      mounted.setSelectedData(selection);
+    off<T extends SessionEventType>(
+        type: T,
+        callback: SessionEventCallback<T>
+    ): void {
+        this._listeners.get(type)?.delete(callback)
     }
-  }
 
-  getCurrentSheetIndex(): number {
-    return this._currentSheetIdx;
-  }
-
-  /**
-   * Resolve a viewport point (clientX/clientY) to a cell in THIS view,
-   * synchronously and with no worker round-trip. Returns null when the point
-   * is outside the data canvas or the view isn't mounted. Used by host-side
-   * craft input routing, which must decide synchronously whether to forward an
-   * event to the engine.
-   */
-  hitTestCell(clientX: number, clientY: number): { row: number; col: number } | null {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mounted = this._mountedComponent as any;
-    if (mounted && typeof mounted.hitTestCell === "function") {
-      return mounted.hitTestCell(clientX, clientY);
+    private _emit<T extends SessionEventType>(
+        type: T,
+        data: SessionEventMap[T]
+    ): void {
+        this._listeners.get(type)?.forEach((cb) => cb(data))
     }
-    return null;
-  }
 
-  /**
-   * Re-render this view after a global zoom change. `ratio` is
-   * newZoom/oldZoom. When `origin` falls inside this view's canvas that point
-   * is held still (zoom about the pointer); otherwise the top-left cell stays
-   * put. No-op when unmounted. The worker must already hold the new zoom
-   * (Engine.setZoom guarantees this).
-   */
-  applyZoom(ratio: number, origin?: ZoomOrigin): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mounted = this._mountedComponent as any;
-    if (mounted && typeof mounted.applyZoom === "function") {
-      return mounted.applyZoom(ratio, origin);
+    // ========================================================================
+    // File / Render
+    // ========================================================================
+
+    /**
+     * Load a workbook from a file buffer and refresh this view.
+     *
+     * When the UI is mounted, delegate to the Spreadsheet component's own
+     * `loadWorkbook` so it can call `updateDocumentDimensions` and refresh its
+     * internal Svelte state. Going through `dataService.loadWorkbook` directly
+     * paints the worker side but leaves the Svelte component with stale
+     * dimensions/anchors from the previous workbook — visible as blank
+     * canvases when switching sheets after a file load.
+     */
+    async loadFile(buffer: Uint8Array, filename: string): Promise<Grid | null> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.loadWorkbook === 'function') {
+            // The mounted component returns false when the beforeLoad gate vetoed
+            // the load (nothing changed) — propagate that as a null result so the
+            // host skips its post-load bookkeeping.
+            const loaded = await mounted.loadWorkbook(buffer, filename)
+            if (!loaded) return null
+            return this._grid
+        }
+        const result = await this._dataService.loadWorkbook(
+            buffer,
+            filename,
+            this._canvasId
+        )
+        if (isErrorMessage(result)) {
+            // A gate veto is a user-initiated cancellation, not a failure — stay
+            // silent instead of emitting an error.
+            if (!isLoadCancelled(result))
+                this._emit('error', new Error(result.msg))
+            return null
+        }
+        this._grid = result
+        this._emit('gridChange', result)
+        return result
     }
-    return Promise.resolve();
-  }
 
-  setCurrentSheetIndex(index: number): void {
-    this._currentSheetIdx = index;
-    // Keep the data service's legacy "active view" pointer in sync — but
-    // only for the primary view, so a secondary view switching its own sheet
-    // doesn't clobber what app-level consumers (toolbar, edit bar) read.
-    if (this._isPrimary) {
-      this._dataService.setCurrentSheetIdx(index);
+    /**
+     * Insert a chart from the current selection (each selected column becomes a
+     * series). Requires a mounted UI. `chartType` is
+     * col|bar|line|area|pie|doughnut|scatter.
+     */
+    insertChart(chartType: string = 'col'): void {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.insertChart === 'function') {
+            mounted.insertChart(chartType)
+        }
     }
-    // When the UI is mounted, delegate to the Spreadsheet component's own
-    // setActiveSheet so it can refresh its internal grid state (and thus
-    // column/row headers and overlays).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mounted = this._mountedComponent as any;
-    if (mounted && typeof mounted.setActiveSheet === "function") {
-      mounted.setActiveSheet(index);
+
+    /**
+     * Reconfigure an existing chart: type, title, legend, axis titles, data
+     * labels, number format, or the data references themselves. Requires a
+     * mounted UI.
+     */
+    updateChart(id: string, opts: ChartUpdate): void {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.updateChart === 'function') {
+            mounted.updateChart(id, opts)
+        }
     }
-    this._emit("activeSheetChange", index);
-  }
 
-  /** Cached sheet info (shared, read through the host). */
-  getSheets(): readonly SheetInfo[] {
-    return this._host.getSheets();
-  }
+    /**
+     * Render the spreadsheet. When UI is mounted, rendering is handled
+     * automatically by the component.
+     */
+    async render(anchorX = 0, anchorY = 0): Promise<Grid | null> {
+        const sheetId = this._dataService.getSheetIdByIdx(this._currentSheetIdx)
+        const result = await this._dataService.render(
+            sheetId,
+            anchorX,
+            anchorY,
+            this._canvasId
+        )
+        if (isErrorMessage(result)) {
+            this._emit('error', new Error(result.msg))
+            return null
+        }
+        this._grid = result
+        this._emit('gridChange', result)
+        return result
+    }
 
-  getConfig(): EngineConfig {
-    return this._config;
-  }
+    /**
+     * Resize the canvas. When UI is mounted, resizing is handled automatically.
+     */
+    async resize(width: number, height: number): Promise<Grid | null> {
+        const result = await this._dataService.resize(
+            width,
+            height,
+            window.devicePixelRatio,
+            this._canvasId
+        )
+        if (isErrorMessage(result)) {
+            this._emit('error', new Error(result.msg))
+            return null
+        }
+        this._grid = result
+        this._emit('gridChange', result)
+        return result
+    }
+
+    // ========================================================================
+    // State Accessors
+    // ========================================================================
+
+    getGrid(): Grid | null {
+        return this._grid
+    }
+
+    getSelection(): SelectedData {
+        return this._selectedData
+    }
+
+    setSelection(selection: SelectedData): void {
+        this._selectedData = selection
+        this._emit('selectionChange', selection)
+        // Push the new value into the mounted Svelte component so its selector
+        // overlay re-renders and its auto-scroll $effect fires. Without this
+        // delegation, the engine's internal state and the canvas-side state
+        // diverge.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.setSelectedData === 'function') {
+            mounted.setSelectedData(selection)
+        }
+    }
+
+    getCurrentSheetIndex(): number {
+        return this._currentSheetIdx
+    }
+
+    /**
+     * Resolve a viewport point (clientX/clientY) to a cell in THIS view,
+     * synchronously and with no worker round-trip. Returns null when the point
+     * is outside the data canvas or the view isn't mounted. Used by host-side
+     * craft input routing, which must decide synchronously whether to forward an
+     * event to the engine.
+     */
+    hitTestCell(
+        clientX: number,
+        clientY: number
+    ): {row: number; col: number} | null {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.hitTestCell === 'function') {
+            return mounted.hitTestCell(clientX, clientY)
+        }
+        return null
+    }
+
+    /**
+     * Re-render this view after a global zoom change. `ratio` is
+     * newZoom/oldZoom. When `origin` falls inside this view's canvas that point
+     * is held still (zoom about the pointer); otherwise the top-left cell stays
+     * put. No-op when unmounted. The worker must already hold the new zoom
+     * (Engine.setZoom guarantees this).
+     */
+    applyZoom(ratio: number, origin?: ZoomOrigin): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.applyZoom === 'function') {
+            return mounted.applyZoom(ratio, origin)
+        }
+        return Promise.resolve()
+    }
+
+    setCurrentSheetIndex(index: number): void {
+        this._currentSheetIdx = index
+        // Keep the data service's legacy "active view" pointer in sync — but
+        // only for the primary view, so a secondary view switching its own sheet
+        // doesn't clobber what app-level consumers (toolbar, edit bar) read.
+        if (this._isPrimary) {
+            this._dataService.setCurrentSheetIdx(index)
+        }
+        // When the UI is mounted, delegate to the Spreadsheet component's own
+        // setActiveSheet so it can refresh its internal grid state (and thus
+        // column/row headers and overlays).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.setActiveSheet === 'function') {
+            mounted.setActiveSheet(index)
+        }
+        this._emit('activeSheetChange', index)
+    }
+
+    /** Cached sheet info (shared, read through the host). */
+    getSheets(): readonly SheetInfo[] {
+        return this._host.getSheets()
+    }
+
+    getConfig(): EngineConfig {
+        return this._config
+    }
 }
 
-export default Session;
+export default Session

@@ -47,5 +47,9 @@ export interface CraftRuntime<S extends CraftState = CraftState, W = unknown> {
      */
     onValidate?: (s: S, wb: W) => MaybePromise<Result<readonly Violation[]>>
 
-    onResponse: (resp: JsonRpcResponse, s: S, wb: W) => MaybePromise<Result<void>>
+    onResponse: (
+        resp: JsonRpcResponse,
+        s: S,
+        wb: W
+    ) => MaybePromise<Result<void>>
 }

@@ -33,8 +33,7 @@ import type {CraftInteractionsApi} from './craft-interactions-api.js'
 
 export function createCoreCraftInteractions(): CraftInteractionsApi {
     return {
-        registerRadio: (b) =>
-            registerRadioBinding({type: 'radio', ...b}),
+        registerRadio: (b) => registerRadioBinding({type: 'radio', ...b}),
         registerMultiSelect: (b) =>
             registerMultiSelectBinding({type: 'multiSelect', ...b}),
         setMultiSelectMax: (groupId, max) => setMultiSelectMax(groupId, max),

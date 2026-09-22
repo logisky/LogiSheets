@@ -37,7 +37,6 @@ describe('callerRegistry', () => {
     })
 })
 
-
 describe('resolveActor', () => {
     it('translates a uuid back to the identity the engine knows', () => {
         // Block owners are craft ids saved in the file; these uuids only exist

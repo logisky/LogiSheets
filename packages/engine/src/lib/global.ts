@@ -21,115 +21,111 @@
  */
 
 // Core Engine
-export { Engine, default } from "./engine";
-export type { EngineEventType, EngineEventMap } from "./engine";
+export {Engine, default} from './engine'
+export type {EngineEventType, EngineEventMap} from './engine'
 
 // Per-view session (engine.createSession())
-export { Session } from "./session";
+export {Session} from './session'
 export type {
-  SessionEventType,
-  SessionEventMap,
-  SessionMountOptions,
-} from "./session";
+    SessionEventType,
+    SessionEventMap,
+    SessionMountOptions,
+} from './session'
 
 // Client exports (for advanced usage)
-export { DataService, WorkbookClient, OffscreenClient } from "./clients";
+export {DataService, WorkbookClient, OffscreenClient} from './clients'
 
 // Worker exports
-export { WorkbookWorkerService, OffscreenWorkerService } from "./worker";
+export {WorkbookWorkerService, OffscreenWorkerService} from './worker'
 
 // Block management
 export {
-  BlockManager,
-  EnumSetManager,
-  FieldManager,
-  LOGISHEETS_BUILTIN_CRAFT_ID,
-  FIELD_AND_VALIDATION_TAG,
-} from "./block";
+    BlockManager,
+    EnumSetManager,
+    FieldManager,
+    LOGISHEETS_BUILTIN_CRAFT_ID,
+    FIELD_AND_VALIDATION_TAG,
+} from './block'
 
-export type { EnumInfo, EnumVariant, FieldInfo, FieldTypeEnum } from "./block";
+export type {EnumInfo, EnumVariant, FieldInfo, FieldTypeEnum} from './block'
 
 // Types
 export type {
-  Grid,
-  Row,
-  Column,
-  Range,
-  Cell,
-  SelectorStyle,
-  CellLayout,
-  CanvasProps,
-  EngineConfig,
-  ZoomOrigin,
-} from "$types/index";
+    Grid,
+    Row,
+    Column,
+    Range,
+    Cell,
+    SelectorStyle,
+    CellLayout,
+    CanvasProps,
+    EngineConfig,
+    ZoomOrigin,
+} from '$types/index'
 
 export {
-  DEFAULT_ENGINE_CONFIG,
-  Range as RangeClass,
-  Cell as CellClass,
-} from "$types/index";
+    DEFAULT_ENGINE_CONFIG,
+    Range as RangeClass,
+    Cell as CellClass,
+} from '$types/index'
 
 // Re-export everything from logisheets-web
-export * from "logisheets-web";
+export * from 'logisheets-web'
 
 // Utility functions
 export {
-  match,
-  xForColStart,
-  xForColEnd,
-  yForRowStart,
-  yForRowEnd,
-  getPosition,
-  getSelectedCellRange,
-  getSelectedLines,
-  getSelectedRows,
-  getSelectedColumns,
-  findVisibleRowIdxRange,
-  findVisibleColIdxRange,
-  buildSelectedDataFromCell,
-  buildSelectedDataFromCellRange,
-  buildSelectedDataFromLines,
-  getReferenceString,
-  quoteSheetName,
-  qualifyReference,
-  getCellRect,
-  isCellInGridWindow,
-  getReferenceHighlightRects,
-  ptToPx,
-  pxToPt,
-  pxToWidth,
-  simpleUuid,
-} from "./components/utils";
+    match,
+    xForColStart,
+    xForColEnd,
+    yForRowStart,
+    yForRowEnd,
+    getPosition,
+    getSelectedCellRange,
+    getSelectedLines,
+    getSelectedRows,
+    getSelectedColumns,
+    findVisibleRowIdxRange,
+    findVisibleColIdxRange,
+    buildSelectedDataFromCell,
+    buildSelectedDataFromCellRange,
+    buildSelectedDataFromLines,
+    getReferenceString,
+    quoteSheetName,
+    qualifyReference,
+    getCellRect,
+    isCellInGridWindow,
+    getReferenceHighlightRects,
+    ptToPx,
+    pxToPt,
+    pxToWidth,
+    simpleUuid,
+} from './components/utils'
 
-export type {
-  CellRect,
-  HighlightRect,
-  FormulaCellRef,
-} from "./components/utils";
+export type {CellRect, HighlightRect, FormulaCellRef} from './components/utils'
 
 // Context menu types
 export type {
-  ContextMenuItem,
-  ContextMenuContext,
-} from "./components/contextMenuTypes";
+    ContextMenuItem,
+    ContextMenuContext,
+} from './components/contextMenuTypes'
 
 // Framework adapters
-export { convertCanvasPropsToAdapterProps } from "./adapters";
+export {convertCanvasPropsToAdapterProps} from './adapters'
 
 export type {
-  SpreadsheetAdapterProps,
-  CanvasAdapterProps,
-  UseSpreadsheetConfig,
-  UseSpreadsheetReturn,
-} from "./adapters";
+    SpreadsheetAdapterProps,
+    CanvasAdapterProps,
+    UseSpreadsheetConfig,
+    UseSpreadsheetReturn,
+} from './adapters'
 
 // Svelte components (for Svelte users)
 export {
-  Spreadsheet,
-  ColumnHeaders,
-  RowHeaders,
-  Selector,
-  SheetTabs,
-  Scrollbar,
-  ContextMenu,
-} from "./components";
+    Spreadsheet,
+    ColumnHeaders,
+    RowHeaders,
+    Selector,
+    SheetTabs,
+    Scrollbar,
+    ContextMenu,
+} from './components'

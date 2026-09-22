@@ -27,16 +27,17 @@ import {
     type ServerResponse,
 } from 'node:http'
 import type {AddressInfo} from 'node:net'
-import type {
-    JsonRpcRequest,
-    JsonRpcResponse,
-} from 'logisheets-core'
+import type {JsonRpcRequest, JsonRpcResponse} from 'logisheets-core'
 import type {SpreadsheetRuntime, Workbook} from './index.js'
 
 // The JSON-RPC wire types are defined in logisheets-core (shared with the craft
 // contract) and re-exported here so runtime consumers keep importing them from
 // logisheets-runtime.
-export type {JsonRpcRequest, JsonRpcError, JsonRpcResponse} from 'logisheets-core'
+export type {
+    JsonRpcRequest,
+    JsonRpcError,
+    JsonRpcResponse,
+} from 'logisheets-core'
 
 // Standard JSON-RPC 2.0 error codes. Developers can also throw {@link RpcError}
 // with their own (positive) application codes.

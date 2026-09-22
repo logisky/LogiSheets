@@ -400,6 +400,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         cells={info.cells}
                         grid={grid}
                         title={info.schema.name}
+                        description={info.description || undefined}
                         schemaFields={info.schema.fields}
                         analysisSource={analysisSourceOf(info)}
                         pivotContext={pivotContextOf(info)}
@@ -483,6 +484,13 @@ interface BlockInterfaceInternalProps {
     grid: Grid
     title: string
     /**
+     * The block's prose description, when it has one. Shown on the title bar,
+     * because a computed cell's stored formula cannot say what it reads —
+     * `#FIELD("x")` is persisted as a bare `(B90)` — so this is the only place
+     * the table gets to explain itself to a person.
+     */
+    description?: string
+    /**
      * The block's schema fields IN SCHEMA ORDER, not display order.
      * `UpsertFieldFormulas` takes one rule per field in exactly that order, so
      * the per-field rule dialog has to rebuild its vector from this list
@@ -560,6 +568,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         canvasStartY,
         cells,
         grid,
+        description,
         schemaFields,
         analysisSource,
         pivotContext,
@@ -1452,52 +1461,55 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     covers it (see field headers overlay below for the
                     same trick). */}
                 {(showInfo || isPaired) && title && (
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: '-72px',
-                            left: '6px',
-                            right: '6px',
-                            height: '24px',
-                            clipPath: `inset(${Math.max(
-                                0,
-                                LeftTop.height - (y - 72)
-                            )}px 0 0 ${Math.max(
-                                0,
-                                LeftTop.width - (x + 6)
-                            )}px)`,
-                            background: BLOCK_TITLE_BG,
-                            borderRadius: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            px: 1,
-                            boxShadow: 2,
-                            pointerEvents: 'auto',
-                            boxSizing: 'border-box',
-                        }}
-                    >
-                        <Typography
-                            variant="caption"
+                    <Tooltip title={description ?? ''} arrow placement="top">
+                        <Box
                             sx={{
-                                color: BLOCK_ON_SURFACE,
-                                fontWeight: 600,
-                                fontSize: '0.78rem',
-                                letterSpacing: '0.02em',
-                                textAlign: 'center',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                width: '100%',
+                                position: 'absolute',
+                                top: '-72px',
+                                left: '6px',
+                                right: '6px',
+                                height: '24px',
+                                clipPath: `inset(${Math.max(
+                                    0,
+                                    LeftTop.height - (y - 72)
+                                )}px 0 0 ${Math.max(
+                                    0,
+                                    LeftTop.width - (x + 6)
+                                )}px)`,
+                                background: BLOCK_TITLE_BG,
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                px: 1,
+                                boxShadow: 2,
+                                pointerEvents: 'auto',
+                                boxSizing: 'border-box',
                             }}
                         >
-                            {title}
-                            {/* Names its source, so an analysis block is
-                                self-explanatory seen alone — the pair is not
-                                glued together and may be nowhere near it. */}
-                            {analyzes && ` ← Σ ${analyzes.name}`}
-                        </Typography>
-                    </Box>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: BLOCK_ON_SURFACE,
+                                    fontWeight: 600,
+                                    fontSize: '0.78rem',
+                                    letterSpacing: '0.02em',
+                                    textAlign: 'center',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    width: '100%',
+                                }}
+                            >
+                                {title}
+                                {/* Names its source, so an analysis block
+                                    is self-explanatory seen alone — the pair
+                                    is not glued together and may be nowhere
+                                    near it. */}
+                                {analyzes && ` ← Σ ${analyzes.name}`}
+                            </Typography>
+                        </Box>
+                    </Tooltip>
                 )}
 
                 {/* A stale pivot is the one thing on this sheet that looks

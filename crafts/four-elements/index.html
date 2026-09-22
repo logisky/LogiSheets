@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>四象</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      background: #f5f5f7; color: #111827; font-size: 13px;
+    }
+    h1 { margin: 0 0 2px; font-size: 18px; }
+    .subtitle { color: #6b7280; font-size: 12px; margin-bottom: 12px; }
+    .card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 12px; margin-bottom: 10px;
+    }
+    .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      padding: 7px 14px; font-size: 13px; border-radius: 999px;
+      border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer;
+    }
+    .btn:hover:not(:disabled) { background: #e5e7eb; }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn-primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .muted { color: #6b7280; font-size: 12px; }
+    .phase { font-weight: 700; font-size: 14px; }
+    /* One hue per element, so a line reads at a glance. */
+    .el { display: inline-flex; align-items: center; justify-content: center;
+          min-width: 30px; height: 26px; padding: 0 7px; border-radius: 6px;
+          font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+    .fire  { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+    .wind  { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+    .earth { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+    .water { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+    .empty { background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+    .line { display: flex; gap: 5px; align-items: center; }
+    .side { width: 34px; color: #6b7280; font-size: 11px; }
+    .shapes { display: flex; gap: 5px; margin-top: 5px; font-size: 11px; color: #6b7280; }
+    .shape { min-width: 66px; }
+    table.score { border-collapse: collapse; font-size: 12px; }
+    table.score td, table.score th { padding: 2px 10px 2px 0; text-align: right; }
+    table.score th { color: #6b7280; font-weight: 500; }
+    table.score td:first-child, table.score th:first-child { text-align: left; }
+    .total { font-weight: 800; font-size: 15px; }
+    .err { color: #b91c1c; font-size: 12px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <h1 data-i18n="title">四象</h1>
+  <div class="subtitle" data-i18n="subtitle">
+    Every rule is a block on the sheet. Edit the counter table or a knob and
+    the game changes underneath you.
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="btn btn-primary" id="new-btn" data-i18n="newGame">New game</button>
+      <span class="phase" id="phase">—</span>
+      <span class="muted" id="whose"></span>
+      <label class="muted" style="margin-left:auto; display:none" id="ai-wrap">
+        <input type="checkbox" id="ai-toggle" /> <span data-i18n="aiOpponent">AI opponent</span>
+      </label>
+    </div>
+    <div class="err hidden" id="err"></div>
+    <div class="muted hidden" id="ai-note" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card" id="choices-card">
+    <div class="muted" id="choices-label">—</div>
+    <div class="row" id="choices" style="margin-top:7px"></div>
+  </div>
+
+  <div class="card">
+    <div class="line"><span class="side" data-i18n="you">You</span><span id="line-you"></span></div>
+    <div class="line" style="margin-top:5px"><span class="side" data-i18n="ai">AI</span><span id="line-ai"></span></div>
+    <div class="shapes" id="shapes"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="btn" id="coach-btn" disabled data-i18n="askCoach">Ask the coach</button>
+      <span class="muted" id="coach-note"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="score">
+      <tr><th></th><th data-i18n="cards">Cards</th><th data-i18n="forms">Forms</th><th data-i18n="total">Total</th></tr>
+      <tr><td data-i18n="you">You</td><td id="s-yc">0</td><td id="s-yf">0</td><td id="s-yt" class="total">0</td></tr>
+      <tr><td data-i18n="ai">AI</td><td id="s-ac">0</td><td id="s-af">0</td><td id="s-at" class="total">0</td></tr>
+    </table>
+    <div class="muted" id="verdict" style="margin-top:6px"></div>
+  </div>
+
+  <script src="./four-elements.js"></script>
+  <script>
+    (function () {
+      // ---- language ----------------------------------------------------
+      //
+      // Same contract as the other crafts: the host injects `window.locale`
+      // and offers `window.onLocaleChange`, and puts `?lang=` on the iframe
+      // URL so the FIRST paint is already right — waiting for the injection
+      // means the markup's own language flashes past first. Both host hooks
+      // are optional, so `pickLocale` falls back rather than throwing.
+      //
+      // Only this panel is translated. The sheet stays English on purpose:
+      // its field names are what the formulas key on (`BLOCKREF("counter",
+      // ...)`), and its block/field descriptions are written for whoever —
+      // or whatever — reads the workbook next, which includes the model.
+      var STRINGS = {
+        en: {
+          title: 'Four Elements',
+          subtitle: 'Every rule is a block on the sheet. Edit the counter table or a knob and the game changes underneath you.',
+          newGame: 'New game',
+          aiOpponent: 'AI opponent',
+          askCoach: 'Ask the coach',
+          you: 'You',
+          ai: 'AI',
+          cards: 'Cards',
+          forms: 'Forms',
+          total: 'Total',
+          draftPhase: 'Draft {n}/5',
+          playPhase: 'Play {n}/5',
+          finished: 'Finished',
+          yourMove: 'your move',
+          aiToMove: 'AI to move',
+          thinking: 'The AI is thinking…',
+          coachThinking: 'thinking…',
+          gameOver: 'Game over.',
+          pressNew: 'Press New game to deal.',
+          onOffer: 'On offer this round — playing as {side}',
+          inHand: 'In hand — playing as {side}',
+          youWin: 'You win.',
+          aiWins: 'The AI wins.',
+          draw: 'A draw.',
+          aiPlayed: 'AI played {card}.',
+          aiSays: 'AI: {taunt}',
+          aiOff: 'AI turned off — play its side by hand, or try again.',
+          aiUnavailable: 'AI opponent unavailable: {reason}.',
+          fire: 'fire', wind: 'wind', earth: 'earth', water: 'water',
+          triple: 'triple', chain: 'chain', split: 'split', none: 'none'
+        },
+        'zh-CN': {
+          title: '四象',
+          subtitle: '每条规则都是表上的一个 block。改动克制表或旋钮，游戏规则随即改变。',
+          newGame: '新对局',
+          aiOpponent: 'AI 对手',
+          askCoach: '请教军师',
+          you: '你',
+          ai: 'AI',
+          cards: '单牌',
+          forms: '牌型',
+          total: '总分',
+          draftPhase: '抽牌 {n}/5',
+          playPhase: '出牌 {n}/5',
+          finished: '已结束',
+          yourMove: '轮到你',
+          aiToMove: '轮到 AI',
+          thinking: 'AI 思考中…',
+          coachThinking: '思考中…',
+          gameOver: '对局结束。',
+          pressNew: '点「新对局」发牌。',
+          onOffer: '本轮牌面 — 当前执子：{side}',
+          inHand: '手牌 — 当前执子：{side}',
+          youWin: '你赢了。',
+          aiWins: 'AI 赢了。',
+          draw: '平局。',
+          aiPlayed: 'AI 出了{card}。',
+          aiSays: 'AI：{taunt}',
+          aiOff: 'AI 已关闭 — 手动替它出牌，或再试一次。',
+          aiUnavailable: 'AI 对手不可用：{reason}。',
+          fire: '火', wind: '风', earth: '土', water: '水',
+          triple: '三连', chain: '顺子', split: '夹心', none: '无'
+        }
+      }
+
+      // NOT `locale`: a top-level `var locale` IS `window.locale`, the
+      // property the host injects — same binding, so each would clobber the
+      // other.
+      var craftLocale = 'en'
+
+      function urlLocale() {
+        try {
+          return new URLSearchParams(window.location.search).get('lang') || undefined
+        } catch (e) { return undefined }
+      }
+
+      function pickLocale(tag) {
+        var want = tag || urlLocale()
+        if (!want) return 'en'
+        if (STRINGS[want]) return want
+        var base = String(want).replace('_', '-').split('-')[0].toLowerCase()
+        return base === 'zh' ? 'zh-CN' : 'en'
+      }
+
+      /** `T('aiSays', {taunt: '…'})`. An unknown key returns itself. */
+      function T(key, vars) {
+        var d = STRINGS[craftLocale] || STRINGS.en
+        var s = d[key] != null ? d[key] : key
+        if (!vars) return s
+        return s.replace(/\{(\w+)\}/g, function (m, k) {
+          return vars[k] != null ? vars[k] : m
+        })
+      }
+
+      /** An element or shape as the player reads it; ids stay English. */
+      function label(id) { return id ? T(id) : id }
+
+      function applyLocale(tag) {
+        craftLocale = pickLocale(tag)
+        document.documentElement.lang = craftLocale
+        document.title = T('title')
+        var els = document.querySelectorAll('[data-i18n]')
+        for (var i = 0; i < els.length; i++) {
+          els[i].textContent = T(els[i].getAttribute('data-i18n'))
+        }
+        // The SHEET follows too — its header line and the labels its enum
+        // sets show. No key and no value moves, so this is safe with a game
+        // in progress.
+        if (game) {
+          game.relabel(craftLocale).catch(function (e) { showError(e) })
+          refresh().catch(function () {})
+        }
+      }
+
+      var FE = null
+      var game = null
+      var busy = false
+      var aiOn = false
+      var aiAbort = null
+
+      var $ = function (id) { return document.getElementById(id) }
+
+      function showError(e) {
+        var el = $('err')
+        if (!e) { el.classList.add('hidden'); el.textContent = ''; return }
+        // The engine names the payload it stopped at; show that, not "failed".
+        el.textContent = String((e && e.message) || e)
+        el.classList.remove('hidden')
+      }
+
+      function chip(card) {
+        var s = document.createElement('span')
+        // The CLASS keeps the element's id (it picks the colour); only the
+        // text is translated.
+        s.className = 'el ' + (card || 'empty')
+        s.textContent = card ? label(card) : '·'
+        return s
+      }
+
+      function renderLine(el, cards) {
+        el.innerHTML = ''
+        cards.forEach(function (c) { el.appendChild(chip(c)) })
+      }
+
+      function render(state) {
+        var t = state.turn
+        $('phase').textContent =
+          t.phase === 'draft' ? T('draftPhase', {n: t.round})
+          : t.phase === 'play' ? T('playPhase', {n: t.nextSlot})
+          : T('finished')
+        $('whose').textContent =
+          t.phase === 'done' ? '' : T(t.toMove === 'you' ? 'yourMove' : 'aiToMove')
+
+        renderLine($('line-you'), state.board.you)
+        renderLine($('line-ai'), state.board.ai)
+
+        $('shapes').innerHTML = ''
+        state.windows.forEach(function (w) {
+          var d = document.createElement('div')
+          d.className = 'shape'
+          d.textContent = w.w + ': ' + label(w.you) + '/' + label(w.ai)
+          $('shapes').appendChild(d)
+        })
+
+        $('s-yc').textContent = state.score.you.cards
+        $('s-yf').textContent = state.score.you.forms
+        $('s-yt').textContent = state.score.you.total
+        $('s-ac').textContent = state.score.ai.cards
+        $('s-af').textContent = state.score.ai.forms
+        $('s-at').textContent = state.score.ai.total
+        $('verdict').textContent =
+          t.phase !== 'done' ? ''
+          : state.score.you.total > state.score.ai.total ? T('youWin')
+          : state.score.you.total < state.score.ai.total ? T('aiWins')
+          : T('draw')
+      }
+
+      async function renderChoices(state) {
+        var t = state.turn
+        var box = $('choices')
+        box.innerHTML = ''
+        if (t.phase === 'done') {
+          $('choices-label').textContent = T('gameOver')
+          return
+        }
+        // With the AI off, both sides are played by hand — the rules have to
+        // hold up with no model involved, and that is also how you test them.
+        if (aiOn && t.toMove === 'ai') {
+          $('choices-label').textContent = T('thinking')
+          return
+        }
+        $('choices-label').textContent = T(
+          t.phase === 'draft' ? 'onOffer' : 'inHand',
+          {side: T(t.toMove === 'you' ? 'you' : 'ai')}
+        )
+
+        var cards = await game.legal()
+        if (!cards.length) { box.textContent = '—'; return }
+        cards.forEach(function (card) {
+          var b = document.createElement('button')
+          b.className = 'btn el ' + card
+          b.textContent = label(card)
+          b.onclick = function () { play(card) }
+          box.appendChild(b)
+        })
+      }
+
+      function note(msg) {
+        var el = $('ai-note')
+        if (!msg) { el.classList.add('hidden'); el.textContent = ''; return }
+        el.textContent = msg
+        el.classList.remove('hidden')
+      }
+
+      async function refresh() {
+        var state = await game.state()
+        render(state)
+        await renderChoices(state)
+        $('coach-btn').disabled = !aiAvailable || state.turn.phase === 'done'
+        // Hand straight back to the model when it is its move. Driven off the
+        // sheet's own `toMove`, so a human-played AI turn works the same way.
+        if (aiOn && state.turn.toMove === 'ai' && state.turn.phase !== 'done')
+          await aiTurn()
+      }
+
+      async function aiTurn() {
+        aiAbort = new AbortController()
+        try {
+          var out = await FE.takeAiTurn(game, window.craftAi.ask, {
+            signal: aiAbort.signal,
+          })
+          note(out.taunt
+            ? T('aiSays', {taunt: out.taunt})
+            : T('aiPlayed', {card: label(out.card)}))
+          await refresh()
+        } catch (e) {
+          // A model that will not pick from four cards is not a reason to lose
+          // the game: fall back to playing its side by hand.
+          aiOn = false
+          $('ai-toggle').checked = false
+          showError(e)
+          note(T('aiOff'))
+          await refresh()
+        } finally {
+          aiAbort = null
+        }
+      }
+
+      async function askCoach() {
+        $('coach-note').textContent = T('coachThinking')
+        try {
+          var out = await window.craftAi.ask('coach', 'What am I facing?')
+          $('coach-note').textContent = out.reading +
+            (out.threat && out.threat !== 'none' ? ' (' + out.threat + ')' : '')
+        } catch (e) {
+          $('coach-note').textContent = ''
+          showError(e)
+        }
+      }
+
+      async function play(card) {
+        if (busy) return
+        busy = true
+        showError(null)
+        try {
+          await game.commit(card)
+          await refresh()
+        } catch (e) {
+          showError(e)
+        } finally {
+          busy = false
+        }
+      }
+
+      async function newGame() {
+        if (busy) return
+        busy = true
+        showError(null)
+        try {
+          await game.newGame(undefined, craftLocale)
+          await refresh()
+        } catch (e) {
+          showError(e)
+        } finally {
+          busy = false
+        }
+      }
+
+      function whenHostReady(cb) {
+        var tries = 0
+        ;(function loop() {
+          if (window.workbook) { cb(); return }
+          if (tries++ > 600) { console.warn('[four-elements] no host APIs'); return }
+          setTimeout(loop, 50)
+        })()
+      }
+
+      $('new-btn').addEventListener('click', newGame)
+      $('coach-btn').addEventListener('click', askCoach)
+      $('ai-toggle').addEventListener('change', async function (e) {
+        aiOn = e.target.checked
+        note(null)
+        showError(null)
+        await refresh()
+      })
+
+      var aiAvailable = false
+
+      // Straight away, off `?lang=`, so the markup is never briefly in the
+      // wrong language while we wait for the host to inject.
+      applyLocale(undefined)
+
+      whenHostReady(async function () {
+        FE = window.FourElements
+        // `window.locale` is authoritative once it exists, and the user can
+        // switch language with the craft open.
+        applyLocale(window.locale)
+        if (typeof window.onLocaleChange === 'function') {
+          window.onLocaleChange(applyLocale)
+        }
+        game = new FE.Game(window.workbook, 0)
+        // The AI is offered only when the host can actually reach a model;
+        // otherwise the game is simply two-player and nothing is broken.
+        try {
+          var st = window.craftAi ? await window.craftAi.available() : null
+          aiAvailable = !!(st && st.ok)
+          if (aiAvailable) $('ai-wrap').style.display = ''
+          else if (st) note(T('aiUnavailable', {reason: st.reason}))
+        } catch (e) {
+          note(T('aiUnavailable', {reason: '—'}))
+        }
+        try {
+          // Reopening a workbook that already holds a game picks it back up;
+          // the sheet is the save file.
+          if (await game.isBuilt()) await refresh()
+          else $('choices-label').textContent = T('pressNew')
+        } catch (e) {
+          showError(e)
+        }
+      })
+    })()
+  </script>
+</body>
+</html>

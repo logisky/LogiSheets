@@ -292,7 +292,12 @@ export async function runCraftExchange(
 
     const violations = await validateLoadedCrafts(loaded, wb)
     if (violations.length)
-        return errorResponse(id, RPC_VALIDATION_FAILED, 'validation failed', violations)
+        return errorResponse(
+            id,
+            RPC_VALIDATION_FAILED,
+            'validation failed',
+            violations
+        )
 
     const resp: JsonRpcResponse = {jsonrpc: '2.0', id}
     const respErrors = await applyCraftResponse(loaded, resp, wb)
@@ -321,7 +326,11 @@ export class MemoryCraftRegistry implements CraftRegistry {
      * metadata; the default carries a non-empty `rtJs` so {@link loadCrafts}
      * imports the module instead of skipping the craft as runtime-less.
      */
-    public add(craftId: string, module: unknown, manifest?: CraftManifest): this {
+    public add(
+        craftId: string,
+        module: unknown,
+        manifest?: CraftManifest
+    ): this {
         this.entries.set(craftId, {
             manifest: manifest ?? {rtJs: craftId, html: ''},
             module,

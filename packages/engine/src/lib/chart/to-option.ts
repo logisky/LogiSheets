@@ -187,8 +187,7 @@ function cartesianOption(model: ChartModel): EChartsOption {
             data: s.values,
             // Stacking belongs to the chart's own kind, so an overridden
             // series is drawn beside the stack rather than in it.
-            stack:
-                model.stacked && kind === chartType ? 'total' : undefined,
+            stack: model.stacked && kind === chartType ? 'total' : undefined,
             areaStyle: kind === 'area' ? {} : undefined,
             ...seriesColor(s),
             ...seriesLabel(model, s, isLine ? 'line' : 'bar'),
@@ -199,8 +198,12 @@ function cartesianOption(model: ChartModel): EChartsOption {
     // discriminated union — the assembled object is cast, the same way the
     // series list is.
     return {
-        xAxis: (horizontal ? valueAxis : categoryAxis) as EChartsOption['xAxis'],
-        yAxis: (horizontal ? categoryAxis : valueAxis) as EChartsOption['yAxis'],
+        xAxis: (horizontal
+            ? valueAxis
+            : categoryAxis) as EChartsOption['xAxis'],
+        yAxis: (horizontal
+            ? categoryAxis
+            : valueAxis) as EChartsOption['yAxis'],
         series: series as EChartsOption['series'],
     }
 }
@@ -314,8 +317,18 @@ function stockOption(model: ChartModel): EChartsOption {
     if (n !== 3 && n !== 4) return cartesianOption(model)
     const [open, high, low, close] =
         n === 4
-            ? [model.series[0], model.series[1], model.series[2], model.series[3]]
-            : [model.series[2], model.series[0], model.series[1], model.series[2]]
+            ? [
+                  model.series[0],
+                  model.series[1],
+                  model.series[2],
+                  model.series[3],
+              ]
+            : [
+                  model.series[2],
+                  model.series[0],
+                  model.series[1],
+                  model.series[2],
+              ]
 
     const at = (s: ChartSeries, i: number) => s.values[i] ?? null
     const data = model.categories.map((_, i) => [
@@ -359,7 +372,8 @@ function ofPieSplit(model: ChartModel): {main: number[]; second: number[]} {
             second = pos ? all.slice(Math.max(0, all.length - pos)) : []
             break
         case 'val':
-            second = pos == null ? [] : all.filter((i) => (values[i] ?? 0) < pos)
+            second =
+                pos == null ? [] : all.filter((i) => (values[i] ?? 0) < pos)
             break
         case 'percent': {
             const total = values.reduce<number>((a, v) => a + (v ?? 0), 0)
@@ -396,7 +410,10 @@ function ofPieOption(model: ChartModel): EChartsOption {
 
     const asBar = model.chartType === 'barOfPie'
     // The second plot is sized relative to the first, as Excel does.
-    const secondRadius = `${Math.min(60, ((model.ofPieSplit?.secondSize ?? 75) / 100) * 45)}%`
+    const secondRadius = `${Math.min(
+        60,
+        ((model.ofPieSplit?.secondSize ?? 75) / 100) * 45
+    )}%`
 
     const secondPlot = asBar
         ? second.map((i) => ({
@@ -537,8 +554,7 @@ export function mapChartToOption(model: ChartModel): EChartsOption {
             body = cartesianOption(model)
     }
 
-    const showLegend =
-        !!model.legendPosition && model.legendPosition !== 'none'
+    const showLegend = !!model.legendPosition && model.legendPosition !== 'none'
 
     // Only the cartesian kinds sit in a `grid`; pie, radar and the XY kinds
     // place themselves, and only the axis-based ones get an axis tooltip.
@@ -571,12 +587,12 @@ export function mapChartToOption(model: ChartModel): EChartsOption {
         grid: gridless
             ? undefined
             : {
-                      top: model.title ? 40 : 16,
-                      bottom: showLegend ? 40 : 24,
-                      left: 48,
-                      right: 24,
-                      containLabel: true,
-                  },
+                  top: model.title ? 40 : 16,
+                  bottom: showLegend ? 40 : 24,
+                  left: 48,
+                  right: 24,
+                  containLabel: true,
+              },
         ...body,
     }
 }
