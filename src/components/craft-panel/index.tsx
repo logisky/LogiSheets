@@ -18,6 +18,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesomeOutlined'
 import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
+import {hydrateEnumSetsFromWorkbook} from '@/core/blocks/enum-hydrate'
 import {buildSelectedDataFromCell} from 'logisheets-engine'
 import {
     callerRegistry,
@@ -157,7 +158,17 @@ export const CraftPanel = ({
         } as Selection
         win.workbook = wrapWorkbookForCraft(
             DATA_SERVICE.getWorkbook(),
-            craftUuid
+            craftUuid,
+            async () => {
+                try {
+                    await hydrateEnumSetsFromWorkbook(
+                        DATA_SERVICE.getWorkbook() as never,
+                        BLOCK_MANAGER.enumSetManager
+                    )
+                } catch {
+                    // Only labels are at stake; the write itself succeeded.
+                }
+            }
         )
         win.__craftUuid = craftUuid
         // The ids of all crafts shipped in this distribution — so a craft (e.g.
@@ -510,9 +521,20 @@ const TX_METHODS = new Set([
 ])
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/** Whether a transaction created or removed an option list. */
+function touchesEnumSets(params: Record<string, unknown>): boolean {
+    const tx = params?.transaction as
+        | {payloads?: readonly {type?: string}[]}
+        | undefined
+    return !!tx?.payloads?.some(
+        (p) => p?.type === 'upsertEnumSet' || p?.type === 'removeEnumSet'
+    )
+}
+
 function wrapWorkbookForCraft<T extends object>(
     workbook: T,
-    craftUuid: string
+    craftUuid: string,
+    onEnumSetsChanged: () => Promise<void>
 ): T {
     return new Proxy(workbook, {
         get(target, prop, receiver) {
@@ -522,11 +544,22 @@ function wrapWorkbookForCraft<T extends object>(
                 typeof prop === 'string' &&
                 TX_METHODS.has(prop)
             ) {
-                return (params: Record<string, unknown>) =>
-                    (original as (p: unknown) => unknown).call(target, {
+                return async (params: Record<string, unknown>) => {
+                    const out = await (
+                        original as (p: unknown) => unknown
+                    ).call(target, {
                         ...params,
                         [CALLER_UUID_PARAM_KEY]: craftUuid,
                     })
+                    // The host's registry is hydrated from the workbook on
+                    // FILE OPEN, which never happens for a set a craft creates
+                    // while running: the engine then validates the field
+                    // correctly and the cell still renders its raw id, because
+                    // only the registry knows the label. Re-hydrate when a
+                    // transaction touched the sets.
+                    if (touchesEnumSets(params)) await onEnumSetsChanged()
+                    return out
+                }
             }
             return typeof original === 'function'
                 ? original.bind(target)

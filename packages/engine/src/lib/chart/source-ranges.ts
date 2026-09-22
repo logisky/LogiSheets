@@ -132,7 +132,13 @@ export function chartSourceRanges(info: ChartInfo): ChartSourceRange[] {
         if (!ref) return
         const parsed = parseA1Range(ref)
         if (!parsed) return
-        out.push({kind, seriesName, sheet: parsed.sheet, range: parsed.range, color})
+        out.push({
+            kind,
+            seriesName,
+            sheet: parsed.sheet,
+            range: parsed.range,
+            color,
+        })
     }
 
     push(info.catRef, 'categories', CATEGORY_COLOR)

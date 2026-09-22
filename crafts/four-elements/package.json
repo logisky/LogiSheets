@@ -1,0 +1,24 @@
+{
+    "name": "four-elements",
+    "craftId": "four-elements",
+    "label": "Four Elements",
+    "version": "0.1.0",
+    "description": "四象 — a draft-and-commit card duel whose rules live in the workbook as blocks and formulas",
+    "main": "dist/four-elements.js",
+    "module": "dist/four-elements.js",
+    "scripts": {
+        "check": "craftsmith check .",
+        "build": "vite build && craftsmith build . && yarn copy-to-public",
+        "copy-to-public": "rm -rf ../../public/four-elements && mkdir -p ../../public/four-elements && cp index.html ../../public/four-elements/index.html && cp dist/four-elements.js ../../public/four-elements/four-elements.js && cp dist/manifest.json ../../public/four-elements/manifest.json && { [ -f dist/tools.js ] && cp dist/tools.js ../../public/four-elements/tools.js || true; }"
+    },
+    "author": "Jeremy He",
+    "license": "MIT",
+    "dependencies": {
+        "logisheets-web": "workspace:*"
+    },
+    "devDependencies": {
+        "logisheets-craftsmith": "workspace:*",
+        "typescript": "^6.0.0",
+        "vite": "^5.0.0"
+    }
+}

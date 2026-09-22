@@ -40,7 +40,8 @@ function parseFormat(fmt: string): NumericFormat | undefined {
     const section = fmt.split(';')[0].trim()
     if (!section || section.toLowerCase() === 'general') return undefined
     // A date/time code is not something we try to render here.
-    if (/[ymdhs]/i.test(section.replace(/\[[^\]]*\]|"[^"]*"/g, ''))) return undefined
+    if (/[ymdhs]/i.test(section.replace(/\[[^\]]*\]|"[^"]*"/g, '')))
+        return undefined
 
     const core = section.match(/[#0](?:[#0,]*)(?:\.[#0]+)?/)
     if (!core) return undefined
@@ -66,7 +67,10 @@ const cache = new Map<string, NumericFormat | undefined>()
  * Render `value` with the Excel format code `fmt`. Returns the plain number
  * when there is no code, or when the code is outside the supported subset.
  */
-export function formatAxisNumber(fmt: string | undefined, value: number): string {
+export function formatAxisNumber(
+    fmt: string | undefined,
+    value: number
+): string {
     if (!fmt) return String(value)
     if (!cache.has(fmt)) cache.set(fmt, parseFormat(fmt))
     const f = cache.get(fmt)

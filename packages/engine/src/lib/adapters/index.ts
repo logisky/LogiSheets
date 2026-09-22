@@ -4,9 +4,9 @@
  */
 
 export {
-  convertCanvasPropsToAdapterProps,
-  type SpreadsheetAdapterProps,
-  type CanvasAdapterProps,
-  type UseSpreadsheetConfig,
-  type UseSpreadsheetReturn,
-} from "./react";
+    convertCanvasPropsToAdapterProps,
+    type SpreadsheetAdapterProps,
+    type CanvasAdapterProps,
+    type UseSpreadsheetConfig,
+    type UseSpreadsheetReturn,
+} from './react'

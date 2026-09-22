@@ -101,14 +101,10 @@ function createProgram(rootFile: string, craftRoot: string): ts.Program {
         'tsconfig.json'
     )
     if (configPath) {
-        const parsed = ts.getParsedCommandLineOfConfigFile(
-            configPath,
-            {},
-            {
-                ...ts.sys,
-                onUnRecoverableConfigFileDiagnostic: () => {},
-            } as ts.ParseConfigFileHost
-        )
+        const parsed = ts.getParsedCommandLineOfConfigFile(configPath, {}, {
+            ...ts.sys,
+            onUnRecoverableConfigFileDiagnostic: () => {},
+        } as ts.ParseConfigFileHost)
         if (parsed) options = {...parsed.options, noEmit: true}
     }
     return ts.createProgram({rootNames: [rootFile], options})
@@ -120,10 +116,7 @@ function tagsOf(node: ts.Node): readonly ts.JSDocTag[] {
     return ts.getJSDocTags(node)
 }
 
-function tagNamed(
-    node: ts.Node,
-    name: string
-): ts.JSDocTag | undefined {
+function tagNamed(node: ts.Node, name: string): ts.JSDocTag | undefined {
     return tagsOf(node).find((t) => t.tagName.escapedText === name)
 }
 
@@ -323,7 +316,10 @@ function extractTool(
     // Real params missing a @param doc → warn only.
     for (const pname of paramOrder)
         if (!paramDocs.has(pname))
-            push('warn', `@tool ${cand.name}: parameter "${pname}" has no @param doc`)
+            push(
+                'warn',
+                `@tool ${cand.name}: parameter "${pname}" has no @param doc`
+            )
 
     const inputSchema: ManifestTool['inputSchema'] = {
         type: 'object',
@@ -478,7 +474,9 @@ function extractRole(
     if (replySchema.type !== 'object' || !replySchema.properties) {
         err(
             `@aiRole ${name}: "${cand.name}" must be an object shape the model ` +
-                `can fill in — a bare ${String(replySchema.type)} gives it nothing to answer with`
+                `can fill in — a bare ${String(
+                    replySchema.type
+                )} gives it nothing to answer with`
         )
         return undefined
     }
@@ -496,8 +494,7 @@ export function extract(root: string): ExtractResult {
     if (!paths.toolsTs && !paths.indexHtml)
         diags.push({
             level: 'error',
-            message:
-                'a craft needs at least one of tools.ts or index.html',
+            message: 'a craft needs at least one of tools.ts or index.html',
             file: paths.root,
         })
 

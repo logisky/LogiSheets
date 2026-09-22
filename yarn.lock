@@ -7871,6 +7871,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"four-elements-core@workspace:crafts/four-elements-core":
+  version: 0.0.0-use.local
+  resolution: "four-elements-core@workspace:crafts/four-elements-core"
+  languageName: unknown
+  linkType: soft
+
+"four-elements@workspace:crafts/four-elements":
+  version: 0.0.0-use.local
+  resolution: "four-elements@workspace:crafts/four-elements"
+  dependencies:
+    logisheets-craftsmith: "workspace:*"
+    logisheets-web: "workspace:*"
+    typescript: "npm:^6.0.0"
+    vite: "npm:^5.0.0"
+  languageName: unknown
+  linkType: soft
+
 "fs-extra@npm:11.1.0":
   version: 11.1.0
   resolution: "fs-extra@npm:11.1.0"

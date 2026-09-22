@@ -24,7 +24,7 @@ const ev = (init: KeyInit) =>
         shiftKey: false,
         altKey: false,
         ...init,
-    }) as KeyboardEvent
+    } as KeyboardEvent)
 
 /**
  * The primary modifier is ⌘ on Apple and Ctrl elsewhere, decided from
@@ -39,7 +39,10 @@ function setPlatform(platform: string) {
     })
 }
 
-const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+const originalNavigator = Object.getOwnPropertyDescriptor(
+    globalThis,
+    'navigator'
+)
 
 afterEach(() => {
     if (originalNavigator)
@@ -60,28 +63,38 @@ describe('matchShortcut (non-Apple: Ctrl is primary)', () => {
         setup()
         expect(matchShortcut(ev({key: 'PageDown'}))).toBe('pageDown')
         expect(matchShortcut(ev({key: 'PageUp'}))).toBe('pageUp')
-        expect(matchShortcut(ev({key: 'PageDown', ctrlKey: true}))).toBe('nextSheet')
-        expect(matchShortcut(ev({key: 'PageUp', ctrlKey: true}))).toBe('prevSheet')
+        expect(matchShortcut(ev({key: 'PageDown', ctrlKey: true}))).toBe(
+            'nextSheet'
+        )
+        expect(matchShortcut(ev({key: 'PageUp', ctrlKey: true}))).toBe(
+            'prevSheet'
+        )
     })
 
     it('keeps Shift+Page on the paging binding (it extends the selection)', () => {
         setup()
-        expect(matchShortcut(ev({key: 'PageDown', shiftKey: true}))).toBe('pageDown')
+        expect(matchShortcut(ev({key: 'PageDown', shiftKey: true}))).toBe(
+            'pageDown'
+        )
     })
 
     it('separates Home, Ctrl+Home and Ctrl+End', () => {
         setup()
         expect(matchShortcut(ev({key: 'Home'}))).toBe('rowStart')
-        expect(matchShortcut(ev({key: 'Home', ctrlKey: true}))).toBe('sheetStart')
-        expect(matchShortcut(ev({key: 'End', ctrlKey: true}))).toBe('sheetEnd')
-        // Shift extends rather than moving, so it must not change the binding.
-        expect(matchShortcut(ev({key: 'Home', shiftKey: true}))).toBe('rowStart')
-        expect(matchShortcut(ev({key: 'Home', ctrlKey: true, shiftKey: true}))).toBe(
+        expect(matchShortcut(ev({key: 'Home', ctrlKey: true}))).toBe(
             'sheetStart'
         )
-        expect(matchShortcut(ev({key: 'End', ctrlKey: true, shiftKey: true}))).toBe(
-            'sheetEnd'
+        expect(matchShortcut(ev({key: 'End', ctrlKey: true}))).toBe('sheetEnd')
+        // Shift extends rather than moving, so it must not change the binding.
+        expect(matchShortcut(ev({key: 'Home', shiftKey: true}))).toBe(
+            'rowStart'
         )
+        expect(
+            matchShortcut(ev({key: 'Home', ctrlKey: true, shiftKey: true}))
+        ).toBe('sheetStart')
+        expect(
+            matchShortcut(ev({key: 'End', ctrlKey: true, shiftKey: true}))
+        ).toBe('sheetEnd')
     })
 
     it('leaves bare End unbound (Excel uses it as a mode toggle we do not have)', () => {
@@ -92,8 +105,12 @@ describe('matchShortcut (non-Apple: Ctrl is primary)', () => {
     it('routes arrows to move, jump, and their Shift-extending variants', () => {
         setup()
         expect(matchShortcut(ev({key: 'ArrowDown'}))).toBe('moveDown')
-        expect(matchShortcut(ev({key: 'ArrowDown', shiftKey: true}))).toBe('moveDown')
-        expect(matchShortcut(ev({key: 'ArrowDown', ctrlKey: true}))).toBe('jumpDown')
+        expect(matchShortcut(ev({key: 'ArrowDown', shiftKey: true}))).toBe(
+            'moveDown'
+        )
+        expect(matchShortcut(ev({key: 'ArrowDown', ctrlKey: true}))).toBe(
+            'jumpDown'
+        )
         expect(
             matchShortcut(ev({key: 'ArrowDown', ctrlKey: true, shiftKey: true}))
         ).toBe('jumpDown')
@@ -110,7 +127,9 @@ describe('matchShortcut (non-Apple: Ctrl is primary)', () => {
         // Layout spellings: Shift+'=' gives '+', the numpad gives '+' / '-'
         // directly, and macOS turns Option+'=' / Option+'-' into '≠' / '–'.
         expect(
-            matchShortcut(ev({key: '+', ctrlKey: true, altKey: true, shiftKey: true}))
+            matchShortcut(
+                ev({key: '+', ctrlKey: true, altKey: true, shiftKey: true})
+            )
         ).toBe('insertLines')
         expect(matchShortcut(ev({key: '≠', ctrlKey: true, altKey: true}))).toBe(
             'insertLines'
@@ -127,13 +146,13 @@ describe('matchShortcut (non-Apple: Ctrl is primary)', () => {
         setup()
         expect(matchShortcut(ev({key: '=', ctrlKey: true}))).toBe('zoomIn')
         // '+' is Shift+'=' on most layouts, and the numpad reports '+' directly.
-        expect(matchShortcut(ev({key: '+', ctrlKey: true, shiftKey: true}))).toBe(
-            'zoomIn'
-        )
+        expect(
+            matchShortcut(ev({key: '+', ctrlKey: true, shiftKey: true}))
+        ).toBe('zoomIn')
         expect(matchShortcut(ev({key: '-', ctrlKey: true}))).toBe('zoomOut')
-        expect(matchShortcut(ev({key: '-', ctrlKey: true, shiftKey: true}))).toBe(
-            'zoomOut'
-        )
+        expect(
+            matchShortcut(ev({key: '-', ctrlKey: true, shiftKey: true}))
+        ).toBe('zoomOut')
         expect(matchShortcut(ev({key: '0', ctrlKey: true}))).toBe('zoomReset')
     })
 
@@ -163,8 +182,12 @@ describe('matchShortcut (Apple: ⌘ is primary)', () => {
         expect(matchShortcut(ev({key: '=', metaKey: true, altKey: true}))).toBe(
             'insertLines'
         )
-        expect(matchShortcut(ev({key: 'Home', metaKey: true}))).toBe('sheetStart')
-        expect(matchShortcut(ev({key: 'PageDown', metaKey: true}))).toBe('nextSheet')
+        expect(matchShortcut(ev({key: 'Home', metaKey: true}))).toBe(
+            'sheetStart'
+        )
+        expect(matchShortcut(ev({key: 'PageDown', metaKey: true}))).toBe(
+            'nextSheet'
+        )
         expect(matchShortcut(ev({key: 'd', ctrlKey: true}))).toBeNull()
     })
 
@@ -204,6 +227,8 @@ describe('dispatchShortcut', () => {
 
     it('falls through when nothing matches', () => {
         setPlatform('Win32')
-        expect(dispatchShortcut(ev({key: 'F7'}), {pageDown: () => {}})).toBe(false)
+        expect(dispatchShortcut(ev({key: 'F7'}), {pageDown: () => {}})).toBe(
+            false
+        )
     })
 })

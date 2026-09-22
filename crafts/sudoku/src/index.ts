@@ -35,7 +35,11 @@ export const N = 9
 export const CELL_PX = 42
 
 // Clues remaining per difficulty (fewer clues = harder; may be non-unique).
-export const DIFFICULTY: Record<string, number> = {easy: 40, medium: 32, hard: 26}
+export const DIFFICULTY: Record<string, number> = {
+    easy: 40,
+    medium: 32,
+    hard: 26,
+}
 
 // Colors. Fills use a {red,green,blue} OBJECT; font/border colors are the
 // engine's "standard ARGB" STRING (8 hex digits, no '#').
@@ -84,7 +88,8 @@ function canPlace(g: Grid, pos: number, v: number): boolean {
     const br = Math.floor(r / 3) * 3
     const bc = Math.floor(c / 3) * 3
     for (let i = 0; i < 3; i++)
-        for (let j = 0; j < 3; j++) if (g[(br + i) * N + (bc + j)] === v) return false
+        for (let j = 0; j < 3; j++)
+            if (g[(br + i) * N + (bc + j)] === v) return false
     return true
 }
 
@@ -236,8 +241,16 @@ export async function renameBoardToLocale(
     await renameBoard(workbook, existing.idx, existing.name, boardName(locale))
 }
 
-function input(sheetIdx: number, r: number, c: number, content: string): EditPayload {
-    return {type: 'cellInput', value: {sheetIdx, row: r, col: c, content}} as EditPayload
+function input(
+    sheetIdx: number,
+    r: number,
+    c: number,
+    content: string
+): EditPayload {
+    return {
+        type: 'cellInput',
+        value: {sheetIdx, row: r, col: c, content},
+    } as EditPayload
 }
 function styleUpdate(
     sheetIdx: number,
@@ -245,7 +258,10 @@ function styleUpdate(
     c: number,
     ty: object
 ): EditPayload {
-    return {type: 'cellStyleUpdate', value: {sheetIdx, row: r, col: c, ty}} as EditPayload
+    return {
+        type: 'cellStyleUpdate',
+        value: {sheetIdx, row: r, col: c, ty},
+    } as EditPayload
 }
 function squareDims(px: number): {width: number; height: number} {
     return {width: px / 7, height: (px * 72) / 96}
@@ -285,9 +301,15 @@ async function ensureSheet(
         const {width, height} = squareDims(CELL_PX)
         const sizing: EditPayload[] = []
         for (let c = 0; c < N; c++)
-            sizing.push({type: 'setColWidth', value: {sheetIdx: idx, col: c, width}} as EditPayload)
+            sizing.push({
+                type: 'setColWidth',
+                value: {sheetIdx: idx, col: c, width},
+            } as EditPayload)
         for (let r = 0; r < N; r++)
-            sizing.push({type: 'setRowHeight', value: {sheetIdx: idx, row: r, height}} as EditPayload)
+            sizing.push({
+                type: 'setRowHeight',
+                value: {sheetIdx: idx, row: r, height},
+            } as EditPayload)
         await commit(workbook, sizing)
     }
     return idx
@@ -319,7 +341,10 @@ const STATUS_C = 10
  * language switch catches up on the next puzzle.
  */
 const STATUS_TEXT: Readonly<
-    Record<BoardLocale, {conflict: string; done: string; filling: string; label: string}>
+    Record<
+        BoardLocale,
+        {conflict: string; done: string; filling: string; label: string}
+    >
 > = {
     'zh-CN': {
         conflict: '❌ 有冲突',
@@ -340,17 +365,26 @@ function checkerPayloads(idx: number, locale?: string): EditPayload[] {
     const out: EditPayload[] = []
     // per-row checks (right of each row)
     for (let r = 0; r < N; r++)
-        out.push(input(idx, r, ROWCHK_COL, conflictFormula(rangeA1(r, 0, r, N - 1))))
+        out.push(
+            input(idx, r, ROWCHK_COL, conflictFormula(rangeA1(r, 0, r, N - 1)))
+        )
     // per-column checks (below each column)
     for (let c = 0; c < N; c++)
-        out.push(input(idx, COLCHK_ROW, c, conflictFormula(rangeA1(0, c, N - 1, c))))
+        out.push(
+            input(idx, COLCHK_ROW, c, conflictFormula(rangeA1(0, c, N - 1, c)))
+        )
     // per-box checks (a 3x3 mini-grid)
     for (let b = 0; b < 9; b++) {
         const br = Math.floor(b / 3) * 3
         const bc = (b % 3) * 3
         const rng = rangeA1(br, bc, br + 2, bc + 2)
         out.push(
-            input(idx, BOXCHK_R0 + Math.floor(b / 3), BOXCHK_C0 + (b % 3), conflictFormula(rng))
+            input(
+                idx,
+                BOXCHK_R0 + Math.floor(b / 3),
+                BOXCHK_C0 + (b % 3),
+                conflictFormula(rng)
+            )
         )
     }
     // overall status
@@ -380,7 +414,8 @@ async function ensureBoardChrome(
     // borders + checker formulas — static, safe to (re)apply each new game
     const payloads: EditPayload[] = []
     for (let r = 0; r < N; r++)
-        for (let c = 0; c < N; c++) payloads.push(styleUpdate(idx, r, c, boxBorderTy(r, c)))
+        for (let c = 0; c < N; c++)
+            payloads.push(styleUpdate(idx, r, c, boxBorderTy(r, c)))
     payloads.push(...checkerPayloads(idx, locale))
     await commit(workbook, payloads)
 }
@@ -443,7 +478,10 @@ export async function clearEntries(
                         setFontColor: USER_FONT,
                         setFontBold: false,
                         setFontSize: 16,
-                        setAlignment: {horizontal: 'center', vertical: 'center'},
+                        setAlignment: {
+                            horizontal: 'center',
+                            vertical: 'center',
+                        },
                     })
                 )
             }
@@ -509,7 +547,10 @@ export async function applySolution(
                         setFontColor: SOLVE_FONT,
                         setFontBold: false,
                         setFontSize: 16,
-                        setAlignment: {horizontal: 'center', vertical: 'center'},
+                        setAlignment: {
+                            horizontal: 'center',
+                            vertical: 'center',
+                        },
                     })
                 )
                 n++
@@ -535,7 +576,10 @@ export async function fillSolution(
                         setFontColor: SOLVE_FONT,
                         setFontBold: false,
                         setFontSize: 16,
-                        setAlignment: {horizontal: 'center', vertical: 'center'},
+                        setAlignment: {
+                            horizontal: 'center',
+                            vertical: 'center',
+                        },
                     })
                 )
             }

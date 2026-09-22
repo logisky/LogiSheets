@@ -24,6 +24,7 @@ import {
     llmConfigured,
     makeLlmClient,
 } from '@/components/watson/lib/llm-factory'
+import {modelForTier} from '@/components/watson/lib/providers'
 
 export type AiUnavailable = 'no-key' | 'denied' | 'offline' | 'unsupported'
 export type AiAvailability = {ok: true} | {ok: false; reason: AiUnavailable}
@@ -136,7 +137,14 @@ export function makeCraftAi(deps: CraftAiDeps): CraftAi {
                         settings.baseUrl,
                         () => loadLlmSettings().apiKey || null
                     ),
-                    model: settings.model,
+                    // The craft says how much the question is worth, not who
+                    // answers it: a draft pick runs on the provider's cheap
+                    // model, a committed move on the configured one.
+                    model: modelForTier(
+                        settings.provider,
+                        settings.model,
+                        opts?.tier
+                    ),
                     role,
                     input,
                     tools: readToolsOf(m, craftId, store),

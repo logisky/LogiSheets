@@ -33,11 +33,7 @@ export interface SkillWorkbook {
             temp: boolean
         }
     }): Promise<unknown>
-    getCell(req: {
-        sheetIdx: number
-        row: number
-        col: number
-    }): Promise<unknown>
+    getCell(req: {sheetIdx: number; row: number; col: number}): Promise<unknown>
     getAllSheetInfo(): Promise<unknown>
     [method: string]: unknown
 }
@@ -152,11 +148,18 @@ export interface Violation {
  * has no validation); a non-empty violation list tells the host to reject the
  * request and roll the inputs back.
  */
-export interface CraftRuntime<S extends CraftState = CraftState, W = SkillWorkbook> {
+export interface CraftRuntime<
+    S extends CraftState = CraftState,
+    W = SkillWorkbook
+> {
     onLoad: (s: S, wb: W) => MaybePromise<Result<void>>
     onRequest: (req: JsonRpcRequest, s: S, wb: W) => MaybePromise<Result<void>>
     onValidate?: (s: S, wb: W) => MaybePromise<Result<readonly Violation[]>>
-    onResponse: (resp: JsonRpcResponse, s: S, wb: W) => MaybePromise<Result<void>>
+    onResponse: (
+        resp: JsonRpcResponse,
+        s: S,
+        wb: W
+    ) => MaybePromise<Result<void>>
 }
 
 // ---- Asking the AI (the craft→AI direction) --------------------------------

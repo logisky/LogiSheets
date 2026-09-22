@@ -23,8 +23,7 @@ describe('RpcServer (JSON-RPC 2.0 over HTTP, real WASM engine)', () => {
                 'setCell',
                 async (p, {runtime}) => {
                     const wb = runtime.workbooks.find((w) => w.id === p.id)
-                    if (!wb)
-                        throw new RpcError(1001, `no workbook ${p.id}`)
+                    if (!wb) throw new RpcError(1001, `no workbook ${p.id}`)
                     await wb.ops.inputCell(0, p.row, p.col, p.text)
                 }
             )
@@ -113,8 +112,18 @@ describe('RpcServer (JSON-RPC 2.0 over HTTP, real WASM engine)', () => {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify([
-                {jsonrpc: '2.0', id: 'a', method: 'setCell', params: {id, row: 1, col: 0, text: 'x'}},
-                {jsonrpc: '2.0', id: 'b', method: 'getCell', params: {id, row: 1, col: 0}},
+                {
+                    jsonrpc: '2.0',
+                    id: 'a',
+                    method: 'setCell',
+                    params: {id, row: 1, col: 0, text: 'x'},
+                },
+                {
+                    jsonrpc: '2.0',
+                    id: 'b',
+                    method: 'getCell',
+                    params: {id, row: 1, col: 0},
+                },
             ]),
         })
         const batch = await res.json()
@@ -124,12 +133,22 @@ describe('RpcServer (JSON-RPC 2.0 over HTTP, real WASM engine)', () => {
     })
 
     it('rejects duplicate method registration', () => {
-        expect(() => server.register('getCell', () => null)).toThrow(/duplicate/)
+        expect(() => server.register('getCell', () => null)).toThrow(
+            /duplicate/
+        )
     })
 
     it('persists a mutation when save is true and cleans history', async () => {
-        const {result: {id}} = await rpc('newWorkbook')
-        const mut = await rpc('mutCell', {id, row: 0, col: 0, text: 'keep', save: true})
+        const {
+            result: {id},
+        } = await rpc('newWorkbook')
+        const mut = await rpc('mutCell', {
+            id,
+            row: 0,
+            col: 0,
+            text: 'keep',
+            save: true,
+        })
         expect(mut.result).toEqual({type: 'str', value: 'keep'})
 
         // Change stuck...
@@ -142,12 +161,20 @@ describe('RpcServer (JSON-RPC 2.0 over HTTP, real WASM engine)', () => {
     })
 
     it('rolls a mutation back when save is false, restoring the prior value', async () => {
-        const {result: {id}} = await rpc('newWorkbook')
+        const {
+            result: {id},
+        } = await rpc('newWorkbook')
         // Establish a baseline value with a persisted write.
         await rpc('mutCell', {id, row: 0, col: 0, text: 'base', save: true})
 
         // A save:false mutation computes against the change but then reverts.
-        const mut = await rpc('mutCell', {id, row: 0, col: 0, text: 'temp', save: false})
+        const mut = await rpc('mutCell', {
+            id,
+            row: 0,
+            col: 0,
+            text: 'temp',
+            save: false,
+        })
         expect(mut.result).toEqual({type: 'str', value: 'temp'})
 
         const read = await rpc('getCell', {id, row: 0, col: 0})
@@ -155,7 +182,9 @@ describe('RpcServer (JSON-RPC 2.0 over HTTP, real WASM engine)', () => {
     })
 
     it('defaults to saving when the save flag is omitted', async () => {
-        const {result: {id}} = await rpc('newWorkbook')
+        const {
+            result: {id},
+        } = await rpc('newWorkbook')
         await rpc('mutCell', {id, row: 0, col: 0, text: 'dflt'})
         const read = await rpc('getCell', {id, row: 0, col: 0})
         expect(read.result).toEqual({type: 'str', value: 'dflt'})

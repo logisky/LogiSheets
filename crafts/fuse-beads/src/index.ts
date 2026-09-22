@@ -224,7 +224,9 @@ async function commit(
     })) as {status?: {type?: string; value?: unknown}} | null
     const status = r && r.status
     if (status && status.type === 'err') {
-        throw new Error(`transaction rejected (status err ${status.value ?? ''})`)
+        throw new Error(
+            `transaction rejected (status err ${status.value ?? ''})`
+        )
     }
 }
 

@@ -77,7 +77,12 @@ describe('craft exchange helpers (real WASM engine)', () => {
         // Install on A1 (#PLACEHOLDER>10), cache the shadow id, set A1 = 5
         // (fails). Insert a row above so the value moves to A2. Reading by the
         // SAME cached id — no re-resolution — still reports the violation.
-        const shadow = await wb.ops.setValidationRule(0, 0, 0, '#PLACEHOLDER>10')
+        const shadow = await wb.ops.setValidationRule(
+            0,
+            0,
+            0,
+            '#PLACEHOLDER>10'
+        )
         const rule = {sheetIdx: 0, row: 0, col: 0, formula: '#PLACEHOLDER>10'}
         await wb.ops.inputCell(0, 0, 0, '5')
         expect(
@@ -109,7 +114,9 @@ describe('craft exchange helpers (real WASM engine)', () => {
             onRequest: () => undefined,
             onResponse: () => undefined,
         }
-        expect(await validateLoadedCrafts([loaded(runtime, {})], wb)).toEqual([])
+        expect(await validateLoadedCrafts([loaded(runtime, {})], wb)).toEqual(
+            []
+        )
     })
 
     it('applyCraftRequest collects a craft objection', async () => {
@@ -192,7 +199,9 @@ describe('runCraftExchange (real WASM engine)', () => {
                 return undefined
             },
             onResponse: async (resp, _s, w) => {
-                resp.result = {a1: await w.client.getValue({sheetIdx: 0, row: 0, col: 0})}
+                resp.result = {
+                    a1: await w.client.getValue({sheetIdx: 0, row: 0, col: 0}),
+                }
                 return undefined
             },
         }
@@ -235,7 +244,8 @@ describe('runCraftExchange (real WASM engine)', () => {
                 await w.ops.inputCell(0, 0, 0, '5') // fails #>10
                 return undefined
             },
-            onValidate: (_s, w) => w.ops.checkValidationShadows([{shadow, rule}]),
+            onValidate: (_s, w) =>
+                w.ops.checkValidationShadows([{shadow, rule}]),
             onResponse: () => undefined,
         }
         const crafts = [loaded(runtime, {})]
@@ -266,7 +276,10 @@ describe('MemoryCraftRegistry + loadCrafts round-trip (real WASM engine)', () =>
         })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const save = await (wb.client as any).saveWorkbook({appData})
-        const wb2 = rt.loadWorkbookFromBytes(new Uint8Array(save.data), 'x.xlsx')
+        const wb2 = rt.loadWorkbookFromBytes(
+            new Uint8Array(save.data),
+            'x.xlsx'
+        )
 
         let seenState: unknown
         const runtime: CraftRuntime<CraftState, Workbook> = {

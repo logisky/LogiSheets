@@ -107,7 +107,9 @@ describe('mapChartToOption — axes', () => {
 
     it('leaves ticks alone when the chart has no number format', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        expect((mapChartToOption(model()).yAxis as any).axisLabel).toBeUndefined()
+        expect(
+            (mapChartToOption(model()).yAxis as any).axisLabel
+        ).toBeUndefined()
     })
 
     it('puts the value axis on X for a bar chart', () => {
@@ -142,7 +144,9 @@ describe('mapChartToOption — axis scale', () => {
     })
 
     it('leaves an automatic axis to the renderer', () => {
-        const option = mapChartToOption(model({valAxisScale: {reversed: false}}))
+        const option = mapChartToOption(
+            model({valAxisScale: {reversed: false}})
+        )
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const y = option.yAxis as any
         expect(y.min).toBeUndefined()
@@ -201,7 +205,9 @@ describe('mapChartToOption — radar', () => {
             'Range',
         ])
         // A single max across every series, so the shapes stay comparable.
-        expect(radar.indicator.every((i: {max: number}) => i.max === 9)).toBe(true)
+        expect(radar.indicator.every((i: {max: number}) => i.max === 9)).toBe(
+            true
+        )
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s = (option.series as any[])[0]
         expect(s.type).toBe('radar')
@@ -299,7 +305,9 @@ describe('mapChartToOption — stock', () => {
 
     it('reads three series as high/low/close, with open = close', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const s = (mapChartToOption(ohlc(['High', 'Low', 'Close'])).series as any[])[0]
+        const s = (
+            mapChartToOption(ohlc(['High', 'Low', 'Close'])).series as any[]
+        )[0]
         // High=10, Low=11, Close=12 → [open=12, close=12, low=11, high=10]
         expect(s.data[0]).toEqual([12, 12, 11, 10])
     })
@@ -338,24 +346,36 @@ describe('mapChartToOption — of pie', () => {
         ])
         // "Other" is the sum of what moved to the second plot.
         expect(main.data[3].value).toBe(10)
-        expect(second.data.map((d: {name: string}) => d.name)).toEqual(['d', 'e'])
+        expect(second.data.map((d: {name: string}) => d.name)).toEqual([
+            'd',
+            'e',
+        ])
     })
 
     it('splits by value threshold', () => {
         const [main, second] = plots(ofPie({ofPieSplit: {by: 'val', pos: 10}}))
-        expect(second.data.map((d: {name: string}) => d.name)).toEqual(['d', 'e'])
+        expect(second.data.map((d: {name: string}) => d.name)).toEqual([
+            'd',
+            'e',
+        ])
         expect(main.data[3].value).toBe(10)
     })
 
     it('splits by percentage of the total', () => {
         // Total is 100, so a 7% threshold moves the 6 and the 4.
         const [, second] = plots(ofPie({ofPieSplit: {by: 'percent', pos: 7}}))
-        expect(second.data.map((d: {name: string}) => d.name)).toEqual(['d', 'e'])
+        expect(second.data.map((d: {name: string}) => d.name)).toEqual([
+            'd',
+            'e',
+        ])
     })
 
     it('defaults to the last two points when no split is authored', () => {
         const [, second] = plots(ofPie())
-        expect(second.data.map((d: {name: string}) => d.name)).toEqual(['d', 'e'])
+        expect(second.data.map((d: {name: string}) => d.name)).toEqual([
+            'd',
+            'e',
+        ])
     })
 
     it('draws the second plot as a stacked column for barOfPie', () => {
@@ -366,9 +386,11 @@ describe('mapChartToOption — of pie', () => {
         expect(series.slice(1).every((s) => s.type === 'bar')).toBe(true)
         expect(series.slice(1).every((s) => s.stack === 'other')).toBe(true)
         // The column needs a grid; the pie half sits beside it.
-        expect(mapChartToOption(
-            ofPie({chartType: 'barOfPie', ofPieSplit: {by: 'pos', pos: 2}})
-        ).grid).toBeDefined()
+        expect(
+            mapChartToOption(
+                ofPie({chartType: 'barOfPie', ofPieSplit: {by: 'pos', pos: 2}})
+            ).grid
+        ).toBeDefined()
     })
 })
 

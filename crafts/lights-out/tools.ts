@@ -39,8 +39,9 @@ function rc(i: number): {row: number; col: number} {
 /** The workbook's monotonic write counter, or null if the host predates it. */
 async function workbookVersion(wb: Client): Promise<number | null> {
     try {
-        const v = await (wb as {getVersion?: () => Promise<number | unknown>})
-            .getVersion?.()
+        const v = await (
+            wb as {getVersion?: () => Promise<number | unknown>}
+        ).getVersion?.()
         return typeof v === 'number' ? v : null
     } catch {
         return null
@@ -48,7 +49,10 @@ async function workbookVersion(wb: Client): Promise<number | null> {
 }
 /** True if a committed write landed since the `since` snapshot (⇒ our read is
  *  stale). Returns false when version tracking is unavailable (best-effort). */
-async function changedSince(wb: Client, since: number | null): Promise<boolean> {
+async function changedSince(
+    wb: Client,
+    since: number | null
+): Promise<boolean> {
     if (since === null) return false
     const now = await workbookVersion(wb)
     return now !== null && now !== since
@@ -68,7 +72,11 @@ export async function solveLightsOut(ctx: Ctx): Promise<{
     const wb = ctx.workbook
     const idx = await findBoardSheetIdx(wb)
     if (idx < 0)
-        return {solved: false, clicks: [], reason: 'No Lights Out board — start a game first.'}
+        return {
+            solved: false,
+            clicks: [],
+            reason: 'No Lights Out board — start a game first.',
+        }
 
     // Optimistic concurrency: the user could click a cell (via the craft)
     // between our read and our write, which would make the computed moves stale
@@ -81,7 +89,11 @@ export async function solveLightsOut(ctx: Ctx): Promise<{
         if (isSolved(board)) return {solved: true, clicks: []}
         const moves = solve(board)
         if (!moves)
-            return {solved: false, clicks: [], reason: 'This board is unsolvable.'}
+            return {
+                solved: false,
+                clicks: [],
+                reason: 'This board is unsolvable.',
+            }
         const next = board.slice()
         for (const m of moves) {
             const {row, col} = rc(m)

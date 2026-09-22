@@ -61,6 +61,12 @@
         "zh-CN": "Debugger (dev)"
       },
       "devOnly": true
+    },
+    "four-elements": {
+      "label": {
+        "en": "Four Elements",
+        "zh-CN": "四象"
+      }
     }
   },
   "distributions": {

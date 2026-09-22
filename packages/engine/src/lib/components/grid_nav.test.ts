@@ -71,9 +71,9 @@ describe('wheelScroll', () => {
     })
 
     it('normalizes units on both axes', () => {
-        expect(wheelScroll(wheel({deltaX: 2, deltaY: 3, deltaMode: LINE}))).toEqual(
-            {dx: 32, dy: 48}
-        )
+        expect(
+            wheelScroll(wheel({deltaX: 2, deltaY: 3, deltaMode: LINE}))
+        ).toEqual({dx: 32, dy: 48})
     })
 })
 
@@ -89,10 +89,9 @@ describe('wheelZoomFactor', () => {
     })
 
     it('is symmetric: a notch out undoes a notch in', () => {
-        expect(wheelZoomFactor(wheelZoomFactor(1, -100, PIXEL), 100, PIXEL)).toBeCloseTo(
-            1,
-            10
-        )
+        expect(
+            wheelZoomFactor(wheelZoomFactor(1, -100, PIXEL), 100, PIXEL)
+        ).toBeCloseTo(1, 10)
     })
 
     it('clamps a huge inertial delta so one flick cannot jump the whole range', () => {
@@ -139,7 +138,12 @@ describe('fillRanges', () => {
 
     it('fills a multi-column selection from its own first column', () => {
         expect(
-            fillRanges('right', {startRow: 1, startCol: 0, endRow: 2, endCol: 3})
+            fillRanges('right', {
+                startRow: 1,
+                startCol: 0,
+                endRow: 2,
+                endCol: 3,
+            })
         ).toEqual({
             src: {startRow: 1, startCol: 0, endRow: 2, endCol: 0},
             dst: {startRow: 1, startCol: 1, endRow: 2, endCol: 3},
@@ -148,7 +152,12 @@ describe('fillRanges', () => {
 
     it('pulls from the column to the left for a single column', () => {
         expect(
-            fillRanges('right', {startRow: 0, startCol: 3, endRow: 2, endCol: 3})
+            fillRanges('right', {
+                startRow: 0,
+                startCol: 3,
+                endRow: 2,
+                endCol: 3,
+            })
         ).toEqual({
             src: {startRow: 0, startCol: 2, endRow: 2, endCol: 2},
             dst: {startRow: 0, startCol: 3, endRow: 2, endCol: 3},
@@ -157,7 +166,12 @@ describe('fillRanges', () => {
 
     it('has nothing to pull from in column 0', () => {
         expect(
-            fillRanges('right', {startRow: 3, startCol: 0, endRow: 5, endCol: 0})
+            fillRanges('right', {
+                startRow: 3,
+                startCol: 0,
+                endRow: 5,
+                endCol: 0,
+            })
         ).toBeNull()
     })
 
@@ -173,7 +187,9 @@ describe('fillRanges', () => {
 })
 
 describe('mergeAt', () => {
-    const merges: MergeRect[] = [{startRow: 2, startCol: 1, endRow: 4, endCol: 3}]
+    const merges: MergeRect[] = [
+        {startRow: 2, startCol: 1, endRow: 4, endCol: 3},
+    ]
 
     it('finds the merge a cell sits in, including its edges', () => {
         expect(mergeAt(merges, 3, 2)).toBe(merges[0])
@@ -197,20 +213,24 @@ describe('expandRangeToMerges', () => {
     it('grows to cover a merge the range only clips', () => {
         // The range clips the top-left corner of the merge B3:D5.
         expect(
-            expandRangeToMerges({startRow: 0, startCol: 0, endRow: 2, endCol: 1}, [
-                {startRow: 2, startCol: 1, endRow: 4, endCol: 3},
-            ])
+            expandRangeToMerges(
+                {startRow: 0, startCol: 0, endRow: 2, endCol: 1},
+                [{startRow: 2, startCol: 1, endRow: 4, endCol: 3}]
+            )
         ).toEqual({startRow: 0, startCol: 0, endRow: 4, endCol: 3})
     })
 
     it('follows a chain of merges pulled in by each other', () => {
         // Growing over the first merge reaches the second, which reaches further.
         expect(
-            expandRangeToMerges({startRow: 0, startCol: 0, endRow: 0, endCol: 0}, [
-                {startRow: 0, startCol: 0, endRow: 1, endCol: 1},
-                {startRow: 1, startCol: 1, endRow: 3, endCol: 2},
-                {startRow: 3, startCol: 2, endRow: 5, endCol: 5},
-            ])
+            expandRangeToMerges(
+                {startRow: 0, startCol: 0, endRow: 0, endCol: 0},
+                [
+                    {startRow: 0, startCol: 0, endRow: 1, endCol: 1},
+                    {startRow: 1, startCol: 1, endRow: 3, endCol: 2},
+                    {startRow: 3, startCol: 2, endRow: 5, endCol: 5},
+                ]
+            )
         ).toEqual({startRow: 0, startCol: 0, endRow: 5, endCol: 5})
     })
 })
@@ -219,7 +239,12 @@ describe('rangeFromCorners', () => {
     it('orders the corners whichever way the selection was built', () => {
         const downRight = rangeFromCorners({row: 1, col: 1}, {row: 4, col: 3})
         const upLeft = rangeFromCorners({row: 4, col: 3}, {row: 1, col: 1})
-        expect(downRight).toEqual({startRow: 1, startCol: 1, endRow: 4, endCol: 3})
+        expect(downRight).toEqual({
+            startRow: 1,
+            startCol: 1,
+            endRow: 4,
+            endCol: 3,
+        })
         expect(upLeft).toEqual(downRight)
     })
 })
@@ -252,25 +277,29 @@ describe('stepFocus', () => {
 
 describe('targetLines', () => {
     it('acts on exactly the selected rows', () => {
-        expect(
-            targetLines({start: 3, end: 6, type: 'row'}, undefined)
-        ).toEqual({axis: 'row', start: 3, count: 4})
+        expect(targetLines({start: 3, end: 6, type: 'row'}, undefined)).toEqual(
+            {axis: 'row', start: 3, count: 4}
+        )
     })
 
     it('acts on exactly the selected columns', () => {
-        expect(targetLines({start: 2, end: 2, type: 'col'}, undefined)).toEqual({
-            axis: 'col',
-            start: 2,
-            count: 1,
-        })
+        expect(targetLines({start: 2, end: 2, type: 'col'}, undefined)).toEqual(
+            {
+                axis: 'col',
+                start: 2,
+                count: 1,
+            }
+        )
     })
 
     it('normalizes a line selection dragged upward', () => {
-        expect(targetLines({start: 9, end: 5, type: 'row'}, undefined)).toEqual({
-            axis: 'row',
-            start: 5,
-            count: 5,
-        })
+        expect(targetLines({start: 9, end: 5, type: 'row'}, undefined)).toEqual(
+            {
+                axis: 'row',
+                start: 5,
+                count: 5,
+            }
+        )
     })
 
     it('falls back to the entire rows a cell selection spans', () => {
@@ -287,12 +316,15 @@ describe('targetLines', () => {
 
     it('prefers the line selection when both are somehow present', () => {
         expect(
-            targetLines({start: 0, end: 0, type: 'col'}, {
-                startRow: 4,
-                startCol: 1,
-                endRow: 6,
-                endCol: 3,
-            })
+            targetLines(
+                {start: 0, end: 0, type: 'col'},
+                {
+                    startRow: 4,
+                    startCol: 1,
+                    endRow: 6,
+                    endCol: 3,
+                }
+            )
         ).toEqual({axis: 'col', start: 0, count: 1})
     })
 

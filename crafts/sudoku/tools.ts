@@ -32,14 +32,18 @@ export interface Ctx {
 /** The workbook's monotonic write counter, or null if the host predates it. */
 async function workbookVersion(wb: Client): Promise<number | null> {
     try {
-        const v = await (wb as {getVersion?: () => Promise<number | unknown>})
-            .getVersion?.()
+        const v = await (
+            wb as {getVersion?: () => Promise<number | unknown>}
+        ).getVersion?.()
         return typeof v === 'number' ? v : null
     } catch {
         return null
     }
 }
-async function changedSince(wb: Client, since: number | null): Promise<boolean> {
+async function changedSince(
+    wb: Client,
+    since: number | null
+): Promise<boolean> {
     if (since === null) return false
     const now = await workbookVersion(wb)
     return now !== null && now !== since
@@ -141,5 +145,10 @@ export async function checkSudoku(ctx: Ctx): Promise<{
     const filled = grid.filter((v) => v !== 0).length
     const blanks = N * N - filled
     const hasConflicts = !isConsistent(grid)
-    return {filled, blanks, hasConflicts, complete: blanks === 0 && !hasConflicts}
+    return {
+        filled,
+        blanks,
+        hasConflicts,
+        complete: blanks === 0 && !hasConflicts,
+    }
 }

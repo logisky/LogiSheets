@@ -134,9 +134,19 @@ export const SpreadsheetView = observer(function SpreadsheetView({
             )
         }
         update()
+        // `resize` and `scroll` alone miss the common case: a side panel
+        // opening does not resize the window and does not scroll anything, it
+        // just makes the canvas narrower. The overlay layer hit-tests the
+        // pointer against this origin, so a stale one puts every block's
+        // hover target a panel-width away from the block. Observe the canvas
+        // itself and the miss goes away.
+        const canvas = containerRef.current?.querySelector('canvas')
+        const observer = new ResizeObserver(update)
+        if (canvas) observer.observe(canvas)
         window.addEventListener('resize', update)
         window.addEventListener('scroll', update, true)
         return () => {
+            observer.disconnect()
             window.removeEventListener('resize', update)
             window.removeEventListener('scroll', update, true)
         }

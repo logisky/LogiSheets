@@ -6,12 +6,17 @@ import {extract, resolveCraft} from './extract.js'
 import type {Diagnostic} from './diagnostics.js'
 import type {ManifestRole} from './manifest.js'
 
-function printDiagnostics(diags: Diagnostic[]): {errors: number; warns: number} {
+function printDiagnostics(diags: Diagnostic[]): {
+    errors: number
+    warns: number
+} {
     let errors = 0
     let warns = 0
     for (const d of diags) {
         const loc = d.file
-            ? `${path.relative(process.cwd(), d.file)}${d.line ? ':' + d.line : ''}`
+            ? `${path.relative(process.cwd(), d.file)}${
+                  d.line ? ':' + d.line : ''
+              }`
             : ''
         const tag = d.level === 'error' ? 'error' : 'warn'
         console.error(`  ${tag}${loc ? ' ' + loc : ''}: ${d.message}`)
@@ -35,7 +40,9 @@ export function check(dir: string): number {
     }
     const nRoles = manifest.roles?.length ?? 0
     console.error(
-        `craft "${manifest.craftId}" OK — ${manifest.tools?.length ?? 0} tool(s)` +
+        `craft "${manifest.craftId}" OK — ${
+            manifest.tools?.length ?? 0
+        } tool(s)` +
             `${nRoles ? `, ${nRoles} AI role(s)` : ''}` +
             `${manifest.skill ? ', skill declared' : ''}` +
             `${manifest.url ? ', has UI' : ''}.`
@@ -94,8 +101,10 @@ export async function buildCraft(dir: string): Promise<number> {
         ...(manifest.roles?.length ? [`${manifest.roles.length} role(s)`] : []),
     ]
     console.error(
-        `built craft "${manifest.craftId}" → ${path.relative(process.cwd(), dist)}/ ` +
-            `(manifest.json, ${counts.join(', ')})`
+        `built craft "${manifest.craftId}" → ${path.relative(
+            process.cwd(),
+            dist
+        )}/ ` + `(manifest.json, ${counts.join(', ')})`
     )
     return 0
 }
@@ -113,7 +122,14 @@ function writeRoleTypes(dir: string, roles: readonly ManifestRole[]): void {
     const body = roles
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((r) => `    ${JSON.stringify(r.name)}: ${r.replyType}`)
+        // Quote only what has to be quoted, so the emitted file is what
+        // prettier would have written and does not fail the repo's lint.
+        .map((r) => {
+            const key = /^[A-Za-z_$][\w$]*$/.test(r.name)
+                ? r.name
+                : JSON.stringify(r.name)
+            return `    ${key}: ${r.replyType}`
+        })
         .join('\n')
     fs.writeFileSync(
         path.join(dir, 'craft-roles.d.ts'),
@@ -388,7 +404,9 @@ export async function countSheets(ctx: SkillCtx): Promise<{sheets: number}> {
             '',
         ].join('\n')
     )
-    console.error(`scaffolded craft "${name}" → ${path.relative(process.cwd(), dir)}/`)
+    console.error(
+        `scaffolded craft "${name}" → ${path.relative(process.cwd(), dir)}/`
+    )
     console.error('next: cd in, `npm install`, then `craftsmith check .`')
     return 0
 }

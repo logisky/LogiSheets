@@ -89,7 +89,9 @@ export class CompositeCraftStore implements InstalledCraftStore {
             store = this.owner.get(craftId)
         }
         if (!store)
-            throw new Error(`craft "${craftId}" not found in any installed source`)
+            throw new Error(
+                `craft "${craftId}" not found in any installed source`
+            )
         return store.load(craftId, entry)
     }
 }

@@ -467,7 +467,9 @@ export function seedViolationsPayloads(
                                 ? 'datetime'
                                 : 'string',
                     },
-                    ...(name === KEY_FIELD ? {required: true, unique: true} : {}),
+                    ...(name === KEY_FIELD
+                        ? {required: true, unique: true}
+                        : {}),
                     ...(name === 'units' || name === 'price'
                         ? {required: true}
                         : {}),

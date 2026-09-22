@@ -193,4 +193,24 @@ describe('ask', () => {
         )
         expect(onBusy.mock.calls).toEqual([[true], [false]])
     })
+
+    // The craft grades its own questions but never names a model — it cannot
+    // know which provider the user configured. The host owns that mapping.
+    it("runs a fast-tier ask on the provider's cheap model", async () => {
+        askAi.mockResolvedValue({move: 'e4'})
+        const {ai} = subject()
+        await ai.ask('opponent', 'Draft round 1.', {tier: 'fast'})
+        expect(askAi.mock.calls[0][0].model).toBe('claude-haiku-4-5')
+    })
+
+    it('runs a default-tier ask on the configured model', async () => {
+        askAi.mockResolvedValue({move: 'e4'})
+        const {ai} = subject()
+        await ai.ask('opponent', 'Play, slot 1.', {tier: 'default'})
+        await ai.ask('opponent', 'No tier given.')
+        expect(askAi.mock.calls.map((c) => c[0].model)).toEqual([
+            'claude-opus-5',
+            'claude-opus-5',
+        ])
+    })
 })

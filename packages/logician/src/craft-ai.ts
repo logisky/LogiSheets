@@ -33,6 +33,20 @@ const REPLY = 'reply'
 /** Safety and cost ceiling: how many times the model may go back for state. */
 const DEFAULT_MAX_ITERATIONS = 8
 
+/**
+ * Room for one turn's output.
+ *
+ * Generous because a reasoning model spends nearly all of it on a `thinking`
+ * block before it emits anything. Measured against claude-opus-5 deciding a
+ * single 四象 draft pick: 1024 was cut off mid-thought every time, and 4096
+ * still was. The role's own prompt is what drives this — it says to work the
+ * position out rather than be handed a score — so the budget has to cover
+ * reasoning, not the answer, which is a few dozen tokens.
+ *
+ * A role that wants a tighter leash passes its own `max_tokens`.
+ */
+const DEFAULT_MAX_TOKENS = 16384
+
 /** One question a craft can ask, as `craftsmith` extracted it from `@aiRole`. */
 export interface AiRole {
     name: string
@@ -156,10 +170,21 @@ export async function askAi<T = unknown>(params: AskAiParams): Promise<T> {
             system,
             tools: llmTools,
             messages,
-            max_tokens: params.max_tokens ?? 1024,
+            max_tokens: params.max_tokens ?? DEFAULT_MAX_TOKENS,
             signal: ctx.signal,
         })
         messages.push({role: 'assistant', content: res.content})
+
+        // A truncated turn can carry no usable tool call, so left alone it
+        // silently spends an iteration and the loop ends up reporting that the
+        // model never answered — which is not what went wrong.
+        if (res.stop_reason === 'max_tokens')
+            throw new AskAiError(
+                `role "${role.name}" was cut off at max_tokens ` +
+                    `(${params.max_tokens ?? DEFAULT_MAX_TOKENS}) before it ` +
+                    `could answer; raise max_tokens for this role`,
+                textOf(res.content)
+            )
 
         const calls = res.content.filter(
             (b): b is Extract<AgentContentBlock, {type: 'tool_use'}> =>

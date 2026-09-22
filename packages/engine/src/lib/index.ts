@@ -1,136 +1,133 @@
 // Main library exports
 export {
-  Spreadsheet,
-  ColumnHeaders,
-  RowHeaders,
-  Selector,
-  SheetTabs,
-  Scrollbar,
-  ContextMenu,
-  // Utility functions
-  match,
-  xForColStart,
-  xForColEnd,
-  yForRowStart,
-  yForRowEnd,
-  getPosition,
-  getSelectedCellRange,
-  getSelectedRows,
-  getSelectedColumns,
-  getSelectedLines,
-  findVisibleRowIdxRange,
-  findVisibleColIdxRange,
-  buildSelectedDataFromCell,
-  buildSelectedDataFromCellRange,
-  ptToPx,
-  pxToPt,
-  pxToWidth,
-  simpleUuid,
-} from "./components";
+    Spreadsheet,
+    ColumnHeaders,
+    RowHeaders,
+    Selector,
+    SheetTabs,
+    Scrollbar,
+    ContextMenu,
+    // Utility functions
+    match,
+    xForColStart,
+    xForColEnd,
+    yForRowStart,
+    yForRowEnd,
+    getPosition,
+    getSelectedCellRange,
+    getSelectedRows,
+    getSelectedColumns,
+    getSelectedLines,
+    findVisibleRowIdxRange,
+    findVisibleColIdxRange,
+    buildSelectedDataFromCell,
+    buildSelectedDataFromCellRange,
+    ptToPx,
+    pxToPt,
+    pxToWidth,
+    simpleUuid,
+} from './components'
 
 // Context menu types
 export type {
-  ContextMenuItem,
-  ContextMenuContext,
-  ContextMenuTarget,
-} from "./components/contextMenuTypes";
+    ContextMenuItem,
+    ContextMenuContext,
+    ContextMenuTarget,
+} from './components/contextMenuTypes'
 
 // Client exports
 export {
-  DataService,
-  WorkbookClient,
-  OffscreenClient,
-  WORKBOOK_LOAD_CANCELLED,
-  isLoadCancelled,
-} from "./clients";
-export type { BeforeLoadWorkbook } from "./clients";
+    DataService,
+    WorkbookClient,
+    OffscreenClient,
+    WORKBOOK_LOAD_CANCELLED,
+    isLoadCancelled,
+} from './clients'
+export type {BeforeLoadWorkbook} from './clients'
 
 // Worker exports
-export { WorkbookWorkerService, OffscreenWorkerService } from "./worker";
+export {WorkbookWorkerService, OffscreenWorkerService} from './worker'
 
 // Block management exports
 export {
-  BlockManager,
-  EnumSetManager,
-  FieldManager,
-  LOGISHEETS_BUILTIN_CRAFT_ID,
-  FIELD_AND_VALIDATION_TAG,
-} from "./block";
+    BlockManager,
+    EnumSetManager,
+    FieldManager,
+    LOGISHEETS_BUILTIN_CRAFT_ID,
+    FIELD_AND_VALIDATION_TAG,
+} from './block'
 
-export type { EnumInfo, EnumVariant, FieldInfo, FieldTypeEnum } from "./block";
+export type {EnumInfo, EnumVariant, FieldInfo, FieldTypeEnum} from './block'
 
 // Re-export types
 export type {
-  Grid,
-  Row,
-  Column,
-  Range,
-  Cell,
-  SelectorStyle,
-  CellLayout,
-  CanvasProps,
-  EngineConfig,
-  ZoomOrigin,
-} from "$types/index";
+    Grid,
+    Row,
+    Column,
+    Range,
+    Cell,
+    SelectorStyle,
+    CellLayout,
+    CanvasProps,
+    EngineConfig,
+    ZoomOrigin,
+} from '$types/index'
 
 // Re-export default config
-export { DEFAULT_ENGINE_CONFIG } from "$types/index";
+export {DEFAULT_ENGINE_CONFIG} from '$types/index'
 
 // Re-export Range and Cell classes (not just types)
-export { Range as RangeClass, Cell as CellClass } from "$types/index";
+export {Range as RangeClass, Cell as CellClass} from '$types/index'
 
 // Chart rendering (ECharts-backed). ChartView renders a resolved ChartModel;
 // mapChartToOption is the model→ECharts translation layer.
-export { ChartView, mapChartToOption } from "./chart";
+export {ChartView, mapChartToOption} from './chart'
 export type {
-  AxisScale,
-  ChartModel,
-  ChartSeries,
-  ChartType,
-  ChartUpdate,
-  DataLabels,
-  LegendPosition,
-} from "./chart";
+    AxisScale,
+    ChartModel,
+    ChartSeries,
+    ChartType,
+    ChartUpdate,
+    DataLabels,
+    LegendPosition,
+} from './chart'
 
 // Engine class - main entry point
-export { Engine, default as EngineDefault } from "./engine";
+export {Engine, default as EngineDefault} from './engine'
 export type {
-  EngineEventType,
-  EngineEventMap,
-  EngineMountOptions,
-} from "./engine";
+    EngineEventType,
+    EngineEventMap,
+    EngineMountOptions,
+} from './engine'
 
 // Session class - per-view handle returned by engine.createSession()
-export { Session, default as SessionDefault } from "./session";
+export {Session, default as SessionDefault} from './session'
 export type {
-  SessionEventType,
-  SessionEventMap,
-  SessionMountOptions,
-  SessionHost,
-} from "./session";
+    SessionEventType,
+    SessionEventMap,
+    SessionMountOptions,
+    SessionHost,
+} from './session'
 
 export type {
-  SelectedData,
-  Transaction,
-  Payload,
-  SheetInfo,
-  CfRuleInfo,
-  CfRuleSpec,
-  CfFormatSpec,
-} from "logisheets-web";
+    SelectedData,
+    Transaction,
+    Payload,
+    SheetInfo,
+    CfRuleInfo,
+    CfRuleSpec,
+    CfFormatSpec,
+} from 'logisheets-web'
 
 // Re-export commonly used logisheets-web utilities
-export {
-  isErrorMessage,
-  getFirstCell,
-} from "logisheets-web";
+export {isErrorMessage, getFirstCell} from 'logisheets-web'
 
 // Framework adapters
-export { convertCanvasPropsToAdapterProps } from "./adapters";
+export {convertCanvasPropsToAdapterProps} from './adapters'
 
 export type {
-  SpreadsheetAdapterProps,
-  CanvasAdapterProps,
-  UseSpreadsheetConfig,
-  UseSpreadsheetReturn,
-} from "./adapters";
+    SpreadsheetAdapterProps,
+    CanvasAdapterProps,
+    UseSpreadsheetConfig,
+    UseSpreadsheetReturn,
+} from './adapters'

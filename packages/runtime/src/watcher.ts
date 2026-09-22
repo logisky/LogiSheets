@@ -51,11 +51,7 @@ export interface WorkbookWatcherOptions {
      * Called after a workbook is (re)loaded and swapped in, with the string id,
      * the new live handle, and the descriptor that triggered the load.
      */
-    onLoad?: (
-        id: string,
-        wb: Workbook,
-        descriptor: WorkbookDescriptor
-    ) => void
+    onLoad?: (id: string, wb: Workbook, descriptor: WorkbookDescriptor) => void
     /**
      * Called when a descriptor file can't be read, parsed, or loaded. The
      * previously-loaded workbook (if any) is left in place. `file` is the
@@ -223,7 +219,9 @@ export class WorkbookWatcher {
         const url = d.url as string
         const res = await fetch(url)
         if (!res.ok)
-            throw new Error(`fetch ${url} failed: ${res.status} ${res.statusText}`)
+            throw new Error(
+                `fetch ${url} failed: ${res.status} ${res.statusText}`
+            )
         const content = new Uint8Array(await res.arrayBuffer())
         const wb = this.runtime.loadWorkbookFromBytes(content, nameFromUrl(url))
         return {wb, source: url}
@@ -246,9 +244,13 @@ function parseDescriptor(text: string): WorkbookDescriptor {
     if (typeof version !== 'string' && typeof version !== 'number')
         throw new Error('descriptor.version must be a string or number')
     if (path !== undefined && (typeof path !== 'string' || path.length === 0))
-        throw new Error('descriptor.path, if present, must be a non-empty string')
+        throw new Error(
+            'descriptor.path, if present, must be a non-empty string'
+        )
     if (url !== undefined && (typeof url !== 'string' || url.length === 0))
-        throw new Error('descriptor.url, if present, must be a non-empty string')
+        throw new Error(
+            'descriptor.url, if present, must be a non-empty string'
+        )
     if (path === undefined && url === undefined)
         throw new Error('descriptor must have a `path` or a `url`')
     return {id, version, path, url}

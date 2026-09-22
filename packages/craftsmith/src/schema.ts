@@ -85,7 +85,10 @@ export function typeToSchema(
         if (members.length && members.every(isBooleanType))
             return {type: 'boolean'}
         throw new SchemaError(
-            `union type "${typeName(checker, t)}" is not a string- or number-literal enum; ` +
+            `union type "${typeName(
+                checker,
+                t
+            )}" is not a string- or number-literal enum; ` +
                 `simplify it or split it into separate tools`
         )
     }
@@ -117,9 +120,8 @@ export function typeToSchema(
             // A property's own doc comment is how the model learns what goes
             // in it. Tool inputs get this from @param; a declared shape has
             // nowhere else to say it.
-            const doc = ts.displayPartsToString(
-                prop.getDocumentationComment(checker)
-            )
+            const doc = ts
+                .displayPartsToString(prop.getDocumentationComment(checker))
                 .replace(/\s+/g, ' ')
                 .trim()
             if (doc && propSchema.description === undefined)

@@ -96,5 +96,15 @@ function l(
     numberMax: number,
     simultaneous: number
 ): LevelSpec {
-    return {level, mode, n, showMs, question, answerCount, paletteSize, numberMax, simultaneous}
+    return {
+        level,
+        mode,
+        n,
+        showMs,
+        question,
+        answerCount,
+        paletteSize,
+        numberMax,
+        simultaneous,
+    }
 }

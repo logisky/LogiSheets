@@ -4,44 +4,44 @@
  * allowing seamless integration with LogiSheets React application.
  */
 
-import type { SelectedData, SheetInfo, CellLayout } from "logisheets-web";
+import type {SelectedData, SheetInfo, CellLayout} from 'logisheets-web'
 
-import type { Grid, EngineConfig } from "$types/index";
+import type {Grid, EngineConfig} from '$types/index'
 
-import type { ContextMenuContext } from "../components/contextMenuTypes";
+import type {ContextMenuContext} from '../components/contextMenuTypes'
 
 /**
  * Props for the React Spreadsheet component adapter.
  * These mirror the Svelte component props but follow React conventions.
  */
 export interface SpreadsheetAdapterProps {
-  /** Currently selected data */
-  selectedData?: SelectedData;
-  /** Active sheet index */
-  activeSheet?: number;
-  /** Cell layouts for custom rendering */
-  cellLayouts?: CellLayout[];
-  /** Engine configuration */
-  config?: Partial<EngineConfig>;
-  /** Show sheet tabs at bottom */
-  showSheetTabs?: boolean;
-  /** Show scrollbars */
-  showScrollbars?: boolean;
+    /** Currently selected data */
+    selectedData?: SelectedData
+    /** Active sheet index */
+    activeSheet?: number
+    /** Cell layouts for custom rendering */
+    cellLayouts?: CellLayout[]
+    /** Engine configuration */
+    config?: Partial<EngineConfig>
+    /** Show sheet tabs at bottom */
+    showSheetTabs?: boolean
+    /** Show scrollbars */
+    showScrollbars?: boolean
 
-  // Event callbacks - React naming convention (onXxx)
-  /** Callback when selection changes */
-  onSelectedDataChange?: (data: SelectedData) => void;
-  /** Callback when active sheet changes */
-  onActiveSheetChange?: (sheet: number) => void;
-  /** Callback when grid updates */
-  onGridChange?: (grid: Grid | null) => void;
-  /** Callback when sheets list changes */
-  onSheetsChange?: (sheets: readonly SheetInfo[]) => void;
-  /**
-   * The user opened the context menu. The engine renders no menu — the host
-   * renders its own at `(x, y)` (viewport coords) using `context`.
-   */
-  onContextMenu?: (context: ContextMenuContext, x: number, y: number) => void;
+    // Event callbacks - React naming convention (onXxx)
+    /** Callback when selection changes */
+    onSelectedDataChange?: (data: SelectedData) => void
+    /** Callback when active sheet changes */
+    onActiveSheetChange?: (sheet: number) => void
+    /** Callback when grid updates */
+    onGridChange?: (grid: Grid | null) => void
+    /** Callback when sheets list changes */
+    onSheetsChange?: (sheets: readonly SheetInfo[]) => void
+    /**
+     * The user opened the context menu. The engine renders no menu — the host
+     * renders its own at `(x, y)` (viewport coords) using `context`.
+     */
+    onContextMenu?: (context: ContextMenuContext, x: number, y: number) => void
 }
 
 /**
@@ -49,14 +49,14 @@ export interface SpreadsheetAdapterProps {
  * Use this interface when migrating from LogiSheets Canvas component.
  */
 export interface CanvasAdapterProps {
-  selectedData: SelectedData;
-  selectedData$: (e: SelectedData) => void;
-  activeSheet: number;
-  activeSheet$: (s: number) => void;
-  selectedDataContentChanged$: (e: object) => void;
-  grid: Grid | null;
-  setGrid: (grid: Grid | null) => void;
-  cellLayouts: CellLayout[];
+    selectedData: SelectedData
+    selectedData$: (e: SelectedData) => void
+    activeSheet: number
+    activeSheet$: (s: number) => void
+    selectedDataContentChanged$: (e: object) => void
+    grid: Grid | null
+    setGrid: (grid: Grid | null) => void
+    cellLayouts: CellLayout[]
 }
 
 /**
@@ -64,19 +64,19 @@ export interface CanvasAdapterProps {
  * This helps when migrating from the existing LogiSheets Canvas component.
  */
 export function convertCanvasPropsToAdapterProps(
-  props: CanvasAdapterProps,
+    props: CanvasAdapterProps
 ): SpreadsheetAdapterProps {
-  return {
-    selectedData: props.selectedData,
-    activeSheet: props.activeSheet,
-    cellLayouts: props.cellLayouts,
-    onSelectedDataChange: (data) => {
-      props.selectedData$(data);
-      props.selectedDataContentChanged$({});
-    },
-    onActiveSheetChange: props.activeSheet$,
-    onGridChange: props.setGrid,
-  };
+    return {
+        selectedData: props.selectedData,
+        activeSheet: props.activeSheet,
+        cellLayouts: props.cellLayouts,
+        onSelectedDataChange: (data) => {
+            props.selectedData$(data)
+            props.selectedDataContentChanged$({})
+        },
+        onActiveSheetChange: props.activeSheet$,
+        onGridChange: props.setGrid,
+    }
 }
 
 /**
@@ -84,30 +84,30 @@ export function convertCanvasPropsToAdapterProps(
  * This can be used with custom React hooks to manage spreadsheet state.
  */
 export interface UseSpreadsheetConfig {
-  /** Initial selected data */
-  initialSelectedData?: SelectedData;
-  /** Initial active sheet index */
-  initialActiveSheet?: number;
-  /** Engine configuration */
-  config?: Partial<EngineConfig>;
+    /** Initial selected data */
+    initialSelectedData?: SelectedData
+    /** Initial active sheet index */
+    initialActiveSheet?: number
+    /** Engine configuration */
+    config?: Partial<EngineConfig>
 }
 
 /**
  * Return type for useSpreadsheet hook (to be implemented in React wrapper package)
  */
 export interface UseSpreadsheetReturn {
-  /** Current selected data */
-  selectedData: SelectedData;
-  /** Set selected data */
-  setSelectedData: (data: SelectedData) => void;
-  /** Current active sheet */
-  activeSheet: number;
-  /** Set active sheet */
-  setActiveSheet: (sheet: number) => void;
-  /** Current grid */
-  grid: Grid | null;
-  /** Current sheets list */
-  sheets: readonly SheetInfo[];
-  /** Props to spread on the Spreadsheet component */
-  spreadsheetProps: SpreadsheetAdapterProps;
+    /** Current selected data */
+    selectedData: SelectedData
+    /** Set selected data */
+    setSelectedData: (data: SelectedData) => void
+    /** Current active sheet */
+    activeSheet: number
+    /** Set active sheet */
+    setActiveSheet: (sheet: number) => void
+    /** Current grid */
+    grid: Grid | null
+    /** Current sheets list */
+    sheets: readonly SheetInfo[]
+    /** Props to spread on the Spreadsheet component */
+    spreadsheetProps: SpreadsheetAdapterProps
 }

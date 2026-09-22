@@ -64,7 +64,15 @@ describe('parseA1Range', () => {
     })
 
     it('returns undefined for anything it cannot read', () => {
-        for (const bad of ['', 'Sheet1!', 'not a ref', '$A$0', 'A', '1', '#REF!']) {
+        for (const bad of [
+            '',
+            'Sheet1!',
+            'not a ref',
+            '$A$0',
+            'A',
+            '1',
+            '#REF!',
+        ]) {
             expect(parseA1Range(bad), bad).toBeUndefined()
         }
     })
@@ -143,7 +151,7 @@ const series = (over: Record<string, unknown>) =>
         formattedValues: ['1'],
         sizes: [],
         ...over,
-    }) as ChartInfo['series'][number]
+    } as ChartInfo['series'][number])
 
 describe('chartSourceRanges', () => {
     it('lists the categories first, then each series', () => {
@@ -181,7 +189,9 @@ describe('chartSourceRanges', () => {
     it('drops the alpha from an ARGB colour', () => {
         const ranges = chartSourceRanges(
             info({
-                series: [series({valRef: 'Sheet1!$B$2:$B$4', color: 'FF4472C4'})],
+                series: [
+                    series({valRef: 'Sheet1!$B$2:$B$4', color: 'FF4472C4'}),
+                ],
             })
         )
         expect(ranges[0].color).toBe('#4472C4')
