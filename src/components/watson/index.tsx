@@ -174,6 +174,14 @@ export const Watson = observer(function Watson({
             localStorage.getItem(KEY_MODEL) || PROVIDERS[provider].defaultModel
     )
     const [showSettings, setShowSettings] = useState(false)
+
+    // Something asked the host to open LLM setup — typically a craft whose AI
+    // features are dark for want of a key. It cannot open this itself and must
+    // never see the key; all it can do is ask. Opening the panel is the
+    // container's half (it owns visibility); this is ours.
+    useEffect(() => {
+        if (globalStore.llmSetupRequests > 0) setShowSettings(true)
+    }, [globalStore.llmSetupRequests])
     const [turnError, setTurnError] = useState<string | null>(null)
     const [confirmState, setConfirmState] = useState<PendingConfirm | null>(
         null

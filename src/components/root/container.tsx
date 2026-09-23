@@ -9,6 +9,8 @@ import {LeftDock, LEFT_DOCK_WIDTH} from '../left-dock'
 import {Grid} from 'logisheets-engine'
 import {CellLayout, SelectedData} from 'logisheets-engine'
 import {parseCraftDeepLink} from '@/core/craft-deeplink'
+import {reaction} from 'mobx'
+import {globalStore} from '@/store'
 
 export const RootContainer = () => {
     const [craftDeepLink] = useState(() => parseCraftDeepLink())
@@ -38,6 +40,22 @@ export const RootContainer = () => {
     const [cellLayouts, setCellLayouts] = useState<CellLayout[]>([])
     const [activeSheet, setActiveSheet] = useState(0)
     const [isWatsonVisible, setWatsonVisible] = useState(false)
+
+    // A craft (or anything else) can ask the host to open LLM setup when its
+    // AI features are dark for want of a key. Watson owns the settings dialog
+    // and opens it off the same counter; visibility is ours. A `reaction`
+    // rather than making this an observer: it is one side effect, and the
+    // component reads nothing else from the store.
+    useEffect(
+        () =>
+            reaction(
+                () => globalStore.llmSetupRequests,
+                (n) => {
+                    if (n > 0) setWatsonVisible(true)
+                }
+            ),
+        []
+    )
 
     // Watson and the craft panel share one left dock; the workbook is pushed
     // right by its width whenever either is open (never covered).

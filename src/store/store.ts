@@ -26,6 +26,19 @@ export class GlobalStore {
         this.isTempMode = v
     }
 
+    // Bumped when something asks the host to open LLM setup — a craft whose
+    // AI features are dark because no key is configured, for instance.
+    //
+    // A counter rather than a boolean: two asks in a row should open the
+    // panel twice, and a boolean that is already true is indistinguishable
+    // from one nobody reset. Nothing here knows what a key IS; a craft must
+    // never see one. It can only ask the host to show its own settings.
+    @observable llmSetupRequests = 0
+
+    @action requestLlmSetup() {
+        this.llmSetupRequests += 1
+    }
+
     // When true, block overlays (border, settings button, field headers,
     // add-row button) are always shown. When false (default), they only
     // appear while the mouse is over the block.
