@@ -8,6 +8,7 @@ Essays on why this project exists.
 
 - [**What is real AI-native?**](/ideas/what-is-real-AI-native) — Rust had the best correction loop in mainstream programming years before anyone was designing for agents. What that accident says about "AI-native".
 - [**Your AI agent doesn't need more memory**](/ideas/your-ai-agent-does-not-need-more-memory) — Memory is for intent. Everything else the software should be able to answer for itself — and the novel was already on the disk.
+- [**Spreadsheets become even more important in the AI era**](/ideas/spreadsheet-becomes-even-more-important-in-AI-era) — The working, the controls and the report in one object. What you need when the analyst is fast, confident and occasionally wrong.
 
 <!--
 This page is just the index. Rewrite it however you like.
