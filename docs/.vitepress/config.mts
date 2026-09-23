@@ -67,6 +67,10 @@ const SIDEBAR = [
                         text: "Your AI agent doesn't need more memory",
                         link: '/ideas/your-ai-agent-does-not-need-more-memory',
                     },
+                    {
+                        text: 'Spreadsheets become even more important in the AI era',
+                        link: '/ideas/spreadsheet-becomes-even-more-important-in-AI-era',
+                    },
                 ],
             },
         ]
