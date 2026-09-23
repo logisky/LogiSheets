@@ -121,7 +121,7 @@ macro_rules! assert_text_from_calc_value {
         let _value = _v.unwrap();
         let _res = match _value {
             Value::Blank => Ok(String::from("")),
-            Value::Number(n) => Ok(n.to_string()),
+            Value::Number(n) => Ok($crate::calc_engine::calculator::number_text::number_to_text(n)),
             Value::Text(t) => Ok(t),
             Value::Boolean(b) => {
                 if b {

@@ -392,7 +392,7 @@ fn collect_cells(value: CalcValue, out: &mut Vec<String>) -> Result<(), ast::Err
 fn value_to_string(v: Value) -> Result<String, ast::Error> {
     match v {
         Value::Blank => Ok(String::new()),
-        Value::Number(n) => Ok(n.to_string()),
+        Value::Number(n) => Ok(super::super::number_text::number_to_text(n)),
         Value::Text(t) => Ok(t),
         Value::Boolean(b) => Ok(if b {
             "TRUE".to_string()

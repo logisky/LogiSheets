@@ -50,7 +50,7 @@ impl CalcValue {
         match self {
             CalcValue::Scalar(v) => match v {
                 Value::Blank => String::from(""),
-                Value::Number(n) => n.to_string(),
+                Value::Number(n) => super::number_text::number_to_text(n),
                 Value::Text(t) => t,
                 Value::Boolean(b) => {
                     if b {

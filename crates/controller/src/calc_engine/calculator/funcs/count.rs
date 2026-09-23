@@ -1,5 +1,6 @@
 use crate::calc_engine::connector::Connector;
 
+use super::utils::scalar_arg_as_number;
 use super::{CalcValue, CalcVertex, Value};
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
@@ -57,10 +58,9 @@ fn counta_calc_value(value: CalcValue) -> u32 {
 
 fn count_calc_value(value: CalcValue) -> u16 {
     match value {
-        CalcValue::Scalar(s) => match s {
-            Value::Number(_) => 1_u16,
-            _ => 0_u16,
-        },
+        // An argument, not a range cell: a logical typed here counts. See
+        // `scalar_arg_as_number`.
+        CalcValue::Scalar(s) => scalar_arg_as_number(&s).map_or(0_u16, |_| 1_u16),
         CalcValue::Range(r) => r.into_iter().fold(0_u16, |s, e| match e {
             Value::Number(_) => s + 1,
             _ => s,
@@ -96,8 +96,11 @@ mod tests {
         ];
         let mut fetcher = TestFetcher {};
         let result = super::calc(args, &mut fetcher);
+        // TRUE, FALSE, -1 and the range's one number: four. Was 2 while a
+        // logical ARGUMENT was skipped — the same rule SUM follows, and the
+        // two used to disagree about the same values.
         if let CalcVertex::Value(CalcValue::Scalar(Value::Number(f))) = result {
-            assert!((f - 2.0).abs() < 1e-10)
+            assert!((f - 4.0).abs() < 1e-10, "expected 4, got {f}")
         } else {
             panic!()
         }

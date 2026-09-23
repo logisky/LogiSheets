@@ -39,6 +39,28 @@ pub fn get_condition_result(calc_value: CalcValue) -> ConditionResult {
 /// Flatten a value into a positional `Vec<f64>` (blank → 0, bool → 1/0, numeric
 /// text parsed). Order is preserved so paired series — e.g. XNPV/XIRR values and
 /// dates — stay aligned by position.
+/// What a value contributes when it is passed as a **direct argument** to one
+/// of the counting aggregates — SUM, COUNT, AVERAGE and their relatives.
+///
+/// `None` means "does not participate". The interesting case is the boolean:
+/// Excel counts a logical **typed into the argument list** (`SUM(1,TRUE)` is
+/// 2) and ignores one **sitting in a referenced range** (`SUM(A1:A2)` over the
+/// same values is 1). Someone who writes TRUE as an argument meant it; a
+/// boolean that merely happens to be inside a range being totalled almost
+/// never is.
+///
+/// The range half is each function's own business — they already agree on it.
+/// This exists so the argument half is written once: it was previously spelled
+/// out separately in sum.rs, count.rs and average.rs, and only sum.rs was
+/// right, so `SUM` and `COUNT` disagreed about the same cell.
+pub fn scalar_arg_as_number(v: &Value) -> Option<f64> {
+    match v {
+        Value::Number(n) => Some(*n),
+        Value::Boolean(b) => Some(if *b { 1_f64 } else { 0_f64 }),
+        _ => None,
+    }
+}
+
 pub fn collect_f64_series(value: CalcValue) -> Result<Vec<f64>, ast::Error> {
     match value {
         CalcValue::Scalar(v) => Ok(vec![convert_f64(v)?]),

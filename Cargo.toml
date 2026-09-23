@@ -87,6 +87,9 @@ zip = { version = "0.6.0", default-features = false, features = ["deflate"] }
 logiscript = { path = "crates/logiscript" }
 logisheets_base = { workspace = true }
 proptest = "1"
+# The generated-corpus test reads its expectations from a JSON manifest that a
+# Python script emits beside the workbooks (see tests/gen/gen_corpus.py).
+serde_json = { workspace = true }
 
 # Cargo ignores `[profile.*]` in non-root workspace members, so the wasm crate's
 # own request for a size-optimized build was silently dropped (it only produced a
