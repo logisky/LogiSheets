@@ -2261,5 +2261,80 @@
       }
     ],
     "file": "realistic.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "E1",
+        "kind": "number",
+        "note": "a name standing for one cell",
+        "sheet": "nm",
+        "value": 0.07
+      },
+      {
+        "cell": "E2",
+        "kind": "number",
+        "note": "and used in arithmetic",
+        "sheet": "nm",
+        "value": 7.0
+      },
+      {
+        "cell": "E3",
+        "kind": "number",
+        "note": "a name standing for a range",
+        "sheet": "nm",
+        "value": 100.0
+      },
+      {
+        "cell": "E4",
+        "kind": "number",
+        "note": "any aggregate takes it",
+        "sheet": "nm",
+        "value": 25.0
+      },
+      {
+        "cell": "E5",
+        "kind": "number",
+        "note": "COUNT sees all four cells, not one",
+        "sheet": "nm",
+        "value": 4.0
+      },
+      {
+        "cell": "E6",
+        "kind": "number",
+        "note": "MAX over a named range",
+        "sheet": "nm",
+        "value": 40.0
+      },
+      {
+        "cell": "E7",
+        "kind": "number",
+        "note": "two names in one expression",
+        "sheet": "nm",
+        "value": 7.000000000000001
+      },
+      {
+        "cell": "E8",
+        "kind": "number",
+        "note": "a name where a range is expected",
+        "sheet": "nm",
+        "value": 20.0
+      },
+      {
+        "cell": "E9",
+        "kind": "number",
+        "note": "two named ranges as criteria and sum",
+        "sheet": "nm",
+        "value": 40.0
+      },
+      {
+        "cell": "E10",
+        "kind": "number",
+        "note": "the name and the literal range are the same cells",
+        "sheet": "nm",
+        "value": 0.0
+      }
+    ],
+    "file": "names.xlsx"
   }
 ]

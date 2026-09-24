@@ -24,6 +24,12 @@
 //! directions: a new mismatch fails, and so does a listed one that starts
 //! passing — because that means somebody fixed it and the note is now a lie.
 //!
+//! Every expectation is checked twice: once on the file as loaded, and again
+//! after saving it through our own writer and reading it back. `roundtrip_corpus`
+//! proves no PART of a file survives the trip; this proves no VALUE changes on
+//! the way — the class where the engine computes the right answer and then
+//! writes something else, which neither check could catch alone.
+//!
 //! The corpus and its manifest are committed, so this needs no Python to run.
 //! Regenerate with `python3 tests/gen/gen_corpus.py` after editing the script.
 
@@ -58,6 +64,76 @@ fn describe(v: &Option<Value>) -> String {
     }
 }
 
+/// Compare one workbook against the manifest's checks, appending any
+/// mismatches to `failures`. `phase` names which copy is being looked at.
+fn verify(
+    wb: &Workbook,
+    book: &Json,
+    file: &str,
+    phase: &str,
+    failures: &mut Vec<String>,
+) -> usize {
+    let mut checked = 0usize;
+    for check in book["checks"].as_array().expect("checks is an array") {
+        let sheet = check["sheet"].as_str().unwrap();
+        let cell = check["cell"].as_str().unwrap();
+        let note = check["note"].as_str().unwrap_or("");
+        let (row, col) = parse_a1(cell);
+
+        let ws = match wb.get_sheet_by_name(sheet) {
+            Ok(ws) => ws,
+            Err(e) => {
+                failures.push(format!("{file} [{phase}] !{sheet}: no such sheet ({e:?})"));
+                continue;
+            }
+        };
+        let got = ws.get_value(row, col).ok();
+        checked += 1;
+
+        let ok = match check["kind"].as_str().unwrap() {
+            "number" => {
+                let want = check["value"].as_f64().unwrap();
+                match &got {
+                    // Relative where it matters, absolute near zero: a
+                    // margin of 0.6333… is not a candidate for ==.
+                    Some(Value::Number(n)) => (n - want).abs() <= 1e-9 * want.abs().max(1.0),
+                    _ => false,
+                }
+            }
+            "text" => {
+                let want = check["value"].as_str().unwrap();
+                matches!(&got, Some(Value::Str(t)) if t == want)
+            }
+            "bool" => {
+                let want = check["value"].as_bool().unwrap();
+                matches!(&got, Some(Value::Bool(b)) if *b == want)
+            }
+            other => panic!("manifest asks for an unknown kind {other:?}"),
+        };
+
+        // A known divergence keeps Excel's answer in the manifest — that
+        // is still what is true — and records why we differ. Same bargain
+        // as `allowed_losses` in roundtrip_corpus: characterised, never
+        // silently tolerated, and it fails the moment it stops being
+        // accurate in either direction.
+        match (ok, check.get("diverges").and_then(|d| d.as_str())) {
+            (true, None) | (false, Some(_)) => {}
+            (false, None) => failures.push(format!(
+                "{file} [{phase}] !{sheet}!{cell}: expected {} {}, got {} — {note}",
+                check["kind"].as_str().unwrap(),
+                check["value"],
+                describe(&got),
+            )),
+            (true, Some(why)) => failures.push(format!(
+                "{file} [{phase}] !{sheet}!{cell}: now MATCHES Excel, but is still \
+                 listed as a known divergence ({why}) — drop the \
+                 `diverges=` from tests/gen/gen_corpus.py and regenerate"
+            )),
+        }
+    }
+    checked
+}
+
 #[test]
 fn computes_what_another_library_left_uncomputed() {
     let dir = std::path::Path::new("tests/generated");
@@ -86,63 +162,26 @@ fn computes_what_another_library_left_uncomputed() {
                 continue;
             }
         };
+        checked += verify(&wb, book, file, "as loaded", &mut failures);
 
-        for check in book["checks"].as_array().expect("checks is an array") {
-            let sheet = check["sheet"].as_str().unwrap();
-            let cell = check["cell"].as_str().unwrap();
-            let note = check["note"].as_str().unwrap_or("");
-            let (row, col) = parse_a1(cell);
-
-            let ws = match wb.get_sheet_by_name(sheet) {
-                Ok(ws) => ws,
-                Err(e) => {
-                    failures.push(format!("{file}!{sheet}: no such sheet ({e:?})"));
-                    continue;
-                }
-            };
-            let got = ws.get_value(row, col).ok();
-            checked += 1;
-
-            let ok = match check["kind"].as_str().unwrap() {
-                "number" => {
-                    let want = check["value"].as_f64().unwrap();
-                    match &got {
-                        // Relative where it matters, absolute near zero: a
-                        // margin of 0.6333… is not a candidate for ==.
-                        Some(Value::Number(n)) => (n - want).abs() <= 1e-9 * want.abs().max(1.0),
-                        _ => false,
-                    }
-                }
-                "text" => {
-                    let want = check["value"].as_str().unwrap();
-                    matches!(&got, Some(Value::Str(t)) if t == want)
-                }
-                "bool" => {
-                    let want = check["value"].as_bool().unwrap();
-                    matches!(&got, Some(Value::Bool(b)) if *b == want)
-                }
-                other => panic!("manifest asks for an unknown kind {other:?}"),
-            };
-
-            // A known divergence keeps Excel's answer in the manifest — that
-            // is still what is true — and records why we differ. Same bargain
-            // as `allowed_losses` in roundtrip_corpus: characterised, never
-            // silently tolerated, and it fails the moment it stops being
-            // accurate in either direction.
-            match (ok, check.get("diverges").and_then(|d| d.as_str())) {
-                (true, None) | (false, Some(_)) => {}
-                (false, None) => failures.push(format!(
-                    "{file}!{sheet}!{cell}: expected {} {}, got {} — {note}",
-                    check["kind"].as_str().unwrap(),
-                    check["value"],
-                    describe(&got),
-                )),
-                (true, Some(why)) => failures.push(format!(
-                    "{file}!{sheet}!{cell}: now MATCHES Excel, but is still \
-                     listed as a known divergence ({why}) — drop the \
-                     `diverges=` from tests/gen/gen_corpus.py and regenerate"
-                )),
+        // And again through our own writer. `roundtrip_corpus` proves no PART
+        // of a file is lost on save; this proves no VALUE is — the class where
+        // the engine computes the right answer and then writes something else,
+        // which neither test could see on its own. Every expectation above is
+        // re-checked, so the second pass costs one save and one load.
+        let saved = match wb.save() {
+            Ok(s) => s,
+            Err(e) => {
+                failures.push(format!("{file}: save failed: {e:?}"));
+                continue;
             }
+        };
+        let mut saved_buf = saved;
+        match Workbook::from_file(&mut saved_buf, file.to_string()) {
+            Ok(reloaded) => {
+                checked += verify(&reloaded, book, file, "after save+reload", &mut failures)
+            }
+            Err(e) => failures.push(format!("{file}: reload of our own output failed: {e:?}")),
         }
     }
 
