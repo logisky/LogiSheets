@@ -83,6 +83,7 @@ export const ContentComponent = observer(function ContentComponent({
                 selectedData={selectedData}
                 selectedData$={selectedData$}
                 selectedDataContentChanged={selectedDataContentChanged}
+                setActiveSheet={setActiveSheet}
             />
             {globalStore.splitView ? (
                 // Split: main and second view are symmetric panes (canvas +

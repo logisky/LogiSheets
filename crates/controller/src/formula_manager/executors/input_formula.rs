@@ -860,7 +860,7 @@ fn collect_ref_ranges(ast: &ast::Node, out: &mut Vec<(SheetId, RangeId)>) {
     }
 }
 
-fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
+pub(crate) fn get_all_vertices_from_ast(ast: &ast::Node, vertices: &mut HashSet<Vertex>) {
     match &ast.pure {
         ast::PureNode::Func(func) => {
             func.args

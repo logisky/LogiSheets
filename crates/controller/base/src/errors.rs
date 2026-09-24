@@ -121,6 +121,16 @@ pub enum BasicError {
     #[error("no checkpoint is saved under the label {0:?}")]
     CheckpointNotFound(String),
     #[error(
+        "{0:?} is not a valid name: start with a letter, `_` or `\\`, use only letters, digits, `_` and `.`, and do not look like a cell reference (A1, R1C1) or TRUE/FALSE"
+    )]
+    InvalidDefinedName(String),
+    #[error("no defined name is called {0:?}")]
+    DefinedNameNotFound(String),
+    #[error("a defined name called {0:?} already exists; names are case-insensitive")]
+    DefinedNameAlreadyExists(String),
+    #[error("{0:?} cannot be defined this way: the definition refers back to {0:?} itself")]
+    DefinedNameCycle(String),
+    #[error(
         "row indices and column indices must pair up one to one, but {0} row index(es) came with {1} column index(es)"
     )]
     IncompleteRowColLength(usize, usize),

@@ -526,7 +526,9 @@
             "dependents": "从属单元格",
             "dependentsTip": "显示哪些单元格读取了此单元格",
             "clearArrows": "清除追踪箭头",
-            "clearArrowsTip": "清除追踪箭头"
+            "clearArrowsTip": "清除追踪箭头",
+            "nameManager": "名称",
+            "nameManagerTip": "定义、重命名和删除名称区域与常量"
         },
         "data": {
             "conditionalFormatting": "条件格式…",
@@ -1051,7 +1053,9 @@
         "editBar": {
             "showFormulaOrValue": "显示公式或值",
             "showValidation": "显示校验公式",
-            "noValidation": "此单元格没有校验规则"
+            "noValidation": "此单元格没有校验规则",
+            "nameBox": "名称框",
+            "nameBoxTip": "输入单元格（B3）、区域（A1:C9）或已定义的名称以跳转；输入新名称可为所选区域命名"
         },
         "craft": {
             "aiBusy": "正在询问 AI",
@@ -1080,6 +1084,19 @@
             "discard": "丢弃",
             "commitTip": "保留这些改动，作为一次可撤销的操作",
             "discardTip": "丢弃这些改动，回到已提交的值"
+        },
+        "nameManager": {
+            "title": "已定义名称",
+            "empty": "还没有定义名称。为区域命名后即可在公式中使用，例如 =SUM(Sales)。",
+            "goTo": "转到",
+            "edit": "编辑",
+            "newName": "新建名称",
+            "editName": "编辑 {{name}}",
+            "name": "名称",
+            "namePlaceholder": "例如 Sales",
+            "refersTo": "引用位置",
+            "notARange": "{{name}} 不是区域，无法选中",
+            "defined": "已定义 {{name}}"
         }
     }
 }

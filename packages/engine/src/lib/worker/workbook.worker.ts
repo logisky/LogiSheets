@@ -29,6 +29,7 @@ import type {
     BlockField,
     DuplicateBlockKey,
     EnumSetInfo,
+    DefinedNameInfo,
     BlockOpForPayload,
     BlockOpPolicy,
     AppData,
@@ -504,6 +505,10 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         return this.workbook.getEnumSets()
     }
 
+    public getDefinedNames(): Result<readonly DefinedNameInfo[]> {
+        return this.workbook.getDefinedNames()
+    }
+
     public getBlockOpForPayloads(): Result<readonly BlockOpForPayload[]> {
         return this.workbook.getBlockOpForPayloads()
     }
@@ -939,6 +944,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.GetEnumSets:
                     result = this.getEnumSets()
+                    break
+                case MethodName.GetDefinedNames:
+                    result = this.getDefinedNames()
                     break
                 case MethodName.GetBlockOpForPayloads:
                     result = this.getBlockOpForPayloads()

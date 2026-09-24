@@ -22,6 +22,7 @@ import type {
     BlockField,
     DuplicateBlockKey,
     EnumSetInfo,
+    DefinedNameInfo,
     BlockOpForPayload,
     BlockOpPolicy,
     TempStatusDiff,
@@ -557,6 +558,13 @@ export class WorkbookClient implements Client {
     getEnumSets(): Resp<readonly EnumSetInfo[]> {
         return this._call(MethodName.GetEnumSets) as Resp<
             readonly EnumSetInfo[]
+        >
+    }
+
+    /** The workbook's defined names — see `Client['getDefinedNames']`. */
+    getDefinedNames(): Resp<readonly DefinedNameInfo[]> {
+        return this._call(MethodName.GetDefinedNames) as Resp<
+            readonly DefinedNameInfo[]
         >
     }
 

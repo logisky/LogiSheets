@@ -15,6 +15,7 @@ import {
     FieldValidationVerdict,
     DuplicateBlockKey,
     EnumSetInfo,
+    DefinedNameInfo,
     BlockOpForPayload,
     BlockOpPolicy,
     GetBlockModifyInfoParams,
@@ -911,6 +912,16 @@ export class Workbook {
      */
     public getEnumSets(): Result<readonly EnumSetInfo[]> {
         return rpc('getEnumSets', undefined, this._id)
+    }
+
+    /**
+     * The workbook's defined names, ordered by name. Each definition is
+     * sheet-qualified (`Sheet1!$B$2:$B$9`) so it reads the same from any sheet.
+     * Define, rename and remove them with the `defineName` / `renameName` /
+     * `removeName` payloads.
+     */
+    public getDefinedNames(): Result<readonly DefinedNameInfo[]> {
+        return rpc('getDefinedNames', undefined, this._id)
     }
 
     /**

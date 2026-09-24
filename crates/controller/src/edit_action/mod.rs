@@ -124,6 +124,11 @@ pub enum EditPayload {
     UpsertEnumSet(UpsertEnumSet),
     RemoveEnumSet(RemoveEnumSet),
 
+    // Defined names (workbook scope)
+    DefineName(DefineName),
+    RenameName(RenameName),
+    RemoveName(RemoveName),
+
     CellFormatBrush(CellFormatBrush),
     LineFormatBrush(LineFormatBrush),
 
@@ -1296,6 +1301,56 @@ pub struct RemoveEnumSet {
 impl From<RemoveEnumSet> for EditPayload {
     fn from(value: RemoveEnumSet) -> Self {
         EditPayload::RemoveEnumSet(value)
+    }
+}
+
+/// Create or replace a workbook-scoped defined name — `TaxRate` → `0.08`,
+/// `Sales` → `Sheet1!$B$2:$B$100`.
+///
+/// `formula` is what the name refers to, written like a cell formula (the
+/// leading `=` is optional). A reference without a sheet prefix is read against
+/// `sheet_idx`. References are stored by cell id, so inserting or deleting rows
+/// moves the name's range the way it moves any formula's.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "define_name.ts", builder, rename_all = "camelCase")]
+pub struct DefineName {
+    pub name: String,
+    pub formula: String,
+    pub sheet_idx: usize,
+}
+
+impl From<DefineName> for EditPayload {
+    fn from(value: DefineName) -> Self {
+        EditPayload::DefineName(value)
+    }
+}
+
+/// Rename a defined name. Formulas that use it follow the rename — they hold
+/// the name's id, not its spelling.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "rename_name.ts", builder, rename_all = "camelCase")]
+pub struct RenameName {
+    pub old_name: String,
+    pub new_name: String,
+}
+
+impl From<RenameName> for EditPayload {
+    fn from(value: RenameName) -> Self {
+        EditPayload::RenameName(value)
+    }
+}
+
+/// Delete a defined name. Formulas that still use it evaluate to `#NAME?`,
+/// and come back to life if the name is defined again.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "remove_name.ts", builder, rename_all = "camelCase")]
+pub struct RemoveName {
+    pub name: String,
+}
+
+impl From<RemoveName> for EditPayload {
+    fn from(value: RemoveName) -> Self {
+        EditPayload::RemoveName(value)
     }
 }
 

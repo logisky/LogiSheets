@@ -78,6 +78,11 @@ fn convert_diff<C: VersionExecCtx>(
         // schema, not through this cell-level diff.
         EditPayload::UpsertEnumSet(_) => Ok(None),
         EditPayload::RemoveEnumSet(_) => Ok(None),
+        // A defined name is workbook-level too. The cells whose values change
+        // because of it are recalculated, and reach the diff that way.
+        EditPayload::DefineName(_) | EditPayload::RenameName(_) | EditPayload::RemoveName(_) => {
+            Ok(None)
+        }
         // A conditional-formatting edit changes how the whole covered range
         // renders, and the range is not known here without resolving anchors, so
         // the sheet is marked wholly stale rather than diffed cell by cell.

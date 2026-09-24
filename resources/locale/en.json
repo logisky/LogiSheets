@@ -526,7 +526,9 @@
             "dependents": "Dependents",
             "dependentsTip": "Show which cells read this one",
             "clearArrows": "Clear arrows",
-            "clearArrowsTip": "Clear the trace arrows"
+            "clearArrowsTip": "Clear the trace arrows",
+            "nameManager": "Names",
+            "nameManagerTip": "Define, rename and delete named ranges and constants"
         },
         "data": {
             "conditionalFormatting": "Conditional formatting…",
@@ -1051,7 +1053,9 @@
         "editBar": {
             "showFormulaOrValue": "Show formula or value",
             "showValidation": "Show validation formula",
-            "noValidation": "No validation on this cell"
+            "noValidation": "No validation on this cell",
+            "nameBox": "Name box",
+            "nameBoxTip": "Type a cell (B3), a range (A1:C9) or a defined name to go there, or a new name to name the selection"
         },
         "craft": {
             "aiBusy": "Asking the AI",
@@ -1080,6 +1084,19 @@
             "discard": "Discard",
             "commitTip": "Keep these edits, as a single undo step",
             "discardTip": "Throw these edits away and go back to the committed values"
+        },
+        "nameManager": {
+            "title": "Defined names",
+            "empty": "No defined names yet. Name a range to use it in formulas, e.g. =SUM(Sales).",
+            "goTo": "Go to",
+            "edit": "Edit",
+            "newName": "New name",
+            "editName": "Edit {{name}}",
+            "name": "Name",
+            "namePlaceholder": "e.g. Sales",
+            "refersTo": "Refers to",
+            "notARange": "{{name}} is not a range, so there is nothing to select",
+            "defined": "Defined {{name}}"
         }
     }
 }

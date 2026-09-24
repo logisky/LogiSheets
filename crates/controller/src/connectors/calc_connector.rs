@@ -341,7 +341,17 @@ impl<'a> Connector for CalcConnector<'a> {
                 }
             }
             ast::CellReference::Ext(_) => todo!(),
-            ast::CellReference::Name(_) => CalcVertex::from_error(ast::Error::Name),
+            // A defined name evaluates its definition in place — a reference
+            // stays a reference, so `SUM(Sales)` and `ROWS(Sales)` see a range
+            // rather than a value. An undefined name is `#NAME?`. A definition
+            // cannot reach itself: `DefineName` and the loader refuse that.
+            ast::CellReference::Name(id) => match self.formula_manager.names.get(id) {
+                Some(def) => {
+                    let def = def.clone();
+                    crate::calc_engine::calculator::calculator::calc_node(&def, self)
+                }
+                None => CalcVertex::from_error(ast::Error::Name),
+            },
             ast::CellReference::RefErr => CalcVertex::from_error(ast::Error::Ref),
         }
     }

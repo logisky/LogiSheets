@@ -489,7 +489,7 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
     // recompute when a member cell changes — mirroring the live input path.
     {
         let mut sid = ShadowIdAssigner::new();
-        let connector = FormulaConnector {
+        let mut connector = FormulaConnector {
             book_name: book_name.as_str(),
             sheet_pos_manager: &mut sheet_info_manager,
             sheet_id_manager: &mut sheet_id_manager,
@@ -507,6 +507,24 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
             container: &container,
             sid_assigner: &mut sid,
         };
+        // Workbook-scoped defined names, now that every sheet a definition can
+        // name is registered. The rest — sheet-scoped names and Excel's
+        // built-ins (`_xlnm.Print_Area`, …) — stay in the verbatim passthrough.
+        if let Some(dns) = settings.preserved_workbook.defined_names.take() {
+            let context_sheet = connector.sheet_pos_manager.get_sheet_id(0);
+            let mut kept = vec![];
+            for dn in dns.names {
+                let loaded = context_sheet.is_some_and(|sheet| {
+                    load_defined_name(&dn, sheet, &mut connector, &mut formula_manager)
+                });
+                if !loaded {
+                    kept.push(dn);
+                }
+            }
+            if !kept.is_empty() {
+                settings.preserved_workbook.defined_names = Some(CtDefinedNames { names: kept });
+            }
+        }
         formula_manager.rebuild_range_deps(&connector);
     }
 
@@ -1136,4 +1154,39 @@ mod tests {
         // its axis used to be a panic waiting to happen.
         assert_eq!(restored(vec![xml(Some(99), "gone")]), vec![]);
     }
+}
+
+/// Parse one `<definedName>` into the formula manager. False when it is not a
+/// plain workbook-scoped name this engine evaluates, so the caller keeps it
+/// verbatim instead.
+fn load_defined_name(
+    dn: &CtDefinedName,
+    context_sheet: SheetId,
+    connector: &mut FormulaConnector,
+    formula_manager: &mut crate::formula_manager::FormulaManager,
+) -> bool {
+    use logisheets_base::id_fetcher::IdFetcherTrait;
+
+    if dn.local_sheet_id.is_some()
+        || dn.hidden
+        || dn.name.starts_with("_xlnm.")
+        || dn.function
+        || dn.vb_procedure
+        || dn.xlm
+        || !crate::controller::is_valid_defined_name(&dn.name)
+    {
+        return false;
+    }
+    let formula = dn.value.trim();
+    let formula = formula.strip_prefix('=').unwrap_or(formula);
+    let Some(ast) = logisheets_parser::Parser {}.parse(formula, context_sheet, connector) else {
+        return false;
+    };
+    let id = connector.fetch_name_id(&None, &dn.name);
+    if formula_manager.name_reaches(&ast, id) {
+        return false;
+    }
+    connector.name_id_manager.set_display(id, &dn.name);
+    formula_manager.set_name(id, ast, connector);
+    true
 }

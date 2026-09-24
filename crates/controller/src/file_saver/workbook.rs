@@ -670,7 +670,13 @@ pub fn save_workbook<S: SaverTrait>(
     let workbook = Wb {
         unknown_parts: settings.unknown_package_parts.clone(),
         xl: Xl {
-            workbook_part: get_workbook(ct_sheets, ct_references, settings, cache_entries),
+            workbook_part: get_workbook(
+                ct_sheets,
+                ct_references,
+                settings,
+                cache_entries,
+                save_defined_names(formula_manager, saver),
+            ),
             styles: (style_id, styles),
             sst,
             worksheets,
@@ -717,11 +723,52 @@ fn save_persons(attachment_manager: &CellAttachmentsManager) -> Option<Persons> 
     }
 }
 
+/// The workbook-scoped names the formula manager evaluates, as
+/// `<definedName>`s. Unparsed against a sheet that does not exist, so every
+/// reference carries its sheet — a workbook-scoped name is read from no sheet
+/// in particular. Sorted, so two saves of one workbook agree.
+fn save_defined_names<S: SaverTrait>(
+    formula_manager: &FormulaManager,
+    saver: &mut S,
+) -> Vec<logisheets_workbook::prelude::CtDefinedName> {
+    let mut out = formula_manager
+        .names
+        .iter()
+        .filter_map(|(id, ast)| {
+            let name = saver.fetch_defined_name(id).ok()?;
+            let value =
+                logisheets_parser::unparse::unparse(ast, saver, logisheets_base::SheetId::MAX)
+                    .ok()?;
+            Some(logisheets_workbook::prelude::CtDefinedName {
+                name,
+                comment: None,
+                comment_menu: None,
+                description: None,
+                help: None,
+                status_bar: None,
+                local_sheet_id: None,
+                hidden: false,
+                function: false,
+                vb_procedure: false,
+                xlm: false,
+                function_group_id: None,
+                shortcut_key: None,
+                publish_to_server: false,
+                workbook_parameter: false,
+                value,
+            })
+        })
+        .collect::<Vec<_>>();
+    out.sort_by_key(|n| n.name.to_uppercase());
+    out
+}
+
 fn get_workbook(
     ct_sheets: CtSheets,
     ext_references: Vec<CtExternalReference>,
     settings: &Settings,
     pivot_cache_entries: Vec<logisheets_workbook::prelude::CtPivotCache>,
+    defined_names: Vec<logisheets_workbook::prelude::CtDefinedName>,
 ) -> WorkbookPart {
     let external_references = if ext_references.is_empty() {
         None
@@ -741,7 +788,18 @@ fn get_workbook(
         sheets: ct_sheets,
         function_groups: kept.function_groups.clone(),
         external_references,
-        defined_names: kept.defined_names.clone(),
+        // Ours first, then the names kept verbatim (sheet-scoped, built-ins).
+        defined_names: {
+            let mut names = defined_names;
+            if let Some(k) = &kept.defined_names {
+                names.extend(k.names.iter().cloned());
+            }
+            if names.is_empty() {
+                None
+            } else {
+                Some(logisheets_workbook::prelude::CtDefinedNames { names })
+            }
+        },
         calc_pr: None,
         ole_size: kept.ole_size.clone(),
         custom_workbook_views: kept.custom_workbook_views.clone(),

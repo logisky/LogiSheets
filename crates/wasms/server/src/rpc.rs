@@ -473,6 +473,7 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
         Message::GetAllBlockFields => res_to_js(controller::get_all_block_fields(&mut mgr, id)),
         Message::DuplicateBlockKeys => res_to_js(controller::duplicate_block_keys(&mgr, id)),
         Message::GetEnumSets => res_to_js(controller::get_enum_sets(&mgr, id)),
+        Message::GetDefinedNames => res_to_js(controller::get_defined_names(&mgr, id)),
         Message::GetBlockOpForPayloads => {
             res_to_js(controller::get_block_op_for_payloads(&mgr, id))
         }

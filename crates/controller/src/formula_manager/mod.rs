@@ -10,7 +10,7 @@ use logisheets_parser::ast;
 use crate::CellId;
 
 use self::ctx::FormulaExecCtx;
-use self::executors::{add_ast_node, rebuild_range_deps};
+use self::executors::{add_ast_node, get_all_vertices_from_ast, rebuild_range_deps};
 pub use executors::FormulaExecutor;
 
 #[derive(Debug, Clone)]
@@ -46,6 +46,78 @@ impl FormulaManager {
     /// and range is registered, so range formulas recompute correctly.
     pub fn rebuild_range_deps<C: FormulaExecCtx>(&mut self, ctx: &C) {
         rebuild_range_deps(self, ctx)
+    }
+
+    /// Install `ast` as what defined name `id` refers to.
+    ///
+    /// `Vertex::Name(id)` is wired to every vertex the definition reads, the
+    /// same way a formula cell is, so a change under the name reaches every
+    /// formula that uses it through the ordinary rdeps walk. The caller dirties
+    /// `Vertex::Name(id)` when the definition itself changed.
+    pub fn set_name<C: FormulaExecCtx>(&mut self, id: NameId, ast: ast::Node, ctx: &C) {
+        self.unlink_name(id);
+        let this = Vertex::Name(id);
+        let mut deps = std::collections::HashSet::<Vertex>::new();
+        get_all_vertices_from_ast(&ast, &mut deps);
+        for dep in deps {
+            self.graph.add_dep(this.clone(), dep.clone());
+            for range_dep in ctx.get_range_deps(&dep) {
+                self.graph.add_dep(dep.clone(), range_dep);
+            }
+        }
+        self.names.insert(id, ast);
+    }
+
+    /// Drop a name's definition. Formulas using it keep their edge to
+    /// `Vertex::Name(id)`, so defining it again brings them back.
+    pub fn remove_name(&mut self, id: NameId) -> bool {
+        self.unlink_name(id);
+        self.names.remove(&id).is_some()
+    }
+
+    fn unlink_name(&mut self, id: NameId) {
+        let this = Vertex::Name(id);
+        if let Some(deps) = self.graph.get_deps(&this).cloned() {
+            deps.iter().for_each(|d| self.graph.remove_dep(&this, d));
+        }
+    }
+
+    /// True when `ast`, followed through the definitions of the names it
+    /// uses, reaches name `target`. Defining `target` as `ast` would then make
+    /// it refer to itself, which has no value.
+    pub fn name_reaches(&self, ast: &ast::Node, target: NameId) -> bool {
+        let mut stack = vec![];
+        collect_names(ast, &mut stack);
+        let mut seen = std::collections::HashSet::new();
+        while let Some(n) = stack.pop() {
+            if n == target {
+                return true;
+            }
+            if !seen.insert(n) {
+                continue;
+            }
+            if let Some(def) = self.names.get(&n) {
+                collect_names(def, &mut stack);
+            }
+        }
+        false
+    }
+}
+
+fn collect_names(ast: &ast::Node, out: &mut Vec<NameId>) {
+    match &ast.pure {
+        ast::PureNode::Func(func) => func.args.iter().for_each(|a| collect_names(a, out)),
+        ast::PureNode::Reference(ast::CellReference::Name(n)) => out.push(*n),
+        ast::PureNode::BlockRef(ast::BlockRefNode::Single { key, .. }) => collect_names(key, out),
+        ast::PureNode::BlockRef(ast::BlockRefNode::Multi {
+            key_condition,
+            field_condition,
+            ..
+        }) => {
+            collect_names(key_condition, out);
+            collect_names(field_condition, out);
+        }
+        _ => {}
     }
 }
 

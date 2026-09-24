@@ -734,6 +734,13 @@ pub struct CtDefinedName {
     pub publish_to_server: bool,
     #[xmlserde(name = b"workbookParameter", ty = "attr", default = "default_false")]
     pub workbook_parameter: bool,
+    /// What the name refers to — `Sheet1!$A$1:$B$9`, `0.08` — with no `=`.
+    #[xmlserde(ty = "text", default = "default_empty_string")]
+    pub value: String,
+}
+
+fn default_empty_string() -> String {
+    String::new()
 }
 
 #[derive(Debug, Clone, XmlSerialize, XmlDeserialize)]

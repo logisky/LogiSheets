@@ -23,6 +23,8 @@ use logisheets_base::{BlockRange, CellId, NormalRange, Range, SheetId};
 use logisheets_workbook::logisheets::AppData;
 use logisheets_workbook::prelude::{read, write};
 pub mod block_key_guard;
+mod defined_names;
+pub(crate) use defined_names::is_valid_name as is_valid_defined_name;
 pub mod display;
 mod executor;
 mod pivot_guard;

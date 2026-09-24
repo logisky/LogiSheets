@@ -51,6 +51,8 @@ export function defaultCategory(
             return ['Charts']
         case 'comment':
             return ['Comments']
+        case 'name':
+            return ['Names']
         case 'history':
             return ['History']
         case 'craft':
