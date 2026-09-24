@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+/**
+ * The `craftsmith` binary (package.json `bin`). Dispatches to ./commands.ts;
+ * the programmatic API lives in ./index.ts.
+ *
+ * Exit codes: 0 on success (warnings alone do not fail), and for `-h` /
+ * `--help`. 1 on any error diagnostic, a missing `new` name, an unknown
+ * command, no command at all (usage is printed), or an uncaught exception
+ * such as a directory without package.json. All output goes to stderr.
+ */
 import {check, buildCraft, pack, scaffold} from './commands.js'
 
 const USAGE = `craftsmith — LogiSheets craft CLI

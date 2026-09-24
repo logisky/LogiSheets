@@ -60,6 +60,8 @@ function parseA1Cell(s: string): {row: number; col: number} | undefined {
  * Parse `[Sheet!]$C$R[:$C$R]`, the shape chart references take. The sheet name
  * may be quoted, in which case doubled apostrophes are literal ones. Corners
  * are normalized, so a reference written bottom-up still reads top-down.
+ * Returned rows/cols are 0-based; undefined when either corner is not a
+ * plain A1 cell (whole-row/column refs, R1C1 and names do not parse).
  */
 export function parseA1Range(
     ref: string

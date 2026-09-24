@@ -141,6 +141,10 @@ export const CraftPanel = ({
     const DATA_SERVICE = engine.getDataService()
     const BLOCK_MANAGER = engine.getBlockManager()
 
+    // Installs the host API (`window.workbook`, `window.onCanvasInput`, …) on
+    // the craft's window. It runs from the iframe's load event, AFTER the
+    // craft's own scripts have started, so a craft must wait for these globals
+    // (poll until present) rather than read them at module top level.
     const inject = () => {
         const iframe = iframeRef.current
         if (!iframe) return

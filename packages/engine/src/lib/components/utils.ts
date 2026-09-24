@@ -1,5 +1,14 @@
 /**
  * Utility functions for the canvas component.
+ *
+ * Geometry helpers work off a rendered {@link Grid}: row/col arguments are
+ * 0-based sheet indices, and results only cover what that grid laid out.
+ * Three pixel spaces appear here — keep them apart:
+ * - canvas px: relative to the data canvas' top-left (below/right of the
+ *   headers), what overlays are positioned in;
+ * - document px: canvas px + the grid's anchor (scroll offset);
+ * - viewport (client) px: what DOM events carry.
+ * All are CSS px at the current zoom.
  */
 
 import type {Grid, Range, Cell as CellType} from '$types/index'
@@ -237,6 +246,11 @@ export const getReferenceHighlightRects = (
     return rects
 }
 
+/**
+ * Canvas-px box of cell (rowIdx, colIdx), ignoring merges. Not clamped: an
+ * index before the window gets the first laid-out row/column's box, one past
+ * it a zero-size box at 0 on that axis.
+ */
 export const getPosition = (rowIdx: number, colIdx: number, grid: Grid) => {
     let xAcc = -grid.subOffsetX
     let x0 = 0
@@ -267,6 +281,12 @@ export const getPosition = (rowIdx: number, colIdx: number, grid: Grid) => {
     return {startX: x0, startY: y0, endX: x1, endY: y1}
 }
 
+/**
+ * Inclusive range of indexes INTO `grid.rows` (not sheet rows) that fit in
+ * `height` px starting at document-y `anchor`. Note the row and column
+ * variants disagree at the far edge: rows stop one before the row that
+ * overflows, columns include the last overflowing one.
+ */
 export const findVisibleRowIdxRange = (
     anchor: number,
     height: number,
@@ -295,6 +315,8 @@ export const findVisibleRowIdxRange = (
     return [startIdx, endIdx]
 }
 
+/** Column counterpart of {@link findVisibleRowIdxRange} (indexes into
+ *  `grid.columns`). */
 export const findVisibleColIdxRange = (
     anchor: number,
     width: number,
@@ -324,6 +346,13 @@ export const findVisibleColIdxRange = (
 // Cell Matching
 // ============================================================================
 
+/**
+ * Hit-test: the cell under canvas point (canvasX, canvasY) given the view's
+ * anchor. `coordinate` holds 0-based sheet indices (the whole merge when the
+ * point is in a merged cell); `position` is in document px for a plain cell.
+ * A point beyond the last laid-out row/column falls back to index 0 on that
+ * axis, so callers should bounds-check first.
+ */
 export function match(
     canvasX: number,
     canvasY: number,
@@ -383,6 +412,8 @@ export function match(
             startCol = mergedCell.startCol
             endCol = mergedCell.endCol
 
+            // NB: accumulates from 0 over the laid-out rows, i.e. NOT in the
+            // document-px space the unmerged branch above uses.
             let sRow = 0
             let eRow = 0
             for (const row of data.rows) {
@@ -497,6 +528,8 @@ export function buildSelectedDataFromLines(
     }
 }
 
+/** `[start, end]` rows of a cell range or row-line selection; `[]` for a
+ *  column selection or none. */
 export function getSelectedRows(v: SelectedData): number[] {
     if (v.data?.ty === 'cellRange') {
         return [v.data.d.startRow, v.data.d.endRow]
@@ -507,6 +540,7 @@ export function getSelectedRows(v: SelectedData): number[] {
     return []
 }
 
+/** `[start, end]` columns of a cell range or column-line selection. */
 export function getSelectedColumns(v: SelectedData): number[] {
     if (v.data?.ty === 'cellRange') {
         return [v.data.d.startCol, v.data.d.endCol]
@@ -521,6 +555,7 @@ export function getSelectedColumns(v: SelectedData): number[] {
 // A1 Notation
 // ============================================================================
 
+/** 0-based column index → letters (0 → A, 26 → AA). */
 export function toA1notation(col: number): string {
     let result = ''
     let c = col
@@ -622,6 +657,9 @@ export function getRequestedZoomFactor(): number {
     return requestedZoomFactor
 }
 
+// Unit converters at the main-thread zoom (see above). pt: row heights and
+// font sizes; "width": Excel column-width units (7 px per unit at 100%).
+// ptToPx/pxToPt round to 2 decimals.
 export function ptToPx(pt: number): number {
     return Math.round(((pt * DEFAULT_PPI * zoomFactor) / 72) * 100) / 100
 }
@@ -642,6 +680,8 @@ export function pxToWidth(px: number): number {
 // UUID Generator
 // ============================================================================
 
+/** Random v4-shaped id from Math.random — unique enough for UI keys, not
+ *  cryptographically random. */
 export function simpleUuid(): string {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0

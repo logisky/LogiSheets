@@ -31,6 +31,12 @@ const CALC_CONDITION_EPHEMERAL_ID: u64 = 225715;
 
 pub(crate) type CellPositionerDefault = CellPositioner<1000>;
 
+/// The engine's public facade: one open workbook.
+///
+/// Write with [`Workbook::handle_action`]; read through the [`Worksheet`]
+/// views from `get_sheet_by_idx` / `_by_name` / `_by_id`. Rows, columns and
+/// sheet indices are 0-based throughout. Methods that take a `sheet_idx`
+/// resolve it against the current tab order at call time.
 pub struct Workbook {
     /// `pub(crate)` so sibling api modules (`field_validation`) can run a
     /// one-shot calculation against the live status; nothing outside the crate
@@ -63,7 +69,9 @@ impl Workbook {
         &self.controller.status
     }
 
-    /// Execute the `EditAction`
+    /// Execute the `EditAction`. See `Controller::handle_action` for the
+    /// contract: never panics, rejections come back in the effect. On top of
+    /// that, re-syncs conditional-formatting shadows for the cells touched.
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
         // Undo/Redo report an empty change list (they swap a whole status
         // snapshot rather than enumerating cells), so the incremental re-sync
@@ -364,6 +372,7 @@ impl Workbook {
             }));
     }
 
+    /// Name of the sheet at tab position `idx`; errors when out of range.
     pub fn get_sheet_name_by_idx(&self, idx: usize) -> Result<String> {
         let sheet_id = self
             .controller
@@ -387,14 +396,18 @@ impl Workbook {
         self.controller.handle_action_in_temp_status(action)
     }
 
+    /// Keep the temp branch and record it as one undo step. No-op without one.
     pub fn commit_temp_status(&mut self) {
         self.controller.commit_temp_status();
     }
 
+    /// Discard the temp branch, restoring the state it forked from. No-op
+    /// without one.
     pub fn clean_temp_status(&mut self) {
         self.controller.clean_temp_status();
     }
 
+    /// No-op, kept for API compatibility.
     pub fn toggle_status(&mut self, _use_temp: bool) {
         // No-op: self.status always reflects the active state (temp or real).
     }
@@ -407,6 +420,8 @@ impl Workbook {
         self.controller.is_in_temp_mode()
     }
 
+    /// [`Workbook::get_cell_info_by_id`] for many cells; the first failure
+    /// fails the whole call.
     pub fn batch_get_cell_info_by_id(&self, ids: Vec<SheetCellId>) -> Result<Vec<CellInfo>> {
         let mut result = Vec::new();
         for id in ids {
@@ -418,6 +433,9 @@ impl Workbook {
         Ok(result)
     }
 
+    /// Current sheet index and position of each cell, e.g. to locate the
+    /// cells an `ActionEffect` reports. Fails on the first id that no longer
+    /// resolves (a deleted cell or sheet).
     pub fn batch_get_cell_coordinate_with_sheet_by_id(
         &self,
         ids: Vec<SheetCellId>,
@@ -435,13 +453,15 @@ impl Workbook {
         Ok(result)
     }
 
+    /// Read a cell by stable ids.
     pub fn get_cell_info_by_id(&self, id: SheetCellId) -> Result<CellInfo> {
         let sheet_id = id.sheet_id;
         let worksheet = self.get_sheet_by_id(sheet_id)?;
         worksheet.get_cell_info_by_cell_id(&id.cell_id)
     }
 
-    /// Create a workbook from a .xlsx file.
+    /// Create a workbook from a .xlsx file. The loaded state (with its
+    /// validation and conditional-formatting shadows) is the undo baseline.
     pub fn from_file(buf: &[u8], book_name: String) -> Result<Self> {
         let controller = Controller::from_file(book_name, buf)?;
         let mut wb = Workbook {
@@ -458,11 +478,14 @@ impl Workbook {
         Ok(wb)
     }
 
+    /// Host/craft data stored in the file alongside the workbook. It is a
+    /// side channel: not part of undo/redo.
     #[inline]
     pub fn get_app_data(&self) -> Vec<AppData> {
         self.controller.app_data.clone()
     }
 
+    /// Replace all app data (not undoable). Saved with the next `save`.
     #[inline]
     pub fn set_app_data(&mut self, app_data: Vec<AppData>) {
         self.controller.app_data = app_data;
@@ -496,7 +519,7 @@ impl Workbook {
         })
     }
 
-    /// Flattened, wasm-friendly form of [`get_cell_list_validation`]: the enum
+    /// Flattened, wasm-friendly form of [`Workbook::get_cell_list_validation`]: the enum
     /// option set for a cell, or `None` if it has no `list` validation. Inline
     /// literal lists return their values; a range/named reference returns `None`
     /// (the caller can't use it as a fixed set without resolving cells). Kept
@@ -526,11 +549,15 @@ impl Workbook {
         self.controller.save_with_format(format)
     }
 
+    /// Like `handle_action(EditAction::Undo)` but without the
+    /// conditional-formatting re-sync that path does. Returns whether
+    /// anything changed.
     #[inline]
     pub fn undo(&mut self) -> bool {
         self.controller.undo()
     }
 
+    /// Redo counterpart of [`Workbook::undo`], with the same caveat.
     #[inline]
     pub fn redo(&mut self) -> bool {
         self.controller.redo()
@@ -573,6 +600,9 @@ impl Workbook {
         self.controller.checkpoint_manager.list()
     }
 
+    /// Feed back results for `ActionEffect::async_tasks`, paired by position.
+    /// Mismatched lengths are rejected with `StatusCode::Err(1)` (and no
+    /// `error_message`).
     #[inline]
     pub fn handle_async_calc_results(
         &mut self,
@@ -593,6 +623,7 @@ impl Workbook {
         self.controller.handle_async_calc_results(tasks, results)
     }
 
+    /// Every sheet, hidden ones included, in tab order.
     #[inline]
     pub fn get_all_sheet_info(&self) -> Vec<SheetInfo> {
         self.controller.get_all_sheet_info()
@@ -621,6 +652,8 @@ impl Workbook {
         names
     }
 
+    /// The per-sheet cache of row/column start offsets that `Worksheet`
+    /// position queries share. Created on first use and never invalidated.
     #[inline]
     pub fn get_cell_positioner(&self, sheet: SheetId) -> Locked<CellPositionerDefault> {
         let mut cell_positioners = locked_write(&self.cell_positioners);
@@ -631,6 +664,9 @@ impl Workbook {
         entry.clone()
     }
 
+    /// Plain-text values of block cells, one per `(row_ids[i], col_ids[i])`
+    /// PAIR (zipped, not a cross product; the shorter list wins). Ids are the
+    /// block's own line ids. A missing cell reads as `""`.
     pub fn get_block_values(
         &self,
         sheet_id: SheetId,
@@ -667,6 +703,7 @@ impl Workbook {
         Ok(values)
     }
 
+    /// Exact (case-sensitive) name lookup.
     pub fn get_sheet_by_name(&self, name: &str) -> Result<Worksheet<'_>> {
         let id = self.controller.get_sheet_id_by_name(name);
         if id.is_none() {
@@ -676,6 +713,7 @@ impl Workbook {
         self.get_sheet_by_id(sheet_id)
     }
 
+    /// Current tab position of a sheet; errors for a deleted sheet.
     pub fn get_sheet_idx_by_id(&self, sheet_id: SheetId) -> Result<usize> {
         self.controller
             .status
@@ -684,6 +722,9 @@ impl Workbook {
             .ok_or(BasicError::UnavailableSheetId(sheet_id).into())
     }
 
+    /// A view of the sheet with this id. The id is NOT validated: an unknown
+    /// or deleted id still returns `Ok`, and the view's reads fail later.
+    /// Check with `get_sheet_idx_by_id` first if that matters.
     pub fn get_sheet_by_id(&self, sheet_id: SheetId) -> Result<Worksheet<'_>> {
         let positioner = self.get_cell_positioner(sheet_id);
         let c = &self.controller;
@@ -707,6 +748,7 @@ impl Workbook {
         }
     }
 
+    /// A view of the sheet at tab position `idx`.
     pub fn get_sheet_by_idx(&self, idx: usize) -> Result<Worksheet<'_>> {
         match self.controller.get_sheet_id_by_idx(idx) {
             Some(sheet_id) => Ok(Worksheet {
@@ -759,17 +801,22 @@ impl Workbook {
         );
     }
 
+    /// Number of sheets, hidden ones included.
     pub fn get_sheet_count(&self) -> usize {
         self.controller.status.sheet_info_manager.pos.len()
     }
 
-    /// A monotonic counter bumped on every committed write. Readers snapshot it
-    /// to detect concurrent modification (optimistic concurrency).
+    /// A monotonic counter bumped on every committed write, undo and redo —
+    /// the controller's `revision`, NOT `ActionEffect::version`. Readers
+    /// snapshot it to detect concurrent modification (optimistic
+    /// concurrency). Temp-branch writes and `Recalc` do not bump it.
     pub fn get_version(&self) -> u32 {
         self.controller.revision()
     }
 
-    /// To see if the formula is valid.
+    /// Whether `f` is a syntactically valid formula. Unlike most of the API it
+    /// expects the leading `=` (surrounding whitespace allowed). Lexing only:
+    /// unknown functions, sheets and names still pass.
     pub fn check_formula(&self, f: String) -> bool {
         if f.is_empty() {
             return false;
@@ -782,6 +829,8 @@ impl Workbook {
         tokens.is_some()
     }
 
+    /// Every `field_id` assigned to a block line (via
+    /// `BlockLineNameFieldUpdate`), across all sheets.
     pub fn get_all_block_fields(&self) -> Result<Vec<BlockField>> {
         Ok(self.controller.status.container.get_all_block_fields())
     }
@@ -886,6 +935,7 @@ impl Workbook {
             .allows(actor, &info.owner))
     }
 
+    /// A block id not yet used on this sheet, for `CreateBlock`.
     pub fn get_available_block_id(&self, sheet_idx: usize) -> Result<usize> {
         let sheet_id = self
             .controller
@@ -901,6 +951,10 @@ impl Workbook {
         Ok(block_id)
     }
 
+    /// The ephemeral "shadow" cell of `kind` attached to a cell, allocating
+    /// the id on first request (hence `&mut`). Shadow cells hold derived
+    /// formulas (validation verdicts, conditional-format matches) and are
+    /// read like any other cell.
     pub fn get_shadow_cell_id(
         &mut self,
         sheet_idx: usize,
@@ -929,6 +983,8 @@ impl Workbook {
         })
     }
 
+    /// [`Workbook::get_shadow_cell_id`] for `(row_idx[i], col_idx[i])` pairs.
+    /// The two lists must be the same length.
     pub fn get_shawdow_cell_ids(
         &mut self,
         sheet_idx: usize,
@@ -966,6 +1022,8 @@ impl Workbook {
             .collect()
     }
 
+    /// A shadow cell's value plus the on-sheet rectangle of the cell it
+    /// shadows (same units as `Worksheet::get_cell_position`).
     pub fn get_shadow_info_by_id(&self, shadow_id: u64) -> Result<ShadowCellInfo> {
         let (sheet_id, cell_id) = self
             .controller
@@ -1007,6 +1065,8 @@ impl Workbook {
         Ok((CellPosition { x, y }, CellPosition { x: end_x, y: end_y }))
     }
 
+    /// Resolve `sheet_idx` and check that a `row_count` x `col_count` schema
+    /// fits in the block.
     pub fn check_bind_block(
         &mut self,
         sheet_idx: usize,
@@ -1014,12 +1074,7 @@ impl Workbook {
         row_count: usize,
         col_count: usize,
     ) -> Result<SheetId> {
-        let sheet_id = self
-            .controller
-            .status
-            .sheet_info_manager
-            .get_sheet_id(sheet_idx)
-            .unwrap();
+        let sheet_id = self.get_worksheet_id(sheet_idx)?;
 
         let block_size = self
             .controller
@@ -1219,7 +1274,23 @@ impl Workbook {
         Ok(TempStatusDiff { cells })
     }
 
+    /// Evaluate a formula (with its leading `=`) as a condition on this sheet
+    /// and return its truthiness; an error result, or a bad `sheet_idx`, is
+    /// `Err`.
+    ///
+    /// Read-only from the caller's point of view: the formula is evaluated in
+    /// a scratch ephemeral cell and the workbook is then put back exactly as
+    /// it was — an open temp branch survives, and `revision` does not move.
     pub fn calc_condition(&mut self, sheet_idx: usize, f: String) -> Result<bool> {
+        let sheet_id = self.get_worksheet_id(sheet_idx)?;
+        // Evaluating needs a real transaction, and a real transaction would
+        // discard the temp branch and count as a write. Snapshot what it
+        // touches and restore it afterwards; `Status` is persistent, so the
+        // clone is cheap.
+        let status = self.controller.status.clone();
+        let temp_status = self.controller.temp_status.take();
+        let revision = self.controller.version_manager.revision;
+
         let effect = self.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
             EphemeralCellInput {
                 sheet_idx,
@@ -1227,14 +1298,8 @@ impl Workbook {
                 content: f.clone(),
             },
         )));
-        let sheet_id = self
-            .controller
-            .status
-            .sheet_info_manager
-            .get_sheet_id(sheet_idx)
-            .unwrap();
-        if let StatusCode::Ok(_) = effect.status {
-            let cell = self
+        let value = match effect.status {
+            StatusCode::Ok(_) => self
                 .controller
                 .status
                 .container
@@ -1242,14 +1307,17 @@ impl Workbook {
                     sheet_id,
                     &CellId::EphemeralCell(CALC_CONDITION_EPHEMERAL_ID),
                 )
-                .unwrap();
-            if cell.value.is_error() {
-                Err(BasicError::InvalidFormula(f).into())
-            } else {
-                Ok(cell.value.bool_value())
-            }
-        } else {
-            Err(BasicError::InvalidFormula(f).into())
+                .map(|c| c.value.clone()),
+            StatusCode::Err(_) => None,
+        };
+
+        self.controller.status = status;
+        self.controller.temp_status = temp_status;
+        self.controller.version_manager.revision = revision;
+
+        match value {
+            Some(v) if !v.is_error() => Ok(v.bool_value()),
+            _ => Err(BasicError::InvalidFormula(f).into()),
         }
     }
 

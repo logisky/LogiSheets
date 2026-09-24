@@ -7,11 +7,16 @@ use logisheets_base::{
     Range, RangeId, SheetId, TextId,
 };
 
+/// Everything the parser needs from its host: id lookup/minting for sheets,
+/// cells, names, functions and texts, the current book name, range/cube
+/// vertex ids, and block ref-name resolution.
 pub trait ContextTrait:
     IdFetcherTrait + GetBookNameTrait + VertexFetcherTrait + BlockRefResolverTrait
 {
 }
 
+/// A ready-made [`ContextTrait`] that forwards to a separate id fetcher and
+/// vertex fetcher.
 pub struct Context<'a, T, F>
 where
     T: IdFetcherTrait,

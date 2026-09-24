@@ -2,6 +2,11 @@
  * History tools — undo / redo the last committed change(s). These operate on
  * the workbook's own undo stack (the same one Ctrl-Z drives), so they reverse
  * any edit, whether made by the user or by Watson.
+ *
+ * While a temp branch is open, the engine steps the branch's own history
+ * instead (stopping at the fork point, never into committed history), and
+ * unlike other actions an undo/redo does not discard the branch — so these
+ * skip the `assertScratchBranchFree` check the write tools make.
  */
 
 import {isErrorMessage} from 'logisheets-web/pure'

@@ -8,6 +8,10 @@ use logisheets_base::{BlockId, SheetId};
 use crate::block_manager::schema_manager::schema::RenderId;
 
 #[derive(Debug, Clone, TS)]
+/// An offset from the sheet's top-left corner, in Excel's native units, which
+/// DIFFER per axis: `y` sums row heights in points, `x` sums column widths in
+/// character-width units. Neither is pixels; hosts convert each axis
+/// separately (the engine UI uses `ptToPx` / `widthToPx`).
 #[ts(file_name = "cell_position.ts", rename_all = "camelCase")]
 pub struct CellPosition {
     pub x: f64,
@@ -15,6 +19,8 @@ pub struct CellPosition {
 }
 
 #[derive(Debug, Clone, TS)]
+/// A 0-based grid position. Note the axis naming: `x` is the COLUMN and `y`
+/// is the ROW.
 #[ts(file_name = "cell_coordinate.ts", rename_all = "camelCase")]
 pub struct CellCoordinate {
     pub x: usize,
@@ -38,6 +44,8 @@ pub struct CellCoordinateWithSheet {
 }
 
 #[derive(Debug, Clone, TS)]
+/// A shadow cell's value and the rectangle of the cell it shadows
+/// ([`CellPosition`] units).
 #[ts(file_name = "shadow_cell_info.ts", rename_all = "camelCase")]
 pub struct ShadowCellInfo {
     pub start_position: CellPosition,
@@ -46,6 +54,9 @@ pub struct ShadowCellInfo {
 }
 
 #[derive(Debug, Clone, Default, TS)]
+/// Everything needed to paint a rectangle of the sheet. Hidden rows and
+/// columns are left out of `rows`/`cols`; `merge_cells` holds merges that
+/// intersect the window; `blocks` the blocks any included cell belongs to.
 #[ts(file_name = "display_window.ts", rename_all = "camelCase")]
 pub struct DisplayWindow {
     pub cells: Vec<CellInfo>,
@@ -57,6 +68,8 @@ pub struct DisplayWindow {
 }
 
 #[derive(Debug, Clone, TS)]
+/// A block with its on-sheet rectangle ([`CellPosition`] units; `end` is the
+/// far corner of its bottom-right cell).
 #[ts(file_name = "block_display_info.ts", rename_all = "camelCase")]
 pub struct BlockDisplayInfo {
     pub info: BlockInfo,
@@ -87,6 +100,7 @@ pub struct SheetInfo {
     pub name: String,
     pub id: SheetId,
     pub hidden: bool,
+    /// ARGB hex as stored (see `SetSheetColor`); `""` when unset.
     pub tab_color: String,
 }
 
@@ -103,8 +117,10 @@ pub struct BlockInfo {
     pub sheet_idx: usize,
     pub sheet_id: SheetId,
     pub block_id: BlockId,
+    /// 0-based sheet row of the block's top-left cell.
     pub row_start: usize,
     pub row_cnt: usize,
+    /// 0-based sheet column of the block's top-left cell.
     pub col_start: usize,
     pub col_cnt: usize,
     pub schema: Option<BlockSchema>,
@@ -551,12 +567,15 @@ pub struct SheetRowInfo {
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "row_info.ts", rename_all = "camelCase")]
 pub struct RowInfo {
+    /// 0-based row index.
     pub idx: usize,
+    /// Points.
     pub height: f64,
     pub hidden: bool,
 }
 
 impl RowInfo {
+    /// Uses the global default height (15pt), not the sheet's own default.
     pub fn default(idx: usize) -> RowInfo {
         Self {
             idx,
@@ -577,12 +596,15 @@ pub struct SheetColInfo {
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "col_info.ts", rename_all = "camelCase")]
 pub struct ColInfo {
+    /// 0-based column index.
     pub idx: usize,
+    /// Excel character-width units, not pixels.
     pub width: f64,
     pub hidden: bool,
 }
 
 impl ColInfo {
+    /// Uses the global default width (8.43), not the sheet's own default.
     pub fn default(idx: usize) -> Self {
         Self {
             idx,
@@ -592,10 +614,12 @@ impl ColInfo {
     }
 }
 
+/// Excel's default row height, in points.
 pub fn get_default_row_height() -> f64 {
     15.
 }
 
+/// Excel's default column width, in character-width units.
 pub fn get_default_col_width() -> f64 {
     8.43
 }

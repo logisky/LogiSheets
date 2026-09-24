@@ -1,7 +1,10 @@
 /**
  * Types for the Formula Editor
  *
- * These match the backend API types from logisheets-web
+ * The wire types (`TokenType`, `TokenUnit`, `CellRef`, `FormulaDisplayInfo`)
+ * mirror logisheets-web's generated bindings for the Rust
+ * `lexer4fmt::FormulaDisplayInfo` (crates/controller/lexer4fmt/src/fmt.rs);
+ * they are redeclared here so the package has no logisheets-web dependency.
  */
 
 /**
@@ -22,15 +25,24 @@ export type TokenType =
  */
 export interface TokenUnit {
     tokenType: TokenType
-    /** Start index in the formula string (0-based, excludes leading '=') */
+    /**
+     * Start offset into the formula body (the text after the leading '=').
+     * 0-based UTF-8 BYTE offset, not a JS string index — it only matches the
+     * string index for ASCII text; the editor converts before use.
+     */
     start: number
-    /** End index in the formula string (exclusive) */
+    /** End offset, exclusive; same basis as `start`. */
     end: number
 }
 
 /**
  * Cell reference info parsed by the backend.
  * Used for highlighting cell references with colors.
+ *
+ * `row*` / `col*` are 0-based indices (A1 is row 0, col 0); `*2` is set only
+ * for a range. A missing row or column means that part was not written (e.g.
+ * a whole-column `A:A`). Sheet / workbook names are as written, without the
+ * surrounding quotes; `sheet2` is set only for a 3D `Sheet1:Sheet2!` ref.
  */
 export interface CellRef {
     workbook?: string
@@ -45,6 +57,9 @@ export interface CellRef {
 /**
  * The complete display info returned by the backend for a formula.
  * This is what the editor receives from `getDisplayUnitsOfFormula`.
+ *
+ * Invariant: `cellRefs[i]` belongs to the i-th `cellReference` token in
+ * `tokenUnits` (same order), which is how highlight colors stay paired.
  */
 export interface FormulaDisplayInfo {
     cellRefs: readonly CellRef[]
@@ -53,7 +68,12 @@ export interface FormulaDisplayInfo {
 
 /**
  * Function to fetch formula display info from backend.
- * The editor calls this whenever the text changes.
+ * The editor calls this on creation and ~100 ms after the last edit
+ * (debounced), only while the text is a formula (see `isFormula`).
+ *
+ * A rejection is caught and logged, and the previous highlighting is kept;
+ * resolving `undefined` clears it. Responses are applied in completion order,
+ * so an implementation should not let a slow call outlive a newer one.
  *
  * @param formula - The formula text (with leading '=' stripped)
  * @returns Promise resolving to FormulaDisplayInfo or undefined if not a formula
@@ -63,12 +83,16 @@ export type GetDisplayUnitsFunc = (
 ) => Promise<FormulaDisplayInfo | undefined>
 
 /**
- * A formula function definition for autocomplete.
+ * A formula function definition for autocomplete and signature help.
+ * Names are matched case-insensitively against the typed function name.
  */
 export interface FormulaFunction {
     /** Function name, e.g. "SUM" */
     name: string
-    /** Description of what the function does */
+    /**
+     * Description of what the function does — shown verbatim, so pass
+     * already-localized text (the editor does no i18n lookup).
+     */
     description: string
     /** Function arguments */
     args: FormulaArg[]
@@ -86,7 +110,10 @@ export interface FormulaFunction {
 export interface FormulaArg {
     argName: string
     description: string
-    /** If true, this argument can repeat */
+    /**
+     * If true, this argument and the ones after it repeat (signature help
+     * shows `name, name1, name2, ...`).
+     */
     startRepeated?: boolean
 }
 
@@ -140,6 +167,11 @@ export interface FormulaEditorConfig {
 
 /**
  * Props for the FormulaEditor component.
+ *
+ * Every prop except `defaultValue`, `initialCursorPosition`, `className` and
+ * `style` is re-synced on each render; those four are read once at mount.
+ * Point-mode arrow handling (`onArrowKey`) is only exposed by the vanilla
+ * `createFormulaEditor`.
  */
 export interface FormulaEditorProps {
     /** Current value (controlled) */
@@ -148,11 +180,18 @@ export interface FormulaEditorProps {
     defaultValue?: string
     /** Initial cursor position: 'start' or 'end' (default: 'end') */
     initialCursorPosition?: 'start' | 'end'
-    /** Called when value changes */
+    /**
+     * Called when value changes — including programmatic `setValue` /
+     * controlled `value` updates, not just typing.
+     */
     onChange?: (value: string) => void
     /** Called when editor loses focus - use this to commit the value */
     onBlur?: (value: string) => void
-    /** Called when Enter is pressed (without modifier keys) */
+    /**
+     * Called when Enter is pressed (without modifier keys) while no
+     * autocomplete list is open — Enter accepts the completion instead.
+     * Alt+Enter inserts a newline.
+     */
     onSubmit?: (value: string) => void
     /** Called when Escape is pressed */
     onCancel?: () => void
@@ -160,7 +199,10 @@ export interface FormulaEditorProps {
     getDisplayUnits: GetDisplayUnitsFunc
     /** List of available formula functions for autocomplete */
     formulaFunctions?: FormulaFunction[]
-    /** Current sheet name (for determining if cell refs are local) */
+    /**
+     * Current sheet name, compared against `CellRef.sheet1` to decide which
+     * refs are local (only local refs get a colored background).
+     */
     sheetName?: string
     /** Configuration options */
     config?: FormulaEditorConfig
@@ -183,6 +225,7 @@ export const CELL_REF_COLORS = [
     'rgba(255, 192, 0, 0.3)', // #FFC000 Orange/Yellow
 ]
 
+/** Palette color for the `index`-th reference; wraps after six. */
 export function getCellRefColor(index: number): string {
     return CELL_REF_COLORS[index % CELL_REF_COLORS.length]
 }

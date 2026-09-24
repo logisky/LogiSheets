@@ -24,7 +24,8 @@ import {Workbook, isErrorMessage} from 'logisheets-web'
 
 // Create an empty workbook, or load one from .xlsx bytes.
 const wb = new Workbook()
-const code = wb.load(new Uint8Array(buffer), 'book.xlsx') // 0 === success
+const loaded = wb.load(new Uint8Array(buffer), 'book.xlsx')
+if (isErrorMessage(loaded)) throw new Error(loaded.msg)
 
 // Read a cell.
 const ws = wb.getWorksheet(0)
@@ -46,7 +47,7 @@ wb.execTransaction({
 })
 
 // Save back to .xlsx.
-const saved = wb.save('') // { data: Uint8Array, code }
+const saved = wb.save('') // { data: Uint8Array }, or an ErrorMessage
 ```
 
 `Workbook` also exposes blocks, comments, checkpoints, fill-handle prediction,

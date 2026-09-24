@@ -1,3 +1,13 @@
+//! Types shared by every LogiSheets engine crate: the stable id types
+//! ([`CellId`], `SheetId`, `RowId`, ...), references and ranges built from
+//! them, [`CellValue`] and formula [`Error`] values, the `errors::BasicError`
+//! every layer reports, and the traits (`traits`) through which the parser
+//! and calculator reach the controller's managers without depending on it.
+//!
+//! The core idea: a cell is addressed by ids that never change when rows or
+//! columns are inserted or deleted, and only the controller's navigator maps
+//! ids to 0-based `(row, col)` positions.
+
 pub mod async_func;
 pub mod traits;
 pub mod types;
@@ -12,22 +22,28 @@ use gents_derives::TS;
 use logisheets_workbook::prelude::*;
 use std::hash::Hash;
 
+/// A cell's stable identity. It does not change when rows or columns are
+/// inserted or deleted around the cell; ask the worksheet for its current
+/// position.
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]
 #[ts(file_name = "cell_id.ts", tag = "type")]
 pub enum CellId {
+    /// An ordinary grid cell, keyed by its sheet-scoped row and column ids.
     NormalCell(NormalCellId),
+    /// A cell inside a block, keyed by the block and the block's own line ids.
     BlockCell(BlockCellId),
-    // For better interaction with the web, we add this variant.
-    // EphemeralCell is a cell that will not be saved to the workbook,
-    // and it can not be referenced by other cells.
-    // It's developers' responsibility to ensure the data is saved on their sides.
-    // Developers can use this variant to utilize LogiSheets features in their own ways.
-    // And it is also dangerous to assume the ephemeral id is only used by your current
-    // application, as it is possible that other applications will use the same id.
+    /// A cell with no grid position. It is never saved to the workbook and
+    /// cannot be referenced by other formulas, but it can hold a formula and
+    /// a style, so a host can use the engine to compute values of its own
+    /// (the engine does this for validation and conditional-formatting
+    /// "shadow" cells). Persisting it is the host's job. The id space is
+    /// shared by everyone using the workbook, so do not assume an id is
+    /// yours alone.
     EphemeralCell(EphemeralId),
 }
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]
+/// Row and column ids of a grid cell. Both are scoped to one sheet.
 #[ts(file_name = "normal_cell_id.ts")]
 pub struct NormalCellId {
     pub row: RowId,
@@ -157,12 +173,13 @@ pub struct ExtRef {
 }
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, Copy, TS)]
+/// A cell inside a block. `row`/`col` are the BLOCK's own line ids, not the
+/// sheet's, so they stay valid when the block moves or its lines reorder.
 #[ts(file_name = "block_cell_id.ts", rename_all = "camelCase")]
 pub struct BlockCellId {
+    /// Unique within a sheet only.
     pub block_id: BlockId,
-    // block inner row id
     pub row: RowId,
-    // block inner col id
     pub col: ColId,
 }
 
@@ -172,6 +189,8 @@ pub struct Addr {
     pub col: usize,
 }
 
+/// A formula error value. `to_string` / `from_string` convert to and from the
+/// Excel spelling; an unknown spelling reads as `Unspecified` (`#UNKNOWN!`).
 #[derive(Debug, Clone)]
 pub enum Error {
     Unspecified,
@@ -222,6 +241,12 @@ impl Error {
     }
 }
 
+/// A cell's stored value.
+///
+/// `String` is an id into the workbook's shared-text table, so reading it
+/// needs a text fetcher. `InlineStr` is rich text carried inline (files
+/// written without a shared-string table). `FormulaStr` is the text result of
+/// a formula.
 #[derive(Debug, Clone)]
 pub enum CellValue {
     Blank,
@@ -240,6 +265,8 @@ impl Default for CellValue {
 }
 
 impl CellValue {
+    /// Plain-text rendering, with no number formatting applied. Booleans
+    /// come out as `"1"`/`"0"`, not `TRUE`/`FALSE`; blank is `""`.
     pub fn to_string<F>(&self, text_id_fetcher: &F) -> String
     where
         F: Fn(TextId) -> String,
@@ -265,6 +292,11 @@ impl CellValue {
         }
     }
 
+    /// Classify typed input the way Excel does: empty is `Blank`,
+    /// `true`/`false` (any case) is a boolean, a leading `'` forces text (and
+    /// is dropped), anything `f64` parses is a number, the rest is text. Only
+    /// the classification trims whitespace; stored text keeps it. Formulas
+    /// are not handled here.
     pub fn from_string<F>(text: String, text_id_fetcher: &mut F) -> Self
     where
         F: FnMut(&str) -> TextId,
@@ -420,29 +452,18 @@ impl CellValue {
                     }
                 }
                 StCellType::Str => CellValue::FormulaStr(text.value.clone()),
-                StCellType::D => todo!(),
-                StCellType::E => {
-                    let e = {
-                        if &text.value == "#DIV/0!" {
-                            Error::Div0
-                        } else if &text.value == "#N/A" {
-                            Error::NA
-                        } else if &text.value == "#NAME?" {
-                            Error::Name
-                        } else if &text.value == "#NULL!" {
-                            Error::Null
-                        } else if &text.value == "#NUM!" {
-                            Error::Num
-                        } else if &text.value == "#VALUE!" {
-                            Error::Value
-                        } else if &text.value == "#GETTING_DATA" {
-                            Error::GettingData
-                        } else {
-                            Error::Value
-                        }
-                    };
-                    CellValue::Error(e)
-                }
+                // ISO-8601 in the file; the engine stores dates as serial
+                // numbers like any other number. An unreadable one loads blank
+                // rather than failing the whole workbook.
+                StCellType::D => match types::datetime::parse_iso8601_serial(&text.value) {
+                    Some(n) => CellValue::Number(n),
+                    None => CellValue::Blank,
+                },
+                // An error code the engine doesn't know loads as #VALUE!.
+                StCellType::E => match Error::from_string(text.value.clone()) {
+                    Error::Unspecified | Error::Placeholder => CellValue::Error(Error::Value),
+                    e => CellValue::Error(e),
+                },
             }
         } else {
             CellValue::Blank
@@ -456,6 +477,7 @@ impl CellValue {
         CellValue::get_value(&c.t, c.v.as_ref(), c.is.as_ref(), f)
     }
 
+    /// Truthiness for conditions. Errors, blanks and formula text are false.
     pub fn bool_value(&self) -> bool {
         match self {
             CellValue::Boolean(b) => *b,
@@ -474,6 +496,8 @@ impl CellValue {
     }
 }
 
+/// `"A"` -> 0, `"AA"` -> 26. The label must be non-empty UPPERCASE ASCII
+/// letters; anything else underflows (panics in debug builds).
 pub fn column_label_to_index(label: &str) -> usize {
     let mut result: usize = 0;
     for (i, c) in label.chars().rev().enumerate() {
@@ -482,6 +506,7 @@ pub fn column_label_to_index(label: &str) -> usize {
     result - 1
 }
 
+/// 0-based column index to its letters: 0 -> `"A"`, 26 -> `"AA"`.
 pub fn index_to_column_label(index: usize) -> String {
     let mut result: Vec<char> = vec![];
     let mut left = index as i32;

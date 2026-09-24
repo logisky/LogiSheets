@@ -45,6 +45,10 @@ import {isErrorMessage, Result} from './utils'
 import {BlockManager} from './block_manager'
 import {Author} from './author'
 
+// Every engine call is one `handle(msg, bookId)` into the WASM, where `msg` is
+// the bare method name for a parameterless call and `{method, value}`
+// otherwise. `handle` never throws for an engine failure: it returns an
+// `ErrorMessage`, which is why the methods below type their result `Result<T>`.
 function rpc(
     method: string,
     params?: Record<string, unknown>,
@@ -64,7 +68,27 @@ function newGuid(): string {
 export type Callback = () => void
 export type CellIdCallback = (cellId: SheetCellId) => void
 
+/**
+ * A synchronous handle on one engine workbook, living in the calling thread.
+ *
+ * In the browser, `initWasm()` must have resolved before the constructor runs;
+ * the Node build needs no init. The app does not use this directly on the main
+ * thread: logisheets-engine runs one inside its web worker and exposes it as
+ * the async {@link Client}. Shared code should target `Client`.
+ *
+ * Conventions for every method:
+ *  - Sheet, row and column indexes are 0-based. `sheetIdx` is the tab
+ *    position (changes when sheets move); `sheetId` is stable. Convert with
+ *    {@link getSheetId} / {@link getSheetIdx}.
+ *  - Reads return `Result<T>`: an `ErrorMessage` on failure, never a throw.
+ *  - Writes go through {@link execTransaction}, which reports a rejection in
+ *    the returned `ActionEffect` rather than throwing.
+ *
+ * Call {@link release} when done; the engine keeps the workbook alive until
+ * then.
+ */
 export class Workbook {
+    /** Allocates a new, empty workbook in the engine. */
     public constructor() {
         this._id = rpc('newWorkbook') as number
         this._blockManager = new BlockManager(
@@ -90,6 +114,7 @@ export class Workbook {
         )
     }
 
+    /** Current tab position of the sheet with stable id `sheetId`. */
     public getSheetIdx(sheetId: number): Result<number> {
         return rpc('getSheetIdx', {sheetId}, this._id)
     }
@@ -104,6 +129,12 @@ export class Workbook {
         )
     }
 
+    /**
+     * An unused block id on the sheet, asked of the engine every call and not
+     * reserved: two calls before a `createBlock` return the same id.
+     * {@link createBlockForNewCraft} instead hands out ids from a local
+     * counter.
+     */
     public getAvailableBlockId(
         params: GetAvailableBlockIdParams
     ): Result<number> {
@@ -115,9 +146,11 @@ export class Workbook {
     }
 
     /**
-     * @returns the block id if success, otherwise the error message
+     * Create a `rowCnt` x `colCnt` block whose master (top-left) cell is at
+     * (`masterRow`, `masterCol`), as a non-undoable transaction.
      *
-     * It is caller's responsibility to store the block id.
+     * @returns the new block id, or an `ErrorMessage` if the engine rejected
+     * the block. The caller must store the id; nothing else records it.
      */
     public createBlockForNewCraft(
         sheetIdx: number,
@@ -283,6 +316,8 @@ export class Workbook {
         })
     }
 
+    /** Undo the last undoable transaction. `false` when there was nothing to
+     *  undo; on `true` the cell and sheet update callbacks fire. */
     public undo(): boolean {
         const result = rpc('undo', undefined, this._id) as boolean
         if (result) {
@@ -292,6 +327,7 @@ export class Workbook {
         return result
     }
 
+    /** Redo the last undone transaction. Same contract as {@link undo}. */
     public redo(): boolean {
         const result = rpc('redo', undefined, this._id) as boolean
         if (result) {
@@ -301,10 +337,14 @@ export class Workbook {
         return result
     }
 
+    /** Called after a transaction reporting cell changes, after undo/redo,
+     *  and when async custom-function results land. No unsubscribe. */
     public registerCellUpdatedCallback(callback: Callback) {
         this._cellUpdatedCallbacks.push(callback)
     }
 
+    /** Called after a transaction reporting sheet-level changes, and after
+     *  undo/redo. No unsubscribe. */
     public registerSheetInfoUpdateCallback(callback: Callback) {
         this._sheetInfoUpdatedCallbacks.push(callback)
     }
@@ -324,6 +364,7 @@ export class Workbook {
         return rpc('getSheetNameByIdx', {idx}, this._id)
     }
 
+    /** Every sheet, in tab order. */
     public getAllSheetInfo(): Array<SheetInfo> {
         return rpc('getAllSheetInfo', undefined, this._id)
     }
@@ -337,10 +378,18 @@ export class Workbook {
         return rpc('getFormulaFunctionNames', undefined, this._id)
     }
 
+    /** Whether `f` looks like a formula: it must start with `=` and the rest
+     *  must lex. A cheap syntax screen, not a full parse; nothing is evaluated. */
     public checkFormula(f: string): boolean {
         return rpc('checkFormula', {formula: f}, this._id)
     }
 
+    /**
+     * Evaluate a boolean formula on sheet `sheetIdx`. `f` is written as cell
+     * content into one engine-owned scratch ephemeral cell, so a formula needs
+     * its leading `=`. An `ErrorMessage` when the result is an error value or
+     * the write is rejected.
+     */
     public calcCondition(sheetIdx: number, f: string): Result<boolean> {
         return rpc('calcCondition', {sheetIdx, condition: f}, this._id)
     }
@@ -398,6 +447,7 @@ export class Workbook {
         return rpc('isInTempMode', undefined, this._id)
     }
 
+    /** Stable id of the sheet at tab position `sheetIdx`. */
     public getSheetId(sheetIdx: number): Result<number> {
         return rpc('getSheetId', {sheetIdx}, this._id)
     }
@@ -422,6 +472,11 @@ export class Workbook {
         return rpc('getDisplayUnitsOfFormula', {formula: f}, this._id)
     }
 
+    /**
+     * Subscribe to value changes of the cell now at (sheetIdx, rowIdx,
+     * colIdx). The coordinate is resolved to a cell id once, up front.
+     * Returns an `ErrorMessage` if it cannot be resolved.
+     */
     public onCellValueChanged(
         sheetIdx: number,
         rowIdx: number,
@@ -493,6 +548,14 @@ export class Workbook {
         this._registerCellValueChangedCallback(cellId, callback)
     }
 
+    /**
+     * Temp branch (speculative edits). Transactions sent with `temp: true`
+     * land on ONE workbook-wide branch; {@link commitTempStatus} folds it into
+     * the real state, {@link cleanupTempStatus} discards all of it, and
+     * {@link toggleStatus} picks which state reads are served from. Any
+     * non-temp write discards the branch. Check {@link isInTempMode} before
+     * assuming the slot is free.
+     */
     public commitTempStatus(): Result<void> {
         return rpc('commitTempStatus', undefined, this._id)
     }
@@ -501,10 +564,13 @@ export class Workbook {
         return rpc('cleanupTempStatus', undefined, this._id)
     }
 
+    /** Serve reads from the temp branch (`true`) or the committed state. */
     public toggleStatus(useTemp: boolean): Result<void> {
         return rpc('toggleStatus', {useTemp}, this._id)
     }
 
+    /** Cell infos for stable cell ids, in input order. Works for ephemeral and
+     *  shadow cells, which have no coordinate. */
     public batchGetCellInfoById(
         ids: readonly SheetCellId[]
     ): Result<readonly CellInfo[]> {
@@ -517,6 +583,19 @@ export class Workbook {
         return rpc('batchGetCellCoordinateWithSheetById', {ids}, this._id)
     }
 
+    /**
+     * Apply a transaction: all payloads, in order, as one unit and (when
+     * `tx.undoable`) one undo step.
+     *
+     * Never throws for an engine refusal. A rejected transaction applies
+     * nothing and returns an `ActionEffect` with `status.type === 'err'` and
+     * the reason (naming the offending payload) in `errorMessage`; check it
+     * whenever the write must land. Callbacks fire only on success.
+     *
+     * Custom-function calls in the new formulas come back as `asyncTasks`;
+     * they are run here through the registered {@link CustomFunc}s and their
+     * results fed back later, so those cells update after this returns.
+     */
     public execTransaction(tx: Transaction): ActionEffect {
         const result = rpc(
             'handleTransaction',
@@ -595,11 +674,17 @@ export class Workbook {
      * so a file Excel must recalculate needs the coordinates. One-way — a
      * resolved `BLOCKREFS` becomes a plain range, which LogiSheets does not
      * parse back when it straddles a block.
+     *
+     * `data` is the opaque AppData string stored in the file (craft state and
+     * friends); read it back with {@link getAppData} after a load. Despite the
+     * return type, a failed save returns an `ErrorMessage`: check with
+     * `isErrorMessage`.
      */
     public save(data: string, resolveBlockRefs = false): SaveFileResult {
         return rpc('saveWorkbook', {appData: data, resolveBlockRefs}, this._id)
     }
 
+    /** The AppData entries carried by the loaded file (see {@link save}). */
     public getAppData(): readonly AppData[] {
         return rpc('getAppData', undefined, this._id)
     }
@@ -610,6 +695,8 @@ export class Workbook {
         return rpc('getVersion', undefined, this._id)
     }
 
+    /** Free the engine workbook. Every later call on this handle, or on a
+     *  `Worksheet` taken from it, is invalid. */
     public release() {
         rpc('release', undefined, this._id)
     }
@@ -618,6 +705,8 @@ export class Workbook {
         return rpc('getSheetCount', undefined, this._id)
     }
 
+    /** The sheet at tab position `idx`. THROWS when `idx` is out of range,
+     *  unlike the `Result`-returning reads. */
     public getWorksheet(idx: number): Worksheet {
         if (idx >= this.getSheetCount())
             throw Error(`invalid sheet index: ${idx}`)
@@ -816,14 +905,23 @@ export class Workbook {
         })
     }
 
+    /** The sheet with stable id `id`. Not validated: an unknown id yields a
+     *  `Worksheet` whose calls fail. */
     public getWorksheetById(id: number): Worksheet {
         return new Worksheet(this._id, id, false)
     }
 
+    /** Make `customFunc.funcName` callable from formulas. The engine hands
+     *  such calls back as async tasks, see {@link execTransaction}. */
     public registryCustomFunc(customFunc: CustomFunc) {
         this._calculator.registry(customFunc)
     }
 
+    /**
+     * The id of a cell's shadow: an ephemeral companion cell the engine keeps
+     * per (cell, kind) for validation-style formulas. Allocated on first ask
+     * and stable afterwards.
+     */
     public getShadowCellId(params: GetShadowCellIdParams): Result<number> {
         return rpc(
             'getShadowCellId',
@@ -852,6 +950,8 @@ export class Workbook {
         )
     }
 
+    /** The stable id of the cell at a coordinate. It survives row/column
+     *  insertion and deletion, unlike the coordinate. */
     public getCellId(params: GetCellIdParams): Result<SheetCellId> {
         return rpc(
             'getCellId',
@@ -1026,6 +1126,9 @@ export class Workbook {
         (sheetIdxes: readonly number[]) => void
     > = []
 
+    // NOTE: keyed by SheetCellId OBJECT identity, while execTransaction looks
+    // up the fresh objects each ActionEffect carries, so these lookups do not
+    // match. logisheets-engine's client keys by a string form instead.
     private _cellValueChangedCallbacks: Map<SheetCellId, Callback[]> = new Map()
     private _cellRemovedCallbacks: Map<SheetCellId, Callback[]> = new Map()
     // The book id which is generated by `WASM`

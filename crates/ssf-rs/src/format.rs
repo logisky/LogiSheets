@@ -118,6 +118,14 @@ fn choose_fmt(f: &str, v: &Value) -> Result<(usize, String), String> {
 }
 
 /// `ssf.format(fmt, v, opts)` for a string format code.
+///
+/// `fmt` may hold up to four `;`-separated sections (positive; negative;
+/// zero; text) with optional `[>100]`-style conditions, chosen per `v` the
+/// way Excel does. `date1904` selects the 1904 date system for serials;
+/// otherwise the 1900 system applies, including its fictitious 1900-02-29.
+/// Empty text formats to `""`. `Err` carries `ssf`'s message for a format
+/// it cannot parse (unterminated string or `[`, unrecognised character,
+/// no section for the value); callers usually fall back to plain rendering.
 pub fn format(fmt: &str, v: &Value, date1904: bool) -> Result<String, String> {
     let sfmt = fmt;
     if isgeneral(sfmt, 0) {
@@ -135,7 +143,8 @@ pub fn format(fmt: &str, v: &Value, date1904: bool) -> Result<String, String> {
     eval_fmt(&f.1, v, date1904, f.0)
 }
 
-/// `ssf.format` for a numeric format id.
+/// `ssf.format` for a built-in numeric format id (`numFmtId` in styles.xml).
+/// Ids with no built-in or default mapping format as `General`.
 pub fn format_id(id: u16, v: &Value, date1904: bool) -> Result<String, String> {
     let sfmt = resolve_id(id);
     format(&sfmt, v, date1904)

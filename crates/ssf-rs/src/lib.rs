@@ -5,6 +5,11 @@
 //! display string. This is the piece needed to implement Excel's
 //! `TEXT(value, format_text)` natively in Rust.
 //!
+//! Within LogiSheets it backs `TEXT()` and number-to-text conversion in
+//! `logisheets_controller`, and the browser's `format_number` /
+//! `format_text` exports in `logisheets_wasm_server`. It has no LogiSheets
+//! dependencies and can be used on its own.
+//!
 //! **Attribution:** derived from `ssf` v0.11.2, `(C) 2013-present SheetJS LLC`,
 //! licensed under Apache-2.0. See `NOTICE` and `README.md`. Changes from
 //! upstream are documented in `NOTICE`.

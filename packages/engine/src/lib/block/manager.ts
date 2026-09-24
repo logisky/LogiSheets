@@ -8,6 +8,8 @@ import {EnumSetManager} from './enum_set_manager'
 import {FieldManager, type FieldInfo} from './field_manager'
 import type {WorkbookClient} from '../clients/workbook'
 
+// Legacy identifiers kept in the public API; nothing in this repo reads
+// them any more.
 export const LOGISHEETS_BUILTIN_CRAFT_ID = 'logisheets'
 export const FIELD_AND_VALIDATION_TAG = 80
 
@@ -50,6 +52,11 @@ export class BlockManager {
         return JSON.stringify({variantColors})
     }
 
+    /**
+     * Merge a blob written by {@link getPersistentData} (or the older
+     * enumSets form) into the enum colours. Throws on malformed JSON. Call
+     * {@link clear} first when switching workbooks.
+     */
     public parseAppData(data: string): void {
         const parsed = JSON.parse(data) as {
             variantColors?: Record<string, string>

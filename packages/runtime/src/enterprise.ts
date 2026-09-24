@@ -53,6 +53,10 @@ export interface AccessEvent {
     method?: string
 }
 
+/**
+ * Calls the enterprise control panel. `register` throws on a non-2xx reply;
+ * `heartbeat` and `ingest` are fire-and-forget and swallow every failure.
+ */
 export class ControlPlaneClient {
     constructor(private readonly opts: ControlPlaneOptions) {}
 
@@ -69,6 +73,8 @@ export class ControlPlaneClient {
         return `${this.opts.controlPlaneUrl.replace(/\/$/, '')}${path}`
     }
 
+    /** Announce this runtime (`address` is the base URL the panel dials).
+     *  Returns its runtimeId and the craft-registry credentials. */
     async register(input: {
         address: string
         name?: string
@@ -112,6 +118,10 @@ export class ControlPlaneClient {
 // (works for self-contained ESM bundles; host-SDK externals must be provided by
 // the runtime's own module resolution). TODO: tarball unpack + external mapping
 // to match craft-registry's bundle format.
+//
+// Every failure (network, non-2xx, failed import) resolves `undefined`, which
+// the loader treats as "no such craft": a misconfigured registry shows up as
+// crafts silently missing, not as an error.
 export class HttpCraftRegistry implements CraftRegistry {
     constructor(
         private readonly registryUrl: string,
@@ -229,6 +239,16 @@ export interface RuntimeHttpResponse {
     body?: unknown
 }
 
+/**
+ * The runtime's own HTTP surface for the control panel: `/pin`, `/unpin`,
+ * `/task` (POST) and `/status` (GET). Every route is gated by `secret`
+ * (Bearer) when one is set (403 otherwise); with none, the server is open.
+ * A route that throws comes back as HTTP 500 with `{error}`.
+ *
+ * Use {@link listen} on Node, or {@link handleRequest} from any other host.
+ * A `compute` task handler ({@link craftComputeHandler}) is registered by
+ * default.
+ */
 export class EnterpriseRuntimeServer {
     private readonly runtime: SpreadsheetRuntime
     private registry?: CraftRegistry
@@ -249,15 +269,20 @@ export class EnterpriseRuntimeServer {
             this.handlers.set(name, h)
     }
 
+    /** Set where crafts are pulled from. Workbooks loaded before this call
+     *  had no crafts loaded and are not revisited. */
     setRegistry(registry: CraftRegistry): void {
         this.registry = registry
     }
 
+    /** Add or replace the handler `/task` runs for `rpcCall === name`. */
     registerTask(name: string, handler: TaskHandler): this {
         this.handlers.set(name, handler)
         return this
     }
 
+    /** Start the Node HTTP server. Binds all interfaces by default (the
+     *  control panel dials in), unlike RpcServer's loopback default. */
     listen(port: number, host = '0.0.0.0'): Promise<AddressInfo> {
         if (this.server) throw new Error('server already listening')
         const server = createServer((req, res) => void this.onRequest(req, res))

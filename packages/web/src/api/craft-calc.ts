@@ -14,6 +14,11 @@ import {isErrorMessage} from './utils'
 // keep both base and offset in plain Number. With 2^32 reserved for the
 // engine and 2^20 per craft, we can hand out ~2^21 craft ranges before
 // running into precision concerns — plenty.
+//
+// NOTE: the engine does not honour this split. Its shadow-cell allocator
+// (crates/controller/src/sid_assigner) starts at u32::MAX and counts UP, into
+// the first craft range, and `WorkbookOps.evalFormula` (logisheets-core) uses
+// ids from 1, so ids from different owners can collide.
 const ENGINE_RESERVED_END = 0x1_0000_0000 // 2^32
 const CRAFT_RANGE_SIZE = 1 << 20 // 2^20 ids per craft
 
@@ -40,6 +45,13 @@ let nextCraftBase = ENGINE_RESERVED_END
  *
  * Slot 0 inside each craft range is reserved for `calcOnce`; user
  * `localId`s are transparently offset by 1 so they cannot collide.
+ *
+ * Failure: every method throws an `Error` when an engine call resolves an
+ * `ErrorMessage`. A write the engine REJECTS resolves an `ActionEffect` with
+ * `status.type === 'err'` instead, which these methods do not inspect, so a
+ * rejected formula surfaces only as whatever the slot then reads back.
+ *
+ * All slots live on sheet index 0, which must exist.
  *
  * Lifetime notes:
  *  - Ephemeral cells are wiped on file save/load (that's what "ephemeral"
@@ -95,7 +107,8 @@ export class CraftCalc {
      * for normal cells), so repeated `getCalc` calls reflect the latest
      * state without re-issuing the formula.
      *
-     * Throws if `localId` was never `setCalc`-ed (or has been dropped).
+     * A slot that was never `setCalc`-ed (or has been dropped) reads as
+     * `'empty'`; the engine does not distinguish it from an empty result.
      */
     public async getCalc(localId: number): Promise<Value> {
         const sheetId = await this._resolveSheetId()
@@ -244,7 +257,8 @@ export class CraftCalc {
 
 /**
  * Allocate a fresh ephemeral-id range and return a {@link CraftCalc}
- * handle scoped to it. Call once per craft (or per host-UI context).
+ * handle scoped to it. Call once per craft (or per host-UI context): every
+ * call burns a new range for the rest of the JS session.
  */
 export function acquireCraftCalc(workbook: Client): CraftCalc {
     const base = nextCraftBase

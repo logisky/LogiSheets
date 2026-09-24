@@ -3,7 +3,7 @@ use logisheets_base::{Cube, CubeId, SheetId};
 use crate::Error;
 use crate::cube_manager::ctx::CubeExecCtx;
 
-use super::{CubeExecutor, CubeUpdateType};
+use super::{CubeExecutor, CubeUpdateType, utils::cube_spans_sheet};
 
 pub fn delete_sheet<C>(
     exec_ctx: CubeExecutor,
@@ -14,10 +14,7 @@ where
     C: CubeExecCtx,
 {
     let mut func = |cube: &Cube, _: &CubeId| -> Result<CubeUpdateType, Error> {
-        let from_idx = _ctx.fetch_sheet_index(&cube.from_sheet)?;
-        let to_idx = _ctx.fetch_sheet_index(&cube.to_sheet)?;
-        let curr_idx = _ctx.fetch_sheet_index(&sheet)?;
-        if curr_idx < from_idx || curr_idx > to_idx {
+        if !cube_spans_sheet(_ctx, cube, &sheet) {
             return Ok(CubeUpdateType::None);
         }
 

@@ -35,6 +35,12 @@ impl Default for ShadowKind {
     }
 }
 
+/// Allocates the ephemeral ids of shadow cells, one per `(sheet, cell, kind)`.
+///
+/// Ids are handed out upward from `u32::MAX`, so a host picking its own
+/// `EphemeralId`s should stay below that to avoid colliding with shadows. The
+/// mapping lives outside `Status`: it is not undone, not saved, and rebuilt
+/// per session.
 #[derive(Debug)]
 pub struct ShadowIdAssigner {
     next_id: u64,

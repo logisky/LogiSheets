@@ -60,6 +60,11 @@ async function anyText(
     return false
 }
 
+/**
+ * Infer categories/series references for a new chart from `range` (0-based,
+ * corners in any order) on `sheetName`. References come back as absolute,
+ * sheet-qualified A1 strings ready for the core's CreateChart payload.
+ */
 export async function chartDataRefsFromSelection(
     chartType: string,
     range: SelectionRange,

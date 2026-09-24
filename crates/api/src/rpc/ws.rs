@@ -85,6 +85,8 @@ pub fn get_links(
     Ok(ws.get_links())
 }
 
+/// Blocks lying entirely inside the `row_cnt` x `col_cnt` rectangle at
+/// (`row`, `col`). An empty rectangle (either count 0) covers nothing.
 pub fn get_all_fully_covered_blocks(
     mgr: &Manager,
     id: usize,
@@ -96,9 +98,13 @@ pub fn get_all_fully_covered_blocks(
 ) -> Result<Vec<BlockInfo>, ErrorMessage> {
     let wb = mgr.workbook(id)?;
     let ws = wb.get_sheet_by_id(sheet_id).map_err(ErrorMessage::from)?;
+    if row_cnt == 0 || col_cnt == 0 {
+        return Ok(vec![]);
+    }
     Ok(ws.get_all_fully_covered_blocks(row, col, row + row_cnt - 1, col + col_cnt - 1))
 }
 
+/// Row height in points.
 pub fn get_row_height(
     mgr: &Manager,
     id: usize,
@@ -117,6 +123,7 @@ pub fn get_row_height(
         .map_err(ErrorMessage::from)
 }
 
+/// Column width in Excel character-width units, not points.
 pub fn get_col_width(
     mgr: &Manager,
     id: usize,
@@ -232,6 +239,9 @@ pub fn get_style(
         .map_err(ErrorMessage::from)
 }
 
+/// Note the argument order: both rows, then both columns (`start_row,
+/// end_row, start_col, end_col`), unlike the worksheet method it calls and
+/// unlike every other range function here.
 pub fn get_display_window(
     mgr: &Manager,
     id: usize,
@@ -255,6 +265,8 @@ pub fn get_display_window(
         .map_err(ErrorMessage::from)
 }
 
+/// Takes `height` before `width`; the worksheet method it wraps takes them the
+/// other way round, hence the swap below.
 pub fn get_display_window_with_start_point(
     mgr: &Manager,
     id: usize,
@@ -276,6 +288,8 @@ pub fn get_display_window_with_start_point(
         .map_err(ErrorMessage::from)
 }
 
+/// A `height` x `width` window placed so the cell's top-left sits 40% of the
+/// way in from the window's top-left (`/ 2.5`), roughly centring it.
 pub fn get_display_window_within_cell(
     mgr: &Manager,
     id: usize,
@@ -377,6 +391,9 @@ pub fn get_diy_cell_id_with_block_id(
     Ok(ws.get_diy_cell_id_with_block_id(&block_id, row, col))
 }
 
+/// The nearest appendix tagged (`craft_id`, `tag`) at block-relative
+/// (`row_idx`, `col_idx`) or in a row above it, same column; errors when the
+/// search reaches the block's first row without a match.
 pub fn lookup_appendix_upward(
     mgr: &Manager,
     id: usize,
@@ -560,6 +577,7 @@ pub fn get_reproducible_cells(
         .map_err(ErrorMessage::from)
 }
 
+/// The answer's `x` is the column and `y` the row, both 0-based.
 pub fn get_next_visible_cell(
     mgr: &Manager,
     id: usize,
@@ -585,6 +603,7 @@ pub fn get_next_visible_cell(
     .map_err(ErrorMessage::from)
 }
 
+/// Ctrl+Arrow target. The answer's `x` is the column and `y` the row.
 pub fn get_data_boundary(
     mgr: &Manager,
     id: usize,

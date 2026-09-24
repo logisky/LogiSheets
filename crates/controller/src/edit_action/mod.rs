@@ -2,18 +2,27 @@ use crate::conditional_formatting_manager::spec::CfRuleSpec;
 use gents_derives::TS;
 use logisheets_base::{BlockId, CellId, ColId, EphemeralId, RowId, SheetId, async_func::Task};
 
+/// Marker for payload structs, so [`PayloadsAction::add_payload`] can take
+/// them directly.
 pub trait Payload: Into<EditPayload> {}
 
 /// `EditAction` represents your update behavior to the workbook.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "edit_action.ts", tag = "type")]
 pub enum EditAction {
+    /// Step back one undoable transaction (inside an active temp branch,
+    /// one step of that branch).
     Undo,
     Redo,
+    /// Apply a transaction. Any other action than `Undo`/`Redo` discards an
+    /// active temp branch first.
     Payloads(PayloadsAction),
+    /// Re-evaluate these cells and their dependents without changing any
+    /// input. Not recorded in history.
     Recalc(Vec<RecalcCell>),
 }
 
+/// A cell to re-evaluate, by stable ids.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "recalc_cell.ts", rename_all = "camelCase")]
 pub struct RecalcCell {
@@ -49,13 +58,19 @@ impl From<PayloadsAction> for EditAction {
 #[ts(file_name = "payloads_action.ts")]
 pub struct PayloadsAction {
     pub payloads: Vec<EditPayload>,
+    /// Record the transaction as one undo step. `false` still applies and
+    /// commits it; it just cannot be undone.
     pub undoable: bool,
-    // An action that is used to customize the initial status of a new workbook.
-    // This action is `undoable` but its new status should be recorded to history.
+    /// Build a workbook's opening state rather than edit it: the resulting
+    /// status becomes the new history baseline (clearing undo/redo), and the
+    /// block-key uniqueness and pivot-conflict guards are skipped so a file
+    /// that already violates them still opens. Not for user edits.
     pub init: bool,
 }
 
 impl PayloadsAction {
+    /// An empty, NON-undoable transaction. Call `set_undoable(true)` for a
+    /// user edit.
     pub fn new() -> Self {
         PayloadsAction {
             payloads: vec![],
@@ -69,6 +84,7 @@ impl PayloadsAction {
         self
     }
 
+    /// Also clears `undoable`, whichever value `v` has.
     pub fn set_init(mut self, v: bool) -> Self {
         self.init = v;
         self.undoable = false;
@@ -224,33 +240,50 @@ impl From<RestoreCheckpoint> for EditPayload {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Insert a new, empty sheet.
 #[ts(file_name = "create_sheet.ts", builder, rename_all = "camelCase")]
 pub struct CreateSheet {
+    /// Tab position of the new sheet, `0..=sheet count`; later sheets shift
+    /// right.
     pub idx: usize,
+    /// Must not name an existing sheet.
     pub new_name: String,
 }
 
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "delete_sheet.ts", builder, rename_all = "camelCase")]
 pub struct DeleteSheet {
+    /// The engine accepts deleting any sheet, but a UI host that is still
+    /// rendering this sheet must move its view to another sheet first.
     pub idx: usize,
 }
 
 #[derive(Debug, Clone, TS)]
+/// Set a sheet's tab color.
 #[ts(file_name = "set_sheet_color.ts", builder, rename_all = "camelCase")]
 pub struct SetSheetColor {
     pub idx: usize,
+    /// Stored unvalidated and written verbatim as OOXML `<tabColor rgb>`, so
+    /// use 8-digit ARGB hex with no `#` (`"FFFF0000"`).
     pub color: String,
 }
 
 #[derive(Debug, Clone, TS)]
+/// Hide or show a sheet tab.
+///
+/// Known gap: the executor currently ignores `visible` and always hides the
+/// sheet; there is no payload that unhides one.
 #[ts(file_name = "set_sheet_visible.ts", builder, rename_all = "camelCase")]
 pub struct SetSheetVisible {
     pub idx: usize,
     pub visible: bool,
 }
 
-/// Find a sheet by its name and rename it. If no sheet is found, do nothing.
+/// Rename a sheet, found by `old_name` or else by `idx`.
+///
+/// `old_name` wins when both are set, and an unknown `old_name` is a silent
+/// no-op. An out-of-range `idx` is rejected, as is setting neither. Formulas
+/// referencing the sheet keep working: they hold its id, not its name.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "sheet_rename.ts", builder, rename_all = "camelCase")]
 pub struct SheetRename {
@@ -260,6 +293,11 @@ pub struct SheetRename {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Format painter: copy one cell's style onto every cell of the inclusive
+/// rectangle `dst_row_start..=dst_row_end` x `dst_col_start..=dst_col_end`.
+///
+/// Known gap: the executor resolves the destination on the SOURCE sheet;
+/// `dst_sheet_idx` is currently ignored.
 #[ts(file_name = "cell_format_brush.ts", builder, rename_all = "camelCase")]
 pub struct CellFormatBrush {
     pub src_sheet_idx: usize,
@@ -273,6 +311,11 @@ pub struct CellFormatBrush {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Copy one cell's style onto whole rows (`row == true`) or columns
+/// `from..=to` (inclusive). Sets the line style only; existing cells keep
+/// their own.
+///
+/// Known gap: like [`CellFormatBrush`], `dst_sheet_idx` is currently ignored.
 #[ts(file_name = "line_format_brush.ts", builder, rename_all = "camelCase")]
 pub struct LineFormatBrush {
     pub src_sheet_idx: usize,
@@ -285,6 +328,8 @@ pub struct LineFormatBrush {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Delete `count` sheet rows starting at `start`, with their cells. For rows
+/// inside a block use [`DeleteRowsInBlock`].
 #[ts(file_name = "delete_rows.ts", builder, rename_all = "camelCase")]
 pub struct DeleteRows {
     pub sheet_idx: usize,
@@ -293,6 +338,8 @@ pub struct DeleteRows {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Insert `count` empty rows so that the first new row sits at index `start`;
+/// the row previously at `start` moves down. References shift with the cells.
 #[ts(file_name = "insert_rows.ts", builder, rename_all = "camelCase")]
 pub struct InsertRows {
     pub sheet_idx: usize,
@@ -301,6 +348,7 @@ pub struct InsertRows {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Column counterpart of [`DeleteRows`].
 #[ts(file_name = "delete_cols.ts", builder, rename_all = "camelCase")]
 pub struct DeleteCols {
     pub sheet_idx: usize,
@@ -309,6 +357,7 @@ pub struct DeleteCols {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Column counterpart of [`InsertRows`].
 #[ts(file_name = "insert_cols.ts", builder, rename_all = "camelCase")]
 pub struct InsertCols {
     pub sheet_idx: usize,
@@ -340,11 +389,6 @@ pub struct DeleteCellImage {
     pub col: usize,
 }
 
-/// Move (and/or resize) a chart to a new anchor. The chart is identified by
-/// `chart_id` on the given sheet. `from`/`to` are the new top-left and
-/// bottom-right anchor corners, each a cell position plus an EMU offset into
-/// that cell (1px = 9525 EMU at 96 DPI). Anchoring to cells (not pixels) is how
-/// the chart shifts with row/column edits.
 /// Delete a chart from a sheet, identified by `chart_id`.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "delete_chart.ts", builder, rename_all = "camelCase")]
@@ -569,6 +613,11 @@ pub struct DeleteConditionalFormattingRule {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Move (and/or resize) a chart to a new anchor. The chart is identified by
+/// `chart_id` on the given sheet. `from`/`to` are the new top-left and
+/// bottom-right anchor corners, each a cell position plus an EMU offset into
+/// that cell (1px = 9525 EMU at 96 DPI). Anchoring to cells (not pixels) is how
+/// the chart shifts with row/column edits.
 #[ts(file_name = "move_chart.ts", builder, rename_all = "camelCase")]
 pub struct MoveChart {
     pub sheet_idx: usize,
@@ -584,6 +633,10 @@ pub struct MoveChart {
 }
 
 /// Take the `content` as input to the cell. The type of the `content` can be referred automatically.
+///
+/// A formula (`content` starting with `=`) must evaluate to one scalar: the
+/// engine has no dynamic arrays, so nothing spills into neighbouring cells and
+/// array criteria are not evaluated. Lay out helper columns instead.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "cell_input.ts", builder, rename_all = "camelCase")]
 pub struct CellInput {
@@ -594,6 +647,10 @@ pub struct CellInput {
 }
 
 #[derive(Debug, Clone, TS)]
+/// [`CellInput`] for an ephemeral cell (see `CellId::EphemeralCell`): the
+/// cell is created on first write, can hold a formula that reads the sheet,
+/// and is never saved. `sheet_idx` is the sheet unqualified references in the
+/// formula resolve against.
 #[ts(
     file_name = "ephemeral_cell_input.ts",
     builder,
@@ -621,6 +678,10 @@ pub struct EphemeralCellRemove {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Empty a cell: its value and formula go, and dependents recalculate.
+///
+/// Use this, not a [`CellInput`] with empty `content`, to blank a cell. A
+/// cell whose value a block field template computes is left untouched.
 #[ts(file_name = "cell_clear.ts", builder, rename_all = "camelCase")]
 pub struct CellClear {
     pub sheet_idx: usize,
@@ -630,9 +691,10 @@ pub struct CellClear {
 
 /// Create a new block.
 ///
-/// Note that the block id is assigned by you. You are supposed to
-/// manage all your blocks. If the `block id` is already existed, engines
-/// will remove the old one.
+/// Note that the block id is assigned by you and must be unused on the sheet
+/// (see `Workbook::get_available_block_id`); an id already in use rejects the
+/// transaction. `master_row`/`master_col` is the top-left corner and must be
+/// an ordinary cell, not inside another block.
 ///
 /// `owner`, `modify_policy`, `permissions` and `description` are metadata the
 /// host uses to gate write access at runtime — ask
@@ -991,6 +1053,7 @@ pub struct BlockModifyInfo {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Change a block's record/field counts. `None` keeps that dimension.
 #[ts(file_name = "resize_block.ts", builder, rename_all = "camelCase")]
 pub struct ResizeBlock {
     pub sheet_idx: usize,
@@ -1036,6 +1099,8 @@ pub struct CreateLink {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Mark a block cell as host-rendered ("DIY"): the engine assigns it a
+/// `DiyCellId` and the host draws it. The cell must be inside a block.
 #[ts(file_name = "create_diy_cell.ts", builder, rename_all = "camelCase")]
 pub struct CreateDiyCell {
     pub sheet_idx: usize,
@@ -1078,6 +1143,9 @@ pub struct RemoveDiyCellById {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Attach an opaque craft-owned record to a block cell. `row_idx`/`col_idx`
+/// are 0-based within the block. Give `sheet_idx` or `sheet_id`; `sheet_idx`
+/// wins when both are set, and neither is rejected.
 #[ts(file_name = "create_appendix.ts", builder, rename_all = "camelCase")]
 pub struct CreateAppendix {
     pub sheet_id: Option<SheetId>,
@@ -1101,6 +1169,7 @@ pub struct RemoveAppendix {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Set a custom row height, in points (Excel's unit; the default is 15).
 #[ts(file_name = "set_row_height.ts", builder, rename_all = "camelCase")]
 pub struct SetRowHeight {
     pub sheet_idx: usize,
@@ -1109,6 +1178,8 @@ pub struct SetRowHeight {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Set a custom column width, in Excel character-width units (the default is
+/// 8.43), not pixels.
 #[ts(file_name = "set_col_width.ts", builder, rename_all = "camelCase")]
 pub struct SetColWidth {
     pub sheet_idx: usize,
@@ -1117,6 +1188,8 @@ pub struct SetColWidth {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Move a block so its top-left corner lands at the new sheet position. Its
+/// cells keep their `BlockCellId`s, so formulas follow it.
 #[ts(file_name = "move_block.ts", builder, rename_all = "camelCase")]
 pub struct MoveBlock {
     pub sheet_idx: usize,
@@ -1126,6 +1199,8 @@ pub struct MoveBlock {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Delete a block with its cells and schema. Analysis blocks that analyse it
+/// are removed in the same transaction.
 #[ts(file_name = "remove_block.ts", builder, rename_all = "camelCase")]
 pub struct RemoveBlock {
     pub sheet_idx: usize,
@@ -1133,6 +1208,9 @@ pub struct RemoveBlock {
 }
 
 #[derive(Debug, Clone, TS)]
+/// [`CellInput`] addressed inside a block: `row`/`col` are 0-based offsets
+/// from the block's top-left. Input to a cell whose field has a value
+/// template is dropped; the template computes it.
 #[ts(file_name = "block_input.ts", builder, rename_all = "camelCase")]
 pub struct BlockInput {
     pub sheet_idx: usize,
@@ -1155,6 +1233,8 @@ impl From<UpsertFieldRenderInfo> for EditPayload {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Move one block row (`is_row`) or column from position `from` to `to`
+/// (0-based within the block, both `< len`), shifting the lines between.
 #[ts(file_name = "move_block_line.ts", builder, rename_all = "camelCase")]
 pub struct MoveBlockLine {
     pub sheet_idx: usize,
@@ -1171,6 +1251,14 @@ impl From<MoveBlockLine> for EditPayload {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Permute a block's rows (`is_row`) or columns in one step:
+/// `new_order[i]` is the CURRENT index of the line that ends up at position
+/// `i`. Its length must equal the line count. Lines carry their cells, so
+/// formulas follow them.
+///
+/// Only length and range are checked, not that `new_order` is a
+/// permutation: a repeated index duplicates one line's id and drops
+/// another's.
 #[ts(file_name = "reorder_block_lines.ts", rename_all = "camelCase")]
 pub struct ReorderBlockLines {
     pub sheet_idx: usize,
@@ -1581,6 +1669,8 @@ pub struct RandomSchemaUnit {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Delete `cnt` block rows starting at `start` (0-based within the block).
+/// Only the block shrinks; the sheet's rows are untouched.
 #[ts(
     file_name = "delete_rows_in_block.ts",
     builder,
@@ -1606,6 +1696,8 @@ pub struct ReproduceCells {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Insert `cnt` block rows so the first lands at `start` (0-based within the
+/// block). Only the block grows; the sheet's rows are untouched.
 #[ts(
     file_name = "insert_rows_in_block.ts",
     builder,
@@ -1654,6 +1746,10 @@ pub struct BlockStyleUpdate {
     pub style_update: StyleUpdateType,
 }
 
+/// Hide or show a row or column.
+///
+/// Known gap: no executor handles this payload yet, so it currently changes
+/// nothing (it is only recorded in the version diff).
 #[derive(Default, Debug, Clone, TS)]
 #[ts(file_name = "set_visible.ts", builder, rename_all = "camelCase")]
 pub struct SetVisible {
@@ -1664,6 +1760,7 @@ pub struct SetVisible {
 }
 
 #[derive(Debug, Clone, TS)]
+/// A cell by stable ids, as reported in [`ActionEffect`].
 #[ts(file_name = "sheet_cell_id.ts", builder, rename_all = "camelCase")]
 pub struct SheetCellId {
     pub sheet_id: SheetId,
@@ -1685,7 +1782,6 @@ pub struct SheetColId {
 }
 
 /// `ActionEffect` represents the result of handling an `EditAction`.
-/// The `version` will be incremented if the action is successfully handled.
 ///
 /// Additionally, since `LogiSheets` allows developers to define their own functions,
 /// the engine may encounter functions it cannot compute directly. In such cases,
@@ -1693,22 +1789,31 @@ pub struct SheetColId {
 #[derive(Default, Debug, Clone, TS)]
 #[ts(file_name = "action_effect.ts", builder, rename_all = "camelCase")]
 pub struct ActionEffect {
-    /// The latest version after processing an action. 0 means latest version
+    /// The undo-history version after the action: it advances only when an
+    /// undoable transaction is recorded. Undo, redo and rejections report 0.
+    /// For change detection use `Workbook::get_version` (the revision).
     pub version: u32,
     /// Tasks should be calculated outside this engine(mainly because of network limitations and customer defined)
     pub async_tasks: Vec<Task>,
+    /// `Err` when the engine rejected the action. A rejection is reported
+    /// here, not raised: callers that need the write to land must check it.
     pub status: StatusCode,
 
+    /// Cells whose value changed, including recalculated dependents. Undo
+    /// and redo swap whole snapshots and leave all the change lists empty,
+    /// so a host must re-read everything after them.
     pub value_changed: Vec<SheetCellId>,
     pub cell_removed: Vec<SheetCellId>,
     pub style_changed: Vec<SheetCellId>,
 
     pub row_inserted: Vec<SheetRowId>,
     pub row_removed: Vec<SheetRowId>,
+    /// Never populated at present.
     pub row_updated: Vec<SheetRowId>,
 
     pub col_inserted: Vec<SheetColId>,
     pub col_removed: Vec<SheetColId>,
+    /// Never populated at present.
     pub col_updated: Vec<SheetColId>,
 
     /// Sheet indices whose row-heights or column-widths changed. Lets the
@@ -1757,8 +1862,10 @@ pub struct AsyncFuncResult {
 
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "status_code.ts", tag = "type", rename_all = "camelCase")]
+/// Outcome of an action. `Err`'s code is always 1; the reason is in
+/// `ActionEffect::error_message`.
 pub enum StatusCode {
-    Ok(WorkbookUpdateType), // when there is no other history version for undo/redo, return false.
+    Ok(WorkbookUpdateType),
     Err(u8),
 }
 
@@ -1768,15 +1875,21 @@ pub enum StatusCode {
     tag = "type",
     rename_all = "camelCase"
 )]
+/// What a successful action touched, so a host knows how much to redraw.
 pub enum WorkbookUpdateType {
+    /// Applied, but changed nothing.
     DoNothing,
     Cell,
+    /// The sheet list or a sheet's properties (create, delete, rename,
+    /// color, visibility), or a checkpoint restore.
     Sheet,
     SheetAndCell,
+    /// `Undo` with nothing to undo.
     UndoNothing,
     RedoNothing,
     Undo,
     Redo,
+    /// Not produced by the engine at present.
     EphemeralCells,
 }
 
@@ -1790,6 +1903,7 @@ use crate::{ReproducibleCell, controller::style::PatternFill};
 use logisheets_workbook::prelude::*;
 
 #[derive(Debug, Clone, TS)]
+/// Apply a partial style change to one cell.
 #[ts(file_name = "cell_style_update.ts", builder, rename_all = "camelCase")]
 pub struct CellStyleUpdate {
     pub sheet_idx: usize,
@@ -1811,6 +1925,10 @@ pub struct EphemeralCellStyleUpdate {
 }
 
 #[derive(Debug, Clone, TS)]
+/// Apply a partial style change to whole rows (`row == true`) or columns
+/// `from..=to` (inclusive). Where a line crosses a styled column (or row),
+/// the change is also written onto that intersection cell, whose own style
+/// would otherwise win.
 #[ts(file_name = "line_style_update.ts", builder, rename_all = "camelCase")]
 pub struct LineStyleUpdate {
     pub sheet_idx: usize,
@@ -1853,6 +1971,12 @@ pub struct BlockLineNameFieldUpdate {
     pub diy_render: Option<bool>,
 }
 
+/// A font or border color: 8 hex digits in "standard ARGB" order, no `#`
+/// (`"FF0B0F19"` is opaque near-black). `#RRGGBB` or 6-digit hex is too short
+/// to parse and yields no color, so the style silently does not render.
+///
+/// Fills use a different shape — see `PatternFill`, which takes
+/// `{red, green, blue}` channels.
 pub type Color = String;
 
 #[derive(Debug, Clone, TS)]
@@ -1886,6 +2010,14 @@ pub enum HorizontalAlignment {
     Distributed,
 }
 
+/// A partial style change: every `Some` field is applied, `None` fields keep
+/// the cell's current value.
+///
+/// Colors come in two shapes. Font and border colors (`set_font_color`,
+/// `set_*_border_color`) are 8-hex-digit ARGB strings with no `#`, e.g.
+/// `"FF1976D2"`; a `#RRGGBB` or 6-digit value yields no color and silently
+/// does not render. Fill colors go through `set_pattern_fill`, whose
+/// `fg_color`/`bg_color` are `{red, green, blue}` objects with 0–255 channels.
 #[derive(Debug, Clone, Default, TS)]
 #[ts(file_name = "style_update_type.ts", builder, rename_all = "camelCase")]
 pub struct StyleUpdateType {
@@ -1916,6 +2048,8 @@ pub struct StyleUpdateType {
 }
 
 #[derive(Debug, Clone, Default, TS)]
+/// Merge the inclusive rectangle. Both corners must be ordinary (non-block)
+/// cells. Overlap with an existing merge is not checked.
 #[ts(file_name = "merge_cells.ts", builder, rename_all = "camelCase")]
 pub struct MergeCells {
     pub sheet_idx: usize,
@@ -1925,6 +2059,8 @@ pub struct MergeCells {
     pub end_col: usize,
 }
 #[derive(Debug, Clone, Default, TS)]
+/// Unmerge the merge whose TOP-LEFT cell is `(row, col)`. Any other cell,
+/// including one inside a merge, is a no-op.
 #[ts(file_name = "split_merged_cells.ts", builder, rename_all = "camelCase")]
 pub struct SplitMergedCells {
     pub sheet_idx: usize,

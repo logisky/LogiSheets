@@ -3,8 +3,9 @@
  *
  * The logician package never imports a concrete storage backend.
  * Hosts plug one in:
- *   - Watson (browser craft)        → IdbConversationStore via Dexie
- *   - Node CLI / MCP server          → FileConversationStore (json-on-disk)
+ *   - Watson (in-app assistant)     → IdbConversationStore via Dexie, in
+ *                                      the app's watson/lib/storage-idb.ts
+ *   - Node CLI / MCP server          → a host-side store (none ships here)
  *   - Tests / smoke runs / REPLs     → MemoryConversationStore (this file)
  *
  * Same pattern as `WorkbookClient` in tool.ts — declare the surface
@@ -22,6 +23,8 @@ import type {
 // Interface
 // ---------------------------------------------------------------------------
 
+/** Not read by anything in this package, `MemoryConversationStore`
+ *  included; a hint for backends that want a query cap. */
 export interface ConversationStoreOpts {
     /** Cap on listEvents() output for safety; 0 means no cap. */
     max_events_per_query?: number
@@ -30,10 +33,15 @@ export interface ConversationStoreOpts {
 /**
  * Persistence surface used by the agent loop. All methods are async so
  * IDB / fs / network backends fit without changing call sites.
+ *
+ * Ordering contract: a conversation must be created before events are
+ * appended to it, and `listEvents` must return them in append order — the
+ * projection pairs tool_use with tool_result by walking that order.
  */
 export interface ConversationStore {
     // ----- Conversation lifecycle -----
 
+    /** Assigns `id` (unless given), `created_at` and `updated_at`. */
     createConversation(
         meta: Omit<Conversation, 'id' | 'created_at' | 'updated_at'> & {
             id?: string
@@ -69,7 +77,11 @@ export interface ConversationStore {
      */
     appendEvents(events: ConversationEvent[]): Promise<void>
 
-    /** Read events in ts-ascending order. */
+    /**
+     * Read events in ts-ascending order. `since_ts` is inclusive; `limit`
+     * keeps the OLDEST `limit` events in the memory store, so it is not a
+     * "last N" window.
+     */
     listEvents(
         conversation_id: string,
         opts?: {since_ts?: number; limit?: number}
@@ -89,7 +101,9 @@ export interface ConversationStore {
     /**
      * Reactive subscription. Browser stores (IDB/Dexie) implement this
      * to drive UI updates; headless backends may omit it.
-     * Returns an unsubscribe function.
+     * Returns an unsubscribe function. `cb` receives the conversation's
+     * full event list each time, not a delta; the memory store also fires
+     * it once immediately with the current snapshot.
      */
     subscribeEvents?(
         conversation_id: string,
@@ -108,10 +122,12 @@ export interface ConversationStore {
 
 /**
  * Volatile store. Survives the lifetime of the process, nothing more.
+ * `appendEvent(s)` throws for an unknown conversation; `updateConversation`
+ * on an unknown id is a silent no-op. `importConversation` replaces any
+ * existing conversation with the same id.
  * Useful for:
  *   - tests
  *   - node CLI runs that don't care about persistence across invocations
- *   - Watson MVP before IdbConversationStore lands
  */
 export class MemoryConversationStore implements ConversationStore {
     private conversations = new Map<string, Conversation>()

@@ -36,7 +36,7 @@ Insert cols at the given position.
 
 ```ls
 # Insert 3 cols at the col B.
-INSERTROW B 3
+INSERTCOL B 3
 ```
 
 ### DELETEROW
@@ -63,6 +63,22 @@ Create a block with the given id and range.
 
 ```ls
 BLOCKCREATE  1   A1:C3
+```
+
+### BLOCKCONVERT
+
+Like `BLOCKCREATE`, but keeps the range's existing cells and formulas.
+
+```ls
+BLOCKCONVERT  1   A1:C3
+```
+
+### BLOCKRESIZE
+
+Resize a block to the given row and column counts.
+
+```ls
+BLOCKRESIZE  {block_id}  {row_cnt}  {col_cnt}
 ```
 
 ### BLOCKREMOVE
@@ -110,7 +126,7 @@ BLOCKDELETEROW  {block_id}  {idx}  {cnt}
 Delete some cols in a block.
 
 ```ls
-BLOCKDELTECOL {block_id}  {idx}  {cnt}
+BLOCKDELETECOL {block_id}  {idx}  {cnt}
 ```
 
 ### CHECKNUM
@@ -129,12 +145,12 @@ Check whether the value of a specific cell is equal to a string.
 CHECKSTR A1 aaa
 ```
 
-### CHECKERROR
+### CHECKERR
 
 Check whether the value of a specific cell is equal to an error.
 
 ```ls
-CHECKERROR A1 #NUM!
+CHECKERR A1 #NUM!
 ```
 
 ### CHECKFORMULA

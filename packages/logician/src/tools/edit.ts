@@ -61,8 +61,15 @@ async function commitTransaction(
 // Shared shapes
 // ---------------------------------------------------------------------------
 
+/** A cell value as the model reads and writes it; null = empty. An engine
+ *  error reads back as its spreadsheet spelling (`#DIV/0!`). */
 export type CellValue = string | number | boolean | null
 
+/**
+ * One write addressed by (block ref name, row key, field name) rather than a
+ * coordinate. `value` is stringified into a `blockInput`: a leading "=" makes
+ * it a formula, and null writes an empty string.
+ */
 export interface BlockCellChange {
     block: string
     row_key: string
@@ -293,7 +300,11 @@ export const clearBlock: Tool<ClearBlockInput, {rows_cleared: number}> = {
 // 4. preview_changes  (dry-run a batch via temp transaction)
 // ---------------------------------------------------------------------------
 
-/** One cell to report a value for, either semantically or by coordinate. */
+/**
+ * One cell to report a value for, either semantically or by coordinate.
+ * `block`/`row_key`/`field` win when `block` is set; otherwise `row`/`col`
+ * are required — zero-based sheet coordinates, `sheet_idx` defaulting to 0.
+ */
 export interface WatchTarget {
     block?: string
     row_key?: string
@@ -671,7 +682,11 @@ function flattenValue(v: Value): CellValue {
 
 /** Which (block, row_key, field) a coordinate names, if any. Shared with the
  *  inspect tools so a traced cell reads back semantically rather than as a
- *  coordinate the agent then has to interpret. */
+ *  coordinate the agent then has to interpret.
+ *
+ *  `row`/`col` are zero-based sheet coordinates. Undefined when no block
+ *  covers the cell, or the covering block has no schema or no key/field at
+ *  that offset. The first block in `blocks` that covers the cell decides. */
 export function locateInBlock(
     sheetIdx: number,
     row: number,
@@ -695,7 +710,7 @@ export function locateInBlock(
 }
 
 // ---------------------------------------------------------------------------
-// Design note: no `undo_redo` here.
+// Design note: no `undo_redo` in EDIT_TOOLS.
 //
 // Rationale: the engine's undo stack is shared with the human user
 // (it's what Ctrl-Z/Y drives). Letting the AI step it would silently
@@ -704,6 +719,10 @@ export function locateInBlock(
 // undoable so the user can reverse an AI restore with a single Ctrl-Z.
 // Users still get standard Ctrl-Z/Y on the canvas; that path is
 // untouched.
+//
+// NOTE: history.ts has since added `history__undo` / `history__redo`
+// over that same shared stack, and Watson registers them, so the
+// concern above now applies to those tools.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------

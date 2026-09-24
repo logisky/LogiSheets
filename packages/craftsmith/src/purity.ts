@@ -21,6 +21,19 @@ function lineOf(node: ts.Node): number {
     return sf.getLineAndCharacterOfPosition(node.getStart()).line + 1
 }
 
+/**
+ * Purity errors for one file (tools.ts only — modules it imports are not
+ * scanned). Two rules, both syntactic:
+ *
+ * 1. No top-level expression statement. `const x = f()` at module scope is
+ *    not caught.
+ * 2. None of {@link FORBIDDEN_GLOBALS} as an identifier, except as a
+ *    `.prop` access name, the right side of a qualified type name, a
+ *    destructuring binding, or a parameter name. Other ambient APIs (`fetch`,
+ *    `setTimeout`, `self`, ...) are allowed.
+ *
+ * Never throws; every finding is an `'error'`.
+ */
 export function lintPurity(sourceFile: ts.SourceFile): Diagnostic[] {
     const out: Diagnostic[] = []
     const file = sourceFile.fileName
@@ -43,8 +56,10 @@ export function lintPurity(sourceFile: ts.SourceFile): Diagnostic[] {
     // 2. Forbidden ambient globals anywhere in the file.
     const visit = (node: ts.Node): void => {
         if (ts.isIdentifier(node) && FORBIDDEN_GLOBALS.has(node.text)) {
-            // Only flag when used as a value reference, not as a property name
-            // (e.g. `obj.document`) or a declaration.
+            // Skip property-access names (`obj.document`), qualified type
+            // names and parameter / destructuring names. Other positions —
+            // object-literal keys (`{window: 1}`), `const window = …` — are
+            // still flagged even though they are not global references.
             const parent = node.parent
             const isPropertyAccessName =
                 ts.isPropertyAccessExpression(parent) && parent.name === node

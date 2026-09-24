@@ -1,3 +1,23 @@
+//! Reading and writing .xlsx (Office Open XML spreadsheet) packages for
+//! LogiSheets.
+//!
+//! This crate is file I/O only: [`reader::read`] turns package bytes into a
+//! [`workbook::Wb`], a typed tree mirroring the zip's parts, and
+//! [`writer::write`] turns a `Wb` back into bytes. It knows nothing about
+//! formulas, cell ids or recalculation; `logisheets_controller` converts a
+//! `Wb` into its own state on load and builds a fresh one on save.
+//! `logisheets-rs` re-exports the few types callers see (`AppData`, a handful
+//! of style enums).
+//!
+//! The part schemas live in the private `ooxml` module and are reached
+//! through [`prelude`]. Each is an `xmlserde`-derived struct named after its
+//! ECMA-376 type (`CtXxx` for complex types, `StXxx` for simple types).
+//! [`logisheets`] holds the LogiSheets-only part (blocks, schemas, app data),
+//! which other spreadsheet programs ignore.
+//!
+//! Round-trip is the rule: a part this crate does not model is preserved as
+//! raw bytes (see `workbook::UnknownPart` and `workbook::PassthroughPart`)
+//! rather than dropped.
 pub mod logisheets;
 mod ooxml;
 pub mod reader;

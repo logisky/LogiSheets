@@ -2,7 +2,7 @@ use logisheets_base::{Cube, CubeCross, CubeId};
 
 use crate::{Error, SheetId, cube_manager::ctx::CubeExecCtx};
 
-use super::{CubeExecutor, CubeUpdateType};
+use super::{CubeExecutor, CubeUpdateType, utils::cube_spans_sheet};
 
 pub fn input<C>(
     exec_ctx: CubeExecutor,
@@ -15,15 +15,18 @@ where
     C: CubeExecCtx,
 {
     let mut func = |cube: &Cube, _: &CubeId| -> Result<CubeUpdateType, Error> {
-        let from_idx = old_ctx.fetch_sheet_index(&cube.from_sheet)?;
-        let to_idx = old_ctx.fetch_sheet_index(&cube.to_sheet)?;
-        let curr_idx = old_ctx.fetch_sheet_index(&sheet)?;
-        if curr_idx < from_idx || curr_idx > to_idx {
+        if !cube_spans_sheet(old_ctx, cube, &sheet) {
             return Ok(CubeUpdateType::None);
         }
 
         Ok(match cube.cross {
-            CubeCross::Single(_, _) => CubeUpdateType::None,
+            CubeCross::Single(r, c) => {
+                if row == r && col == c {
+                    CubeUpdateType::Dirty
+                } else {
+                    CubeUpdateType::None
+                }
+            }
             CubeCross::RowRange(start, end) => {
                 if row >= start && row <= end {
                     CubeUpdateType::Dirty

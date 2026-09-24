@@ -3,6 +3,12 @@ import type {Client} from 'logisheets-web/pure'
 import type {ToolContext} from '../tool.js'
 import {setCells} from './cells.js'
 import {previewChanges} from './edit.js'
+import {
+    createPivot,
+    editAnalysisBlock,
+    editPivot,
+    refreshPivot,
+} from './builder.js'
 import {assertScratchBranchFree, withTempBranch} from './temp-branch.js'
 
 /**
@@ -189,4 +195,26 @@ describe('edit__preview_changes', () => {
         expect(rec.toggled).toBe(0)
         expect(rec.cleaned).toBe(0)
     })
+})
+
+describe('pivot and analysis tools', () => {
+    // These commit through logisheets-core's WorkbookOps rather than
+    // `commitTransaction`, so they need their own guard.
+    const tools = [
+        ['edit_analysis_block', editAnalysisBlock],
+        ['create_pivot', createPivot],
+        ['edit_pivot', editPivot],
+        ['refresh_pivot', refreshPivot],
+    ] as const
+
+    for (const [name, tool] of tools) {
+        it(`${name} writes nothing while the user is in temp mode`, async () => {
+            const {client: c, rec} = client({inTempMode: true, block: true})
+            await expect(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                tool.handler({name: 'orders'} as any, ctxFor(c))
+            ).rejects.toThrow(/scratch-branch/)
+            expect(rec.committed).toEqual([])
+        })
+    }
 })

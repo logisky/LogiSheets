@@ -523,6 +523,12 @@ function scatterOption(model: ChartModel): EChartsOption {
     }
 }
 
+/**
+ * Translate a resolved {@link ChartModel} into a complete ECharts option. Pure
+ * and synchronous; `*3d` kinds are drawn as their flat equivalents. The
+ * result is meant to be applied with `notMerge` (ChartView does), since it
+ * does not clear keys a previous chart type set.
+ */
 export function mapChartToOption(model: ChartModel): EChartsOption {
     let body: EChartsOption
     switch (flatten(model.chartType)) {

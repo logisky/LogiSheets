@@ -24,6 +24,10 @@ import {SchemaError} from './diagnostics.js'
 import {typeToSchema} from './schema.js'
 import {lintPurity} from './purity.js'
 
+/**
+ * Absolute paths of a craft's conventional files. Optional ones are set only
+ * when the file exists directly in `root` (no subdirectories searched).
+ */
 export interface CraftPaths {
     root: string
     toolsTs?: string
@@ -32,12 +36,21 @@ export interface CraftPaths {
     packageJson: string
 }
 
+/**
+ * Output of {@link extract}. `manifest` is always returned — best-effort even
+ * when `diagnostics` holds errors — so callers must check for an `'error'`
+ * level before writing it anywhere.
+ */
 export interface ExtractResult {
     manifest: CraftManifest
     diagnostics: Diagnostic[]
 }
 
-/** Discover a craft's parts by file convention. */
+/**
+ * Discover a craft's parts by file convention: `package.json` (required),
+ * `tools.ts`, `runtime.ts`, `index.html`. Throws if `root` has no
+ * package.json; otherwise never fails.
+ */
 export function resolveCraft(root: string): CraftPaths {
     const abs = path.resolve(root)
     const pkg = path.join(abs, 'package.json')
@@ -84,6 +97,10 @@ function readIdentity(paths: CraftPaths, diags: Diagnostic[]): Identity {
     }
 }
 
+// The craft's own tsconfig (searched from the craft root UPWARD, so a monorepo
+// craft may pick up a parent's) REPLACES these defaults rather than merging.
+// DOM is in the default lib only so ambient types like AbortSignal in SkillCtx
+// resolve — using DOM globals is still rejected by the purity lint.
 function createProgram(rootFile: string, craftRoot: string): ts.Program {
     let options: ts.CompilerOptions = {
         target: ts.ScriptTarget.ES2021,
@@ -150,6 +167,10 @@ interface Candidate {
     fn: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression
 }
 
+// Only top-level function declarations and single-declarator
+// `const f = () => …` / `function` expressions are candidates; a @tool on
+// anything else (class method, `export {f}` re-export, object member) is
+// silently not seen.
 function collectCandidates(sf: ts.SourceFile): Candidate[] {
     const out: Candidate[] = []
     for (const stmt of sf.statements) {
@@ -183,6 +204,8 @@ function collectCandidates(sf: ts.SourceFile): Candidate[] {
 
 // ---- Per-tool extraction ---------------------------------------------------
 
+// Syntactic, not type-based: the name `ctx`, or a written type annotation
+// whose text ends in `Ctx` / `Context`.
 function looksLikeCtx(param: ts.ParameterDeclaration): boolean {
     if (ts.isIdentifier(param.name) && param.name.text === 'ctx') return true
     const typeText = param.type?.getText() ?? ''
@@ -209,6 +232,8 @@ function unwrapPromise(type: ts.Type, checker: ts.TypeChecker): ts.Type {
     return type
 }
 
+// Lenient: anything other than temp / true / yes (typos included) becomes
+// 'none' with no diagnostic.
 function parseMutates(raw: string): MutatesPolicy {
     const v = raw.trim().toLowerCase()
     if (v === 'temp') return 'temp'
@@ -359,6 +384,8 @@ function extractTool(
     }
 }
 
+// writeCell → write_cell. A run of capitals is not split (parseURL →
+// parse_url, URLParser → urlparser); no "__" check is made.
 function toSnake(name: string): string {
     return name
         .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
@@ -486,6 +513,27 @@ function extractRole(
 
 // ---- Entry -----------------------------------------------------------------
 
+/**
+ * Statically extract a craft's manifest. Reads files only — nothing is
+ * executed or written. `tools.ts`, when present, is type-checked with the
+ * craft's tsconfig (type errors themselves are not reported; only what blocks
+ * the contract is).
+ *
+ * Errors reported as diagnostics include: missing craftId / non-kebab
+ * craftId; neither tools.ts nor index.html; purity violations (see
+ * ./purity.ts); a `@tool` that is not an exported named binding, lacks a
+ * description, lacks a leading `ctx`, uses a destructured parameter or a type
+ * `typeToSchema` rejects, or documents a `@param` that does not exist; tools
+ * without a `@logicianSkill`; an `@aiRole` that is unnamed, non-kebab,
+ * unexported, lacks `@system` or is not an object shape; roles without a
+ * read-only tool; duplicate tool or role names. Missing `@param` docs are
+ * warnings.
+ *
+ * Throws when `root` has no package.json or it is not valid JSON. Also
+ * throws when an `@aiRole` reply type contains something `typeToSchema`
+ * rejects: unlike tool parameters, that SchemaError is not turned into a
+ * diagnostic.
+ */
 export function extract(root: string): ExtractResult {
     const paths = resolveCraft(root)
     const diags: Diagnostic[] = []

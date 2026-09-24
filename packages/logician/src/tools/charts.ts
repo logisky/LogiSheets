@@ -149,6 +149,8 @@ function newChartId(): string {
     return `chart-${Date.now().toString(36)}${rand}`
 }
 
+/** The `chartType` values insert_chart, chart_from_block and update_chart
+ *  accept (their schema enum). */
 export const CHART_TYPES = [
     'col',
     'bar',

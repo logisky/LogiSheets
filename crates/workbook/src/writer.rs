@@ -72,6 +72,12 @@ pub struct WriteProof {
 
 type Writer<'a> = ZipWriter<Cursor<&'a mut Vec<u8>>>;
 
+/// Serialize a [`Wb`] into the bytes of an .xlsx (zip) package.
+///
+/// Relationship ids and part paths for the parts this crate models are minted
+/// fresh here, so they need not match the file the `Wb` was read from;
+/// preserved [`UnknownPart`](crate::workbook::UnknownPart)s keep theirs. The
+/// LogiSheets-only data, when present, goes to `logisheets/data.xml`.
 pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     let mut buf = Vec::<u8>::with_capacity(65535);
     let mut writer: Writer = ZipWriter::new(Cursor::new(&mut buf));
@@ -159,14 +165,6 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     Ok(buf)
 }
 
-/// Write out parts reached by relationships this crate does not model: the bytes
-/// at their original paths, their own `.rels`, the relationship that pointed at
-/// them, and the `[Content_Types].xml` entries they need.
-///
-/// Original paths and relationship ids are kept deliberately. A vendor manifest
-/// names the parts it owns by path, and renumbering either would leave a file
-/// whose pieces no longer find each other — worse than the deletion this
-/// replaces.
 /// The next `rIdN` not already claimed.
 ///
 /// Preserved parts keep the relationship ids they arrived with, because the XML
@@ -184,6 +182,14 @@ fn next_rid(counter: &mut usize, taken: &[CtRelationship]) -> String {
     }
 }
 
+/// Write out parts reached by relationships this crate does not model: the bytes
+/// at their original paths, their own `.rels`, the relationship that pointed at
+/// them, and the `[Content_Types].xml` entries they need.
+///
+/// Original paths and relationship ids are kept deliberately. A vendor manifest
+/// names the parts it owns by path, and renumbering either would leave a file
+/// whose pieces no longer find each other — worse than the deletion this
+/// replaces.
 fn write_unknown_parts(
     unknown: &[crate::workbook::UnknownPart],
     writer: &mut Writer,

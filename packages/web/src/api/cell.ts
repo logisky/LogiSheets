@@ -1,11 +1,15 @@
 import {CellInfo, Value, Style} from '../bindings'
 
+/** Convenience wrapper over one {@link CellInfo} snapshot; it does not track
+ *  later edits. */
 export class Cell {
     public constructor(cellInfo: CellInfo) {
         this._value = CellValue.from(cellInfo.value)
         this._info = cellInfo
     }
 
+    /** The value as a plain string (`''` when empty, `true`/`false` for
+     *  booleans, the error text for errors). Not number-formatted. */
     public getText(): string {
         return this._value.valueStr ?? ''
     }

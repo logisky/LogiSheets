@@ -1,3 +1,23 @@
+//! The RPC wire protocol: [`Message`] (one variant per method), its params
+//! structs, and [`WorkbookMethods`], the typed method table the TS client is
+//! generated from (`buildtools` walks it; `Message` itself is not emitted).
+//!
+//! Conventions every params struct follows unless its own doc says otherwise:
+//!
+//! - Rows and columns are 0-based (`row: 0, col: 0` is `A1`), and a
+//!   `start*`/`end*` pair is an inclusive range.
+//! - `sheetIdx` is the sheet's current position in the tab order and shifts
+//!   when sheets are added or removed; `sheetId` is a stable internal
+//!   id. Convert with `getSheetId` / `getSheetIdx`.
+//! - Coordinates on block-scoped methods (`getBlockRowId`,
+//!   `getDiyCellIdWithBlockId`, `lookupAppendixUpward`, ...) are relative to
+//!   the block's top-left cell.
+//! - A failure comes back as an `ErrorMessage`, not a panic or a throw. The
+//!   exception is `handleTransaction`, whose engine rejections arrive inside
+//!   the `ActionEffect` (see [`HandleTransactionParams`]).
+//! - Struct and field `///` docs are copied into the generated TS by
+//!   `yarn gen-bindings`; docs on [`WorkbookMethods`] fields are not.
+
 use gents_derives::{Interface, TS};
 
 use crate::BlockId;
@@ -13,10 +33,17 @@ use crate::{
 };
 
 // ============================================================================
-// Params structs - all derive TS for TypeScript generation
-// All params will be generated into a single file: rpc_params.ts
+// Params structs. Each derives TS and is emitted to its own `file_name` under
+// packages/web/src/bindings when `WorkbookMethods` references it.
 // ============================================================================
 
+/// One RPC request: a variant per method, carrying that method's params.
+///
+/// On the wire a unit variant is its bare camelCase name (`"undo"`) and every
+/// other variant is `{method, value}`, `value` being the params struct with
+/// camelCase fields. The transport pairs each message with a book id, which
+/// every method except `NewWorkbook` requires. This enum only decodes requests;
+/// the generated TS client is built from [`WorkbookMethods`].
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_message.ts", tag = "method", rename_all = "camelCase")]
 pub enum Message {
@@ -119,6 +146,7 @@ pub enum Message {
     ListCheckpoints,
 }
 
+/// An inclusive rectangle of cells, row-major. Same contract as [`GetCellsParams`].
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_cell_infos_params.ts", rename_all = "camelCase")]
 pub struct GetCellInfosParams {
@@ -129,6 +157,10 @@ pub struct GetCellInfosParams {
     pub end_col: usize,
 }
 
+/// The used extent of a sheet: `maxRow`/`maxCol` are the 0-based
+/// coordinates of the furthest non-empty cell, `height`/`width` the position
+/// of that cell's top-left corner (see [`GetCellPositionParams`] for units).
+/// An empty sheet answers all zeros.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_sheet_dimension_params.ts",
@@ -138,6 +170,9 @@ pub struct GetSheetDimensionParams {
     pub sheet_id: SheetId,
 }
 
+/// Cells whose formulas read any cell in this inclusive rectangle (Excel
+/// "trace dependents"). The corners may be given in either order. Dependents
+/// can live on other sheets; each carries its own `sheetIdx`.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_dependents_params.ts", rename_all = "camelCase")]
 pub struct GetDependentsParams {
@@ -148,6 +183,7 @@ pub struct GetDependentsParams {
     pub end_col: usize,
 }
 
+/// The cells and ranges one cell's formula references (Excel "trace precedents").
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_precedents_params.ts", rename_all = "camelCase")]
 pub struct GetPrecedentsParams {
@@ -156,6 +192,7 @@ pub struct GetPrecedentsParams {
     pub col: usize,
 }
 
+/// Blocks on this sheet a `colCnt`-wide range could be linked to: same column count, and not already a link target.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_linkable_blocks_params.ts",
@@ -166,12 +203,15 @@ pub struct GetLinkableBlocksParams {
     pub col_cnt: usize,
 }
 
+/// Every range on this sheet that is linked to a block, resolved to sheet coordinates.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_links_params.ts", rename_all = "camelCase")]
 pub struct GetLinksParams {
     pub sheet_idx: usize,
 }
 
+/// Height of one row, in points. Rows with no explicit height answer the
+/// sheet's default (15 unless the file says otherwise).
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_row_height_params.ts", rename_all = "camelCase")]
 pub struct GetRowHeightParams {
@@ -179,6 +219,9 @@ pub struct GetRowHeightParams {
     pub row_idx: usize,
 }
 
+/// Width of one column, in Excel character-width units (not pixels or
+/// points). Columns with no explicit width answer the sheet's default (8.43
+/// unless the file says otherwise).
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_col_width_params.ts", rename_all = "camelCase")]
 pub struct GetColWidthParams {
@@ -194,6 +237,8 @@ pub struct GetCellInfoParams {
     pub col: usize,
 }
 
+/// Everything needed to paint an inclusive rectangle: cells, row and column
+/// infos, comments, merges and blocks. Hidden rows and columns are left out.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_display_window_params.ts",
@@ -207,6 +252,10 @@ pub struct GetDisplayWindowParams {
     pub end_col: usize,
 }
 
+/// A display window chosen by position rather than index: the rows and
+/// columns covering `height` x `width` from (`startX`, `startY`), plus one
+/// extra row and column before the start. The answer's `startX`/`startY` is
+/// where its first row and column begin. Units as in [`GetCellPositionParams`].
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_display_window_with_start_point_params.ts",
@@ -220,6 +269,8 @@ pub struct GetDisplayWindowWithStartPointParams {
     pub width: f64,
 }
 
+/// A display window of `height` x `width` placed around a cell, so a caller
+/// can jump the viewport to it. Units as in [`GetCellPositionParams`].
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_display_window_within_cell_params.ts",
@@ -233,6 +284,7 @@ pub struct GetDisplayWindowWithinCellParams {
     pub width: f64,
 }
 
+/// One cell by position. Shared by `getCell`, `getValue`, `getFormula`, `getStyle` and `getCellListValidation`.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_cell_params.ts", rename_all = "camelCase")]
 pub struct GetCellParams {
@@ -241,6 +293,7 @@ pub struct GetCellParams {
     pub col: usize,
 }
 
+/// An inclusive rectangle of cells, returned row-major.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_cells_params.ts", rename_all = "camelCase")]
 pub struct GetCellsParams {
@@ -251,6 +304,9 @@ pub struct GetCellsParams {
     pub end_col: usize,
 }
 
+/// Predict a fill-handle drag: `src` is the selected range, `dst` the
+/// disjoint range dragged over. Returns one `CellInput` per `dst` cell and
+/// writes nothing; send them back as one transaction to apply them.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_predict_fill_params.ts", rename_all = "camelCase")]
 pub struct PredictFillParams {
@@ -265,6 +321,9 @@ pub struct PredictFillParams {
     pub dst_end_col: usize,
 }
 
+/// Cells in the outer rectangle minus those in the inner `window*`
+/// rectangle, row-major. For fetching only what a scrolled viewport newly
+/// exposes.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_cells_except_window_params.ts",
@@ -282,6 +341,7 @@ pub struct GetCellsExceptWindowParams {
     pub window_end_col: usize,
 }
 
+/// A cell's value, raw style and appendices, in a form that can be written back elsewhere (copy/paste).
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_reproducible_cell_params.ts",
@@ -293,6 +353,7 @@ pub struct GetReproducibleCellParams {
     pub col: usize,
 }
 
+/// Batch form of [`GetReproducibleCellParams`]: one answer per coordinate, in order.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_reproducible_cells_params.ts",
@@ -303,6 +364,7 @@ pub struct GetReproducibleCellsParams {
     pub coordinates: Vec<SheetCoordinate>,
 }
 
+/// A block's layout, schema and governance, with its cells.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_block_info_params.ts", rename_all = "camelCase")]
 pub struct GetBlockInfoParams {
@@ -310,6 +372,9 @@ pub struct GetBlockInfoParams {
     pub block_id: u32,
 }
 
+/// The top-left corner of a cell, measured from the sheet origin. `y` sums row
+/// heights (points) and `x` sums column widths (character units), so the two
+/// axes are in different units; convert before mixing them.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_cell_position_params.ts",
@@ -321,6 +386,13 @@ pub struct GetCellPositionParams {
     pub col: usize,
 }
 
+/// Apply a `Transaction` to the workbook.
+///
+/// An engine rejection does NOT surface as an `ErrorMessage` or a thrown
+/// error: the call resolves with an `ActionEffect` whose `status` is `Err`
+/// and whose `error_message` names the payload it stopped at. Nothing in the
+/// transaction is applied in that case. Check `status` whenever a failed write
+/// matters, or the failure passes silently.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_handle_transaction_params.ts",
@@ -330,12 +402,16 @@ pub struct HandleTransactionParams {
     pub transaction: Transaction,
 }
 
+/// Does nothing. The temp branch is entered by sending a transaction with
+/// `temp: true` and left with `commitTempStatus` / `cleanupTempStatus`; this
+/// method is kept only so old callers do not fail.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_toggle_status_params.ts", rename_all = "camelCase")]
 pub struct ToggleStatusParams {
     pub use_temp: bool,
 }
 
+/// Resolve cells by id rather than position. Fails on the first id that no longer exists.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_batch_get_cell_info_by_id_params.ts",
@@ -345,6 +421,7 @@ pub struct BatchGetCellInfoByIdParams {
     pub ids: Vec<SheetCellId>,
 }
 
+/// The current sheet index and coordinate of each cell id, in order. Fails on the first id that no longer exists.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_batch_get_cell_coordinate_with_sheet_by_id_params.ts",
@@ -354,6 +431,7 @@ pub struct BatchGetCellCoordinateWithSheetByIdParams {
     pub ids: Vec<SheetCellId>,
 }
 
+/// The name of the sheet at this index.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_sheet_name_by_idx_params.ts",
@@ -363,16 +441,24 @@ pub struct GetSheetNameByIdxParams {
     pub idx: usize,
 }
 
+/// Replace the workbook behind this book id with one parsed from an .xlsx
+/// file. Undo history starts empty.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_load_workbook_params.ts", rename_all = "camelCase")]
 pub struct LoadWorkbookParams {
+    /// The raw .xlsx file bytes.
     pub content: Vec<u8>,
+    /// The workbook's name, used as its book name inside the engine.
     pub name: String,
 }
 
+/// Serialize the workbook to .xlsx bytes.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_save_params.ts", rename_all = "camelCase")]
 pub struct SaveParams {
+    /// Opaque host state to store in the file. It becomes the workbook's only
+    /// app-data entry, named `logisheets`: any other entry is dropped. Read it
+    /// back with `getAppData`.
     pub app_data: String,
     /// Write block formulas as `A1` references instead of `BLOCKREF(...)`.
     ///
@@ -382,6 +468,8 @@ pub struct SaveParams {
     pub resolve_block_refs: Option<bool>,
 }
 
+/// The stable id of the cell at this position. The id survives row and column
+/// inserts and deletes, where the position does not.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_cell_id_params.ts", rename_all = "camelCase")]
 pub struct GetCellIdParams {
@@ -390,6 +478,7 @@ pub struct GetCellIdParams {
     pub col_idx: usize,
 }
 
+/// Merged ranges that overlap this inclusive rectangle.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_merged_cells_params.ts", rename_all = "camelCase")]
 pub struct GetMergedCellsParams {
@@ -400,24 +489,28 @@ pub struct GetMergedCellsParams {
     pub end_col: usize,
 }
 
+/// Every comment thread on a sheet.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_comments_params.ts", rename_all = "camelCase")]
 pub struct GetCommentsParams {
     pub sheet_idx: usize,
 }
 
+/// Every in-cell image on a sheet.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_cell_images_params.ts", rename_all = "camelCase")]
 pub struct GetCellImagesParams {
     pub sheet_idx: usize,
 }
 
+/// Every chart on a sheet.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_charts_params.ts", rename_all = "camelCase")]
 pub struct GetChartsParams {
     pub sheet_idx: usize,
 }
 
+/// Every conditional-formatting rule on a sheet, with the spec needed to edit it.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_conditional_formatting_rules_params.ts",
@@ -427,6 +520,12 @@ pub struct GetConditionalFormattingRulesParams {
     pub sheet_idx: usize,
 }
 
+/// Evaluate a formula for its truth value.
+///
+/// Read-only for the caller: the formula is evaluated in a scratch cell and
+/// the workbook is restored afterwards, so the version does not move and an
+/// open temp branch survives. It errors when the formula is invalid, evaluates
+/// to an error, or `sheet_idx` is out of range.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_calc_condition_params.ts", rename_all = "camelCase")]
 pub struct CalcConditionParams {
@@ -434,6 +533,9 @@ pub struct CalcConditionParams {
     pub condition: String,
 }
 
+/// Resolve a `BLOCKREF(refName, key, field)` triple to the cell it names,
+/// the same way the formula does at evaluation time. Errors on an unknown
+/// ref name, key or field.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_cell_id_by_block_ref_params.ts",
@@ -445,6 +547,8 @@ pub struct GetCellIdByBlockRefParams {
     pub field: String,
 }
 
+/// A bound block's rows as display values. Columns follow the schema's field
+/// order, narrowed by `fieldFilter`; rows follow the block's key order.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_export_block_data_params.ts",
@@ -458,6 +562,7 @@ pub struct ExportBlockDataParams {
     pub field_filter: Option<Vec<String>>,
 }
 
+/// A display window covering one block.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_block_display_window_params.ts",
@@ -468,6 +573,7 @@ pub struct GetBlockDisplayWindowParams {
     pub block_id: BlockId,
 }
 
+/// The stable row id at a block-relative row index (0 = the block's first row).
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_block_row_id_params.ts", rename_all = "camelCase")]
 pub struct GetBlockRowIdParams {
@@ -476,6 +582,7 @@ pub struct GetBlockRowIdParams {
     pub row_idx: usize,
 }
 
+/// The stable column id at a block-relative column index (0 = the block's first column).
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_block_col_id_params.ts", rename_all = "camelCase")]
 pub struct GetBlockColIdParams {
@@ -484,18 +591,23 @@ pub struct GetBlockColIdParams {
     pub col_idx: usize,
 }
 
+/// The current index of the sheet with this id.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_sheet_idx_params.ts", rename_all = "camelCase")]
 pub struct GetSheetIdxParams {
     pub sheet_id: SheetId,
 }
 
+/// The stable id of the sheet at this index.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_sheet_id_params.ts", rename_all = "camelCase")]
 pub struct GetSheetIdParams {
     pub sheet_idx: usize,
 }
 
+/// Display strings of block cells addressed by id. `rowIds` and `colIds` are
+/// zipped pairwise, not crossed: the answer has one string per pair, and an
+/// empty cell answers `""`.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_block_values_params.ts", rename_all = "camelCase")]
 pub struct GetBlockValuesParams {
@@ -505,6 +617,9 @@ pub struct GetBlockValuesParams {
     pub col_ids: Vec<ColId>,
 }
 
+/// The line order (rows or columns, per the block's schema) that would sort a
+/// block by one field. Read-only: apply it with a `ReorderBlockLines`
+/// transaction. Errors on a random-schema block or an unknown field.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_block_sort_order_params.ts",
@@ -519,6 +634,7 @@ pub struct GetBlockSortOrderParams {
     pub asc: bool,
 }
 
+/// The shape a pivot block should have now, and whether it has it. Read-only.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_pivot_plan_params.ts", rename_all = "camelCase")]
 pub struct PivotPlanParams {
@@ -527,6 +643,7 @@ pub struct PivotPlanParams {
     pub block_id: BlockId,
 }
 
+/// The shape a pivot WOULD have for a recipe no block carries yet. Read-only.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_pivot_plan_for_params.ts", rename_all = "camelCase")]
 pub struct PivotPlanForParams {
@@ -601,6 +718,9 @@ pub struct GetBlockModifyInfoParams {
     pub block_id: BlockId,
 }
 
+/// The id of a shadow cell: a hidden ephemeral cell the engine keeps beside a
+/// real one to hold a derived result (a validation verdict, a conditional
+/// format). Read its value through the returned id.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_shadow_cell_id_params.ts",
@@ -617,6 +737,8 @@ pub struct GetShadowCellIdParams {
     pub kind: Option<crate::ShadowKind>,
 }
 
+/// Batch form of [`GetShadowCellIdParams`]. `rowIdx` and `colIdx` are zipped
+/// pairwise and must have the same length.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_shadow_cell_ids_params.ts",
@@ -626,9 +748,11 @@ pub struct GetShadowCellIdsParams {
     pub sheet_idx: usize,
     pub row_idx: Vec<usize>,
     pub col_idx: Vec<usize>,
+    /// As in [`GetShadowCellIdParams::kind`].
     pub kind: Option<crate::ShadowKind>,
 }
 
+/// Where a shadow cell's host cell sits on screen, and the shadow's value.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_shadow_info_by_id_params.ts",
@@ -638,6 +762,8 @@ pub struct GetShadowInfoByIdParams {
     pub shadow_id: u64,
 }
 
+/// The craft-owned (DIY) cell id at a block-relative position, or `null` when
+/// that cell is not a DIY cell.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_diy_cell_id_with_block_id_params.ts",
@@ -650,6 +776,9 @@ pub struct GetDiyCellIdWithBlockIdParams {
     pub col: usize,
 }
 
+/// Find the nearest appendix a craft attached, searching upward from a
+/// block-relative cell through the rows above it in the same column. Errors
+/// when none is found.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_lookup_appendix_upward_params.ts",
@@ -664,6 +793,8 @@ pub struct LookupAppendixUpwardParams {
     pub tag: u8,
 }
 
+/// The next cell in `direction` that is not in a hidden row or column (arrow
+/// key navigation).
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_next_visible_cell_params.ts",
@@ -676,6 +807,7 @@ pub struct GetNextVisibleCellParams {
     pub direction: Direction,
 }
 
+/// Where Ctrl+Arrow lands from this cell: the next data or block boundary in `direction`.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_data_boundary_params.ts",
@@ -697,6 +829,7 @@ pub enum Direction {
     Right,
 }
 
+/// Tokenize a formula for syntax highlighting. Needs no workbook state.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_display_units_of_formula_params.ts",
@@ -706,6 +839,7 @@ pub struct GetDisplayUnitsOfFormulaParams {
     pub formula: String,
 }
 
+/// A row's height and visibility. A row with nothing set answers defaults.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_row_info_params.ts", rename_all = "camelCase")]
 pub struct GetRowInfoParams {
@@ -713,6 +847,7 @@ pub struct GetRowInfoParams {
     pub row_idx: usize,
 }
 
+/// A block id not yet used on this sheet, for a `CreateBlock` payload.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_available_block_id_params.ts",
@@ -722,12 +857,16 @@ pub struct GetAvailableBlockIdParams {
     pub sheet_idx: usize,
 }
 
+/// Whether a string lexes as a formula. It must start with `=`; the check is
+/// lexical only and says nothing about whether names or functions exist.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_check_formula_params.ts", rename_all = "camelCase")]
 pub struct CheckFormulaParams {
     pub formula: String,
 }
 
+/// Whether a `rowCount` x `colCount` schema fits inside this block (both no
+/// larger than the block's size).
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_check_bind_block_params.ts", rename_all = "camelCase")]
 pub struct CheckBindBlockParams {
@@ -737,6 +876,7 @@ pub struct CheckBindBlockParams {
     pub col_count: usize,
 }
 
+/// A column's width and visibility. A column with nothing set answers defaults.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_col_info_params.ts", rename_all = "camelCase")]
 pub struct GetColInfoParams {
@@ -744,6 +884,7 @@ pub struct GetColInfoParams {
     pub col_idx: usize,
 }
 
+/// Blocks across one sheet or the whole workbook.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_get_all_blocks_params.ts", rename_all = "camelCase")]
 pub struct GetAllBlocksParams {
@@ -753,6 +894,9 @@ pub struct GetAllBlocksParams {
     pub sheet_id: Option<SheetId>,
 }
 
+/// Snapshot the current workbook state under a label. Answers the number of
+/// checkpoints stored afterwards. Restoring goes through the
+/// `RestoreCheckpoint` payload so it lands on the undo stack.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_save_checkpoint_params.ts", rename_all = "camelCase")]
 pub struct SaveCheckpointParams {
@@ -764,6 +908,7 @@ pub struct SaveCheckpointParams {
     pub description: Option<String>,
 }
 
+/// Drop a named checkpoint. Answers whether it existed.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_delete_checkpoint_params.ts",
@@ -773,6 +918,7 @@ pub struct DeleteCheckpointParams {
     pub label: String,
 }
 
+/// A checkpoint as `listCheckpoints` reports it: label and description, without the snapshot.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "checkpoint_meta.ts", rename_all = "camelCase")]
 pub struct CheckpointMetaDto {
@@ -789,6 +935,8 @@ impl From<crate::CheckpointMeta> for CheckpointMetaDto {
     }
 }
 
+/// Blocks lying entirely inside the `rowCnt` x `colCnt` rectangle whose
+/// top-left is (`row`, `col`). A count of 0 covers nothing.
 #[derive(Debug, Clone, TS)]
 #[ts(
     file_name = "rpc_get_fully_covered_blocks_params.ts",
@@ -802,11 +950,19 @@ pub struct GetFullyCoveredBlocksParams {
     pub col_cnt: usize,
 }
 
+/// A batch of payloads applied atomically, in order: each payload sees the
+/// effects of the ones before it, and if one fails none are applied.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "rpc_transaction.ts", rename_all = "camelCase")]
 pub struct Transaction {
     pub payloads: Vec<EditPayload>,
+    /// Record the result as one undo step. `false` applies it without an undo
+    /// entry.
     pub undoable: bool,
+    /// Apply on the workbook's temp branch, opening it if none is open. There is
+    /// one branch per workbook: later temp transactions accumulate on it until
+    /// `commitTempStatus` (one undo step for all of them) or `cleanupTempStatus`
+    /// (discarded). A non-temp transaction discards an open branch first.
     pub temp: bool,
 }
 
@@ -893,6 +1049,9 @@ pub struct WorkbookMethods {
         params: GetReproducibleCellsParams,
         book_id: Option<usize>,
     ) -> Result<Vec<ReproducibleCell>, ErrorMessage>,
+    /// Typed as `CellPosition`, but the value is a grid coordinate: `x` is the
+    /// column index and `y` the row index, both 0-based. Same for
+    /// `get_data_boundary`.
     pub get_next_visible_cell: fn(
         params: GetNextVisibleCellParams,
         book_id: Option<usize>,
@@ -973,12 +1132,14 @@ pub struct WorkbookMethods {
     ) -> Result<Vec<BlockInfo>, ErrorMessage>,
     pub get_links:
         fn(params: GetLinksParams, book_id: Option<usize>) -> Result<Vec<LinkInfo>, ErrorMessage>,
+    /// Answers how many checkpoints are stored after the save.
     pub save_checkpoint:
         fn(params: SaveCheckpointParams, book_id: Option<usize>) -> Result<usize, ErrorMessage>,
     pub delete_checkpoint:
         fn(params: DeleteCheckpointParams, book_id: Option<usize>) -> Result<bool, ErrorMessage>,
     pub list_checkpoints:
         fn(book_id: Option<usize>) -> Result<Vec<CheckpointMetaDto>, ErrorMessage>,
+    /// Answers `null`, not a number, when the cell is not a DIY cell.
     pub get_diy_cell_id_with_block_id: fn(
         params: GetDiyCellIdWithBlockIdParams,
         book_id: Option<usize>,
@@ -1031,9 +1192,12 @@ pub struct WorkbookMethods {
     ) -> Result<ShadowCellInfo, ErrorMessage>,
 
     // Transaction operations
+    /// `true` when a step was undone. With a temp branch open, undo and redo
+    /// move within the branch and stop at its fork point.
     pub undo: fn(book_id: Option<usize>) -> Result<bool, ErrorMessage>,
     pub redo: fn(book_id: Option<usize>) -> Result<bool, ErrorMessage>,
     pub clean_history: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
+    /// A no-op; see [`ToggleStatusParams`].
     pub toggle_status:
         fn(params: ToggleStatusParams, book_id: Option<usize>) -> Result<(), ErrorMessage>,
     pub cleanup_temp_status: fn(book_id: Option<usize>) -> Result<(), ErrorMessage>,
@@ -1044,6 +1208,8 @@ pub struct WorkbookMethods {
     // Workbook operations
     pub load_workbook:
         fn(params: LoadWorkbookParams, book_id: Option<usize>) -> Result<(), ErrorMessage>,
+    /// Sent on the wire as `saveWorkbook` ([`Message::SaveWorkbook`]); a client
+    /// that forwards this field's name verbatim will not reach it.
     pub save:
         fn(params: SaveParams, book_id: Option<usize>) -> Result<SaveFileResult, ErrorMessage>,
     pub get_app_data: fn(book_id: Option<usize>) -> Result<Vec<AppData>, ErrorMessage>,
@@ -1078,6 +1244,8 @@ pub struct WorkbookMethods {
         fn(params: GetRowInfoParams, book_id: Option<usize>) -> Result<RowInfo, ErrorMessage>,
 
     // Helpers
+    /// No [`Message`] variant carries this method, so the WASM transport rejects
+    /// it as unknown.
     pub get_all_block_ref_names: fn() -> Vec<String>,
 
     pub handle_transaction: fn(

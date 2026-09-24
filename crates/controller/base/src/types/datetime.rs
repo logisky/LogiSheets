@@ -219,6 +219,39 @@ pub fn parse_date_time(s: &str) -> Option<f64> {
     }
 }
 
+/// The 1900-system serial number of an ISO-8601 value, as stored in a cell
+/// with `t="d"`: a date (`2008-08-08`), a date-time (`2008-08-08T13:30:00`,
+/// optional fractional seconds and trailing `Z`), or a bare time
+/// (`13:30:00`, a fraction of a day). `None` for anything else, or for a date
+/// before 1900-01-01.
+pub fn parse_iso8601_serial(s: &str) -> Option<f64> {
+    let s = s.trim().trim_end_matches('Z');
+    // Days since 1899-12-31, plus one from 1900-03-01 on for the leap day
+    // Excel pretends 1900 had. Not `get_serial_num_by_date_1900`: that maps
+    // both its (y, m, d) overflow of 1900-02-29 and a real 1900-03-01 to 60.
+    let date_serial = |d: NaiveDate| {
+        let days = d
+            .signed_duration_since(NaiveDate::from_ymd_opt(1899, 12, 31)?)
+            .num_days();
+        let leap_fix = if d >= NaiveDate::from_ymd_opt(1900, 3, 1)? {
+            1
+        } else {
+            0
+        };
+        (days >= 1).then(|| (days + leap_fix) as f64)
+    };
+    let time_fraction = |t: NaiveTime| t.num_seconds_from_midnight() as f64 / 86400.;
+    if let Ok(dt) = NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.f") {
+        return Some(date_serial(dt.date())? + time_fraction(dt.time()));
+    }
+    if let Ok(d) = NaiveDate::parse_from_str(s, "%Y-%m-%d") {
+        return date_serial(d);
+    }
+    NaiveTime::parse_from_str(s, "%H:%M:%S%.f")
+        .ok()
+        .map(time_fraction)
+}
+
 #[cfg(test)]
 mod tests {
     use super::EasyDate;
@@ -227,6 +260,18 @@ mod tests {
     use super::get_serial_num_by_date_1900;
     use super::get_time_by_decimal_num;
     use super::parse_date_time;
+    use super::parse_iso8601_serial;
+
+    #[test]
+    fn parse_iso8601_serial_test() {
+        assert_eq!(parse_iso8601_serial("1900-01-01"), Some(1.));
+        assert_eq!(parse_iso8601_serial("1900-03-01"), Some(61.));
+        assert_eq!(parse_iso8601_serial("2008-08-08"), Some(39668.));
+        assert_eq!(parse_iso8601_serial("2008-08-08T12:00:00Z"), Some(39668.5));
+        assert_eq!(parse_iso8601_serial("06:00:00"), Some(0.25));
+        assert_eq!(parse_iso8601_serial("1899-12-31"), None);
+        assert_eq!(parse_iso8601_serial("not a date"), None);
+    }
 
     #[test]
     fn parse_time_test() {

@@ -18,7 +18,7 @@ export interface InstalledCraftSummary {
 }
 
 export interface InstalledCraftStore {
-    /** Enumerate installed crafts — what `discover_skills` iterates. */
+    /** Enumerate installed crafts — what `skills__discover` iterates. */
     list(): Promise<InstalledCraftSummary[]>
     /** Full manifest for one craft, or undefined if not installed. */
     get(craftId: string): Promise<CraftManifest | undefined>
@@ -40,6 +40,9 @@ export interface InstalledCraftStore {
  * Precedence is by order: the FIRST store that knows a craftId owns it (so a
  * downloaded craft can shadow a bundled one if its store is listed first). All
  * of a craft's operations (get/load) route to its owning store.
+ *
+ * Failure: a store whose `list()` rejects is skipped; a rejecting `get()` or
+ * `load()` propagates. `load()` throws when no store knows the craft.
  */
 export class CompositeCraftStore implements InstalledCraftStore {
     private owner = new Map<string, InstalledCraftStore>()

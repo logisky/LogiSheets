@@ -1,5 +1,16 @@
 /**
  * Workbook Client - communicates with the worker for workbook operations.
+ *
+ * Implements logisheets-web's `Client` contract as async RPC to
+ * WorkbookWorkerService. Every call resolves (never rejects): engine
+ * failures come back as an `ErrorMessage`, so check with `isErrorMessage`.
+ * An exception thrown inside the worker (or an unknown method) is posted as
+ * `{error, id}`, and the handler below reads only `result`, so that call
+ * resolves to `undefined`. If the worker dies, pending calls stay pending. Calls made before the WASM has booted
+ * are queued in the worker (see worker.ts), not dropped.
+ *
+ * Also the main-thread fan-out for worker push events (cell/sheet/header
+ * updates, per-cell value-changed/removed watchers).
  */
 
 import type {
@@ -56,6 +67,8 @@ function removeFromArray<T>(arr: T[], item: T): void {
 export class WorkbookClient implements Client {
     private _worker: Worker
     private _resolvers: Map<number, (arg: any) => void> = new Map()
+    // Requests and push events share the `id` field; start above the
+    // WorkerUpdate codes (0..6) so a reply is never mistaken for an event.
     private _id = 100
     private _ready = false
 
@@ -70,6 +83,8 @@ export class WorkbookClient implements Client {
 
     constructor(worker: Worker) {
         this._worker = worker
+        // Assigns `onmessage` (OffscreenClient uses addEventListener), so a
+        // second WorkbookClient on the same worker would steal every reply.
         this._worker.onmessage = (e) => {
             const data = e.data
             const {result, id} = data
@@ -79,6 +94,9 @@ export class WorkbookClient implements Client {
             } else if (id === WorkerUpdate.Sheet) {
                 this._sheetUpdatedCallbacks.forEach((f) => f())
             } else if (id === WorkerUpdate.CellAndSheet) {
+                // Sheet first, then cell — but subscribers that re-fetch the
+                // sheet list asynchronously (DataService) have NOT refreshed
+                // it yet when the cell callbacks run.
                 this._sheetUpdatedCallbacks.forEach((f) => f())
                 this._cellUpdatedCallbacks.forEach((f) => f())
             } else if (id === WorkerUpdate.HeaderUpdated) {
@@ -128,6 +146,7 @@ export class WorkbookClient implements Client {
 
     // Accepts the generated params-object (contract) or the raw sheet index
     // (legacy in-app callers). Normalized to the index the worker expects.
+    // NB: the object form's `sheetId` field is forwarded AS AN INDEX.
     getSheetDimension(
         params: Parameters<Client['getSheetDimension']>[0] | number
     ): Resp<SheetDimension> {

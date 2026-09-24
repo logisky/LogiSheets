@@ -67,6 +67,8 @@ fn new_workbook_room(msg: Join) -> Result<RoomHandle, Error> {
     Ok(handle)
 }
 
+// The closure returns `handle_msg()`'s future without awaiting it, so as
+// written the room loop never runs.
 fn start_room_server(rs: RoomServer) {
     tokio::spawn(async move { rs.handle_msg() });
 }

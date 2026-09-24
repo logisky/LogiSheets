@@ -7,6 +7,7 @@ use logisheets_base::get_curr_addr::GetCurrAddrTrait;
 use logisheets_base::set_curr_cell::SetCurrCellTrait;
 use logisheets_base::{
     Addr, CellId, CellValue, Error, FuncId, NameId, SheetId, TextId,
+    cube_value::CubeValue,
     matrix_value::{MatrixValue, cross_product_usize},
 };
 use logisheets_base::{BlockCellId, BlockId, BlockRange, CubeCross, NormalRange, Range};
@@ -307,7 +308,9 @@ impl<'a> Connector for CalcConnector<'a> {
             }
             ast::CellReference::UnMut(cube) => {
                 let cube_id = cube.cube_id;
-                let cube = self.cube_manager.get_cube(&cube_id).unwrap();
+                let Some(cube) = self.cube_manager.get_cube(&cube_id) else {
+                    return CalcVertex::from_error(ast::Error::Ref);
+                };
                 match cube.cross {
                     CubeCross::Single(row, col) => CalcVertex::Reference(CalcReference {
                         from_sheet: Some(cube.from_sheet),
@@ -340,7 +343,9 @@ impl<'a> Connector for CalcConnector<'a> {
                     }),
                 }
             }
-            ast::CellReference::Ext(_) => todo!(),
+            // Other workbooks are never loaded, so there is nothing to read:
+            // `ExtBooksManager` answers every lookup with #REF! as well.
+            ast::CellReference::Ext(_) => CalcVertex::from_error(ast::Error::Ref),
             // A defined name evaluates its definition in place — a reference
             // stays a reference, so `SUM(Sales)` and `ROWS(Sales)` see a range
             // rather than a value. An undefined name is `#NAME?`. A definition
@@ -370,15 +375,7 @@ impl<'a> Connector for CalcConnector<'a> {
                 let sheet_id = r.sheet;
                 match r.reference {
                     Reference::Addr(addr) => match r.from_sheet {
-                        Some(from_sheet) => {
-                            let sheets = self.get_sheet_ids(from_sheet, sheet_id);
-                            sheets.into_iter().for_each(|s| {
-                                let _value = self.get_sheet_calc_range_value(
-                                    s, addr.row, addr.col, addr.row, addr.col,
-                                );
-                            });
-                            todo!()
-                        }
+                        Some(from_sheet) => self.get_cube_value(from_sheet, sheet_id, addr, addr),
                         None => self.get_sheet_calc_range_value(
                             sheet_id, addr.row, addr.col, addr.row, addr.col,
                         ),
@@ -396,7 +393,7 @@ impl<'a> Connector for CalcConnector<'a> {
                         CalcValue::Range(v)
                     }
                     Reference::Range(start, end) => match r.from_sheet {
-                        Some(_) => todo!(),
+                        Some(from_sheet) => self.get_cube_value(from_sheet, sheet_id, start, end),
                         None => self.get_sheet_calc_range_value(
                             sheet_id, start.row, start.col, end.row, end.col,
                         ),
@@ -537,12 +534,44 @@ impl<'a> Connector for CalcConnector<'a> {
 }
 
 impl<'a> CalcConnector<'a> {
+    /// A 3D reference (`Sheet1:Sheet3!A1:B2`): the same rectangle on every
+    /// sheet from `from_sheet` to `to_sheet` in tab order, one matrix per
+    /// sheet. #REF! when either end sheet no longer exists.
+    fn get_cube_value(
+        &mut self,
+        from_sheet: SheetId,
+        to_sheet: SheetId,
+        start: Addr,
+        end: Addr,
+    ) -> CalcValue {
+        let sheets = self.get_sheet_ids(from_sheet, to_sheet);
+        if sheets.is_empty() {
+            return CalcValue::Scalar(Value::Error(ast::Error::Ref));
+        }
+        let data = sheets
+            .into_iter()
+            .map(|s| {
+                match self.get_sheet_calc_range_value(s, start.row, start.col, end.row, end.col) {
+                    CalcValue::Range(m) => m,
+                    CalcValue::Scalar(v) => MatrixValue::from(vec![vec![v]]),
+                    // `get_sheet_calc_range_value` only builds the two above.
+                    _ => MatrixValue::from(vec![vec![Value::Error(ast::Error::Ref)]]),
+                }
+            })
+            .collect();
+        CalcValue::Cube(CubeValue::new(data))
+    }
+
+    /// The sheets between `start` and `end` in tab order, inclusive, in
+    /// either order (`Sheet3:Sheet1` spans the same sheets as `Sheet1:Sheet3`).
+    /// Empty when either sheet is gone.
     fn get_sheet_ids(&self, start: SheetId, end: SheetId) -> Vec<SheetId> {
         let start_idx = self.sheet_pos_manager.get_sheet_idx(&start);
         let end_idx = self.sheet_pos_manager.get_sheet_idx(&end);
         let mut result: Vec<SheetId> = Vec::new();
         match (start_idx, end_idx) {
-            (Some(s_idx), Some(e_idx)) => {
+            (Some(a), Some(b)) => {
+                let (s_idx, e_idx) = (a.min(b), a.max(b));
                 (s_idx..e_idx + 1).into_iter().for_each(|i| {
                     if let Some(id) = self.sheet_pos_manager.get_sheet_id(i) {
                         result.push(id)

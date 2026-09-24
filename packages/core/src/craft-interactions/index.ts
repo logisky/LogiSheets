@@ -1,3 +1,27 @@
+// Craft interactions — host-drawn widgets bound to block cells.
+//
+// A craft registers bindings (radio, multi-select, point allocator, number
+// slider, percent allocator); the host draws an overlay on each bound cell and
+// records what the user picks. The browser injects these functions onto the
+// craft iframe (`window.registerRadio`, `window.getRadioSelection`, ...; see
+// the app's craft-interaction layer), and the craft reads results back on
+// demand. Nothing here writes to the workbook.
+//
+// Conventions for every binding:
+//   - `row` / `col` are BLOCK-relative, counted from the block's master cell,
+//     so a binding follows its block when the block moves.
+//   - A binding is keyed by (groupId, blockId, row, col); registering the same
+//     key again replaces it. `sheetIdx` is NOT part of the key, so the same
+//     key on two sheets collides.
+//   - State is one module-level store per process; subscribers
+//     ({@link subscribeRadioBindings}) hear about every change of every kind.
+//   - Radio / multi-select / point selections live HERE, not in cells, and
+//     persist through {@link getPersistentInteractions} on save. Slider and
+//     percent values live in the cells themselves.
+
+// ---- Radio (1-of-n) ------------------------------------------------------
+// Each group holds at most one selected `value`.
+
 export interface RadioBinding {
     type: 'radio'
     groupId: string
@@ -22,6 +46,8 @@ function notifyStore(): void {
     for (const l of storeListeners) l()
 }
 
+/** Listen for ANY change to the interaction store (every widget kind, not
+ *  just radios). Returns an unsubscribe function. */
 export function subscribeRadioBindings(listener: () => void): () => void {
     storeListeners.add(listener)
     return () => {
@@ -41,6 +67,8 @@ export function unregisterRadioBinding(
     notifyStore()
 }
 
+/** Remove a group's radio bindings and selection, or every group's when
+ *  `groupId` is omitted. */
 export function clearRadioBindings(groupId?: string): void {
     if (groupId === undefined) {
         radioBindings.clear()
@@ -58,6 +86,7 @@ export function getRadioBindings(): readonly RadioBinding[] {
     return Array.from(radioBindings.values())
 }
 
+/** The `value` of the group's selected binding, if any. */
 export function getRadioSelection(groupId: string): string | undefined {
     return groupSelections.get(groupId)
 }
@@ -123,6 +152,8 @@ export function getMultiSelectBindings(): readonly MultiSelectBinding[] {
     return Array.from(multiSelectBindings.values())
 }
 
+/** Cap a group's selections (negative clamps to 0). Until set, a group has
+ *  no cap when toggling, though {@link getMultiSelectMax} reports 0. */
 export function setMultiSelectMax(groupId: string, max: number): void {
     multiSelectMax.set(groupId, Math.max(0, max))
     notifyStore()
@@ -136,6 +167,8 @@ export function getMultiSelectSelections(groupId: string): string[] {
     return Array.from(multiSelectSelections.get(groupId) ?? [])
 }
 
+/** Select `value` if unselected and under the cap, deselect it if
+ *  selected. A select past the cap is silently ignored. */
 export function toggleMultiSelectValue(groupId: string, value: string): void {
     let set = multiSelectSelections.get(groupId)
     if (!set) {
@@ -226,6 +259,8 @@ export function getPointAllocatorBindings(): readonly PointAllocatorBinding[] {
     return Array.from(pointBindings.values())
 }
 
+/** Set a group's point budget (negative clamps to 0). Shrinking it does not
+ *  take back points already allocated, so `remaining` can go negative. */
 export function setPointPool(groupId: string, total: number): void {
     pointPoolTotals.set(groupId, Math.max(0, total))
     notifyStore()
@@ -315,6 +350,8 @@ export function getNumberSliderBindings(): readonly NumberSliderBinding[] {
     return Array.from(numberSliderBindings.values())
 }
 
+/** Add `delta` points to one cell (negative removes), clamped so the group
+ *  never exceeds its pool and a cell never goes below 0. */
 export function adjustPointAllocation(
     binding: Pick<PointAllocatorBinding, 'groupId' | 'blockId' | 'row' | 'col'>,
     delta: number
@@ -512,6 +549,8 @@ interface PersistedShape {
     percentBindings: PercentAllocatorBinding[]
 }
 
+/** Snapshot every binding and user selection, for the host to fold into the
+ *  AppData envelope's `craftInteractions` on save. */
 export function getPersistentInteractions(): PersistedShape {
     const out: PersistedShape = {
         radioBindings: Array.from(radioBindings.values()),
@@ -544,6 +583,8 @@ export function getPersistentInteractions(): PersistedShape {
     return out
 }
 
+/** Replace the whole store from a snapshot (as written by
+ *  {@link getPersistentInteractions}); malformed entries are dropped. */
 export function loadPersistentInteractions(data: unknown): void {
     // Always clear first, then repopulate from whatever the workbook carried.
     // Passing undefined/null (a workbook with no interaction state) therefore

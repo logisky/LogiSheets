@@ -2,14 +2,20 @@
 //
 // This is the Node counterpart of the browser app: it wires logisheets-core's
 // (engine-neutral) logic to the Node WASM engine via the injected-Client model.
-// The browser supplies logisheets-engine's worker client; here we supply a
-// synchronous client built on the Node WASM `handle()` entry point.
+// The browser supplies logisheets-engine's worker client; here we supply an
+// async-wrapped client built on the Node WASM `handle()` entry point.
 //
 // A single {@link SpreadsheetRuntime} owns many {@link Workbook}s at once
 // (wb1, wb2, wb3, …); every operation runs against one specific workbook. All
 // workbook logic lives in logisheets-core's WorkbookOps; the runtime only
 // adapts the synchronous Node `handle()` entry point into the async Client that
 // WorkbookOps consumes, then exposes that ops layer per workbook.
+//
+// Everything from logisheets-core is re-exported, so consumers import from
+// here alone. Engine failures follow the Client contract: reads resolve an
+// ErrorMessage, and a refused transaction resolves an ActionEffect with
+// `status.type === 'err'` (never a throw; see WorkbookOps for which of its
+// methods surface that).
 
 import {readFile, writeFile} from 'node:fs/promises'
 import {basename, resolve} from 'node:path'
@@ -94,8 +100,18 @@ export * from './enterprise.js'
  * 1:1 onto `handle({method, value: params}, bookId)`, so a single generic
  * Proxy covers the whole interface — no per-method boilerplate. Results are
  * wrapped in a resolved Promise so a Node caller can `await` exactly like the
- * browser. The callback/register* members are not used by the operation layer
- * and are intentionally absent.
+ * browser.
+ *
+ * Gotchas that follow from "every property is an RPC":
+ *  - The `register*` callback members do not subscribe to anything: they are
+ *    forwarded to the engine as RPCs it does not know.
+ *  - The proxy has a `then` property, so it looks like a thenable. Never
+ *    `await` the client itself, return it from an async function or
+ *    `Promise.resolve` it: that invokes `then` as an RPC instead of yielding
+ *    the client.
+ *  - `handleTransaction` returns the engine's ActionEffect as is. Its
+ *    `asyncTasks` (custom-function calls) are not run: there is no
+ *    Calculator on this path, so nothing feeds their results back.
  */
 function makeNodeClient(bookId: number): Client {
     return new Proxy(
@@ -149,7 +165,9 @@ export class Workbook {
         this.path = path
     }
 
-    /** Read a single cell's evaluated value. */
+    /** Read a single cell's evaluated value (0-based indexes). Synchronous.
+     *  Despite the type, an out-of-range sheet or cell returns an
+     *  ErrorMessage; guard with `isErrorMessage`. */
     public getValue(sheetIdx: number, row: number, col: number): Value {
         return handle(
             {method: 'getValue', value: {sheetIdx, row, col}},

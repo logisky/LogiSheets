@@ -17,8 +17,11 @@ use std::collections::HashMap;
 
 use crate::SerdeErr;
 
+/// A relationship id, e.g. `rId1`.
 pub type Id = String;
 
+/// A whole .xlsx package, one field per part. Produced by
+/// [`read`](crate::reader::read) and consumed by [`write`](crate::writer::write).
 #[derive(Debug)]
 pub struct Wb {
     pub xl: Xl,
@@ -28,6 +31,9 @@ pub struct Wb {
     pub unknown_parts: Vec<UnknownPart>,
 }
 
+/// Everything under `xl/`. Maps keyed by [`Id`] are keyed by the relationship
+/// id that reached the part (`rId3`), which is also what `workbook.xml` uses to
+/// name it.
 #[derive(Debug)]
 pub struct Xl {
     pub workbook_part: WorkbookPart,

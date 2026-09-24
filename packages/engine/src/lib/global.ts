@@ -1,23 +1,43 @@
 /**
- * LogiSheets Engine - Global entry point
+ * logisheets-engine — embeddable, canvas-rendered spreadsheet UI.
  *
- * This file exposes the entire engine API to the global `window.LogiSheetsEngine` object.
- * It can be used in any framework or vanilla JavaScript.
+ * This is the package's real build entry (vite.config.lib.ts `lib.entry`,
+ * package.json `types` → dist/types/lib/global.d.ts). The UMD build also
+ * exposes it as `window.LogiSheetsEngine`. `./index.ts` is an older, partly
+ * overlapping export list that the build does not use.
  *
- * Usage in browser:
- * ```html
- * <script src="logisheets-engine.umd.js"></script>
- * <script>
- *   const engine = new LogiSheetsEngine.Engine();
- *   await engine.init(document.getElementById('canvas'));
- * </script>
- * ```
+ * Main exports:
+ * - {@link Engine} — one per workbook. Owns the Web Worker (Rust/WASM engine
+ *   + OffscreenCanvas painter), the shared sheet-info cache and workbook
+ *   events. Hands out per-view {@link Session}s; the legacy
+ *   `engine.mount()`/`render()`/… methods drive a lazily-created default one.
+ * - {@link Session} — one on-screen view: mounted Svelte UI, active sheet,
+ *   selection, viewport.
+ * - `engine.getWorkbook()` → {@link WorkbookClient}, the full logisheets-web
+ *   workbook API proxied to the worker. Everything in `logisheets-web` is
+ *   re-exported below, so hosts need not depend on it directly.
+ * - Geometry/selection helpers from components/utils, block managers,
+ *   Svelte components (for Svelte hosts) and adapter prop types.
  *
- * Usage as ES module:
+ * Sibling packages: `logisheets-web` supplies the WASM bindings and payload
+ * types (bundled in, not a peer); `logisheets-formula-editor` is the formula
+ * input a host typically pairs with the `startEdit` event. The engine renders
+ * no toolbar, edit bar or context menu — the host builds those on top.
+ *
+ * Usage:
  * ```javascript
- * import { Engine, Transaction, CellInputBuilder } from 'logisheets-engine';
- * const engine = new Engine();
+ * import {Engine} from 'logisheets-engine'
+ * import 'logisheets-engine/style.css'
+ * const engine = new Engine()
+ * engine.on('ready', async () => {
+ *     engine.mount(document.getElementById('sheet'))
+ *     await engine.loadFile(bytes, 'book.xlsx')
+ * })
  * ```
+ * The legacy Engine methods that touch the workbook (loadFile, render,
+ * resize, setCurrentSheetIndex, insertChart, updateChart) throw until
+ * `ready` has fired. UMD consumers must provide `echarts` as a
+ * global (it is external to the bundle).
  */
 
 // Core Engine

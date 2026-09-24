@@ -1,3 +1,7 @@
+/**
+ * A 0-based column index as A1 column letters: 0 -> `A`, 25 -> `Z`,
+ * 26 -> `AA`. Throws for a negative or non-integer index.
+ */
 export function toA1notation(index: number): string {
     /**
      * The algorithm employed here is the same as converting numbers between

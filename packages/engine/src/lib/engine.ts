@@ -222,6 +222,7 @@ export class Engine {
     // Legacy per-view API (delegates to the default session)
     // ========================================================================
 
+    /** Mount the default session's UI. See {@link Session.mount}. */
     mount(container: HTMLElement, options: SessionMountOptions = {}): void {
         this.getDefaultSession().mount(container, options)
     }
@@ -242,6 +243,12 @@ export class Engine {
         return this.getDefaultSession().initOffscreen(canvas)
     }
 
+    /**
+     * Replace the open workbook with `buffer` (`.xlsx` bytes) via the default
+     * session. Every view's workbook is replaced — there is one per Engine.
+     * Resolves null when the load failed (an `error` event carries why) or the
+     * {@link setBeforeLoadWorkbook} gate cancelled it. Throws before `ready`.
+     */
     async loadFile(buffer: Uint8Array, filename: string): Promise<Grid | null> {
         this._ensureReady()
         return this.getDefaultSession().loadFile(buffer, filename)
@@ -294,6 +301,7 @@ export class Engine {
         this.getDefaultSession().setSelection(selection)
     }
 
+    /** 0-based sheet index shown by the default session (0 if none yet). */
     getCurrentSheetIndex(): number {
         return this._defaultSession?.getCurrentSheetIndex() ?? 0
     }
@@ -404,6 +412,11 @@ export class Engine {
         this._emit('zoomChange', z)
     }
 
+    /**
+     * Switch the default session to the 0-based sheet `index`. Throws before
+     * `ready`. Call it before deleting/replacing the displayed sheet — see
+     * {@link Session.setCurrentSheetIndex}.
+     */
     setCurrentSheetIndex(index: number): void {
         this._ensureReady()
         this.getDefaultSession().setCurrentSheetIndex(index)
@@ -435,9 +448,13 @@ export class Engine {
 
     /**
      * Subscribe to an event. Workbook-level events (ready/sheetChange/
-     * cellChange) are handled by the Engine; per-view events (selectionChange/
-     * gridChange/activeSheetChange/startEdit/invalidFormula) are forwarded to
-     * the default session for backwards compatibility. `error` fires for both.
+     * cellChange/zoomChange) are handled by the Engine; per-view events
+     * (selectionChange/gridChange/activeSheetChange/startEdit/invalidFormula/
+     * find/contextMenu) are forwarded to the default session for backwards
+     * compatibility — subscribing to one creates that session. `error` is
+     * registered on both, but only sessions emit it today (failed
+     * render/resize/unmounted loadFile of the default view).
+     * `ready` is not replayed: check {@link isReady} before subscribing late.
      */
     on<T extends EngineEventType | SessionEventType>(
         type: T,

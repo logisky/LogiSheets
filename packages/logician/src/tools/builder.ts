@@ -1,16 +1,26 @@
 /**
  * Builder tools — let the LLM construct block-shaped models in a workbook
- * from a natural-language description.
+ * from a natural-language description. All live in the `build` namespace and
+ * ship as `BUILDER_TOOLS`.
  *
- * Surface (10 tools, block-only — no raw (sheet,row,col) writes):
- *   Structure  : create_sheet, create_block, add_block_rows, delete_block_rows,
- *                move_block_row
- *   Rules      : set_field_rule, define_enum_set
+ * Surface (block-only — no raw (sheet,row,col) writes; those are cells.ts):
+ *   Structure  : create_sheet, create_block, convert_to_block, add_block_rows,
+ *                delete_block_rows, move_block_row, rename_block, rename_field
+ *   Rules      : set_field_rule, define_enum_set, set_block_description,
+ *                set_block_permissions
+ *   Analysis   : create_analysis_block / edit_analysis_block, create_pivot /
+ *                edit_pivot / refresh_pivot
  *   Reflection : list_blocks, describe_block, eval_formula
- *   Safety     : checkpoint / restore       (one tool, two ops)
+ *   Safety     : checkpoint (save / restore / delete / list)
  *
- * Handlers below are intentionally thin — they describe the contract.
- * Real implementations will dispatch to the workbook client + block manager.
+ * The tool descriptions are the model-facing documentation and carry most of
+ * the engine gotchas (e.g. BLOCKREF at the cell's own block is refused; use
+ * the two-argument #FIELD).
+ *
+ * Every write refuses while a temp branch is open, since a committed write
+ * would discard it: most go through `commitTransaction`; edit_analysis_block,
+ * create_pivot, edit_pivot and refresh_pivot commit via logisheets-core's
+ * `WorkbookOps` and call `assertScratchBranchFree` themselves first.
  */
 
 import {
@@ -1865,7 +1875,11 @@ export const defineEnumSet: Tool<DefineEnumSetInput, DefineEnumSetOutput> = {
 /** Watson-session enum registry. Mirror of what's in the host's
  *  enumSetManager when available, plus a fallback for headless. Read by
  *  the create_block handler when a field declares `field_type: 'enum'`
- *  so it can auto-inject a variant whitelist validation. */
+ *  so it can auto-inject a variant whitelist validation.
+ *
+ *  Module-level: shared by every workbook and agent in the process and never
+ *  cleared, so an id defined against one workbook is visible to the next.
+ */
 export const _enumSetCache = new Map<
     string,
     {
@@ -4115,6 +4129,9 @@ export const editAnalysisBlock: Tool<
     },
     handler: async (input, ctx) => {
         const client = asClient(ctx)
+        // Commits through WorkbookOps, outside the temp branch: refuse up
+        // front rather than discard it.
+        await assertScratchBranchFree(client, 'edit_analysis_block')
         const block = await blockByName(client, input.name)
         if (block.analyzes === undefined) {
             throw new Error(
@@ -4315,6 +4332,9 @@ export const createPivot: Tool<
     },
     handler: async (input, ctx) => {
         const client = asClient(ctx)
+        // Commits through WorkbookOps, outside the temp branch: refuse up
+        // front rather than discard it.
+        await assertScratchBranchFree(client, 'create_pivot')
         const all = await client.getAllBlocks({})
         if (isErrorMessage(all)) {
             throw new Error(`getAllBlocks failed: ${all.msg}`)
@@ -4400,7 +4420,6 @@ export const createPivot: Tool<
                 measure: m.measure,
             })),
         ]
-
         const ops = new WorkbookOps(client)
         const made = await ops.createPivot({
             source: {
@@ -4565,6 +4584,9 @@ export const editPivot: Tool<
     },
     handler: async (input, ctx) => {
         const client = asClient(ctx)
+        // Commits through WorkbookOps, outside the temp branch: refuse up
+        // front rather than discard it.
+        await assertScratchBranchFree(client, 'edit_pivot')
         const block = await blockByName(client, input.name)
         const was = block.pivot
         if (!was) {
@@ -4636,7 +4658,6 @@ export const editPivot: Tool<
                       func: f.pivotFunc as AggFunc | undefined,
                       measure: f.pivotMeasure,
                   }))
-
         const ops = new WorkbookOps(client)
         const made = await ops.editPivot({
             sheetIdx: block.sheetIdx,
@@ -4712,6 +4733,9 @@ export const refreshPivot: Tool<
     },
     handler: async (input, ctx) => {
         const client = asClient(ctx)
+        // Commits through WorkbookOps, outside the temp branch: refuse up
+        // front rather than discard it.
+        await assertScratchBranchFree(client, 'refresh_pivot')
         const block = await blockByName(client, input.name)
         if (!block.pivot) {
             throw new Error(
@@ -4737,7 +4761,6 @@ export const refreshPivot: Tool<
         const source = isErrorMessage(all)
             ? undefined
             : all.find((b) => b.blockId === block.analyzes)
-
         const ops = new WorkbookOps(client)
         const changed = await ops.refreshPivot({
             sheetIdx: block.sheetIdx,

@@ -5,11 +5,17 @@ use pest::iterators::Pair;
 #[derive(Debug, TS, Clone, Eq, PartialEq)]
 #[ts(rename_all = "camelCase", file_name = "formula_display_info.ts")]
 pub struct FormulaDisplayInfo {
+    /// Every cell reference, in source order, for colouring the referenced
+    /// ranges on the grid.
     pub cell_refs: Vec<CellRef>,
+    /// Leaf tokens in source order, for syntax highlighting.
     pub token_units: Vec<TokenUnit>,
 }
 
 #[derive(Debug, TS, Clone, Eq, PartialEq, Default)]
+/// A reference as written in the formula. Rows and columns are 0-based; a
+/// missing component (a whole-column `A:A` has no rows) is `None`. `sheet2` is
+/// the end of a 3-D `Sheet1:Sheet3!` span. Names are kept as written.
 #[ts(rename_all = "camelCase", file_name = "cell_ref.ts")]
 pub struct CellRef {
     pub workbook: Option<String>,
@@ -22,6 +28,9 @@ pub struct CellRef {
 }
 
 #[derive(Debug, TS, Clone, Eq, PartialEq)]
+/// A token's span in the input. `start`/`end` are BYTE offsets (end
+/// exclusive), not character offsets: a host indexing a UTF-16 string must
+/// convert them when the formula contains non-ASCII text.
 #[ts(rename_all = "camelCase", file_name = "token_unit.ts")]
 pub struct TokenUnit {
     pub token_type: TokenType,
@@ -41,6 +50,10 @@ pub enum TokenType {
     Other,
 }
 
+/// Tokenize a formula body (no leading `=`) for display. Unlike the strict
+/// `logisheets_lexer`, a trailing unparseable tail is accepted and reported as
+/// a `WrongSuffix` token, so a half-typed formula still highlights. `None`
+/// only when not even a prefix lexes.
 pub fn lex_and_fmt(s: &str) -> Option<FormulaDisplayInfo> {
     let pairs = lex(s)?;
     let mut result = FormulaDisplayInfo {

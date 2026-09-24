@@ -1,5 +1,9 @@
 use crate::xml_data::{Decl, KeyValue, Object, Value, XmlData};
 
+/// Where a difference is: the tag, attribute name or `__text__` key, and a
+/// byte offset just past it in the document that holds it (`xml2` for a
+/// `Create`, `xml1` otherwise). Offsets locate a spot; they are not stable
+/// identifiers.
 #[derive(Debug, PartialEq)]
 pub struct Element {
     pub tag: String,
@@ -15,6 +19,8 @@ impl From<KeyValue> for Element {
     }
 }
 
+/// One difference. `Delete`: only in `xml1`. `Create`: only in `xml2`.
+/// `Update`: in both with different values (or different kinds of value).
 #[derive(Debug, PartialEq)]
 pub enum Diff {
     Delete(Element),
@@ -111,7 +117,8 @@ fn compare_value(tag: String, pos1: usize, v1: Value, v2: Value) -> Vec<Diff> {
             if arr1.len() != arr2.len() {
                 vec![Diff::Update(Element { tag, positon: pos1 })]
             } else {
-                // FIXME: check the element of the array.
+                // FIXME: check the element of the array. Until then, repeated
+                // siblings of equal count always compare equal (see crate doc).
                 vec![]
             }
         }

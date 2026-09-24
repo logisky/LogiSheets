@@ -403,6 +403,23 @@ function toSchemaFieldSpec(f: FormBlockField) {
 /**
  * High-level workbook operations bound to one engine {@link Client}.
  * Construct one per workbook and share it across the host.
+ *
+ * Indexes are 0-based; `sheetIdx` is the tab position. Block-relative
+ * `row`/`col` count from the block's master (top-left) cell.
+ *
+ * Failure contract, read before relying on a write:
+ *  - An operation THROWS (rejects) when the engine answers a call with an
+ *    `ErrorMessage`, and when this layer refuses its inputs (documented per
+ *    method).
+ *  - An operation does NOT throw when the engine refuses the edit itself.
+ *    The engine reports that as an `ActionEffect` with
+ *    `status.type === 'err'` (reason in `errorMessage`) and applies nothing.
+ *    Methods returning `Promise<ActionEffect>` hand that effect back: check
+ *    `status`. Methods returning `Promise<void>` or a summary DROP it, so a
+ *    refused transaction looks like success there.
+ *
+ * Every transaction is built at the injected {@link TempModeProvider}'s
+ * current value, so in the browser's temp mode these writes are speculative.
  */
 export class WorkbookOps {
     /** Monotonic id for the throwaway ephemeral cells used by evalFormula. */
@@ -416,7 +433,9 @@ export class WorkbookOps {
     /**
      * Build a transaction at the host's current temp-mode, send it, and return
      * the engine's effect. Throws on an engine ErrorMessage so callers can use
-     * normal try/catch instead of inspecting a union.
+     * normal try/catch instead of inspecting a union. An engine REJECTION is
+     * not an ErrorMessage: it comes back as the effect with `status.type ===
+     * 'err'` and is returned, not thrown.
      */
     private async apply(
         payloads: readonly Payload[],
@@ -541,7 +560,11 @@ export class WorkbookOps {
         return this.apply([{type: 'deleteSheet', value: {idx}}], true)
     }
 
-    /** Set a sheet tab's color (ARGB string; empty clears it). */
+    /**
+     * Set a sheet tab's color: 8-hex ARGB with no `#` (e.g. `'FF4472C4'`),
+     * or `''` to clear. Stored verbatim and written to the file's `tabColor`;
+     * nothing validates or normalises it.
+     */
     setSheetColor(idx: number, color: string): Promise<ActionEffect> {
         return this.apply([{type: 'setSheetColor', value: {idx, color}}], true)
     }
@@ -674,7 +697,8 @@ export class WorkbookOps {
     // payloads (logic in ../format) and applies them. The host supplies the
     // sheet index (a view concern) and the selection.
 
-    /** Apply font styling (bold/italic/underline/strike/color/size). */
+    /** Apply font styling (bold/italic/underline/strike/color/size). The
+     *  color is 8-hex ARGB with no `#`, see {@link FontStyle}. */
     async setFont(
         sheetIdx: number,
         data: SelectedData,
@@ -714,7 +738,9 @@ export class WorkbookOps {
         await this.applyGenerated(generateNumFmtPayload(sheetIdx, data, numFmt))
     }
 
-    /** Apply a pattern fill (foreground/background color + pattern). */
+    /** Apply a pattern fill (foreground/background color + pattern). Colors
+     *  are hex strings here (`'#RRGGBB'`, `'RRGGBB'` or `'AARRGGBB'`), turned
+     *  into the engine's `{red, green, blue}` objects; alpha is dropped. */
     async setPatternFill(
         sheetIdx: number,
         data: SelectedData,
@@ -731,7 +757,8 @@ export class WorkbookOps {
         )
     }
 
-    /** Apply borders to the selection per the batch directive. */
+    /** Apply borders to the selection per the batch directive. The color is
+     *  8-hex ARGB (a leading `#` is stripped), see {@link BorderBatchUpdate}. */
     async setBorder(
         sheetIdx: number,
         data: SelectedData,
@@ -2054,6 +2081,11 @@ export class WorkbookOps {
      * Value. Parks the formula in a throwaway ephemeral cell, reads the result
      * back, and leaves no committed change — the same mechanism the browser
      * uses for shadow cells, here for one-shot evaluation.
+     *
+     * Each call takes a NEW ephemeral id (from 1, per WorkbookOps instance)
+     * and never removes the cell, so the cells accumulate, and keep
+     * recomputing, for the life of the loaded workbook. A rejected write is not
+     * detected: the read-back then yields whatever the slot holds.
      */
     async evalFormula(sheetIdx: number, formula: string): Promise<Value> {
         const id = this.ephemeralSeq++

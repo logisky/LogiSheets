@@ -11,17 +11,30 @@ use crate::state;
 // Nothing here may panic — a panic poisons the wasm instance, and every later
 // call traps. Every failure leaves as an `ErrorMessage`.
 
+// Every RPC result is plain data and serializes, with one exception:
+// serde_wasm_bindgen (without the bigint option) refuses a u64/i64 beyond
+// 2^53. That must not panic, so it is reported as an `ErrorMessage` instead —
+// which itself is a string and a small integer and always serializes.
 pub(crate) fn ok_to_js<T: serde::Serialize>(v: &T) -> JsValue {
-    serde_wasm_bindgen::to_value(v).unwrap()
+    serde_wasm_bindgen::to_value(v).unwrap_or_else(serialize_failed)
 }
 
 pub(crate) fn res_to_js<T: serde::Serialize>(r: Result<T, ErrorMessage>) -> JsValue {
     // Untagged wire format: both are emitted bare, and the JS SDK tells them
     // apart by shape (`isErrorMessage`).
     match r {
-        Ok(v) => serde_wasm_bindgen::to_value(&v).unwrap(),
-        Err(e) => serde_wasm_bindgen::to_value(&e).unwrap(),
+        Ok(v) => ok_to_js(&v),
+        Err(e) => ok_to_js(&e),
     }
+}
+
+fn serialize_failed(e: serde_wasm_bindgen::Error) -> JsValue {
+    let msg = ErrorMessage {
+        msg: format!("the result could not be sent to JavaScript: {e}"),
+        // `Error::Serde`'s code.
+        ty: 2,
+    };
+    serde_wasm_bindgen::to_value(&msg).unwrap_or(JsValue::NULL)
 }
 
 pub(crate) fn client_error<T: serde::Serialize>(msg: String) -> JsValue {
@@ -43,6 +56,11 @@ fn requested_method(msg: &JsValue) -> String {
         .unwrap_or_else(|| "<no method field>".to_string())
 }
 
+/// The single RPC entry point. `msg` is a [`Message`] as JS (a bare method
+/// name for a unit variant, otherwise `{method, value}`); `book_id` names the
+/// workbook and is required by everything except `newWorkbook`, which returns
+/// the id to use. Answers the method's result or an `ErrorMessage`, told apart
+/// by shape on the JS side.
 #[wasm_bindgen]
 pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
     state::init();

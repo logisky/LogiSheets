@@ -7,6 +7,13 @@ use crate::{EditPayload, ErrorMessage, Workbook};
 /// `Error::PayloadError`, which says the same thing.
 pub const CLIENT_ERROR: usize = 6;
 
+/// Every workbook one transport has open, keyed by book id.
+///
+/// Ids are minted by [`Manager::new_workbook`], count up from 0 and are never
+/// reused, even after [`Manager::remove`]. Each workbook also has a payload
+/// buffer ([`add_payload`](Manager::add_payload) /
+/// [`get_payloads`](Manager::get_payloads)) that the manager only stores; the
+/// RPC logic functions do not read it.
 #[derive(Default)]
 pub struct Manager {
     books: HashMap<usize, Workbook>,
@@ -15,6 +22,7 @@ pub struct Manager {
 }
 
 impl Manager {
+    /// Open an empty workbook and return its new id.
     pub fn new_workbook(&mut self) -> usize {
         self.books.insert(self.next_id, Workbook::default());
         self.payloads.insert(self.next_id, vec![]);
@@ -24,6 +32,9 @@ impl Manager {
         res
     }
 
+    /// Put `wb` in slot `id`, replacing any workbook there and clearing its
+    /// payload buffer. Does not advance the id counter, so replacing an id that
+    /// was never minted can collide with a later [`new_workbook`](Self::new_workbook).
     pub fn replace_workbook(&mut self, id: usize, wb: Workbook) {
         self.books.insert(id, wb);
         self.payloads.insert(id, vec![]);
@@ -48,6 +59,7 @@ impl Manager {
         }
     }
 
+    /// Buffer a payload for workbook `id`. Dropped silently if `id` is not open.
     pub fn add_payload(&mut self, id: usize, payload: EditPayload) {
         match self.payloads.entry(id) {
             Entry::Occupied(mut payloads) => {
@@ -65,11 +77,14 @@ impl Manager {
         }
     }
 
+    /// Close workbook `id` and drop its payload buffer. Unknown ids are ignored.
     pub fn remove(&mut self, id: usize) {
         self.payloads.remove(&id);
         self.books.remove(&id);
     }
 
+    /// Take workbook `id`'s buffered payloads, leaving an empty buffer. For an id
+    /// that is not open this answers empty but also creates the buffer.
     pub fn get_payloads(&mut self, id: &usize) -> Vec<EditPayload> {
         self.payloads.insert(*id, vec![]).unwrap_or_default()
     }

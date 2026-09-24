@@ -242,6 +242,10 @@ export const setCells: Tool<SetCellsInput, {written: number}> = {
             throw new Error(
                 `${input.cells.length} cells (max ${MAX_WRITE}) — split into batches`
             )
+        // NOTE: null / '' become a `cellInput` with empty content, not a
+        // `cellClear`. The engine treats those differently: the cell reads
+        // back empty, but dependents can stay stale and `=""` guards may not
+        // fire. `clear_cells` below uses `cellClear`, which is the real clear.
         const payloads: EditPayload[] = input.cells.map((c) => ({
             type: 'cellInput',
             value: {
@@ -283,6 +287,8 @@ export const clearCells: Tool<RangeInput, {cleared: number}> = {
             throw new Error(
                 `range covers ${count} cells (max ${MAX_RANGE}); narrow it`
             )
+        // `cellClear`, not an empty `cellInput`: only this removes the cell so
+        // dependents recompute against a truly blank input.
         const payloads: EditPayload[] = []
         for (let row = r.startRow; row <= r.endRow; row++)
             for (let col = r.startCol; col <= r.endCol; col++)

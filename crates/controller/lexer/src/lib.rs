@@ -1,3 +1,9 @@
+//! The strict pest lexer for Excel formulas (`grammar.pest`). It is the first
+//! stage of the engine's formula pipeline: `logisheets_parser` walks the pairs
+//! it produces to build an AST. Lexing checks syntax only; whether a function,
+//! sheet or name exists is decided later. For editor highlighting, which must
+//! cope with half-typed input, see `logisheets_lexer4fmt`.
+
 use pest::Parser;
 use pest_derive::Parser;
 use tracing::error;
@@ -6,6 +12,9 @@ use tracing::error;
 #[grammar = "grammar.pest"]
 pub struct FormulaParser;
 
+/// Lex a formula body — WITHOUT the leading `=` — returning the `formula`
+/// pair. `None` when the text does not lex; the failure is logged, not
+/// returned.
 pub fn lex(s: &str) -> Option<pest::iterators::Pair<'_, Rule>> {
     let result = FormulaParser::parse(Rule::start, s);
     match result {

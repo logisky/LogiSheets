@@ -1,3 +1,5 @@
+/** Hands out block ids for `Workbook.createBlockForNewCraft` and checks that a
+ *  created block can be bound. Internal to `Workbook`. */
 export class BlockManager {
     public constructor(
         checkBindBlock: (

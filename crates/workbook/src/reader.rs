@@ -32,6 +32,19 @@ use crate::{
     xml_deserialize_from_reader,
 };
 
+/// Parse the bytes of an .xlsx (zip) package into a [`Wb`], following the
+/// package relationships from `_rels/.rels`.
+///
+/// Lenient by design: only a missing or unreadable workbook part
+/// (`xl/workbook.xml` or its relationships) is an error. A worksheet,
+/// external link, doc-props or LogiSheets data part that fails to parse is
+/// DROPPED with a message on stdout, so the `Wb` can lack a sheet the
+/// workbook part still lists, and writing it back loses that part. A part
+/// reached by an unrecognised relationship type is instead kept verbatim as
+/// an [`UnknownPart`](crate::workbook::UnknownPart).
+///
+/// A package with no styles part, or one that fails to parse, loads with an
+/// empty stylesheet.
 pub fn read(buf: &[u8]) -> Result<Wb, SerdeErr> {
     let reader = Cursor::new(buf);
     let mut archive = ZipArchive::new(reader)?;
@@ -147,6 +160,22 @@ fn de_external_link<R: Read + Seek>(
         external_link_part,
         target,
     })
+}
+
+fn empty_stylesheet() -> StylesheetPart {
+    StylesheetPart {
+        num_fmts: None,
+        fonts: None,
+        fills: None,
+        borders: None,
+        cell_style_xfs: None,
+        cell_xfs: None,
+        cell_styles: None,
+        dxfs: None,
+        table_styles: None,
+        colors: None,
+        ext_lst: None,
+    }
 }
 
 fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, SerdeErr> {
@@ -287,7 +316,11 @@ fn de_xl<R: Read + Seek>(path: &str, archive: &mut ZipArchive<R>) -> Result<Xl, 
         });
     Ok(Xl {
         workbook_part,
-        styles: styles.unwrap(),
+        // The styles part is optional in the spec, and one that fails to parse
+        // is dropped above like any other part. Either way, load with no
+        // styles (every cell renders in the defaults) rather than refuse the
+        // workbook. The id is never written back: saving assigns its own.
+        styles: styles.unwrap_or_else(|| (String::from("rIdStyles"), empty_stylesheet())),
         sst,
         worksheets,
         external_links,

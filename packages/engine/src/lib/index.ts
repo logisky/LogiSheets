@@ -1,3 +1,12 @@
+/**
+ * Export list used by the in-repo dev playground (src/App.svelte).
+ *
+ * NOT the published entry: the library build and its `.d.ts` come from
+ * `./global.ts`. The two lists overlap but have drifted (this one lacks the
+ * logisheets-web star re-export; global.ts lacks the chart and load-cancel
+ * exports), so add a new public export to global.ts first.
+ */
+
 // Main library exports
 export {
     Spreadsheet,
