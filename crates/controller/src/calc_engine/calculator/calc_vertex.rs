@@ -46,8 +46,11 @@ pub enum CalcValue {
 }
 
 impl CalcValue {
-    pub fn to_async_arg(self) -> String {
-        match self {
+    /// The text a custom (async) function receives for this argument. Its
+    /// arguments cross to the host as plain strings, so only a scalar has a
+    /// representation: a range, 3D range or union is `Err(#VALUE!)`.
+    pub fn to_async_arg(self) -> Result<String, ast::Error> {
+        Ok(match self {
             CalcValue::Scalar(v) => match v {
                 Value::Blank => String::from(""),
                 Value::Number(n) => super::number_text::number_to_text(n),
@@ -61,10 +64,10 @@ impl CalcValue {
                 }
                 Value::Error(e) => e.get_err_str().to_string(),
             },
-            CalcValue::Range(_) => todo!(),
-            CalcValue::Cube(_) => todo!(),
-            CalcValue::Union(_) => todo!(),
-        }
+            CalcValue::Range(_) | CalcValue::Cube(_) | CalcValue::Union(_) => {
+                return Err(ast::Error::Value);
+            }
+        })
     }
 }
 

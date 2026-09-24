@@ -182,6 +182,8 @@ fn exec_switch(ctx: &mut ExecContext, switch: Switch, _line: usize) -> Option<Ex
     None
 }
 
+// Like every write here, the `ActionEffect` is dropped: a rejected input does
+// not fail the script, only a later CHECK does.
 fn exec_input(ctx: &mut ExecContext, input: Input, line: usize) -> Option<ExecError> {
     let sheet = ctx.workbook.get_sheet_idx_by_name(&ctx.sheet_name);
     if let Err(_) = sheet {

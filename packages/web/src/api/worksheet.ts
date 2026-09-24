@@ -36,7 +36,24 @@ function rpc(
     return handle(msg, bookId ?? null)
 }
 
+/**
+ * The read surface of one sheet of a {@link Workbook}. Obtain it from
+ * `Workbook.getWorksheet` / `getWorksheetById`; writes go through the
+ * workbook's transactions.
+ *
+ * The constructor resolves the sheet's tab index AND its stable id once and
+ * caches both. Methods send one or the other to the engine, so after sheets
+ * are created, deleted or moved, take a fresh `Worksheet` rather than keep an
+ * old one.
+ *
+ * Rows and columns are 0-based; `start..end` ranges are inclusive on both
+ * ends. Reads return an `ErrorMessage` instead of throwing. Some are typed
+ * without `Result` but can still return one when the engine refuses (e.g. a
+ * stale sheet), so guard them with `isErrorMessage` too.
+ */
 export class Worksheet {
+    /** @param id the engine book id. `sheetIdxOrId` is a tab index, or a
+     *  stable sheet id when `isSheetIdx` is false. */
     public constructor(id: number, sheetIdxOrId: number, isSheetIdx = true) {
         this._id = id
         if (isSheetIdx) {
@@ -264,6 +281,7 @@ export class Worksheet {
         )
     }
 
+    /** Row height in points; the sheet default when the row has none set. */
     public getRowHeight(rowIdx: number): Result<number> {
         return rpc('getRowHeight', {sheetId: this._sheetId, rowIdx}, this._id)
     }
@@ -288,6 +306,8 @@ export class Worksheet {
         ) as Result<ColInfo>
     }
 
+    /** Value, formula, style and block membership of one cell. An empty cell
+     *  still yields a `CellInfo` (value `'empty'`). */
     public getCellInfo(rowIdx: number, colIdx: number): Result<CellInfo> {
         return rpc(
             'getCell',
@@ -331,6 +351,8 @@ export class Worksheet {
         )
     }
 
+    /** One `CellInfo` per cell of the inclusive rectangle, row-major. Fails
+     *  whole if any cell fails. */
     public getCellInfos(
         startRow: number,
         startCol: number,
@@ -344,6 +366,8 @@ export class Worksheet {
         )
     }
 
+    /** Like {@link getCellInfos}, skipping the cells inside the inclusive
+     *  `window*` rectangle (already fetched by the caller). */
     public getCellInfosExceptWindow(
         startRow: number,
         startCol: number,
@@ -412,6 +436,8 @@ export class Worksheet {
         )
     }
 
+    /** A block's geometry, schema and governance fields. Typed without
+     *  `Result` but returns an `ErrorMessage` for an unknown block. */
     public getBlockInfo(blockId: number): BlockInfo {
         return rpc('getBlockInfo', {sheetId: this._sheetId, blockId}, this._id)
     }
@@ -437,6 +463,9 @@ export class Worksheet {
         return new Cell(cellInfo)
     }
 
+    /** The cell's formula without the leading `=`, or `''` for a plain value.
+     *  Regenerated from the parsed formula, so not necessarily the text as
+     *  typed. */
     public getFormula(rowIdx: number, colIdx: number): Result<string> {
         return rpc(
             'getFormula',
@@ -453,6 +482,8 @@ export class Worksheet {
         )
     }
 
+    /** The evaluated value. An empty cell is the string `'empty'`, not an
+     *  object. */
     public getValue(rowIdx: number, colIdx: number): Result<Value> {
         return rpc(
             'getValue',

@@ -1,7 +1,11 @@
 /**
- * React adapter for logisheets-engine Svelte components.
- * This module provides React wrappers around the Svelte components,
- * allowing seamless integration with LogiSheets React application.
+ * React-facing prop TYPES for the Svelte `Spreadsheet` component, plus one
+ * prop converter for code migrating from the old LogiSheets Canvas.
+ *
+ * No React component or hook is shipped here (`UseSpreadsheetReturn`
+ * describes one a host may write). React hosts normally use
+ * `new Engine()` + `engine.mount(div)` / `createSession()` from a
+ * `useEffect`, as the root app does.
  */
 
 import type {SelectedData, SheetInfo, CellLayout} from 'logisheets-web'
@@ -62,6 +66,8 @@ export interface CanvasAdapterProps {
 /**
  * Convert LogiSheets-style props to engine adapter props.
  * This helps when migrating from the existing LogiSheets Canvas component.
+ * Every selection change also fires `selectedDataContentChanged$({})`;
+ * `grid` and the sheet-list/context-menu callbacks are not carried over.
  */
 export function convertCanvasPropsToAdapterProps(
     props: CanvasAdapterProps

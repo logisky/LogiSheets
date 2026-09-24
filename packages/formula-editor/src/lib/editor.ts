@@ -100,7 +100,9 @@ const DEFAULT_CONFIG: Required<FormulaEditorConfig> = {
 // State effect for updating decorations from backend
 const setTokenDecorations = StateEffect.define<DecorationSet>()
 
-// Effect to update stored token units
+// Effect to update stored token units. Kept in state (not just turned into
+// decorations) because F4, point mode and signature help all read the same
+// backend tokens instead of re-lexing the formula client-side.
 const setStoredTokenUnits =
     StateEffect.define<
         readonly {tokenType: string; start: number; end: number}[]
@@ -132,6 +134,8 @@ const tokenDecorationsField = StateField.define<DecorationSet>({
                 return effect.value
             }
         }
+        // Map through edits so highlights track the text until the debounced
+        // backend refresh replaces them.
         return decorations.map(tr.changes)
     },
     provide: (field) => EditorView.decorations.from(field),
@@ -140,6 +144,10 @@ const tokenDecorationsField = StateField.define<DecorationSet>({
 /**
  * Get function context from tokenUnits (from backend).
  * Returns the function name and current argument index if inside a function call.
+ *
+ * Token offsets are used as string indices here without the byte→UTF-16
+ * conversion `buildDecorations` does, and `(` / `,` inside string literals
+ * are counted too — both only matter for non-ASCII or quoted-text formulas.
  */
 function getFunctionContextFromTokens(
     text: string,
@@ -216,6 +224,8 @@ function createSignatureTooltip(
 
     const paramStrs: string[] = []
     let targetParamIndex = argIndex < 0 ? 0 : argIndex
+    // Expand a repeating arg at least this far so a variadic signature shows
+    // a few numbered slots rather than collapsing straight to `...`.
     const minParamCount = 3
     if (targetParamIndex < minParamCount) targetParamIndex = minParamCount
 
@@ -296,7 +306,10 @@ const tokenStyles = {
     wrongSuffix: Decoration.mark({class: 'cm-formula-wrong'}),
 }
 
-// Helper to check if cell reference is local
+// Helper to check if cell reference is local. Same rule as the exported
+// `isLocalCellRef` in ./utils. Note logisheets-engine's
+// getReferenceHighlightRects treats `Sheet1:Sheet1!` as local and skips refs
+// without a row/col, so its color indices can differ from these.
 function isLocalCellRef(
     cellRef: {workbook?: string; sheet1?: string; sheet2?: string},
     currentSheet: string
@@ -333,6 +346,9 @@ function buildDecorations(
                 decorations.push({from, to, decoration: tokenStyles.funcName})
                 break
             case 'cellReference': {
+                // cellRefs is parallel to the cellReference tokens, so the
+                // running index both pairs them and picks the palette color
+                // (non-local refs still consume a color slot).
                 const cellRef = displayInfo.cellRefs[cellRefIndex]
                 if (cellRef && isLocalCellRef(cellRef, currentSheet)) {
                     decorations.push({
@@ -438,18 +454,35 @@ function isReferenceContext(state: EditorState): boolean {
 /**
  * Options for {@link createFormulaEditor}. These mirror the React component's
  * props minus the React-only bits — the React `style` prop maps to `style`
- * here (applied to the host element).
+ * here (applied to the host element) — plus the core-only `onArrowKey`.
+ *
+ * Text need not be a formula: plain text is edited without highlighting,
+ * autocomplete or point mode. Callbacks receive the full document text,
+ * including any leading '='.
  */
 export interface FormulaEditorOptions {
-    /** Initial value (with leading '='). */
+    /**
+     * Initial value; later changes pushed via `updateOptions({value})` are
+     * written into the document (controlled mode).
+     */
     value?: string
     /** Initial value when `value` is not given. */
     defaultValue?: string
     /** Where to place the cursor on creation (default: 'end'). */
     initialCursorPosition?: 'start' | 'end'
+    /**
+     * Fires on every document change — typing, `setValue`, `insertText`,
+     * `replaceRange` and controlled `value` updates alike.
+     */
     onChange?: (value: string) => void
+    /** Fires when the editable content loses focus; typical commit point. */
     onBlur?: (value: string) => void
+    /**
+     * Plain Enter while no autocomplete list is open (Enter accepts the
+     * completion instead). Enter never inserts a newline; Alt+Enter does.
+     */
     onSubmit?: (value: string) => void
+    /** Escape. The editor does not revert the text itself. */
     onCancel?: () => void
     /**
      * Point-mode: called on an arrow / Ctrl+Arrow key while the caret sits where
@@ -465,36 +498,75 @@ export interface FormulaEditorOptions {
     ) => boolean
     /** Fetch token / cell-ref info from the host (required). */
     getDisplayUnits: GetDisplayUnitsFunc
-    /** Functions offered by autocomplete + signature help. */
+    /**
+     * Functions offered by autocomplete + signature help. Defaults to an EMPTY
+     * list (no suggestions) — pass `builtinFormulaFunctions` for the bundled
+     * set.
+     */
     formulaFunctions?: FormulaFunction[]
-    /** Current sheet name (for local cell-ref coloring). */
+    /**
+     * Current sheet name (for local cell-ref coloring). Defaults to '', so
+     * only refs with no sheet prefix count as local.
+     */
     sheetName?: string
+    /** Merged over the defaults; see `updateOptions` for live changes. */
     config?: FormulaEditorConfig
-    /** Extra class(es) added to the host element. */
+    /**
+     * Extra class(es) added to the host element. Applied at creation and on
+     * a config-triggered rebuild only; classes are never removed.
+     */
     className?: string
-    /** Extra inline styles merged onto the host element. */
+    /** Extra inline styles merged onto the host element (same timing). */
     style?: Partial<CSSStyleDeclaration>
 }
 
-/** Imperative handle returned by {@link createFormulaEditor}. */
+/**
+ * Imperative handle returned by {@link createFormulaEditor}.
+ *
+ * Positions are 0-based UTF-16 code-unit offsets (JS string indices) into the
+ * whole document, leading '=' included. Every text-changing method fires
+ * `onChange`. After `destroy()` the methods are no-ops (`getValue()` returns
+ * '', `getView()` null).
+ */
 export interface FormulaEditorHandle {
+    /** Focus without scrolling the page to the editor. */
     focus(): void
     blur(): void
     getValue(): string
+    /** Replace the whole document. */
     setValue(value: string): void
-    /** Insert text at the current cursor position. */
+    /** Insert text at the caret and move the caret after it. */
     insertText(text: string): void
-    /** Replace a range — useful for swapping a previously-inserted ref. */
+    /**
+     * Replace `[from, to)` and put the caret after the new text — useful for
+     * swapping a previously-inserted ref.
+     */
     replaceRange(from: number, to: number, text: string): void
     getCursorPosition(): number
+    /**
+     * The underlying CodeMirror view, for advanced use. A config change
+     * replaces it, so don't hold on to it across `updateOptions`.
+     */
     getView(): EditorView | null
     /**
      * Update live options without recreating the editor. Callback / function-
      * list / sheet-name changes apply immediately; a changed `config` rebuilds
      * the view (preserving text + cursor); a changed controlled `value` is
      * dispatched into the document.
+     *
+     * Callbacks can be cleared by passing the key with `undefined`;
+     * `getDisplayUnits` / `formulaFunctions` cannot (falsy is ignored). The
+     * rebuild on a config change drops undo history, and when it happens any
+     * `value` in the same call is ignored. A new `sheetName` takes effect at
+     * the next highlight refresh, not immediately. Do not call after
+     * `destroy()` — a config change would mount a fresh view.
      */
     updateOptions(opts: Partial<FormulaEditorOptions>): void
+    /**
+     * Tear down the view, pending refresh timer and blur listener. Must be
+     * called when the host element goes away. The host element keeps the
+     * classes / inline styles the editor added.
+     */
     destroy(): void
 }
 
@@ -513,6 +585,11 @@ const CONFIG_KEYS: (keyof FormulaEditorConfig)[] = [
 /**
  * Create a formula editor mounted into `parent`. Returns an imperative handle;
  * call `destroy()` when done.
+ *
+ * The CodeMirror view is appended to `parent`, which also gets the
+ * `formula-editor` class and sizing / border styles. `getDisplayUnits` is
+ * called immediately when the initial text is a formula. Does not throw on a failing
+ * host callback: `getDisplayUnits` errors are logged to the console.
  */
 export function createFormulaEditor(
     parent: HTMLElement,
@@ -684,6 +761,8 @@ export function createFormulaEditor(
 
         const customKeymap = keymap.of([
             {
+                // Deleting the opener of an empty pair (e.g. the `(` of an
+                // autocompleted `SUM()`) also removes its closer.
                 key: 'Backspace',
                 run: (v) => {
                     const {state} = v
@@ -722,6 +801,8 @@ export function createFormulaEditor(
                         return acceptCompletion(v)
                     }
                     live.onSubmit?.(v.state.doc.toString())
+                    // Consume even without onSubmit: a formula is one logical
+                    // line; newlines go through Alt-Enter.
                     return true
                 },
             },

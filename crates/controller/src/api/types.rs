@@ -13,11 +13,17 @@ pub struct SaveFileResult {
 
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "cell_info.ts", rename_all = "camelCase")]
+/// Everything a renderer needs about one cell.
 pub struct CellInfo {
+    /// The computed value, with no number format applied.
     pub value: Value,
+    /// The formula re-rendered from the AST WITHOUT the leading `=` (so not
+    /// necessarily as typed), or `""` when the cell holds no formula.
     pub formula: String,
     pub style: Style,
+    /// The block the cell belongs to, if any.
     pub block_id: Option<BlockId>,
+    /// Set when the cell is host-rendered (see `CreateDiyCell`).
     pub diy_cell_id: Option<DiyCellId>,
     /// The value of this cell's data-validation shadow, if one exists. It is
     /// the boolean result of the validation rule (`false` ⇒ the cell's value
@@ -77,6 +83,10 @@ pub struct CfIcon {
 }
 
 #[derive(Debug, Clone, TS)]
+/// The used extent of a sheet. `max_row`/`max_col` are the 0-based indices of
+/// the furthest stored cell (a styled blank counts); `height`/`width` are the
+/// offsets where that cell STARTS, in the units of
+/// `Worksheet::get_cell_position`. All zero for a sheet with no cells.
 #[ts(file_name = "sheet_dimension.ts", rename_all = "camelCase")]
 pub struct SheetDimension {
     pub max_row: usize,
@@ -98,6 +108,7 @@ pub struct ReproducibleCell {
 }
 
 #[derive(Debug, Clone, TS)]
+/// A 0-based `(row, col)` position.
 #[ts(file_name = "sheet_coordinate.ts", rename_all = "camelCase")]
 pub struct SheetCoordinate {
     pub row: usize,

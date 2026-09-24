@@ -34,7 +34,16 @@ export type MaybePromise<T> = T | Promise<T>
  *   onResponse  the response has been produced and is about to be returned
  */
 export interface CraftRuntime<S extends CraftState = CraftState, W = unknown> {
+    /**
+     * Rehydrate from the state the craft saved. Returning an `ErrorMessage`
+     * makes the host skip this craft. `s` is the parsed state object; the
+     * host passes the SAME object to every later hook.
+     */
     onLoad: (s: S, wb: W) => MaybePromise<Result<void>>
+    /**
+     * Write the request's inputs into the workbook. Return an `ErrorMessage`
+     * (or throw) to object; the host then rejects the request.
+     */
     onRequest: (req: JsonRpcRequest, s: S, wb: W) => MaybePromise<Result<void>>
 
     /**
@@ -47,6 +56,11 @@ export interface CraftRuntime<S extends CraftState = CraftState, W = unknown> {
      */
     onValidate?: (s: S, wb: W) => MaybePromise<Result<readonly Violation[]>>
 
+    /**
+     * Fill `resp` (typically `resp.result`) from the workbook. It is mutated
+     * in place: the host returns the same object. Return an `ErrorMessage`
+     * (or throw) to turn the reply into an error.
+     */
     onResponse: (
         resp: JsonRpcResponse,
         s: S,

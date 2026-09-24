@@ -50,7 +50,10 @@ fn every_value_kind_survives_a_round_trip() {
         ("1e300", "Number(1e300)"),
         ("plain text", "Str(\"plain text\")"),
         // Non-ASCII, and a string holding the characters XML escapes.
-        ("名字 & <tag> \"quoted\"", "Str(\"名字 & <tag> \\\"quoted\\\"\")"),
+        (
+            "名字 & <tag> \"quoted\"",
+            "Str(\"名字 & <tag> \\\"quoted\\\"\")",
+        ),
         // Long enough that a producer would put it in the shared-string table
         // rather than inline.
         (
@@ -88,7 +91,9 @@ fn every_value_kind_survives_a_round_trip() {
             .map(|v| format!("{v:?}"))
             .unwrap_or_else(|e| format!("{e:?}"));
         if live != *want {
-            failures.push(format!("{typed:?}: read {live} before saving, wanted {want}"));
+            failures.push(format!(
+                "{typed:?}: read {live} before saving, wanted {want}"
+            ));
             continue;
         }
         let back = save_reload(&wb)
@@ -144,14 +149,18 @@ fn every_reference_form_survives_a_round_trip() {
         );
         let live = wb.get_sheet_by_idx(0).and_then(|s| s.get_value(0, 2));
         if !matches!(live, Ok(Value::Number(n)) if n == *want_before) {
-            failures.push(format!("{formula}: {live:?} before saving, wanted {want_before}"));
+            failures.push(format!(
+                "{formula}: {live:?} before saving, wanted {want_before}"
+            ));
             continue;
         }
 
         let mut back = save_reload(&wb);
         let reread = back.get_sheet_by_idx(0).and_then(|s| s.get_value(0, 2));
         if !matches!(reread, Ok(Value::Number(n)) if n == *want_before) {
-            failures.push(format!("{formula}: came back {reread:?}, wanted {want_before}"));
+            failures.push(format!(
+                "{formula}: came back {reread:?}, wanted {want_before}"
+            ));
             continue;
         }
         // The reference SPELLING, so a dropped `$` or a collapsed `A:A` is

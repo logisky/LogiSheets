@@ -70,6 +70,10 @@ export interface ToLlmMessagesOpts {
      * Drop tool_results older than this index (0-based, counting only
      * tool_result events). Use to keep ancient results out of context
      * once they're no longer load-bearing. -1 disables (default).
+     *
+     * Only the tool_result is dropped; its tool_use stays in the assistant
+     * message, and Anthropic rejects a tool_use with no matching result. A
+     * caller using this must drop or rewrite the paired tool_use too.
      */
     truncate_tool_results_before?: number
 }
@@ -88,6 +92,11 @@ export interface ToLlmMessagesOpts {
  *   - system_note:ui_only→ dropped
  *   - system_note:summary→ {role: 'user', content: text} with a
  *                          "[summary]" prefix so the model recognizes it
+ *
+ * Consecutive same-role messages are NOT merged: each tool_result is its own
+ * user message, followed by a separate user message for the next user text.
+ * A tool_call with no later tool_result (turn aborted mid-tools) is emitted
+ * unpaired; the projection does not repair it.
  */
 export function toLlmMessages(
     events: readonly ConversationEvent[],
@@ -281,6 +290,11 @@ export interface ToUiBubblesOpts {
     include_debug?: boolean
 }
 
+/**
+ * Project events into chat bubbles. A tool_result or user_confirm is patched
+ * onto the ToolBubble opened by its tool_call; a tool_result with no prior
+ * call becomes an "orphan" note instead of being dropped.
+ */
 export function toUiBubbles(
     events: readonly ConversationEvent[],
     opts: ToUiBubblesOpts = {}

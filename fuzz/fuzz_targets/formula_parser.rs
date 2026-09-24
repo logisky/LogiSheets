@@ -13,14 +13,14 @@ fuzz_target!(|data: &[u8]| {
         return;
     };
     let mut wb = Workbook::default();
-    wb.handle_action(EditAction::Payloads(
-        PayloadsAction::new().add_payload(CellInput {
+    wb.handle_action(EditAction::Payloads(PayloadsAction::new().add_payload(
+        CellInput {
             sheet_idx: 0,
             row: 0,
             col: 0,
             content: format!("={}", s),
-        }),
-    ));
+        },
+    )));
     if let Ok(ws) = wb.get_sheet_by_idx(0) {
         let _ = ws.get_value(0, 0);
     }

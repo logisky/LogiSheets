@@ -9,6 +9,17 @@
  *   const editor = createFormulaEditor(el, { getDisplayUnits, ... })
  *
  * The React `<FormulaEditor>` (the package root) is a thin wrapper over this.
+ *
+ * Main exports: `createFormulaEditor` + its option / handle types, the
+ * bundled `builtinFormulaFunctions`, the wire types shared with the engine
+ * (`FormulaDisplayInfo`, `TokenUnit`, `CellRef`, ...) and small utils.
+ *
+ * The editor never tokenizes on its own: the host must supply
+ * `getDisplayUnits` (usually via `createEngineFormulaSource` from `./engine`).
+ * Without a `formulaFunctions` list, autocomplete and signature help are
+ * silent — pass `builtinFormulaFunctions` for the default set. Hosts in this
+ * repo: the root app's edit bar (via the React root) and the `/inline`
+ * in-cell controller used alongside `logisheets-engine`.
  */
 
 export {createFormulaEditor} from './editor'

@@ -1,5 +1,11 @@
 /**
- * Authoring types for craft `tools.ts` files.
+ * Authoring types for craft `tools.ts` files — the
+ * `logisheets-craftsmith/authoring` subpath. Types only (no runtime code);
+ * craft sources import it with `import type`.
+ *
+ * Covers the three craft faces: tools (`SkillCtx`), the headless runtime
+ * (`CraftRuntime`, below) and asking the AI (`CraftAi`, below). The generated
+ * `craft-roles.d.ts` imports `CraftAi` from here.
  *
  * A tool is a plain exported function whose first parameter is the host-injected
  * `SkillCtx`. `craftsmith` reads the rest of the signature to build the tool's
@@ -19,12 +25,28 @@
  *   /** @tool <one-line description>
  *    *  @param name <description>
  *    *  @mutates none|temp|true      (default: none)
- *    *  @confirm never|once|always|destructive   (default: never) *␟/
+ *    *  @confirm never|once|always|destructive
+ *    *    (default: never if @mutates none, else always) *␟/
  *   export async function doThing(ctx: SkillCtx, a: string, b: number) { … }
+ *
+ *   // on an exported interface / type alias — becomes one manifest role
+ *   /** @aiRole <kebab-name>
+ *    *  @system <system prompt> *␟/
+ *
+ * Rules `craftsmith check` enforces on tools.ts: `ctx` first (named `ctx` or
+ * typed `*Ctx` / `*Context`); remaining params are plain named (not
+ * destructured) and of JSON-mappable types (primitives, literal-union enums,
+ * arrays, object shapes); no top-level expression statements (code that runs
+ * at import) and no `window` / `document` / `globalThis` / `localStorage` / `sessionStorage` /
+ * `navigator`. Tag values are whitespace-collapsed to one line. An unknown
+ * `@mutates` value silently means `none`; an unknown `@confirm` value falls
+ * back to the default.
  */
 
 /** Minimal workbook surface a tool may call. The host injects the real client;
- *  it is structurally the LogiSheets `Client` (logisheets-web). */
+ *  it is structurally the LogiSheets `Client` (logisheets-web). Sheet, row
+ *  and column indices are 0-based. Engine failures come back as an
+ *  error-message value, not a rejection — check results. */
 export interface SkillWorkbook {
     handleTransaction(req: {
         transaction: {
@@ -201,6 +223,10 @@ export interface CraftAi<Roles = Record<string, unknown>> {
     /**
      * Ask one declared role a question. `input` is the question, not the
      * state — the model reads state through this craft's tools.
+     *
+     * Rejects rather than resolving a partial answer: on an undeclared role,
+     * an unavailable model, an aborted `signal`, or a reply that never fits
+     * the role's schema. Check `available()` first.
      */
     ask<K extends keyof Roles & string>(
         role: K,

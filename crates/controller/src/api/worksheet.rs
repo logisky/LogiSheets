@@ -140,7 +140,12 @@ fn boundary_1d(
     }
 }
 
-// Use a cache to record the coordinate
+/// A read-only view of one sheet, borrowed from a [`crate::Workbook`].
+///
+/// Rows and columns are 0-based. Position queries (`get_cell_position`,
+/// display windows) return [`CellPosition`] offsets — points on the y axis,
+/// character-width units on the x axis — and share a per-sheet offset cache
+/// (`positioner`) with the workbook.
 pub struct Worksheet<'a> {
     pub(crate) sheet_id: SheetId,
     pub(crate) controller: &'a Controller,
@@ -178,6 +183,8 @@ impl<'a> Worksheet<'a> {
         )
     }
 
+    /// A cell's computed value by stable id; a cell with nothing stored reads
+    /// as `Value::Empty`, never an error.
     pub fn get_value_by_id(&self, cell_id: &CellId) -> Result<Value> {
         if let Some(cell) = self
             .controller
@@ -210,6 +217,7 @@ impl<'a> Worksheet<'a> {
         }
     }
 
+    /// A cell's computed value, unformatted. Empty cells read as `Value::Empty`.
     pub fn get_value(&self, row: usize, col: usize) -> Result<Value> {
         let cell_id = self
             .controller
@@ -266,6 +274,8 @@ impl<'a> Worksheet<'a> {
         }
     }
 
+    /// The cell's formula rendered from its AST, WITHOUT the leading `=`
+    /// (normalised, so not necessarily as typed); `""` when there is none.
     pub fn get_formula(&self, row: usize, col: usize) -> Result<String> {
         let cell_id = self
             .controller
@@ -275,6 +285,8 @@ impl<'a> Worksheet<'a> {
         self.get_formula_by_id(&cell_id)
     }
 
+    /// Current position of a cell id. Mind the axes: the result's `x` is the
+    /// column and `y` the row. Errors for ephemeral or deleted cells.
     pub fn get_cell_coordinate_by_id(&self, cell_id: &CellId) -> Result<CellCoordinate> {
         let coordinate = self
             .controller
@@ -287,6 +299,7 @@ impl<'a> Worksheet<'a> {
         })
     }
 
+    /// Everything about a cell (value, formula, style, block, shadows) by id.
     pub fn get_cell_info_by_cell_id(&self, cell_id: &CellId) -> Result<CellInfo> {
         let block_id = if let CellId::BlockCell(b) = cell_id {
             Some(b.block_id)
@@ -504,6 +517,7 @@ impl<'a> Worksheet<'a> {
         self.get_value_by_id(&CellId::EphemeralCell(shadow_id)).ok()
     }
 
+    /// Everything about the cell at a position.
     pub fn get_cell_info(&self, row: usize, col: usize) -> Result<CellInfo> {
         let cell_id = self
             .controller
@@ -980,6 +994,7 @@ impl<'a> Worksheet<'a> {
             .collect()
     }
 
+    /// [`CellInfo`] for every cell of the inclusive rectangle, row-major.
     pub fn get_cell_infos(
         &self,
         start_row: usize,
@@ -997,6 +1012,8 @@ impl<'a> Worksheet<'a> {
         Ok(res)
     }
 
+    /// [`Worksheet::get_cell_infos`] minus the cells inside the inclusive
+    /// `window_*` rectangle, for incremental redraws.
     pub fn get_cell_infos_except_window(
         &self,
         start_row: usize,
@@ -1025,6 +1042,8 @@ impl<'a> Worksheet<'a> {
         Ok(res)
     }
 
+    /// Snapshot a cell's value, raw style and appendices for `ReproduceCells`
+    /// (copy/paste). Formulas are not captured.
     pub fn get_reproducible_cell(&self, row: usize, col: usize) -> Result<ReproducibleCell> {
         let cell_id = self
             .controller
@@ -1062,6 +1081,7 @@ impl<'a> Worksheet<'a> {
         Ok(res)
     }
 
+    /// The comment thread on a cell, if any.
     pub fn get_comment(&self, row: usize, col: usize) -> Option<Comment> {
         let cell_id = self
             .controller
@@ -1078,6 +1098,8 @@ impl<'a> Worksheet<'a> {
         Some(Comment { row, col, notes })
     }
 
+    /// The DIY id of a block cell, addressed by 0-based offsets within the
+    /// block.
     pub fn get_diy_cell_id_with_block_id(
         &self,
         block_id: &BlockId,
@@ -1097,6 +1119,9 @@ impl<'a> Worksheet<'a> {
             .get_diy_cell_id(self.sheet_id, &cell_id)
     }
 
+    /// Everything needed to paint the inclusive rectangle, skipping hidden
+    /// rows. Hidden columns are detected on `start_row` only, so a hidden
+    /// `start_row` leaves `cols` empty and hidden columns' cells included.
     pub fn get_display_window(
         &self,
         start_row: usize,
@@ -1163,6 +1188,9 @@ impl<'a> Worksheet<'a> {
         })
     }
 
+    /// Offset of the cell's top-left corner from the sheet origin (points
+    /// down, character widths across; see [`CellPosition`]). Passing
+    /// `row + 1` / `col + 1` gives the far corner.
     pub fn get_cell_position(&self, row: usize, col: usize) -> Result<CellPosition> {
         let mut positioner = locked_write(&self.positioner);
         let y = self.get_row_start_y(row, &mut *positioner)?;
@@ -1219,6 +1247,8 @@ impl<'a> Worksheet<'a> {
         Ok(result)
     }
 
+    /// The DIY id of the cell at a sheet position; errors when it is not a
+    /// DIY block cell.
     pub fn get_diy_cell_id(&self, row: usize, col: usize) -> Result<DiyCellId> {
         let cell_id = self
             .controller
@@ -1237,16 +1267,16 @@ impl<'a> Worksheet<'a> {
         }
     }
 
+    /// The cells, comments and merges of one block, every row and column of
+    /// it (row-major).
     pub fn get_display_window_for_block(&self, block_id: BlockId) -> Result<DisplayWindow> {
         let info = self.get_block_info(block_id)?;
-        let row_ids = (0..info.row_cnt - 1)
-            .into_iter()
-            .map(|r| self.get_block_row_id(block_id, r).unwrap())
-            .collect::<Vec<RowId>>();
-        let col_ids = (0..info.col_cnt - 1)
-            .into_iter()
-            .map(|c| self.get_block_col_id(block_id, c).unwrap())
-            .collect::<Vec<ColId>>();
+        let row_ids = (0..info.row_cnt)
+            .map(|r| self.get_block_row_id(block_id, r))
+            .collect::<Result<Vec<RowId>>>()?;
+        let col_ids = (0..info.col_cnt)
+            .map(|c| self.get_block_col_id(block_id, c))
+            .collect::<Result<Vec<ColId>>>()?;
         let mut cell_infos = vec![];
 
         for r in row_ids.iter() {
@@ -1300,6 +1330,10 @@ impl<'a> Worksheet<'a> {
             .collect()
     }
 
+    /// The display window covering a viewport given in [`CellPosition`] units,
+    /// widened by one row and column before it. `start_x`/`start_y` in the
+    /// result are the offsets of the first row/column returned, for aligning
+    /// the drawing.
     pub fn get_display_window_response(
         &self,
         start_x: f64,
@@ -1338,6 +1372,8 @@ impl<'a> Worksheet<'a> {
         })
     }
 
+    /// The row boundary at or after offset `y` (points) as `(row, row_start)`;
+    /// with `before`, step back one row so the row containing `y` is returned.
     pub fn get_nearest_row_with_given_y(
         &self,
         y: f64,
@@ -1366,6 +1402,8 @@ impl<'a> Worksheet<'a> {
         return Ok((curr_idx, curr_h));
     }
 
+    /// Column counterpart of [`Worksheet::get_nearest_row_with_given_y`]
+    /// (`x` in character-width units).
     pub fn get_nearest_col_with_given_x(
         &self,
         x: f64,
@@ -1394,6 +1432,8 @@ impl<'a> Worksheet<'a> {
         return Ok((curr_idx, curr_w));
     }
 
+    /// Arrow-key move: the nearest non-hidden cell above (`x` = column,
+    /// `y` = row). Errors at row 0; stops at row 0 even if it is hidden.
     pub fn get_next_upward_visible_cell(&self, row: usize, col: usize) -> Result<CellCoordinate> {
         if row == 0 {
             return Err(Error::Basic(BasicError::CellIdNotFound(row, col)));
@@ -1409,6 +1449,7 @@ impl<'a> Worksheet<'a> {
         Ok(CellCoordinate { x: col, y: r })
     }
 
+    /// Arrow-key move downward; see [`Worksheet::get_next_upward_visible_cell`].
     pub fn get_next_downward_visible_cell(&self, row: usize, col: usize) -> Result<CellCoordinate> {
         let mut r = row + 1;
         loop {
@@ -1421,6 +1462,7 @@ impl<'a> Worksheet<'a> {
         Ok(CellCoordinate { x: col, y: r })
     }
 
+    /// Arrow-key move leftward; errors at column 0.
     pub fn get_next_leftward_visible_cell(&self, row: usize, col: usize) -> Result<CellCoordinate> {
         if col == 0 {
             return Err(Error::Basic(BasicError::CellIdNotFound(row, col)));
@@ -1436,6 +1478,7 @@ impl<'a> Worksheet<'a> {
         Ok(CellCoordinate { x: c, y: row })
     }
 
+    /// Arrow-key move rightward.
     pub fn get_next_rightward_visible_cell(
         &self,
         row: usize,
@@ -1534,6 +1577,7 @@ impl<'a> Worksheet<'a> {
         }
     }
 
+    /// Same as [`Worksheet::get_cell_infos`].
     pub fn get_cell_info_in_window(
         &self,
         start_row: usize,
@@ -1632,6 +1676,8 @@ impl<'a> Worksheet<'a> {
         Ok(style_converter.convert_style(raw_style))
     }
 
+    /// The cell's effective style — its own, else its row's, else its
+    /// column's (block lines for a block cell) — resolved against the theme.
     pub fn get_style(&self, row: usize, col: usize) -> Result<Style> {
         let cell_id = self
             .controller
@@ -1641,6 +1687,7 @@ impl<'a> Worksheet<'a> {
         self.get_style_by_id(&cell_id)
     }
 
+    /// Every merge on the sheet at its current position (inclusive corners).
     pub fn get_all_merged_cells(&self) -> Vec<MergeCell> {
         let merges = self
             .controller
@@ -1759,6 +1806,7 @@ impl<'a> Worksheet<'a> {
             })
     }
 
+    /// Blocks lying entirely inside the inclusive rectangle.
     pub fn get_all_fully_covered_blocks(
         &self,
         start_row: usize,
@@ -1770,8 +1818,9 @@ impl<'a> Worksheet<'a> {
         let result = all_blocks
             .into_iter()
             .filter(|b| {
-                let bp_end_row = b.row_start + b.row_cnt - 1;
-                let bp_end_col = b.col_start + b.col_cnt - 1;
+                // `saturating_sub`: a block may momentarily have no rows.
+                let bp_end_row = (b.row_start + b.row_cnt).saturating_sub(1);
+                let bp_end_col = (b.col_start + b.col_cnt).saturating_sub(1);
 
                 bp_end_row <= end_row
                     && b.row_start >= start_row
@@ -2458,6 +2507,7 @@ impl<'a> Worksheet<'a> {
         }
     }
 
+    /// `None` when the row has no stored info (default height, visible).
     pub fn get_row_info(&self, row: usize) -> Option<RowInfo> {
         let row_id = self
             .controller
@@ -2499,6 +2549,7 @@ impl<'a> Worksheet<'a> {
         Some(info)
     }
 
+    /// `None` when the column has no stored info (default width, visible).
     pub fn get_col_info(&self, col: usize) -> Option<ColInfo> {
         let col_id = self
             .controller
@@ -2532,6 +2583,7 @@ impl<'a> Worksheet<'a> {
         }
     }
 
+    /// Row height in points; the sheet default unless custom.
     pub fn get_row_height(&self, row: usize) -> Result<f64> {
         let row_id = self
             .controller
@@ -2557,6 +2609,7 @@ impl<'a> Worksheet<'a> {
         }
     }
 
+    /// Column width in character-width units; the sheet default unless custom.
     pub fn get_col_width(&self, col: usize) -> Result<f64> {
         let col_id = self
             .controller
@@ -2613,6 +2666,8 @@ impl<'a> Worksheet<'a> {
         Some(info)
     }
 
+    /// The sheet's default row height in points (from the file's
+    /// `sheetFormatPr`, else 15).
     pub fn get_default_row_height(&self) -> f64 {
         self.controller
             .settings
@@ -2628,6 +2683,8 @@ impl<'a> Worksheet<'a> {
             .unwrap_or(get_default_row_height())
     }
 
+    /// The sheet's default column width in character-width units (from the
+    /// file's `sheetFormatPr`, else 8.43).
     pub fn get_default_col_width(&self) -> f64 {
         self.controller
             .settings
@@ -2882,6 +2939,7 @@ impl<'a> Worksheet<'a> {
         })
     }
 
+    /// The block's internal placement record.
     #[inline]
     pub fn get_block_place(&self, block_id: BlockId) -> Result<&BlockPlace> {
         self.controller
@@ -2891,6 +2949,7 @@ impl<'a> Worksheet<'a> {
             .map_err(|e| e.into())
     }
 
+    /// `(row_count, col_count)`.
     #[inline]
     pub fn get_block_size(&self, block_id: BlockId) -> Result<(usize, usize)> {
         self.controller
@@ -2900,6 +2959,7 @@ impl<'a> Worksheet<'a> {
             .map_err(|e| e.into())
     }
 
+    /// Sheet `(row, col)` of the block's top-left cell.
     pub fn get_block_master_cell(&self, block_id: BlockId) -> Result<(usize, usize)> {
         let master_cell_id = self
             .controller
@@ -2914,6 +2974,7 @@ impl<'a> Worksheet<'a> {
         Ok(result)
     }
 
+    /// The block's own row id at 0-based offset `row_idx` within the block.
     pub fn get_block_row_id(&self, block_id: BlockId, row_idx: usize) -> Result<RowId> {
         self.controller
             .status
@@ -2922,6 +2983,7 @@ impl<'a> Worksheet<'a> {
             .map_err(|e| e.into())
     }
 
+    /// The block's own column id at 0-based offset `col_idx` within the block.
     pub fn get_block_col_id(&self, block_id: BlockId, col_idx: usize) -> Result<ColId> {
         self.controller
             .status
@@ -2930,6 +2992,7 @@ impl<'a> Worksheet<'a> {
             .map_err(|e| e.into())
     }
 
+    /// The stable id of the cell at a position (a block cell inside a block).
     pub fn get_cell_id(&self, row: usize, col: usize) -> Result<CellId> {
         self.controller
             .status
@@ -2938,6 +3001,9 @@ impl<'a> Worksheet<'a> {
             .map_err(|e| e.into())
     }
 
+    /// Search the block column `col_idx` from `row_idx` upward (inclusive,
+    /// 0-based within the block) for the nearest appendix with this
+    /// `craft_id` and `tag`.
     pub fn lookup_appendix_upward(
         &self,
         block_id: BlockId,

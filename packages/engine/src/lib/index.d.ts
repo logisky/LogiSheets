@@ -1,6 +1,13 @@
 /**
  * Type declarations for the main library exports.
  * This file provides types for consumers using the library from non-Svelte environments.
+ *
+ * NOTE: hand-written and not wired into anything — the published types are
+ * generated from `./global.ts` (tsconfig.types.json), and `$lib/index`
+ * resolves to `./index.ts`, which shadows this file. The prop interfaces
+ * below have drifted from the real components (e.g. Spreadsheet's
+ * `canvasId`/`dataService`, SheetTabs' add/rename/delete callbacks); read
+ * the `.svelte` Props types instead.
  */
 
 import type {ComponentType, SvelteComponent} from 'svelte'

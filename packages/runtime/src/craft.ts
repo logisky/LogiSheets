@@ -124,8 +124,14 @@ export async function readCraftStates(
  *
  * For each craft id found in the workbook's AppData: resolve its manifest,
  * download + import its runtime, then call `runtime.onLoad(state, wb)`. A craft
- * that has no manifest, ships no runtime, or throws while loading is skipped —
- * one broken craft never blocks the rest. Returns the crafts that loaded.
+ * is skipped when it has no manifest, ships no runtime, its module has no
+ * `onLoad`, its saved state is not a JSON object, or `onLoad` returns an
+ * ErrorMessage. Returns the crafts that loaded.
+ *
+ * An exception is NOT contained: if the registry or a craft's `onLoad` throws,
+ * the whole call rejects and crafts loaded so far are not returned.
+ *
+ * Calling this again runs every `onLoad` again on the same workbook.
  */
 export async function loadCrafts(
     wb: Workbook,
@@ -212,6 +218,8 @@ export async function validateLoadedCrafts(
     loaded: readonly LoadedCraft[],
     wb: Workbook
 ): Promise<Violation[]> {
+    // Unlike the request/response hooks, a throwing onValidate is not caught:
+    // it rejects this call (only an ErrorMessage return is ignored).
     const violations: Violation[] = []
     for (const craft of loaded) {
         if (!craft.runtime.onValidate) continue

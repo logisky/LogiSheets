@@ -11454,3 +11454,228 @@ fn adding_and_reordering_fields_is_not_read_as_a_rename() {
     assert_eq!(p.pivot.as_ref().unwrap().row_dim, "region", "untouched");
     assert_eq!(cell_num(&wb, 10, 1), Some(10.0));
 }
+
+#[test]
+fn calc_condition_is_read_only() {
+    let mut wb = Workbook::default();
+    let input = |content: &str| PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: content.to_string(),
+        })],
+        undoable: true,
+        init: false,
+    };
+    wb.handle_action(EditAction::Payloads(input("5")));
+    wb.handle_action_in_temp_status(input("7"));
+    let revision = wb.get_version();
+
+    assert_eq!(wb.calc_condition(0, "=A1>6".to_string()).unwrap(), true);
+    assert!(
+        wb.is_in_temp_mode(),
+        "evaluating must not discard the temp branch"
+    );
+    assert_eq!(wb.get_version(), revision);
+    assert!(wb.calc_condition(0, "=1/0".to_string()).is_err());
+
+    // The branch is still usable and discards back to the committed value.
+    wb.clean_temp_status();
+    assert_eq!(wb.calc_condition(0, "=A1=5".to_string()).unwrap(), true);
+}
+
+#[test]
+fn calc_condition_bad_sheet_idx_is_err_not_panic() {
+    let mut wb = Workbook::default();
+    assert!(wb.calc_condition(9, "=TRUE".to_string()).is_err());
+}
+
+#[test]
+fn workbook_without_styles_part_loads() {
+    // `tests/6.xlsx` with `xl/styles.xml` and its relationship removed. Its
+    // cells still carry `s="…"` indices into the stylesheet that is gone.
+    let buf = std::fs::read("../../tests/no_styles.xlsx").unwrap();
+    let wb = Workbook::from_file(&buf, "no_styles".to_string()).unwrap();
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let (max_row, max_col) = {
+        let d = ws.get_sheet_dimension().unwrap();
+        (d.max_row, d.max_col)
+    };
+    for r in 0..=max_row.min(20) {
+        for c in 0..=max_col.min(20) {
+            ws.get_cell_info(r, c).unwrap();
+            ws.get_style(r, c).unwrap();
+        }
+    }
+    let saved = wb.save().unwrap();
+    Workbook::from_file(&saved, "resaved".to_string()).unwrap();
+}
+
+#[test]
+fn block_display_window_covers_the_whole_block() {
+    let mut wb = Workbook::default();
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CreateBlock(CreateBlock {
+            sheet_idx: 0,
+            id: 1,
+            master_row: 1,
+            master_col: 1,
+            row_cnt: 3,
+            col_cnt: 2,
+            owner: None,
+            modify_policy: None,
+            permissions: None,
+            description: None,
+            analyzes: None,
+            pivot: None,
+        })],
+        undoable: false,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let window = ws.get_display_window_for_block(1).unwrap();
+    assert_eq!(window.cells.len(), 3 * 2);
+}
+
+fn three_sheets_with_a1(values: [&str; 3]) -> Workbook {
+    let mut wb = Workbook::default();
+    let mut payloads = vec![
+        EditPayload::CreateSheet(crate::edit_action::CreateSheet {
+            idx: 1,
+            new_name: "Sheet2".to_string(),
+        }),
+        EditPayload::CreateSheet(crate::edit_action::CreateSheet {
+            idx: 2,
+            new_name: "Sheet3".to_string(),
+        }),
+    ];
+    for (sheet_idx, v) in values.iter().enumerate() {
+        payloads.push(EditPayload::CellInput(CellInput {
+            sheet_idx,
+            row: 0,
+            col: 0,
+            content: v.to_string(),
+        }));
+    }
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads,
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    wb
+}
+
+fn input_at(wb: &mut Workbook, sheet_idx: usize, row: usize, col: usize, content: &str) {
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx,
+            row,
+            col,
+            content: content.to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+}
+
+fn value_at(
+    wb: &Workbook,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+) -> crate::controller::display::Value {
+    wb.get_sheet_by_idx(sheet_idx)
+        .unwrap()
+        .get_value(row, col)
+        .unwrap()
+}
+
+#[test]
+fn three_d_references_evaluate_across_sheets() {
+    let mut wb = three_sheets_with_a1(["1", "2", "4"]);
+    input_at(&mut wb, 0, 5, 0, "=SUM(Sheet1:Sheet3!A1)");
+    input_at(&mut wb, 0, 5, 1, "=SUM(Sheet1:Sheet3!A1:B2)");
+    input_at(&mut wb, 0, 5, 2, "=COUNT(Sheet2:Sheet3!A1)");
+    assert!(
+        matches!(value_at(&wb, 0, 5, 0), crate::controller::display::Value::Number(n) if n == 7.0)
+    );
+    assert!(
+        matches!(value_at(&wb, 0, 5, 1), crate::controller::display::Value::Number(n) if n == 7.0)
+    );
+    assert!(
+        matches!(value_at(&wb, 0, 5, 2), crate::controller::display::Value::Number(n) if n == 2.0)
+    );
+
+    // A cell on a sheet in the middle of the span feeds the result.
+    input_at(&mut wb, 1, 0, 0, "20");
+    assert!(
+        matches!(value_at(&wb, 0, 5, 0), crate::controller::display::Value::Number(n) if n == 25.0)
+    );
+}
+
+#[test]
+fn three_d_reference_with_the_sheets_reversed_spans_the_same_sheets() {
+    let mut wb = three_sheets_with_a1(["1", "2", "4"]);
+    input_at(&mut wb, 0, 5, 0, "=SUM(Sheet3:Sheet1!A1)");
+    assert!(
+        matches!(value_at(&wb, 0, 5, 0), crate::controller::display::Value::Number(n) if n == 7.0)
+    );
+}
+
+#[test]
+fn external_reference_is_ref_error_not_panic() {
+    let mut wb = Workbook::default();
+    input_at(&mut wb, 0, 0, 0, "=[Book2.xlsx]Sheet1!A1");
+    input_at(&mut wb, 0, 0, 1, "=SUM([Book2.xlsx]Sheet1!A1:B2)");
+    assert!(matches!(
+        value_at(&wb, 0, 0, 0),
+        crate::controller::display::Value::Error(_)
+    ));
+    assert!(matches!(
+        value_at(&wb, 0, 0, 1),
+        crate::controller::display::Value::Error(_)
+    ));
+}
+
+#[test]
+fn three_d_reference_survives_losing_its_end_sheet() {
+    let mut wb = three_sheets_with_a1(["1", "2", "4"]);
+    input_at(&mut wb, 0, 5, 0, "=SUM(Sheet3:Sheet1!A1)");
+    input_at(&mut wb, 1, 0, 0, "20");
+    assert!(
+        matches!(value_at(&wb, 0, 5, 0), crate::controller::display::Value::Number(n) if n == 25.0)
+    );
+
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::DeleteSheet(crate::edit_action::DeleteSheet {
+            idx: 2,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    assert!(matches!(
+        effect.status,
+        crate::edit_action::StatusCode::Ok(_)
+    ));
+    // A cube whose end sheet is gone must not fail the cube dirty check that
+    // runs for every later cell input in the workbook.
+    input_at(&mut wb, 1, 3, 3, "9");
+    input_at(&mut wb, 0, 3, 3, "9");
+    assert!(matches!(
+        value_at(&wb, 0, 5, 0),
+        crate::controller::display::Value::Error(_)
+    ));
+}

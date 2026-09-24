@@ -151,7 +151,11 @@ export class Session {
     // ========================================================================
 
     /**
-     * Mount the spreadsheet UI to a container element.
+     * Mount the spreadsheet UI (Svelte `Spreadsheet`) into `container`, which
+     * should have a definite size — the canvas fills it. Mounting twice warns
+     * and is ignored; call {@link unmount} first. The component transfers its
+     * own canvas to the worker, so do not also call {@link initOffscreen}.
+     * Current selection and active sheet are passed in as initial props.
      */
     mount(container: HTMLElement, options: SessionMountOptions = {}): void {
         if (this._mountedComponent) {
@@ -240,7 +244,10 @@ export class Session {
     }
 
     /**
-     * Initialize offscreen canvas for headless rendering (no mounted UI).
+     * Headless alternative to {@link mount}: hand `canvas` to the worker and
+     * drive it with {@link render}/{@link resize}. A canvas can be transferred
+     * only once (a second call throws in the browser). Silently does nothing
+     * where `transferControlToOffscreen` is unsupported.
      */
     async initOffscreen(canvas: HTMLCanvasElement): Promise<void> {
         if ('transferControlToOffscreen' in canvas) {
@@ -263,6 +270,7 @@ export class Session {
     // Event Handling (per-view)
     // ========================================================================
 
+    /** Subscribe to a per-view event. Callbacks run synchronously on emit. */
     on<T extends SessionEventType>(
         type: T,
         callback: SessionEventCallback<T>
@@ -353,8 +361,13 @@ export class Session {
     }
 
     /**
-     * Render the spreadsheet. When UI is mounted, rendering is handled
-     * automatically by the component.
+     * Render the current sheet into this view's canvas. `anchorX`/`anchorY` are
+     * the viewport's top-left in document CSS pixels (scroll offset); the
+     * worker may adjust them, so read the resolved anchor from the returned
+     * grid. Needs a canvas already registered via {@link mount} or
+     * {@link initOffscreen}. A mounted component renders itself — calling this
+     * then also bypasses its anchor/scroll state. Failures emit `error` and
+     * resolve to null.
      */
     async render(anchorX = 0, anchorY = 0): Promise<Grid | null> {
         const sheetId = this._dataService.getSheetIdByIdx(this._currentSheetIdx)
@@ -374,7 +387,10 @@ export class Session {
     }
 
     /**
-     * Resize the canvas. When UI is mounted, resizing is handled automatically.
+     * Resize the canvas to `width`×`height` CSS pixels (backing store is
+     * scaled by `devicePixelRatio`) and re-render at the last anchor. For
+     * headless views; a mounted component tracks its container itself.
+     * Failures emit `error` and resolve to null.
      */
     async resize(width: number, height: number): Promise<Grid | null> {
         const result = await this._dataService.resize(
@@ -404,6 +420,10 @@ export class Session {
         return this._selectedData
     }
 
+    /**
+     * Replace the selection, emit `selectionChange`, and push it into the
+     * mounted component (which redraws the selector and scrolls it into view).
+     */
     setSelection(selection: SelectedData): void {
         this._selectedData = selection
         this._emit('selectionChange', selection)
@@ -418,6 +438,7 @@ export class Session {
         }
     }
 
+    /** 0-based index (not id) of the sheet this view displays. */
     getCurrentSheetIndex(): number {
         return this._currentSheetIdx
     }
@@ -457,6 +478,17 @@ export class Session {
         return Promise.resolve()
     }
 
+    /**
+     * Switch this view to the sheet at 0-based `index` and emit
+     * `activeSheetChange`. Not range-checked here; the mounted component
+     * renders whatever id the index maps to.
+     *
+     * Call this BEFORE a transaction that deletes or replaces the sheet this
+     * view displays. The view tracks an index, and its post-delete clamp
+     * reads a stale sheet list (see the cell-updated handler in
+     * Spreadsheet.svelte), so deleting the displayed sheet otherwise leaves
+     * the canvas painting a sheet that no longer exists.
+     */
     setCurrentSheetIndex(index: number): void {
         this._currentSheetIdx = index
         // Keep the data service's legacy "active view" pointer in sync — but

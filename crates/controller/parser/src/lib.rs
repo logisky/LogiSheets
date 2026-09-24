@@ -1,3 +1,16 @@
+//! Excel formula parser: turns `logisheets_lexer` pairs into an id-based AST
+//! ([`ast::Node`]) and back ([`unparse`]).
+//!
+//! Parsing resolves every sheet, cell, range, name, function and block
+//! reference to the engine's stable ids through a [`context::ContextTrait`]
+//! (the controller implements it), minting ids as needed — so parsing mutates
+//! the context and the AST survives rows moving and sheets being renamed.
+//! Operator precedence and associativity follow Excel (see `CLIMBER`).
+//!
+//! Entry point: [`Parser::parse`]. Block-schema templates with `#KEY`,
+//! `#FIELD(...)` and `#PLACEHOLDER` go through [`Parser::scan_placeholders`]
+//! and [`Parser::parse_with_substitutes`].
+
 pub mod ast;
 mod climber;
 pub mod context;
@@ -54,7 +67,7 @@ lazy_static! {
 }
 
 /// One of the three template-placeholder kinds that
-/// {@link Parser::parse_with_substitutes} can substitute. The resolver
+/// [`Parser::parse_with_substitutes`] can substitute. The resolver
 /// closure receives a borrowed view (so `FieldRef` carries the field
 /// name without re-allocating).
 pub enum PlaceholderKind<'a> {
@@ -68,8 +81,8 @@ pub enum PlaceholderKind<'a> {
     FieldRef(&'a str, Option<&'a str>),
 }
 
-/// Owned counterpart of {@link PlaceholderKind}, usable as a map key.
-/// {@link Parser::scan_placeholders} reports what a template needs in
+/// Owned counterpart of [`PlaceholderKind`], usable as a map key.
+/// [`Parser::scan_placeholders`] reports what a template needs in
 /// this form so a caller can resolve every placeholder up front — with
 /// full `&mut context` access — and then hand `parse_with_substitutes` a
 /// plain lookup. A key-addressed `#FIELD` has to mint a range id to
@@ -94,9 +107,18 @@ impl PlaceholderKind<'_> {
     }
 }
 
+/// Stateless; all state lives in the context passed to each call.
 pub struct Parser {}
 
 impl Parser {
+    /// Parse a formula body — WITHOUT the leading `=`; surrounding whitespace
+    /// is trimmed. `curr_sheet` is the sheet unqualified references resolve
+    /// against.
+    ///
+    /// `None` only when the text does not lex. A reference that lexes but
+    /// cannot be resolved (e.g. a range covering part of a block) does not
+    /// fail the parse: it becomes a `#REF!` value node, so the formula is
+    /// stored and evaluates to an error.
     pub fn parse<T>(&self, f: &str, curr_sheet: SheetId, context: &mut T) -> Option<ast::Node>
     where
         T: ContextTrait,
@@ -111,7 +133,7 @@ impl Parser {
     /// context. Callers use it to resolve the placeholders they care about
     /// up front (which for a key-addressed `#FIELD` means minting range
     /// ids, hence `&mut context`) and then feed the results to
-    /// {@link parse_with_substitutes} as a plain lookup.
+    /// [`Parser::parse_with_substitutes`] as a plain lookup.
     ///
     /// Returns `None` only when the body does not lex at all.
     pub fn scan_placeholders(&self, f: &str) -> Option<HashSet<Placeholder>> {
@@ -145,6 +167,8 @@ impl Parser {
         Some(out)
     }
 
+    /// [`Parser::parse_with_substitutes`] specialised to `#PLACEHOLDER` only,
+    /// replacing each occurrence with a clone of `substitude`.
     pub fn parse_with_substitude<T>(
         &self,
         f: &str,
@@ -780,12 +804,68 @@ mod tests {
         // Operators in positions the grammar does not allow, unbalanced
         // delimiters, stray tokens, empty and degenerate input.
         let cases = [
-            "*5", "+", ")", "(", "%", "%5", "5%%", "--5", "1 2", "1++2", "1**2",
-            ",", "1,,2", "SUM(,)", "SUM(1,)", "^2", "2^", "<", "<>", "1<>",
-            "&", "1&", "A1:", ":A1", "A1::A2", "(1", "1)", "((1)", "(1))",
-            "SUM(", "SUM)", "IF(", "\"", "'", ".", "..", "1..2", "-", "!", "@",
-            "~", "`", "[", "]", "{", "}", ";", "?", "A1!B1", "!A1", "Sheet1!!A1",
-            "BLOCKREF()", "BLOCKREFS(1,2)", "", " ", "1 +", "+ 1",
+            "*5",
+            "+",
+            ")",
+            "(",
+            "%",
+            "%5",
+            "5%%",
+            "--5",
+            "1 2",
+            "1++2",
+            "1**2",
+            ",",
+            "1,,2",
+            "SUM(,)",
+            "SUM(1,)",
+            "^2",
+            "2^",
+            "<",
+            "<>",
+            "1<>",
+            "&",
+            "1&",
+            "A1:",
+            ":A1",
+            "A1::A2",
+            "(1",
+            "1)",
+            "((1)",
+            "(1))",
+            "SUM(",
+            "SUM)",
+            "IF(",
+            "\"",
+            "'",
+            ".",
+            "..",
+            "1..2",
+            "-",
+            "!",
+            "@",
+            "~",
+            "`",
+            "[",
+            "]",
+            "{",
+            "}",
+            ";",
+            "?",
+            "A1!B1",
+            "!A1",
+            "Sheet1!!A1",
+            "BLOCKREF()",
+            "BLOCKREFS(1,2)",
+            "",
+            " ",
+            "1 +",
+            "+ 1",
+            // 3D and external ranges, which unwrapped their endpoints one
+            // grammar level too deep.
+            "Sheet1:Sheet3!A1:B2",
+            "[Book2.xlsx]Sheet1!A1:B2",
+            "[Book2.xlsx]Sheet1:Sheet2!A1:B2",
         ];
         for case in cases {
             // The contract is "no panic"; `None` or an AST are both fine.

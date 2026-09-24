@@ -1,6 +1,13 @@
 /**
  * DataService - main service for interacting with the spreadsheet engine.
- * Combines WorkbookClient and OffscreenClient functionality.
+ * Combines WorkbookClient (workbook RPC) and OffscreenClient (canvas
+ * rendering) over ONE worker, and keeps the shared sheet-info cache.
+ *
+ * One instance per Engine, shared by every view. Views address their canvas
+ * by `canvasId` (0 is the legacy single-canvas default) and their sheet by
+ * id; "current sheet" is per-view state, not kept here (bar the legacy
+ * pointer below). Row/col/sheet indexes are 0-based throughout. Methods
+ * return `ErrorMessage` values rather than throwing, except where noted.
  */
 
 import type {
@@ -128,6 +135,13 @@ export class DataService {
     // Rendering
     // ========================================================================
 
+    /**
+     * Paint sheet `sheetId` (an id, not an index) into canvas `canvasId`.
+     * `anchorX/Y` are the viewport's top-left in document CSS pixels; the
+     * resolved anchor comes back on the grid. The canvas must have been
+     * registered with {@link initOffscreen} first. An unknown sheet id returns
+     * an ErrorMessage without painting.
+     */
     public async render(
         sheetId: number,
         anchorX: number,
@@ -144,6 +158,10 @@ export class DataService {
             })
     }
 
+    /**
+     * Resize canvas `canvasId` to `width`×`height` CSS pixels at `dpr`, then
+     * re-render the sheet/anchor it last rendered.
+     */
     public async resize(
         width: number,
         height: number,
@@ -153,6 +171,10 @@ export class DataService {
         return this._offscreen.resize(canvasId, width, height, dpr)
     }
 
+    /**
+     * Register a transferred canvas under `canvasId`. Must precede any
+     * render/resize for that id. Pair with {@link disposeOffscreen}.
+     */
     public initOffscreen(canvas: OffscreenCanvas, canvasId = 0): Resp<void> {
         return this._offscreen.init(canvasId, canvas, window.devicePixelRatio)
     }
@@ -196,6 +218,12 @@ export class DataService {
         this._beforeLoad = handler
     }
 
+    /**
+     * Replace the open workbook (for every view) with `.xlsx` bytes, refresh
+     * the sheet cache, reset the legacy active-sheet pointer to 0, notify
+     * sheet subscribers and render sheet 0 into `canvasId`. Returns the
+     * {@link WORKBOOK_LOAD_CANCELLED} sentinel when the gate vetoes it.
+     */
     public async loadWorkbook(
         buf: Uint8Array,
         name: string,
@@ -239,6 +267,12 @@ export class DataService {
     // only translate a view's sheet index into the shared id/name.
     // ========================================================================
 
+    /**
+     * Map a 0-based sheet index to its id via the cache. Out of range yields
+     * 0, which is not guaranteed to be a live sheet id. The cache refreshes
+     * asynchronously after a sheet event, so right after a sheet is deleted
+     * this can still return the deleted sheet's id.
+     */
     public getSheetIdByIdx(idx: number): number {
         return this._sheetInfos[idx]?.id ?? 0
     }
@@ -249,6 +283,9 @@ export class DataService {
 
     // --- Legacy active-view pointer (see _activeSheetIdx above) -------------
 
+    // Ignored when `idx` is past the cached list. Never clamped on sheet
+    // deletion, so after deleting the active sheet getCurrentSheetId() keeps
+    // returning the removed id until the primary view switches sheet.
     public setCurrentSheetIdx(idx: number): void {
         if (idx >= this._sheetInfos.length) return
         this._activeSheetIdx = idx
@@ -271,6 +308,7 @@ export class DataService {
         return this._sheetInfos
     }
 
+    /** Used range of the 0-based sheet; `maxRow`/`maxCol` < 0 when empty. */
     public getSheetDimension(sheetIdx: number): Resp<SheetDimension> {
         return this._workbook.getSheetDimension(sheetIdx)
     }
@@ -370,6 +408,7 @@ export class DataService {
     // Formula Operations
     // ========================================================================
 
+    /** Whether `formula` parses. An RPC error also reports false. */
     public async checkFormula(formula: string): Promise<boolean> {
         const result = await this._workbook.checkFormula({formula})
         if (typeof result === 'boolean') {
@@ -382,6 +421,11 @@ export class DataService {
     // Transaction Operations
     // ========================================================================
 
+    /**
+     * Apply a transaction. Resolves undefined on success or the ErrorMessage
+     * from the engine. Views
+     * re-render via the resulting cell/sheet events, not from this call.
+     */
     public async handleTransaction(
         transaction: Transaction,
         temp = false
@@ -472,6 +516,13 @@ export class DataService {
         return this.handleTransaction({payloads, undoable: true, temp: false})
     }
 
+    /**
+     * INCOMPLETE: applies `transaction` without events and measures row
+     * heights for the last-rendered canvas, but never applies the heights
+     * (`onlyIncrease`/`fromRowIdx`/`toRowIdx` are unused). A rejected
+     * transaction is swallowed — this resolves undefined either way — and the
+     * last render is repainted. Prefer {@link handleTransaction}.
+     */
     public async handleTransactionAndAdjustRowHeights(
         transaction: Transaction,
         onlyIncrease = false,

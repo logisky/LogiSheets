@@ -48,7 +48,8 @@ export interface ToolCallEvent extends BaseEvent {
     tool_use_id: string
     /** Fully-qualified tool name, e.g. "build__create_block". */
     name: string
-    /** Validated input object. */
+    /** Input exactly as the model sent it — not validated against the
+     *  tool's schema. */
     input: unknown
     turn_id: string
 }
@@ -57,13 +58,18 @@ export interface ToolResultEvent extends BaseEvent {
     kind: 'tool_result'
     tool_use_id: string
     /**
-     * Output payload, or a blob ref when the value is large. Large outputs
-     * (e.g. describe_block with include_rows=true) should be stored via
-     * `ConversationStore.putBlob` and referenced here as
-     * `{kind: 'blob_ref', ref: '...'}` to keep events table compact.
+     * Output payload, or a blob ref when the value is large. A host may store
+     * a large output via `ConversationStore.putBlob` and reference it here as
+     * `{kind: 'blob_ref', ref: '...'}` to keep the events table compact. The
+     * `Agent` never does this itself, and it does not resolve refs when
+     * projecting (see agent/loop.ts), so the model would see a placeholder.
      */
     output: unknown
-    /** Set when the handler threw. `output` then holds an error summary. */
+    /**
+     * Set when the call failed: the handler threw, the tool was unknown, or
+     * the user declined. The `Agent` then writes `output: null`, and the
+     * projection sends this string as an `is_error` tool_result.
+     */
     error?: string
     /** Total time the handler spent, ms. */
     duration_ms: number

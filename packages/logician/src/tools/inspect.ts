@@ -1,12 +1,12 @@
 /**
  * Inspect tools — read-only views over the workbook for the agent to
  * "see" what the user sees: where validation warnings fire, why a cell
- * is currently locked, what sheets and blocks exist, and what the user
- * has selected.
+ * is currently locked, what the user has selected, and how a cell's value
+ * is derived (trace). Listing sheets/blocks is `build__list_blocks`.
  *
- * Handlers are intentionally thin — they describe the contract. Real
- * implementations dispatch to the workbook client and the block manager
- * (which owns shadow-cell state for validation / editability formulas).
+ * Validation and editability verdicts are read from the engine's shadow
+ * cells (`getShadowCellIds` / `getShadowInfoById`) through the workbook
+ * client; there is no separate block-manager dependency.
  */
 
 import {getFirstCell, isErrorMessage} from 'logisheets-web/pure'
@@ -46,6 +46,7 @@ function flattenCellValue(v: Value): string | number | boolean | null {
 // Shared output shapes
 // ---------------------------------------------------------------------------
 
+/** A cell by sheet NAME and zero-based sheet row / col. */
 export interface CellAddress {
     sheet: string
     row: number

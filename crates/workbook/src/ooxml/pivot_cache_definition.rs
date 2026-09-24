@@ -10,11 +10,11 @@
 use xmlserde::Unparsed;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
-use super::defaults::{
-    default_false, default_one_f64, default_true, default_zero_i32, default_zero_u32,
-    default_zero_u8, st_group_by_range,
-};
 use super::complex_types::CtPivotArea;
+use super::defaults::{
+    default_false, default_one_f64, default_true, default_zero_i32, default_zero_u8,
+    default_zero_u32, st_group_by_range,
+};
 use super::pivot_shared::{CtX, PivotSharedItem};
 use super::simple_types::{StGroupBy, StSourceType};
 

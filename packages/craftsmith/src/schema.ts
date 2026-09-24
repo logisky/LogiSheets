@@ -53,6 +53,22 @@ function typeName(checker: ts.TypeChecker, t: ts.Type): string {
     }
 }
 
+/**
+ * Map a checked TS type to JSON Schema.
+ *
+ * - `undefined` and `null` are stripped from unions first; optionality is the
+ *   caller's call, and nullability is dropped (never `type: 'null'`).
+ * - Object properties that are `?:` or include `undefined` are left out of
+ *   `required`; a property's own doc comment becomes its `description`.
+ * - `any` / `unknown` map to `{}` (any value).
+ * - Throws {@link SchemaError} for mixed unions, property-less object types
+ *   (functions, index-signature-only types like `Record<string, T>`), and
+ *   anything else unmapped.
+ * - No cycle detection: a self-referential type recurses until the stack
+ *   overflows (a RangeError, not a SchemaError).
+ *
+ * `node` is the location used to resolve property types (generics, `this`).
+ */
 export function typeToSchema(
     type: ts.Type,
     checker: ts.TypeChecker,

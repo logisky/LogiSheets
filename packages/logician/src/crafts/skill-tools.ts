@@ -31,7 +31,15 @@ function sanitizeNamespace(craftId: string): string {
     return craftId.replace(/[^a-zA-Z0-9_-]/g, '_')
 }
 
-/** Build a live Tool that dispatches to a craft module's exported function. */
+/**
+ * Build a live Tool that dispatches to a craft module's exported function.
+ *
+ * The module is fetched through `store.load` on every call (the store is
+ * expected to cache). The model's argument object is spread positionally in
+ * `paramOrder`, after the ctx; the function's return value becomes `data`
+ * (`undefined` → null). Throws, to the model, when the export is missing or
+ * not a function, and passes through whatever the craft function throws.
+ */
 export function craftToolFromManifest(
     craftId: string,
     mt: ManifestTool,
@@ -83,6 +91,11 @@ const USE_DESCRIPTION =
  * The two discovery/loading meta-tools. Register these into the same registry
  * the Agent uses; `skills__use` registers craft tools into it on demand, and the
  * agent loop re-lists tools every request so they surface immediately.
+ *
+ * Loaded tools are never unregistered, so they stay offered for the registry's
+ * lifetime (every later conversation too). `skills__use` is idempotent: an id
+ * already in the registry is skipped yet still reported as loaded — even when
+ * it belongs to a different tool that happens to share the id.
  */
 export function makeCraftSkillTools(
     store: InstalledCraftStore,

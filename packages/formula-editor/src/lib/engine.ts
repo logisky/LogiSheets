@@ -2,7 +2,7 @@
  * logisheets-formula-editor/engine
  *
  * One-call binding from a logisheets engine `DataService` (or anything with
- * the same two methods) to the props the editor needs — so the host doesn't
+ * the same methods) to the props the editor needs — so the host doesn't
  * re-implement the `getDisplayUnits` / `checkFormula` / function-list wiring by
  * hand for every editor instance.
  *
@@ -13,7 +13,12 @@
  *   createFormulaEditor(el, { ...src, sheetName, onSubmit, ... })
  *
  * Typed structurally (no `logisheets-web` import), so it stays dependency-free
- * and accepts any object exposing the two methods below.
+ * and accepts any object exposing the methods below. The engine's
+ * `DataService` (logisheets-engine) satisfies it as-is.
+ *
+ * Main export: `createEngineFormulaSource`. Consumers: the root app's edit bar
+ * and the `/inline` in-cell controller (which also uses the point-mode
+ * navigation methods on `FormulaWorkbook`).
  */
 
 import type {
@@ -24,8 +29,18 @@ import type {
 } from './types'
 import {builtinFormulaFunctions} from './functions'
 
-/** The slice of a workbook client the source needs. */
+/**
+ * The slice of a workbook client the source needs. Only
+ * `getDisplayUnitsOfFormula` is used by {@link createEngineFormulaSource}; the
+ * two navigation methods are for the `/inline` controller's point mode. All
+ * indices are 0-based.
+ */
 export interface FormulaWorkbook {
+    /**
+     * Lex a formula body (no leading '='). Resolves to a
+     * {@link FormulaDisplayInfo} on success or an error-message object
+     * otherwise; the source tells them apart by the `tokenUnits` key.
+     */
     getDisplayUnitsOfFormula(formula: string): Promise<unknown>
     /**
      * Point-mode arrow move: the next visible cell in a direction (skips hidden
@@ -50,9 +65,17 @@ export interface FormulaWorkbook {
 
 /** The slice of an engine `DataService` the source needs. */
 export interface EngineFormulaServices {
+    /** Called per request, not cached, so a swapped workbook is picked up. */
     getWorkbook(): FormulaWorkbook
+    /**
+     * Whether a formula (text as typed, including the leading '=') parses.
+     * Expected to resolve `false` rather than reject on an engine error.
+     */
     checkFormula(formula: string): Promise<boolean>
-    /** Sheet name for a given index — used to build cross-sheet references. */
+    /**
+     * Sheet name for a 0-based sheet index — used by `/inline` to qualify
+     * cross-sheet references. Not used by {@link createEngineFormulaSource}.
+     */
     getSheetNameByIdx(idx: number): string
 }
 
@@ -69,7 +92,11 @@ export interface EngineFormulaSourceOptions {
     onCellRefs?: (cellRefs: readonly CellRef[]) => void
 }
 
-/** Props the editor consumes, derived from the engine. */
+/**
+ * Props derived from the engine. The editor itself consumes
+ * `getDisplayUnits` + `formulaFunctions`; `checkFormula` is for the host's
+ * commit path — the editor never validates on its own.
+ */
 export interface EngineFormulaSource {
     getDisplayUnits: GetDisplayUnitsFunc
     checkFormula: (formula: string) => Promise<boolean>
@@ -79,6 +106,12 @@ export interface EngineFormulaSource {
 /**
  * Build the editor's data props from an engine `DataService`. Spread the result
  * into `createFormulaEditor` / `<FormulaEditor>`.
+ *
+ * The returned `getDisplayUnits` never rejects: an engine error, a thrown
+ * call, or an unlexable formula all resolve `undefined` (no highlighting) and report
+ * an empty ref list to `onCellRefs`, so an overlay clears instead of showing
+ * stale highlights. `checkFormula` is passed through unchanged. Holds no
+ * resources — nothing to dispose.
  */
 export function createEngineFormulaSource(
     services: EngineFormulaServices,

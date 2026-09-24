@@ -833,11 +833,7 @@ pub struct CtWorkbookPr {
     pub publish_items: bool,
     #[xmlserde(name = b"checkCompatibility", ty = "attr", default = "default_false")]
     pub check_compatibility: bool,
-    #[xmlserde(
-        name = b"autoCompressPictures",
-        ty = "attr",
-        default = "default_true"
-    )]
+    #[xmlserde(name = b"autoCompressPictures", ty = "attr", default = "default_true")]
     pub auto_compress_pictures: bool,
     #[xmlserde(name = b"refreshAllConnections", ty = "attr", default = "default_true")]
     pub refresh_all_connections: bool,

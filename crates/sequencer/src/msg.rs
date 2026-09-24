@@ -79,6 +79,7 @@ pub struct SequencerInitWorkbook {
     pub file_id: FileId,
     // If None, it means this message is sent to the first user for this room, who
     // sent the workbook data just now. So sequenser has no need to send it back again.
+    // (Intended: `room::RoomServer` currently always sends `Some`.)
     pub data: Option<Vec<u8>>,
 }
 

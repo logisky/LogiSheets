@@ -49,8 +49,15 @@ const DEFAULT_MAX_TOKENS = 16384
 
 /** One question a craft can ask, as `craftsmith` extracted it from `@aiRole`. */
 export interface AiRole {
+    /** Used only in error messages here; the host selects roles by it. */
     name: string
+    /** Sent verbatim as the (cached) system prompt. */
     system: string
+    /**
+     * Becomes the `reply` tool's input schema. Only checked shallowly: an
+     * object, `required` keys present, top-level primitive `type`s and
+     * `enum`s — nested shapes are the craft's to validate.
+     */
     replySchema: JSONSchema
 }
 
@@ -64,7 +71,9 @@ export interface AskAiParams {
     tools: readonly Tool[]
     /** Context handed to a dispatched craft tool; its `signal` also aborts us. */
     ctx: ToolContext
+    /** Per-response output cap. Default 16384 — see DEFAULT_MAX_TOKENS. */
     max_tokens?: number
+    /** LLM round-trips allowed, the answering one included. Default 8. */
     max_iterations?: number
 }
 
@@ -137,8 +146,12 @@ function textOf(content: AgentContentBlock[]): string {
 /**
  * Run one question to completion and return the model's parsed answer.
  *
- * Throws {@link AskAiError} if the model never answers, answers in the wrong
- * shape twice, or runs past `max_iterations`.
+ * Throws {@link AskAiError} if `tools` contains a mutating tool (before any
+ * request), a response stops at max_tokens, the model answers in prose twice,
+ * answers in the wrong shape twice, or runs past `max_iterations`. Anything
+ * else is not wrapped: an abort of `ctx.signal` throws the signal's reason
+ * and an `LlmClient` rejection propagates. A craft tool that throws does not
+ * end the call; the model gets the message as an `is_error` result.
  */
 export async function askAi<T = unknown>(params: AskAiParams): Promise<T> {
     const {llm, model, role, input, tools, ctx} = params

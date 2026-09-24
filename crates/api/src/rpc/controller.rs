@@ -16,10 +16,15 @@ use super::{Manager, Transaction};
 // command) so both share one implementation; serialization happens at the edge.
 // ============================================================================
 
+/// Open an empty workbook and return the book id every later call needs.
 pub fn new_workbook(mgr: &mut Manager) -> usize {
     mgr.new_workbook()
 }
 
+/// Parse `buf` as .xlsx into the workbook slot `id`, replacing what was there
+/// and resetting its pending payloads. On a parse error the slot is untouched.
+/// `id` need not exist yet; a transport normally mints it with [`new_workbook`]
+/// first.
 pub fn read_file(
     mgr: &mut Manager,
     id: usize,
@@ -31,6 +36,12 @@ pub fn read_file(
     Ok(())
 }
 
+/// Serialize workbook `id` to .xlsx bytes.
+///
+/// `app_data` replaces the workbook's whole app-data list with one entry named
+/// `logisheets` before writing, and stays set after the call. With
+/// `resolve_block_refs`, block formulas are written as A1 references so another
+/// spreadsheet can recalculate them.
 pub fn save_file(
     mgr: &mut Manager,
     id: usize,
@@ -55,6 +66,7 @@ pub fn get_app_data(mgr: &Manager, id: usize) -> Result<Vec<AppData>, ErrorMessa
     Ok(mgr.workbook(id)?.get_app_data())
 }
 
+/// Drop workbook `id`. Releasing an unknown id is a no-op; later calls on it fail.
 pub fn release(mgr: &mut Manager, id: usize) {
     mgr.remove(id)
 }
@@ -86,6 +98,7 @@ pub fn is_in_temp_mode(mgr: &Manager, id: usize) -> Result<bool, ErrorMessage> {
     Ok(mgr.workbook(id)?.is_in_temp_mode())
 }
 
+/// A no-op kept for old callers: the temp branch opens on the first `temp` transaction.
 pub fn toggle_status(mgr: &mut Manager, id: usize, use_temp: bool) -> Result<(), ErrorMessage> {
     mgr.workbook_mut(id)?.toggle_status(use_temp);
     Ok(())
@@ -153,6 +166,9 @@ pub fn check_formula(mgr: &Manager, id: usize, f: String) -> Result<bool, ErrorM
     Ok(mgr.workbook(id)?.check_formula(f))
 }
 
+/// Evaluate `f` for its truth value. Goes through a normal (non-temp) write of
+/// an ephemeral cell, so it bumps the version and discards any open temp
+/// branch.
 pub fn calc_condition(
     mgr: &mut Manager,
     id: usize,
@@ -453,12 +469,6 @@ pub fn get_all_block_fields(mgr: &mut Manager, id: usize) -> Result<Vec<BlockFie
     wb.get_all_block_fields().map_err(ErrorMessage::from)
 }
 
-/// Every duplicated block row key in the workbook.
-///
-/// The companion to the engine's write-path refusal: that stops a caller from
-/// creating a collision, this finds the ones a file arrived with. Nothing else
-/// surfaces them — `BLOCKREF` resolves a repeated key to its first match and
-/// says nothing — so a caller has to ask.
 /// Which [`BlockOp`](logisheets_controller::edit_action::BlockOp) each payload
 /// counts as, keyed by wire type name.
 ///
@@ -510,6 +520,12 @@ pub fn get_defined_names(
     Ok(wb.get_defined_names())
 }
 
+/// Every duplicated block row key in the workbook.
+///
+/// The companion to the engine's write-path refusal: that stops a caller from
+/// creating a collision, this finds the ones a file arrived with. Nothing else
+/// surfaces them — `BLOCKREF` resolves a repeated key to its first match and
+/// says nothing — so a caller has to ask.
 pub fn duplicate_block_keys(
     mgr: &Manager,
     id: usize,
@@ -518,6 +534,11 @@ pub fn duplicate_block_keys(
     Ok(wb.duplicate_block_keys())
 }
 
+/// Apply a [`Transaction`], on the temp branch when `transaction.temp`.
+///
+/// `Err` only when `id` names no workbook. An engine rejection is an `Ok` whose
+/// `ActionEffect::status` is `Err`, with nothing applied; see
+/// `HandleTransactionParams`.
 pub fn handle_transaction(
     mgr: &mut Manager,
     id: usize,
@@ -540,12 +561,13 @@ pub fn handle_transaction(
 
 // ---- Formula helpers (no workbook state) ----------------------------------
 
+/// Whether `f` (after trimming) is `=` followed by something that lexes as a
+/// formula. Anything without the leading `=` is `false`.
 pub fn formula_check(f: &str) -> bool {
-    let f = f.trim();
-    let f = &f[1..];
-    lex_success(f)
+    f.trim().strip_prefix('=').is_some_and(lex_success)
 }
 
+/// Tokenize a formula for syntax highlighting; errors when it does not lex.
 pub fn get_display_units_of_formula(f: &str) -> Result<FormulaDisplayInfo, ErrorMessage> {
     lex_and_fmt(f)
         .ok_or_else(|| ErrorMessage::from(Error::from(BasicError::InvalidFormula(f.to_string()))))

@@ -521,7 +521,6 @@ impl CtTwoCellAnchor {
         }
     }
 
-
     /// The `(col, row)` of the `from` marker, i.e. the anchored cell.
     pub fn anchor_cell(&self) -> (i32, i32) {
         (self.from.col.v, self.from.row.v)

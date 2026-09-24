@@ -3,12 +3,18 @@ import {upperCase} from '../strings/index.js'
 import {isString} from '../type-guard/index.js'
 const a1notationReg = /^(?<cs>[A-Z]+)(?<rs>\d+)(:(?<ce>[A-Z]+)(?<re>\d+))?$/i
 const notationReq = /^[A-Z]/
+/** Whether `value` is a cell (`B3`) or range (`A1:C9`) reference,
+ *  case-insensitive. No `$`, no sheet prefix. */
 export function isA1notation(value: unknown) {
     if (!isString(value)) return false
     return a1notationReg.test(upperCase(value))
 }
 
-// zero-based
+/**
+ * Parse a cell or range reference into 0-based indexes: `cs`/`rs` are the
+ * start column/row, `ce`/`re` the end (present for a range only).
+ * `undefined` when the text is not in {@link isA1notation}'s form.
+ */
 export function parseA1notation(
     value: string
 ): {cs: number; rs: number; ce?: number; re?: number} | undefined {

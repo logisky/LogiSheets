@@ -417,17 +417,13 @@ where
 }
 
 fn build_unmut_a1_reference_range(pair: Pair<Rule>) -> ast::UnMutA1ReferenceRange {
+    // The grammar's children here are bare `a1_addr`s, not `a1_reference`s
+    // (see `build_mut_a1_reference_range`). Unwrapping them as references went
+    // one level too deep and hit `unreachable!` for every 3D or external range.
     let mut iter = pair.into_inner();
-    let first = iter.next().unwrap();
-    let start = build_unmut_a1_reference(first);
-    let second = iter.next().unwrap();
-    let end = build_unmut_a1_reference(second);
-    match (start, end) {
-        (ast::UnMutA1Reference::Addr(s), ast::UnMutA1Reference::Addr(e)) => {
-            ast::UnMutA1ReferenceRange { start: s, end: e }
-        }
-        _ => unreachable!(),
-    }
+    let start = build_unmut_a1_addr(iter.next().unwrap());
+    let end = build_unmut_a1_addr(iter.next().unwrap());
+    ast::UnMutA1ReferenceRange { start, end }
 }
 
 fn build_mut_a1_reference_range<T>(

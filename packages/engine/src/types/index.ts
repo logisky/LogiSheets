@@ -18,17 +18,27 @@ import type {
 // Grid Types - Used for rendering the spreadsheet
 // ============================================================================
 
+/** A visible row: 0-based sheet row `idx`, `height` in CSS px at the
+ *  current zoom. */
 export interface Row {
     height: number
     idx: number
 }
 
+/** A visible column: 0-based sheet column `idx`, `width` in CSS px. */
 export interface Column {
     width: number
     idx: number
 }
 
+/**
+ * What one render produced for one view: the resolved viewport and the
+ * rows/columns (including partially visible ones) it painted, in order.
+ * Overlays (selection, headers, block chrome) must be positioned from THIS
+ * grid rather than recomputed, so they match the pixels on the canvas.
+ */
 export interface Grid {
+    /** Viewport top-left in document CSS px, as resolved by the worker. */
     anchorX: number
     anchorY: number
     /**
@@ -236,6 +246,12 @@ export interface EngineEvents {
 // Engine Configuration
 // ============================================================================
 
+/**
+ * Engine/view options. Pass a partial to `new Engine(config)`; missing keys
+ * come from {@link DEFAULT_ENGINE_CONFIG}. The Engine keeps one copy shared by
+ * all its sessions, and its setters (setShowGridLines, setShowCellValues)
+ * mutate it in place.
+ */
 export interface EngineConfig {
     /** Width of the left header panel in pixels */
     leftTopWidth: number
@@ -248,9 +264,9 @@ export interface EngineConfig {
     /** Render cell values (text). When false, fills/borders/gridlines still
      * render but cell text is skipped. */
     showCellValues: boolean
-    /** Default cell width in pt */
+    /** Default cell width in pt. Not read by the engine today. */
     defaultCellWidth: number
-    /** Default cell height in pt */
+    /** Default cell height in pt. Not read by the engine today. */
     defaultCellHeight: number
     /** Scrollbar size in pixels */
     scrollbarSize: number

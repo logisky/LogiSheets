@@ -86,16 +86,20 @@ fn panics_reachable_from_data_do_not_increase() {
     // on the line above — and separating those from the reachable ones is the
     // work this ratchet is meant to fund, one number at a time.
     const DATA_PATHS: &[(&str, usize)] = &[
-        ("crates/workbook/src/reader.rs", 12),
+        ("crates/workbook/src/reader.rs", 11),
         ("crates/workbook/src/writer.rs", 2),
         ("crates/controller/src/file_loader", 17),
         ("crates/controller/src/file_saver", 12),
-        ("crates/controller/base/src/lib.rs", 2),
+        ("crates/controller/base/src/lib.rs", 1),
         // The calculator is the big one, and the least surprising: an
         // unimplemented corner of a function is a `todo!()` today, and an
         // argument that has already been checked is unwrapped. Every one is a
         // formula someone can type.
-        ("crates/controller/src/calc_engine", 443),
+        ("crates/controller/src/calc_engine", 440),
+        // What the calculator reads references through, and the parser that
+        // turns typed text into them.
+        ("crates/controller/src/connectors", 12),
+        ("crates/controller/parser/src", 56),
     ];
     let mut report = Vec::new();
     for (path, budget) in DATA_PATHS {

@@ -19,6 +19,10 @@
  *
  * This entry depends on `logisheets-engine` (peer) for the grid geometry,
  * event types, and selection helpers; the package core/root stay engine-free.
+ * The root app wraps it in src/components/spreadsheet-view/inline-cell-editor.tsx
+ * and implements `FormulaCoordinator` in src/core/formula-edit-coordinator.ts.
+ *
+ * Rows / cols / sheet indices throughout are 0-based engine indices.
  */
 
 import {createFormulaEditor, type FormulaEditorHandle} from './editor'
@@ -75,7 +79,12 @@ export interface FormulaEditEntry {
  * committing, and sheet tabs / other canvases know not to steal focus.
  */
 export interface FormulaCoordinator {
+    /** Called when an edit enters formula mode (text starts with '='). */
     setActive(entry: FormulaEditEntry): void
+    /**
+     * Called when that edit leaves formula mode or finishes. Implementations
+     * should ignore an entry that is no longer the active one.
+     */
     clear(entry: FormulaEditEntry): void
     getActive(): FormulaEditEntry | null
     isFormulaEditing(): boolean
@@ -90,7 +99,11 @@ export interface InlineCellEditorOptions {
     /** Emits startEdit / selectionChange / invalidFormula for this view
      *  (an engine `Session`, or the `Engine` itself for the main view). */
     eventSource: Pick<Session, 'on' | 'off'>
-    /** Engine data service — `getWorkbook()` + `checkFormula()`. */
+    /**
+     * Engine data service — `getWorkbook()` (display units + point-mode
+     * navigation), `checkFormula()`, and `getSheetNameByIdx()` for qualifying
+     * cross-sheet refs.
+     */
     dataService: EngineFormulaServices
     /** Stable id of the view that owns this editor (cross-view routing). */
     viewId: string
@@ -99,7 +112,9 @@ export interface InlineCellEditorOptions {
     /** Current sheet name (read fresh; used for local cell-ref coloring). */
     getSheetName: () => string
     /** Commit a cell value (the host's input/ops layer). The return value is
-     *  awaited but otherwise ignored, so `void`/any Promise is fine. */
+     *  awaited but otherwise ignored, so `void`/any Promise is fine. `text` is
+     *  trimmed; a formula has already passed `checkFormula`. A rejection
+     *  propagates and leaves the editor open. */
     inputCell: (
         sheetIdx: number,
         row: number,
@@ -133,13 +148,23 @@ export interface InlineCellEditorOptions {
     onEditRefused?: (sheetIdx: number, row: number, col: number) => void
     /** Autocomplete / signature functions. Default: bundled built-ins. */
     formulaFunctions?: FormulaFunction[]
-    /** Maps a reference index to a CSS color. Default: built-in palette. */
+    /**
+     * Maps a reference index to a CSS color for the grid overlays. Default:
+     * built-in palette. The in-editor text highlight always uses the built-in
+     * palette, so a custom mapping makes the two disagree.
+     */
     getHighlightColor?: (index: number) => string
     /** Base editor config (merged over the in-cell defaults). */
     editorConfig?: FormulaEditorConfig
-    /** Called when a committed formula fails validation. */
+    /**
+     * Called when a committed formula fails validation (the editor stays
+     * open), and on the event source's `invalidFormula` event.
+     */
     onInvalidFormula?: () => void
-    /** Reports whether an editor is open (so the canvas can avoid stealing focus). */
+    /**
+     * Reports whether an editor is open (so the canvas can avoid stealing
+     * focus). `false` is also reported by `destroy()`, open editor or not.
+     */
     onEditingChange?: (editing: boolean) => void
     /** Bumped after commits / selection moves so dependents re-read content. */
     onContentChanged?: () => void
@@ -156,12 +181,18 @@ export interface InlineCellEditorOptions {
     ) => boolean
 }
 
+/** Handle returned by {@link createInlineCellEditor}. */
 export interface InlineCellEditorHandle {
     /** Call on every grid change/render: repositions the editor and repaints
      *  highlights (parks the editor off-screen if its cell scrolled away). */
     setGrid(grid: Grid | null): void
     isEditing(): boolean
+    /** Editing and the text starts with '=' (i.e. point mode is on). */
     isEditingFormula(): boolean
+    /**
+     * Unsubscribe from the event source and close any open edit WITHOUT
+     * committing it. Call when the view is torn down.
+     */
     destroy(): void
 }
 
@@ -177,6 +208,16 @@ interface EditCtx {
 
 const MEASURE_FONT = '13px Consolas, Monaco, "Courier New", monospace'
 
+/**
+ * Wire an in-cell formula editor to one engine view. Subscribes to
+ * `eventSource` immediately; nothing is mounted until a `startEdit` arrives.
+ *
+ * The host must keep the grid current via `setGrid` — `startEdit` is ignored
+ * while no grid is known, and positions / highlights go stale otherwise.
+ * Commit runs on Enter, on blur of a plain-text edit, or when the selection
+ * moves to another cell; a formula edit is not committed on blur (point mode)
+ * and a failing `checkFormula` keeps it open. Escape cancels.
+ */
 export function createInlineCellEditor(
     options: InlineCellEditorOptions
 ): InlineCellEditorHandle {

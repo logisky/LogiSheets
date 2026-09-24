@@ -27,7 +27,8 @@ import {Workbook, isErrorMessage} from 'logisheets'
 // Load a workbook from an .xlsx file on disk.
 const wb = new Workbook()
 const buf = readFileSync('book.xlsx')
-const code = wb.load(new Uint8Array(buf), 'book.xlsx') // 0 === success
+const loaded = wb.load(new Uint8Array(buf), 'book.xlsx')
+if (isErrorMessage(loaded)) throw new Error(loaded.msg)
 
 // Read a cell.
 const ws = wb.getWorksheet(0)
@@ -49,7 +50,7 @@ wb.execTransaction({
 })
 
 // Save back to .xlsx.
-const saved = wb.save('') // { data: Uint8Array, code }
+const saved = wb.save('') // { data: Uint8Array }, or an ErrorMessage
 writeFileSync('out.xlsx', saved.data)
 ```
 

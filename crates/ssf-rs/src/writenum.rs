@@ -63,7 +63,11 @@ fn s(x: f64) -> String {
 fn js_substr(src: &str, start: i32, len: i32) -> String {
     let chars: Vec<char> = src.chars().collect();
     let n = chars.len() as i32;
-    let st = if start < 0 { (n + start).max(0) } else { start.min(n) };
+    let st = if start < 0 {
+        (n + start).max(0)
+    } else {
+        start.min(n)
+    };
     let l = if len < 0 { 0 } else { len.min(n - st) };
     chars[st as usize..(st + l) as usize].iter().collect()
 }
@@ -71,7 +75,11 @@ fn js_substr(src: &str, start: i32, len: i32) -> String {
 fn js_substr_from(src: &str, start: i32) -> String {
     let chars: Vec<char> = src.chars().collect();
     let n = chars.len() as i32;
-    let st = if start < 0 { (n + start).max(0) } else { start.min(n) };
+    let st = if start < 0 {
+        (n + start).max(0)
+    } else {
+        start.min(n)
+    };
     chars[st as usize..].iter().collect()
 }
 
@@ -410,7 +418,11 @@ fn write_num_f1(r1: &str, r2: &str, r3: &str, r4: &str, aval: f64, sign: &str) -
     let base = (rr as f64 / den as f64).floor() as i64;
     let myn = rr - base * den;
     let myd = den;
-    let basestr = if base == 0 { String::new() } else { base.to_string() };
+    let basestr = if base == 0 {
+        String::new()
+    } else {
+        base.to_string()
+    };
     let fracstr = if myn == 0 {
         fill(' ', r1.len() + 1 + r4.len())
     } else {
@@ -450,7 +462,11 @@ fn write_num_frac_gen(fmt: &str, aval: f64, sign: &str) -> Result<String, String
     o.push_str(r3);
     let mut oa2 = rpad_(&s(ff.2), ri);
     if oa2.len() < r4.len() {
-        oa2 = format!("{}{}", hashq(&js_substr_from(r4, (r4.len() - oa2.len()) as i32)), oa2);
+        oa2 = format!(
+            "{}{}",
+            hashq(&js_substr_from(r4, (r4.len() - oa2.len()) as i32)),
+            oa2
+        );
     }
     o.push_str(&oa2);
     Ok(o)
@@ -472,13 +488,7 @@ fn write_num_frac_mixed(fmt: &str, aval: f64, sign: &str) -> String {
         "0".to_string()
     };
     let fracpart = if ff.1 != 0.0 {
-        format!(
-            "{}{}/{}{}",
-            pad_(&s(ff.1), ri),
-            r2,
-            r3,
-            rpad_(&s(ff.2), ri)
-        )
+        format!("{}{}/{}{}", pad_(&s(ff.1), ri), r2, r3, rpad_(&s(ff.2), ri))
     } else {
         fill(' ', 2 * ri + 1 + r2.len() + r3.len())
     };
@@ -506,7 +516,11 @@ fn write_num_flt(t: &str, fmt: &str, val: f64) -> Result<String, String> {
         return Ok(write_num_exp(fmt, val, false));
     }
     if fmt.starts_with('$') {
-        let skip = if fmt.as_bytes().get(1) == Some(&b' ') { 2 } else { 1 };
+        let skip = if fmt.as_bytes().get(1) == Some(&b' ') {
+            2
+        } else {
+            1
+        };
         return Ok(format!("${}", write_num_flt(t, &fmt[skip..], val)?));
     }
     let aval = val.abs();
@@ -551,7 +565,11 @@ fn write_num_flt(t: &str, fmt: &str, val: f64) -> Result<String, String> {
     if let Some(cap) = re_0star_dot().captures(fmt) {
         let r1len = cap.get(1).unwrap().as_str().len();
         let r2len = cap.get(2).unwrap().as_str().len();
-        return Ok(format!("{}{}", sign, build_0star_dot(rnd(aval, r2len as i32), r1len)));
+        return Ok(format!(
+            "{}{}",
+            sign,
+            build_0star_dot(rnd(aval, r2len as i32), r1len)
+        ));
     }
     if re_comma0().is_match(fmt) {
         return Ok(format!("{}{}", sign, commaify(&pad0r(aval, 0))));
@@ -632,7 +650,11 @@ fn write_num_flt(t: &str, fmt: &str, val: f64) -> Result<String, String> {
         "###,##0.00" => write_num_flt(t, "#,##0.00", val),
         "###,###" | "##,###" | "#,###" => {
             let x = commaify(&pad0r(aval, 0));
-            Ok(if x != "0" { format!("{}{}", sign, x) } else { String::new() })
+            Ok(if x != "0" {
+                format!("{}{}", sign, x)
+            } else {
+                String::new()
+            })
         }
         "###,###.00" => Ok(strip0dot(&write_num_flt(t, "###,##0.00", val)?)),
         "#,###.00" => Ok(strip0dot(&write_num_flt(t, "#,##0.00", val)?)),
@@ -690,7 +712,11 @@ fn write_num_int(t: &str, fmt: &str, val: f64) -> Result<String, String> {
         return Ok(write_num_exp(fmt, val, true));
     }
     if fmt.starts_with('$') {
-        let skip = if fmt.as_bytes().get(1) == Some(&b' ') { 2 } else { 1 };
+        let skip = if fmt.as_bytes().get(1) == Some(&b' ') {
+            2
+        } else {
+            1
+        };
         return Ok(format!("${}", write_num_int(t, &fmt[skip..], val)?));
     }
     let aval = val.abs();
@@ -809,7 +835,11 @@ fn write_num_int(t: &str, fmt: &str, val: f64) -> Result<String, String> {
     match fmt {
         "###,###" | "##,###" | "#,###" => {
             let x = commaify(&s(aval));
-            Ok(if x != "0" { format!("{}{}", sign, x) } else { String::new() })
+            Ok(if x != "0" {
+                format!("{}{}", sign, x)
+            } else {
+                String::new()
+            })
         }
         _ => {
             if re_dot_tail().is_match(fmt) {

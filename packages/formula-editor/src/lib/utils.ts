@@ -21,6 +21,10 @@ export interface DisplayUnit {
  * Convert formula display info to display units for rendering.
  * The offset accounts for the leading '=' being stripped before sending to backend.
  *
+ * Treats token offsets as string indices, so it is only correct for ASCII
+ * formulas — the backend emits UTF-8 byte offsets (see `TokenUnit`). The
+ * CodeMirror editor does not use this; it converts offsets itself.
+ *
  * @param formula - The full formula string (including leading '=')
  * @param displayInfo - Token info from backend
  * @returns Array of display units for rendering
@@ -110,7 +114,9 @@ export function isLocalCellRef(
 }
 
 /**
- * Simple fuzzy match using longest common subsequence.
+ * Case-insensitive subsequence match: every query char must appear in
+ * `target` in order (greedy, first occurrence). `indices` are the matched
+ * positions in `target`; an empty query matches everything.
  */
 export function fuzzyMatch(
     query: string,
@@ -139,7 +145,9 @@ export function fuzzyMatch(
 }
 
 /**
- * Check if text starts with '=' indicating a formula.
+ * Whether the text is a formula: starts with '=' after trimming, or is an
+ * array formula `{=...}`. Note the editor strips the '=' only when it is the
+ * very first character, so ` =A1` or `{=A1}` reach `getDisplayUnits` as-is.
  */
 export function isFormula(text: string): boolean {
     const trimmed = text.trim()
@@ -201,12 +209,15 @@ export function cycleReferenceAbsolute(text: string): string | null {
     return prefix + rebuilt
 }
 
-/**
- * Measure text width using a canvas context.
- */
+// Shared offscreen canvas, created lazily on first measure (keeps the module
+// importable where `document` is absent).
 let measureCanvas: HTMLCanvasElement | null = null
 let measureCtx: CanvasRenderingContext2D | null = null
 
+/**
+ * Width in CSS pixels of `text` rendered in `font` (a CSS font shorthand).
+ * Falls back to 8 px per char when no 2D context is available.
+ */
 export function measureText(text: string, font: string): number {
     if (!measureCanvas) {
         measureCanvas = document.createElement('canvas')
@@ -219,7 +230,8 @@ export function measureText(text: string, font: string): number {
 }
 
 /**
- * Generate a simple UUID.
+ * Generate a v4-shaped UUID from `Math.random` — fine for DOM ids, not
+ * cryptographically unique.
  */
 export function simpleUuid(): string {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {

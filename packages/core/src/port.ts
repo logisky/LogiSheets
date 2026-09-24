@@ -7,10 +7,12 @@
 //
 // The concrete Client is INJECTED by the host:
 //   - browser app   -> logisheets-engine's worker-backed WorkbookClient
-//   - node runtime  -> logisheets' synchronous handle()-based client
+//   - node runtime  -> logisheets-runtime's Proxy over the Node WASM handle(),
+//                      with each synchronous result wrapped in a Promise
 //
-// Both implement the same `Client` interface (node's source is a copy of
-// web's), so logisheets-core never needs to know which one it got.
+// Both implement the same `Client` interface, so logisheets-core never needs
+// to know which one it got. (The Node proxy leaves the `register*` callback
+// members unimplemented; core code must not depend on them.)
 
 import type {Client} from 'logisheets-web'
 

@@ -1,13 +1,25 @@
+//! Arity and argument-kind checking for function calls in a parsed formula
+//! AST (`logisheets_parser::ast`), against a registry of [`FuncSignature`]s.
+//!
+//! Status: unfinished and not used by the engine. [`AstChecker`] has no public
+//! constructor (its registry is private), and a call whose arguments all pass
+//! reaches a `todo!()` in `args_check` and panics. Only the failure paths and
+//! [`ArgCount`] logic are exercised, by this crate's own tests.
+
 use std::collections::HashMap;
 
 use logisheets_base::FuncId;
 use logisheets_parser::ast::{self, Node};
 
+/// Checks function calls against per-function signatures. Functions missing
+/// from the registry are accepted.
 pub struct AstChecker {
     registry: HashMap<FuncId, FuncSignature>,
 }
 
 impl AstChecker {
+    /// Check the call at the root of `node` only; arguments are not recursed
+    /// into.
     pub fn func_check(&self, node: &ast::Node) -> Result<(), FuncCheckError> {
         match &node.pure {
             ast::PureNode::Func(f) => match &f.op {
@@ -33,6 +45,9 @@ impl AstChecker {
     }
 }
 
+/// Walks a signature's [`ArgDef`]s for successive arguments. Once the defs run
+/// out it cycles back to the last `start_repeated` def, so variadic tails
+/// (`SUM(number1, [number2], ...)`) repeat indefinitely.
 pub struct ArgDefIter<'a> {
     data: &'a Vec<ArgDef>,
     idx: usize,
@@ -78,6 +93,7 @@ pub struct FuncSignature {
     pub args: Vec<ArgDef>,
 }
 
+/// Constraints on the number of arguments; every `Some` must hold.
 #[derive(Debug, Clone)]
 pub struct ArgCount {
     pub le: Option<u8>,
@@ -116,6 +132,9 @@ fn arg_count_check(count_rule: &ArgCount, count: u8) -> bool {
     true
 }
 
+/// One formal argument. `ref_only` rejects literal values and array
+/// constants; `start_repeated` marks where a variadic tail begins (see
+/// [`ArgDefIter`]).
 #[derive(Debug, Clone)]
 pub struct ArgDef {
     pub arg_name: String,
@@ -133,6 +152,7 @@ impl ArgDef {
     }
 }
 
+/// Which rule a call broke: the count rule, or the argument at an index.
 #[derive(Debug)]
 pub struct FuncCheckError {
     pub id: FuncId,
@@ -172,6 +192,7 @@ fn args_check(sign: &FuncSignature, args: &Vec<Node>) -> Result<(), FuncCheckErr
         }
         idx += 1;
     }
+    // Unfinished: the success path was never written, so a valid call panics.
     todo!()
 }
 

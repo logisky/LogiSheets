@@ -4,7 +4,10 @@ use logisheets_base::{
 
 use crate::Error;
 
-use super::{CubeExecutor, CubeUpdateType, utils::get_lower_upper_bound_of_cross};
+use super::{
+    CubeExecutor, CubeUpdateType,
+    utils::{cube_spans_sheet, get_lower_upper_bound_of_cross},
+};
 
 pub fn insert_line<C>(
     exec_ctx: CubeExecutor,
@@ -18,10 +21,7 @@ where
     C: IdFetcherTrait + IndexFetcherTrait,
 {
     let mut func = |cube: &Cube, _: &CubeId| -> Result<CubeUpdateType, Error> {
-        let from_idx = old_ctx.fetch_sheet_index(&cube.from_sheet)?;
-        let to_idx = old_ctx.fetch_sheet_index(&cube.to_sheet)?;
-        let curr_idx = old_ctx.fetch_sheet_index(&sheet)?;
-        if curr_idx < from_idx || curr_idx > to_idx {
+        if !cube_spans_sheet(old_ctx, cube, &sheet) {
             return Ok(CubeUpdateType::None);
         }
 

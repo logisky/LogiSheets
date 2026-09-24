@@ -97,11 +97,6 @@ export async function writeCell(
 | `ctx.log(msg)` | Write a progress line into the chat transcript. |
 | `ctx.signal` | An `AbortSignal` that fires if the user cancels the turn. |
 
-::: warning `handleTransaction` never throws on rejection
-It resolves with an `ActionEffect` whose `status.type === 'err'` when the engine
-rejects the payload. Check it if failure matters. See [Gotchas](#gotchas).
-:::
-
 ## Face: AI tools (JSDoc)
 
 To expose your functions to **Watson** (the built-in AI assistant), annotate
@@ -158,7 +153,7 @@ export async function countSheets(ctx: SkillCtx): Promise<{sheets: number}> {
 | `@tool <text>` | each exported fn | Makes the function a callable tool. The text tells the model *when* to call it. |
 | `@param name <text>` | per argument | Describes an argument (shown to the model). |
 | `@mutates none\|temp\|true` | per tool | Does it change the sheet? Default `none`. |
-| `@confirm never\|once\|always\|destructive` | per tool | Ask the user before running? Default `never`. |
+| `@confirm never\|once\|always\|destructive` | per tool | Ask the user before running? Default `never` for `@mutates none`, `always` otherwise. |
 
 ::: tip Descriptions are for the model
 Write `@logicianSkill` and `@tool` text as **"what and when"**, not
@@ -603,7 +598,7 @@ if (!isLegal(uci)) return notifyCraft('warn', `The AI proposed ${uci}.`)
 | Annotation | Where | Meaning |
 | --- | --- | --- |
 | `@aiRole <name>` | on an exported interface / type alias | Declares a question. `<name>` is what `ask()` selects; kebab-case. |
-| `@system <text>` | with `@aiRole` | Who the model is while answering. Sent verbatim. |
+| `@system <text>` | with `@aiRole` | Who the model is while answering. Sent as written, with line breaks collapsed to spaces. |
 
 The reply schema comes from the declaration itself, and each property's doc
 comment becomes that field's description — that is how the model learns what
@@ -675,49 +670,3 @@ matches your code:
 registry your deployment uses. Once installed, the host lists your craft by
 `craftId`, loads `tools.js` for Watson, `index.html` for the panel, and
 `runtime.js` for the server — **no change to the host required**.
-
-## Gotchas
-
-These are the ones that actually bite.
-
-### Two color formats — fills vs borders/fonts
-
-- **Fills** (`setPatternFill.fgColor`) take a **`{red, green, blue}` object**,
-  channels `0–255`.
-- **Font & border colors** (`setFontColor`, `setLeftBorderColor`, …) take a
-  **string in "standard ARGB": 8 hex digits, no `#`** — `"FF0B0F19"` is opaque
-  near-black. A `#RRGGBB` value or 6-digit hex parses to *no color* and silently
-  doesn't render (the core requires `AARRGGBB`, length ≥ 8).
-
-```ts
-setPatternFill: {patternType: 'solid', fgColor: {red: 255, green: 202, blue: 40}} // fill
-setFontColor: 'FF1976D2'                                                          // font/border
-```
-
-### `handleTransaction` never throws on rejection
-
-It resolves with an `ActionEffect`; a rejected payload sets
-`status.type === 'err'`. Check it or failures pass silently:
-
-```ts
-const r = await workbook.handleTransaction({transaction: {payloads, undoable: false, temp: false}})
-if (r?.status?.type === 'err') throw new Error('transaction rejected')
-```
-
-### No dynamic arrays / array formulas
-
-The engine has a rich scalar function set (`COUNTIF`, `SUMPRODUCT`, `INDEX`/`MATCH`,
-`VLOOKUP`, …) but **no spilling and no array criteria**: every formula must reduce
-to one scalar per cell. Lay out helper columns instead of one array formula.
-
-### Don't delete the sheet the user is looking at
-
-Deleting the currently-displayed sheet crashes the canvas. Switch the view to
-another sheet first (`setSelection(0, …)`, yield a frame) then delete/recreate —
-or better, **reuse the sheet and clear its cells** between rounds.
-
-### Host APIs arrive asynchronously
-
-`window.workbook`, `window.onCanvasInput`, etc. are injected on iframe load. Poll
-for them (the `whenReady` helper above) rather than touching them at module top
-level.

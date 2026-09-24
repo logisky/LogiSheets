@@ -1,4 +1,4 @@
-// Permissions — caller identity registry + the pure editability predicate.
+// Permissions — the caller identity registry.
 //
 // The CallerRegistry is plain in-process state (no engine, no UI): it maps
 // caller identities to uuids, blocks to owners, and block-relative field
@@ -14,19 +14,28 @@ import {simpleUuid} from '../utils/index.js'
 
 const USER_KEY = '__user__'
 
+/**
+ * Session-scoped caller identities. The user and each craft get a random uuid
+ * on first ask; a host tags each write with it and later maps it back (via
+ * {@link resolveActor}) to the actor the engine's `mayModifyBlock` expects.
+ * Nothing here persists: uuids and owner records are gone on reload, which
+ * is why block ownership that must survive lives on the engine's block.
+ */
 class CallerRegistry {
     private _entries = new Map<string, string>()
     private _blockOwners = new Map<string, string>()
-    // (sheetIdx, blockId, block-relative col) → field renderId. Populated
-    // when patch.ts observes a bindFormSchema payload. Lets the cellInput
-    // validator look up the FieldInfo for any block cell to enforce
-    // FieldInfo.userEditable.
+    // (sheetIdx, blockId, axis, block-relative offset) → field renderId.
+    // Populated when the app's patch.ts observes a bindFormSchema payload.
+    // It used to back the host-side `userEditable` check; that rule now lives
+    // on the engine schema, and nothing outside tests reads this map.
     private _fieldPositions = new Map<string, string>()
 
+    /** The user's uuid for this session. */
     getUserUuid(): string {
         return this._getOrAssign(USER_KEY)
     }
 
+    /** A craft's uuid for this session. Throws for the reserved user key. */
     getCraftUuid(craftId: string): string {
         if (craftId === USER_KEY) {
             throw new Error(`invalid craftId: ${craftId}`)
@@ -61,6 +70,8 @@ class CallerRegistry {
         return undefined
     }
 
+    /** Record which caller created a block. In-memory only; keyed by
+     *  `sheetIdx`, so it goes stale when sheets move. */
     registerBlockOwner(
         sheetIdx: number,
         blockId: number,
@@ -116,6 +127,7 @@ class CallerRegistry {
     }
 }
 
+/** The process-wide registry. */
 export const callerRegistry = new CallerRegistry()
 
 // `FieldEditableInfo` and `isFieldUserEditable` used to live here, reading a tri-state `userEditable`

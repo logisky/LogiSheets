@@ -31,6 +31,11 @@ import {
 } from 'logisheets-core'
 import type {CraftInteractionsApi} from './craft-interactions-api.js'
 
+/**
+ * Stateless adapter: every call delegates to core's module-level singletons,
+ * so all adapters (and every agent) in one process share the same overlay
+ * registry. Calling this twice gives two views of one store, not two stores.
+ */
 export function createCoreCraftInteractions(): CraftInteractionsApi {
     return {
         registerRadio: (b) => registerRadioBinding({type: 'radio', ...b}),

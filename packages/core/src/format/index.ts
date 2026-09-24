@@ -31,6 +31,9 @@ function selectedLines(v: SelectedData) {
     return v.data?.ty === 'line' ? v.data.d : undefined
 }
 
+// Fills are the one place the engine takes an `{red, green, blue}` object
+// rather than an ARGB string, so the fill generator converts here. Accepts
+// `#RRGGBB`, `RRGGBB` or 8-digit ARGB (alpha dropped).
 function hexToColor(hex: string): Color {
     let h = hex.startsWith('#') ? hex.slice(1) : hex
     // ARGB format (8 chars): skip the first 2 alpha chars
@@ -61,17 +64,30 @@ function lineStyle(
     return {type: 'lineStyleUpdate', value: {sheetIdx, from, to, row, ty}}
 }
 
+/** A partial font change: only the fields present are applied. */
 export interface FontStyle {
     bold?: boolean
+    /** `true` sets a single underline, `false` removes it. */
     underline?: boolean
     italic?: boolean
+    /**
+     * 8-hex-digit ARGB with NO `#`, e.g. `'FF1976D2'`. Passed to the engine
+     * unchanged: a `#RRGGBB` or 6-digit value yields no color and silently
+     * does not render. `''` is ignored rather than clearing the color.
+     */
     color?: string
+    /** Point size. `0` is ignored. */
     size?: number
     strike?: boolean
     /** Font family name, e.g. "Arial", "Times New Roman", "Microsoft YaHei". */
     name?: string
 }
 
+/**
+ * Font payloads for the selection: one `cellStyleUpdate` per cell of a cell
+ * range, or one `lineStyleUpdate` for a row/column selection. `[]` when
+ * nothing is selected.
+ */
 export function generateFontPayload(
     sheetIdx: number,
     data: SelectedData,
@@ -108,6 +124,8 @@ export function generateFontPayload(
     return [lineStyle(sheetIdx, d.start, d.end, d.type === 'row', lineTy)]
 }
 
+/** Alignment payloads for the selection (same shape rules as
+ *  {@link generateFontPayload}). */
 export function generateAlgnmentPayload(
     sheetIdx: number,
     data: SelectedData,
@@ -132,6 +150,12 @@ export function generateNumFmtPayload(
     return generateForSelection(sheetIdx, data, {setNumFmt: numFmt})
 }
 
+/**
+ * Pattern-fill payloads for the selection. Unlike font and border colors,
+ * these take hex strings (`'#RRGGBB'`, `'RRGGBB'` or `'AARRGGBB'`, alpha
+ * dropped) and convert them to the engine's `{red, green, blue}` 0-255
+ * objects. Omitted / empty colors leave that part of the fill unchanged.
+ */
 export function generatePatternFillPayload(
     sheetIdx: number,
     data: SelectedData,
@@ -179,8 +203,14 @@ export type BatchUpdateType =
     | 'inner'
     | 'clear'
 
+/** Which edges of the selection to set, and how. */
 export interface BorderBatchUpdate {
+    /** Which edges: one side, all/outer/inner, or the inner horizontal or
+     *  vertical lines. `clear` currently generates no payloads at all. */
     batch: BatchUpdateType
+    /** 8-hex-digit ARGB, e.g. `'FF000000'`. A leading `#` is stripped and
+     *  the value upper-cased, but a 6-digit value is NOT expanded and will
+     *  not render. */
     color?: string
     borderType?: StBorderStyle
 }
@@ -191,6 +221,14 @@ interface BorderUpdate {
     borderType?: StBorderStyle
 }
 
+/**
+ * Border payloads for the selection. Setting an edge also clears the facing
+ * edge of the neighbouring cell (its bottom for a top edge, and so on), so
+ * two conflicting borders never share one grid line.
+ *
+ * Mutates `update.color` in place (strips `#`, upper-cases); pass a copy if
+ * the caller keeps the object.
+ */
 export function generateBorderPayloads(
     sheetIdx: number,
     data: SelectedData,

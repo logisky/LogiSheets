@@ -10,6 +10,8 @@ use logisheets_workbook::prelude::{
 };
 
 #[derive(Debug, Clone, TS)]
+/// A cell's style resolved for rendering: theme and indexed colors are
+/// already turned into RGBA [`Color`]s with tint applied.
 #[ts(file_name = "style.ts")]
 pub struct Style {
     pub font: Font,
@@ -17,6 +19,8 @@ pub struct Style {
     pub border: Border,
     pub alignment: Option<Alignment>,
     pub protection: Option<CtCellProtection>,
+    /// The number-format code (e.g. `0.00%`); formatting values with it is
+    /// the host's job.
     pub formatter: String,
 }
 
@@ -27,6 +31,7 @@ pub struct Font {
     pub italic: bool,
     pub underline: Option<CtUnderlineProperty>,
     pub color: Option<Color>,
+    /// Size in points.
     pub sz: Option<f64>,
     pub name: Option<CtFontName>,
     pub charset: Option<i32>,
@@ -96,6 +101,11 @@ pub struct Border {
     pub outline: bool,
 }
 
+/// An RGBA color as channels in `0..=255` (`alpha` defaults to 255, opaque).
+///
+/// This is the shape fills take (`PatternFill::fg_color` / `bg_color`) and the
+/// shape resolved styles are read back in. Font and border colors in a
+/// `StyleUpdateType` are ARGB hex strings instead.
 #[derive(Debug, Clone, TS)]
 #[ts(file_name = "color.ts", rename_all = "camelCase")]
 pub struct Color {
@@ -309,7 +319,8 @@ impl<'a> StyleConverter<'a> {
     }
 }
 
-// Convert ARGB hex str and apply the tint to it.
+/// Parse an 8-digit ARGB hex string (no `#`) and apply an OOXML `tint`.
+/// Anything shorter yields a color with every channel `None`.
 pub fn from_hex_str(argb: String, tint: f64) -> Color {
     use colorsys::{Hsl, Rgb};
     if argb.len() < 8 {

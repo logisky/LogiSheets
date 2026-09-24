@@ -23,9 +23,11 @@
  *   { registerRadio: window.registerRadio, ... }
  */
 
-/** A cell an overlay binds to. `row`/`col` are block-relative offsets —
- *  the same coordinates the host singletons use. Tools resolve these from
- *  (block ref, field, row_key) via the block schema before calling. */
+/** A cell an overlay binds to. `row`/`col` are zero-based block-relative
+ *  offsets (the schema's key / field `idx`) — the same coordinates the host
+ *  singletons use. Tools resolve these from (block ref, field, row_key) via
+ *  the block schema before calling. `groupId` is craft-chosen; cells that
+ *  share it form one widget (one radio choice, one point pool). */
 export interface InteractionCell {
     groupId: string
     sheetIdx: number

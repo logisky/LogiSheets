@@ -13,6 +13,12 @@ import type {EditorView} from '@codemirror/view'
 import {createFormulaEditor, type FormulaEditorHandle} from './editor'
 import type {FormulaEditorProps} from './types'
 
+/**
+ * Imperative API exposed through `ref` — a subset of the core's
+ * `FormulaEditorHandle` (no `updateOptions` / `destroy`; props and unmount
+ * cover those). Positions are UTF-16 offsets into the whole text, leading '='
+ * included. Calls before mount or after unmount are no-ops.
+ */
 export interface FormulaEditorRef {
     focus: () => void
     blur: () => void
@@ -27,6 +33,10 @@ export interface FormulaEditorRef {
     getView: () => EditorView | null
 }
 
+/**
+ * React formula editor. Renders a `<div>` host and mounts the core editor into
+ * it once; see `FormulaEditorProps` for which props are live.
+ */
 export const FormulaEditor = forwardRef<FormulaEditorRef, FormulaEditorProps>(
     (props, ref) => {
         const containerRef = useRef<HTMLDivElement>(null)

@@ -146,6 +146,14 @@ export class RpcServer {
      * So callers control persistence per call via a `save` param (default
      * {@link MutationOptions.saveByDefault}, itself defaulting to `true`), and
      * the workbook never accumulates history across requests either way.
+     *
+     * The rollback is "undo until the stack is empty", so it only reverts what
+     * went on the undo stack: writes made with `undoable: false` (e.g.
+     * ephemeral-cell and validation-shadow writes) survive a `save: false`
+     * call. Nothing serialises two mutations on the same workbook either; if
+     * they overlap, each one's cleanHistory/rollback also hits the other's
+     * changes. If `run` throws, neither the rollback nor the final
+     * cleanHistory runs.
      */
     public registerMutation<P = any, R = unknown>(
         method: string,

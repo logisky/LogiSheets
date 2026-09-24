@@ -26,7 +26,11 @@ function printDiagnostics(diags: Diagnostic[]): {
     return {errors, warns}
 }
 
-/** `craftsmith check <dir>` — validate only, no writes. Non-zero on error. */
+/**
+ * `craftsmith check <dir>` — validate only, no writes. Returns 1 if any
+ * diagnostic is an error, else 0 (warnings pass). Throws if `dir` is not a
+ * craft directory.
+ */
 export function check(dir: string): number {
     const {manifest, diagnostics} = extract(dir)
     if (diagnostics.length) {
@@ -50,7 +54,15 @@ export function check(dir: string): number {
     return 0
 }
 
-/** `craftsmith build <dir>` — validate, compile, write dist/. */
+/**
+ * `craftsmith build <dir>` — validate, compile, write dist/. On any error
+ * diagnostic returns 1 before touching the filesystem. Otherwise writes
+ * dist/tools.js, dist/runtime.js, dist/index.html (each only if its source
+ * exists), dist/manifest.json, and — when the craft declares roles —
+ * craft-roles.d.ts in the craft ROOT (not dist/). Existing dist/ files are
+ * overwritten, never cleaned, and a stale craft-roles.d.ts is not removed
+ * when the last role goes. An esbuild failure rejects (CLI exit 1).
+ */
 export async function buildCraft(dir: string): Promise<number> {
     const paths = resolveCraft(dir)
     const {manifest, diagnostics} = extract(dir)
@@ -145,7 +157,11 @@ function writeRoleTypes(dir: string, roles: readonly ManifestRole[]): void {
     )
 }
 
-/** `craftsmith pack <dir>` — tarball dist/ into <craftId>-<version>.tgz. */
+/**
+ * `craftsmith pack <dir>` — tarball dist/ into <craftId>-<version>.tgz in the
+ * craft root. Needs a prior build (returns 1 without dist/manifest.json) and a
+ * `tar` on PATH. Does not re-validate; the name comes from package.json.
+ */
 export function pack(dir: string): number {
     const paths = resolveCraft(dir)
     const dist = path.join(paths.root, 'dist')
@@ -161,7 +177,12 @@ export function pack(dir: string): number {
     return 0
 }
 
-/** `craftsmith new <name>` — scaffold a craft directory. */
+/**
+ * `craftsmith new <name>` — scaffold a craft directory (package.json,
+ * tsconfig.json, tools.ts, index.html, .gitignore, README.md). `name` may be
+ * a path; its basename becomes the package name and craftId, unvalidated.
+ * Returns 1 if the directory already exists.
+ */
 export function scaffold(nameArg: string): number {
     const dir = path.resolve(nameArg)
     const name = path.basename(dir)

@@ -6,6 +6,9 @@ use thiserror::Error;
 
 use crate::{edit_action::EditPayload, file_saver::SaveError, style_manager::errors::StyleError};
 
+/// Every failure the engine reports. A write never surfaces this directly: a
+/// rejected transaction is turned into `ActionEffect::error_message`, with
+/// the failing payload wrapped in `PayloadFailed`.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error(transparent)]

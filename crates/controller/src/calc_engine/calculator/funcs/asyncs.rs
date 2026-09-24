@@ -18,7 +18,11 @@ where
     let async_args = args
         .into_iter()
         .map(|arg| fetcher.get_calc_value(arg).to_async_arg())
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>();
+    let async_args = match async_args {
+        Ok(a) => a,
+        Err(e) => return CalcVertex::from_error(e),
+    };
     let res = fetcher.query_or_commit_task(
         sheet_id,
         cid,

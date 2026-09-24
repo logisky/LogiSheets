@@ -136,6 +136,9 @@ export class OffscreenWorkerService {
         const state = this._getCanvas(canvasId)
         const canvas = state.canvas
         const dpr = state.dpr
+        // Recorded BEFORE the id is validated below: a render for a deleted
+        // sheet sticks, and later resize/image-ready re-renders of this
+        // canvas keep failing until a render with a live id.
         state.sheetId = sheetId
         ;(self as any).window.devicePixelRatio = dpr
 
@@ -368,6 +371,9 @@ export class OffscreenWorkerService {
         const state = this._getCanvas(canvasId)
         const canvas = state.canvas
         const dpr = state.dpr
+        // Recorded BEFORE the id is validated below: a render for a deleted
+        // sheet sticks, and later resize/image-ready re-renders of this
+        // canvas keep failing until a render with a live id.
         state.sheetId = sheetId
 
         const ctx = canvas.getContext('2d')

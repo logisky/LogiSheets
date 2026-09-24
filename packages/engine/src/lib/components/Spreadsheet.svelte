@@ -83,7 +83,10 @@ let isDragging = false; // True while user is drag-selecting
         canvasId?: number
         /** Currently selected data */
         selectedData?: SelectedData
-        /** Active sheet index */
+        /**
+         * 0-based index of the displayed sheet (bindable). An index, not an
+         * id — deleting a sheet before it shifts which sheet this points at.
+         */
         activeSheet?: number
         /** Cell layouts for custom rendering */
         cellLayouts?: CellLayout[]
@@ -657,6 +660,22 @@ let isDragging = false; // True while user is drag-selecting
 
             // Register callbacks for external data service
             subscriptions.push(externalDataService.registerCellUpdatedCallback(async () => {
+                // KNOWN HAZARD — deleting/replacing the displayed sheet.
+                // This clamp is the only place a removed active sheet is
+                // handled, and it usually reads a STALE list: DataService
+                // refreshes its sheet cache asynchronously on the sheet
+                // event (a getAllSheetInfo round trip), while this cell
+                // event is delivered before that reply lands. So when the
+                // active (last) sheet is deleted, render() below asks the
+                // worker for the deleted sheet's id, gets an error back and
+                // silently keeps the old pixels and grid; the clamp only
+                // catches up on the NEXT cell event. Deleting a sheet left
+                // of the active one silently shifts the view to its
+                // neighbour (activeSheet is an index). The sheet-updated
+                // callback below does not clamp or re-render at all.
+                // Hosts must switch the view to a surviving sheet
+                // (Session/Engine.setCurrentSheetIndex) BEFORE a
+                // transaction that deletes or replaces the displayed sheet.
                 const sheetList = externalDataService!.getCacheAllSheetInfo()
                 sheets = sheetList
                 onSheetsChange?.(sheetList)
@@ -706,6 +725,7 @@ let isDragging = false; // True while user is drag-selecting
 
             // Register callbacks
             internalDataService.registerCellUpdatedCallback(async () => {
+                // Same stale-cache clamp hazard as the external branch.
                 const sheetList = internalDataService!.getCacheAllSheetInfo()
                 sheets = sheetList
                 onSheetsChange?.(sheetList)
@@ -2465,6 +2485,9 @@ let isDragging = false; // True while user is drag-selecting
         return true
     }
 
+    // Programmatic switch (Session.setCurrentSheetIndex). Unlike switchSheet
+    // it neither range-checks `idx` nor fires onActiveSheetChange — the
+    // Session emits activeSheetChange itself.
     export function setActiveSheet(idx: number) {
         if (!dataService) return
         // Remember the anchor we're leaving so coming back to this sheet

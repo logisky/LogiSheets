@@ -1,6 +1,10 @@
 /**
  * Main worker entry point.
  * Handles both workbook operations and offscreen rendering.
+ *
+ * Loaded by Engine via `?worker&inline` (see engine.ts for why it must be
+ * inlined). Messages are routed by field: `id` → WorkbookWorkerService
+ * (WorkbookClient), `rid` → OffscreenWorkerService (OffscreenClient).
  */
 
 import {WorkbookWorkerService} from './workbook.worker'
@@ -8,7 +12,9 @@ import {OffscreenWorkerService} from './offscreen.worker'
 
 const ctx: Worker = self as unknown as Worker
 
-// In a Web Worker there is no `window`. Create a compatibility alias.
+// In a Web Worker there is no `window`. Create a compatibility alias so
+// main-thread-shaped code bundled into the worker doesn't throw; the
+// offscreen service re-points `devicePixelRatio` at each canvas's dpr.
 ;(self as any).window = self as any
 self.window.devicePixelRatio = 1
 

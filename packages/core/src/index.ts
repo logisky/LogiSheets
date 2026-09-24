@@ -2,7 +2,25 @@
 //
 // Runs unchanged in the browser app and in a Node runtime. It depends on
 // logisheets-web for TYPES only (see ./port); the concrete engine Client is
-// injected by the host.
+// injected by the host: logisheets-engine's worker client in the browser,
+// logisheets-runtime's `handle()` proxy on Node. ESM only.
+//
+// Main exports:
+//   - WorkbookOps (./ops): the high-level operation layer. Every engine-facing
+//     operation a host offers (cell input, sheets, blocks, form schemas,
+//     analysis blocks, pivots, formatting, validation) lives here once.
+//   - format generators (./format): pure selection -> style payload builders.
+//   - craft contracts (./craft): CraftRuntime (the headless craft hooks),
+//     craft state (per-document, rides AppData), craft storage (per-device),
+//     canvas-input routing, the JSON-RPC wire types.
+//   - craft interactions (./craft-interactions): host-drawn widgets (radio,
+//     multi-select, allocators, sliders) crafts bind to block cells.
+//   - validation, field authoring model, Value helpers, permissions registry,
+//     string / A1 / type-guard utilities.
+//
+// Module-level stores (craft state, storage backend, interactions, active
+// craft, callerRegistry) are process singletons: one workbook per host
+// process is assumed. A Node host serving several workbooks shares them.
 
 export * from './port.js'
 export * from './ops/index.js'

@@ -75,6 +75,11 @@ export interface LlmResponse {
     }
 }
 
+/**
+ * The one call the loop makes. Implementations translate to their wire format
+ * and back; a rejected promise (network, HTTP error, abort) propagates out of
+ * `Agent.runTurn` / `askAi` unchanged — neither retries.
+ */
 export interface LlmClient {
     createMessage(params: LlmCreateMessageParams): Promise<LlmResponse>
 }
@@ -84,6 +89,7 @@ export interface LlmClient {
 // ---------------------------------------------------------------------------
 
 export interface AgentOptions {
+    /** Must already hold the conversation `runTurn` is called with. */
     store: ConversationStore
     registry: ToolRegistry
     llm: LlmClient
@@ -92,11 +98,22 @@ export interface AgentOptions {
     model?: string
     /** Cap on tokens per response. Default 4096. */
     max_tokens?: number
-    /** Base system prompt (instructions). Tool listing is auto-appended. */
+    /**
+     * System prompt, sent verbatim as the only system block. Tools travel in
+     * the request's `tools` field, not in this text.
+     */
     systemPrompt: string
-    /** Defensive cap on tool calls per user turn to prevent runaway loops. */
+    /**
+     * Defensive cap on LLM round-trips per user turn (not individual tool
+     * calls — one response may hold several). Default 16. The check runs
+     * before each request as `iter++ > cap`, so up to cap + 1 requests go out.
+     */
     max_tool_iterations?: number
-    /** Confirmation prompt for tools whose policy demands it. */
+    /**
+     * Confirmation prompt for tools whose policy demands it. Omitted means
+     * auto-approve everything, which suits tests and trusted headless hosts
+     * only. `'once'` is passed through as-is; remembering it is on the host.
+     */
     confirm?: (
         toolName: string,
         input: unknown,
@@ -110,6 +127,11 @@ export interface AgentOptions {
     craftInteractions?: CraftInteractionsApi
 }
 
+/**
+ * One agent bound to one workbook, store and registry. Reusable across
+ * conversations and turns; holds no per-conversation state of its own —
+ * everything is re-read from the store before each LLM request.
+ */
 export class Agent {
     private store: ConversationStore
     private registry: ToolRegistry
@@ -142,6 +164,16 @@ export class Agent {
     /**
      * Run one user turn end-to-end: append the user_message, then loop
      * LLM ↔ tools until the model emits end_turn or we hit a safety cap.
+     *
+     * Requires `conversation_id` to exist in the store (create it first;
+     * `MemoryConversationStore.appendEvent` throws otherwise). Results arrive
+     * as appended events, not as a return value — subscribe to the store or
+     * re-list its events to render them.
+     *
+     * Failure: tool errors and declined confirmations become `tool_result`
+     * events and the loop continues; an `LlmClient` or store rejection
+     * propagates and ends the turn. Hitting the cap, max_tokens, or an abort
+     * seen at the top of the loop ends it with a `ui_only` system_note.
      */
     async runTurn(
         conversation_id: string,
@@ -158,9 +190,10 @@ export class Agent {
         await this.store.appendEvent(userEvent)
 
         const blobResolver: BlobResolver = (ref) => {
-            // listEvents is async; the loop pre-hydrates blobs into a
-            // synchronous cache before each LLM call below. Default
-            // fallback returns null (projection emits a placeholder).
+            // Blob refs are NOT resolved yet: `getBlob` is async and nothing
+            // pre-hydrates a sync cache, so a `blob_ref` tool output reaches
+            // the model as the "(blob … not resolved)" placeholder. The loop
+            // itself never writes blob refs; only a host-written event would.
             return null
         }
 
@@ -242,6 +275,8 @@ export class Agent {
             // requires *all* tool_results for the previous turn before the
             // next request, so we walk them sequentially here.
             for (const call of toolCalls) {
+                // Returning here leaves the remaining tool_use blocks with no
+                // tool_result on record.
                 if (signal?.aborted) return
                 await this.executeToolCall(conversation_id, call, signal)
             }
@@ -365,12 +400,10 @@ export class Agent {
     }
 
     private buildSystem(): AgentSystemBlock[] {
-        // Two blocks so prompt caching works cleanly:
-        //   [0] = user-supplied system prompt (stable, cached)
-        //   [1] = tool list (also stable across a turn; we cache here too
-        //         because the same tools are reused across many turns)
-        // The Messages API treats every block as a sub-prompt; the last
-        // cache_control marker wins for that prefix.
+        // A single cached block holding the host's system prompt. Tools are
+        // not repeated here: they go in the request's `tools` field, which
+        // precedes `system` in Anthropic's cache prefix, so this breakpoint
+        // covers them too.
         return [
             {
                 type: 'text',

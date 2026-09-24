@@ -35,8 +35,8 @@ declare const client: Client // supplied by the host (browser worker or Node)
 const ops = new WorkbookOps(client)
 
 await ops.inputCell(0, 0, 0, 'Hello')          // sheet 0, cell A1
-await ops.createSheet(1, 'Summary')
-await ops.setSheetColor(0, '#4472C4')
+await ops.createSheet('Summary', 1)
+await ops.setSheetColor(0, 'FF4472C4') // ARGB hex, no '#'
 ```
 
 `WorkbookOps` covers cell input (including block cells and cell images), sheet

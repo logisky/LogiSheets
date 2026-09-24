@@ -7,6 +7,9 @@ use std::sync::Mutex;
 // dropped into a stdout-bound println! that goes nowhere in wasm.
 static LAST_ERROR: Mutex<Option<String>> = Mutex::new(None);
 
+/// Take (and clear) the message of the most recent rejected action. Global to
+/// the process, not per workbook. Prefer `ActionEffect::error_message`, which
+/// carries the same text.
 pub fn take_last_error() -> Option<String> {
     LAST_ERROR.lock().ok().and_then(|mut g| g.take())
 }
@@ -49,15 +52,26 @@ use status::Status;
 use self::display::SheetInfo;
 use crate::async_func_manager::AsyncFuncManager;
 
+/// The single, workbook-wide temp branch (a dry run / what-if sandbox).
 pub struct TempStatus {
+    /// The committed state at the moment the branch was opened.
+    /// `clean_temp_status` restores it; `get_temp_status_changes` diffs
+    /// against it.
     pub fork_status: Status,
+    /// The branch's own undo history, so undo inside the branch never
+    /// reaches the main history.
     pub version_manager: VersionManager,
     pub accumulated_payloads: Vec<crate::edit_action::EditPayload>,
     pub accumulated_updated_cells: HashSet<(SheetId, CellId)>,
 }
 
+/// Owns the workbook state and runs transactions against it. Hosts normally go
+/// through `api::Workbook`, which wraps this and keeps derived state
+/// (validation and conditional-formatting shadows) in step.
 pub struct Controller {
     // TODO: clean this field. Use the VersionManager.current
+    /// The live state: the temp branch's head while one is open, else the
+    /// committed state.
     pub status: Status,
     pub temp_status: Option<TempStatus>,
     pub async_func_manager: AsyncFuncManager,
@@ -143,6 +157,8 @@ impl Controller {
     }
 
     #[inline]
+    /// Whether a temp branch is open. There is one per workbook, shared by all
+    /// callers.
     pub fn is_in_temp_mode(&self) -> bool {
         self.temp_status.is_some()
     }
@@ -150,12 +166,16 @@ impl Controller {
     #[deprecated = "no-op in new design; temp mode is always active when temp_status is Some"]
     pub fn toggle_temp_status(&mut self) {}
 
+    /// Discard the temp branch and restore the state it forked from. No-op
+    /// without one.
     pub fn clean_temp_status(&mut self) {
         if let Some(temp) = self.temp_status.take() {
             self.status = temp.fork_status;
         }
     }
 
+    /// Keep the temp branch's state and record all its transactions as ONE
+    /// undo step on the main history. No-op without one.
     pub fn commit_temp_status(&mut self) {
         if let Some(temp) = self.temp_status.take() {
             let merged_payloads = PayloadsAction {
@@ -190,6 +210,8 @@ impl Controller {
         }
     }
 
+    /// Count of undoable transactions recorded; see `revision` for change
+    /// detection.
     pub fn version(&self) -> u32 {
         self.version_manager.version()
     }
@@ -201,6 +223,8 @@ impl Controller {
         self.version_manager.revision()
     }
 
+    /// Load an .xlsx. `name` becomes `curr_book_name`. Formula cells the file carries no cached value for are
+    /// calculated before returning.
     pub fn from_file(name: String, f: &[u8]) -> Result<Self> {
         let res = read(f)?;
         let mut controller = load_file(res, name);
@@ -224,14 +248,17 @@ impl Controller {
         Ok(controller)
     }
 
+    /// The stable id of the sheet at tab position `idx` (0-based).
     pub fn get_sheet_id_by_idx(&self, idx: usize) -> Option<SheetId> {
         self.status.sheet_info_manager.get_sheet_id(idx)
     }
 
+    /// Exact (case-sensitive) name lookup.
     pub fn get_sheet_id_by_name(&self, name: &str) -> Option<SheetId> {
         self.status.sheet_id_manager.has(name)
     }
 
+    /// Every sheet, hidden ones included, in tab order.
     pub fn get_all_sheet_info(&self) -> Vec<SheetInfo> {
         let id_manager = &self.status.sheet_id_manager;
         let info_manager = &self.status.sheet_info_manager;
@@ -247,20 +274,44 @@ impl Controller {
             .collect()
     }
 
+    /// Run a transaction on the temp branch, opening it first if none is open.
+    /// Later temp transactions accumulate on the same branch until
+    /// `commit_temp_status` or `clean_temp_status`, and any non-temp action
+    /// other than undo/redo discards it.
+    ///
+    /// The branch is workbook-wide: check `is_in_temp_mode` before opening
+    /// one, or you may be writing into someone else's. Temp writes do not
+    /// bump `revision`.
     pub fn handle_action_in_temp_status(&mut self, action: PayloadsAction) -> ActionEffect {
         // Initialize temp branch on first temp transaction
         if self.temp_status.is_none() {
+            // The branch's history must start at the fork point, or its first
+            // undo would restore `Status::default()` — a workbook with no sheets.
+            let mut version_manager = VersionManager::default();
+            version_manager.set_init_status(self.status.clone());
             self.temp_status = Some(TempStatus {
                 fork_status: self.status.clone(),
-                version_manager: VersionManager::default(),
+                version_manager,
                 accumulated_payloads: vec![],
                 accumulated_updated_cells: HashSet::new(),
             });
         }
 
+        // The executor records undoable actions into (and resets on `init`)
+        // whichever history it is handed. Hand it the branch's, with both flags
+        // cleared: every temp step is recorded below exactly once, and nothing
+        // may reach the main history until `commit_temp_status` merges the
+        // branch into a single step.
+        let exec_action = PayloadsAction {
+            payloads: action.payloads.clone(),
+            undoable: false,
+            init: false,
+        };
+        let main_version = self.version_manager.version();
+        let temp = self.temp_status.as_mut().unwrap();
         let executor = Executor {
             status: self.status.clone(),
-            version_manager: &mut self.version_manager,
+            version_manager: &mut temp.version_manager,
             async_func_manager: &mut self.async_func_manager,
             book_name: &self.curr_book_name,
             calc_config: self.settings.calc_config,
@@ -279,7 +330,7 @@ impl Controller {
             col_removed: vec![],
             header_updated: HashSet::new(),
         };
-        let result = executor.execute_and_calc(action.clone());
+        let result = executor.execute_and_calc(exec_action);
         match result {
             Ok(result) => {
                 let cell_updated = result.cell_updated
@@ -295,15 +346,12 @@ impl Controller {
                     WorkbookUpdateType::DoNothing
                 };
 
-                let temp = self.temp_status.as_mut().unwrap();
-                temp.accumulated_payloads.extend(action.payloads.clone());
-                temp.accumulated_updated_cells
-                    .extend(result.updated_cells.iter().copied());
-                temp.version_manager.record(
+                result.version_manager.record(
                     result.status.clone(),
-                    action,
+                    action.clone(),
                     result.updated_cells.clone(),
                 );
+                let accumulated_cells: Vec<_> = result.updated_cells.iter().copied().collect();
                 let header_updated: Vec<u32> = result
                     .header_updated
                     .iter()
@@ -312,8 +360,8 @@ impl Controller {
                     .collect();
                 self.status = result.status;
 
-                ActionEffect {
-                    version: result.version_manager.version(),
+                let effect = ActionEffect {
+                    version: main_version,
                     async_tasks: result.async_func_manager.get_calc_tasks(),
                     status: StatusCode::Ok(c),
                     value_changed: result
@@ -359,7 +407,11 @@ impl Controller {
                         .collect(),
                     header_updated,
                     ..Default::default()
-                }
+                };
+                let temp = self.temp_status.as_mut().unwrap();
+                temp.accumulated_payloads.extend(action.payloads);
+                temp.accumulated_updated_cells.extend(accumulated_cells);
+                effect
             }
             Err(e) => {
                 record_last_error(&e);
@@ -368,7 +420,13 @@ impl Controller {
         }
     }
 
-    // Handle an action and get the affected sheet indices.
+    /// Run an action and report what it changed. Never panics or returns
+    /// `Err`: a rejected transaction leaves the state untouched and comes back
+    /// as `StatusCode::Err` with `error_message` set.
+    ///
+    /// A `Payloads` action discards any open temp branch first; `Undo`/`Redo`
+    /// act on the temp branch while one is open. A committed change that is
+    /// not `DoNothing` bumps `revision`. `Recalc` does not.
     pub fn handle_action(&mut self, action: EditAction) -> ActionEffect {
         // A non-temp transaction discards any active temp branch
         if self.is_in_temp_mode() && !matches!(action, EditAction::Undo | EditAction::Redo) {
@@ -573,6 +631,8 @@ impl Controller {
         }
     }
 
+    /// Feed back results for `ActionEffect::async_tasks`, pairwise by
+    /// position, and recalculate the cells waiting on them.
     pub fn handle_async_calc_results(
         &mut self,
         tasks: Vec<Task>,
@@ -593,6 +653,8 @@ impl Controller {
         self.handle_action(EditAction::Recalc(pending_cells))
     }
 
+    /// Undo one step (of the temp branch's history while one is open).
+    /// Returns whether anything changed.
     pub fn undo(&mut self) -> bool {
         let changed = if let Some(temp) = &mut self.temp_status {
             // Undo within temp branch; stop at fork point (never crosses into main history)
@@ -1200,6 +1262,81 @@ mod tests {
         let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).unwrap();
         let cell = wb.status.container.get_cell(sheet_id, &cell_id).unwrap();
         assert!(matches!(cell.value, CellValue::Number(1.0)));
+    }
+
+    fn input_a1(content: &str, undoable: bool) -> PayloadsAction {
+        PayloadsAction {
+            payloads: vec![EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 0,
+                content: String::from(content),
+            })],
+            undoable,
+            init: false,
+        }
+    }
+
+    fn a1_value(wb: &Controller) -> Option<CellValue> {
+        let sheet_id = wb.get_sheet_id_by_idx(0)?;
+        let cell_id = wb.status.navigator.fetch_cell_id(&sheet_id, 0, 0).ok()?;
+        wb.status
+            .container
+            .get_cell(sheet_id, &cell_id)
+            .map(|c| c.value.clone())
+    }
+
+    #[test]
+    fn test_temp_undo_returns_to_fork_not_empty_workbook() {
+        let mut wb = Controller::default();
+        wb.handle_action(EditAction::Payloads(input_a1("5", true)));
+
+        wb.handle_action_in_temp_status(input_a1("1", true));
+        assert!(matches!(a1_value(&wb), Some(CellValue::Number(1.0))));
+
+        assert!(wb.undo());
+        assert_eq!(wb.get_all_sheet_info().len(), 1);
+        assert!(matches!(a1_value(&wb), Some(CellValue::Number(5.0))));
+        assert!(!wb.undo(), "undo must stop at the fork point");
+    }
+
+    #[test]
+    fn test_temp_steps_stay_out_of_main_history() {
+        let mut wb = Controller::default();
+        wb.handle_action(EditAction::Payloads(input_a1("5", true)));
+        let main_version = wb.version();
+
+        wb.handle_action_in_temp_status(input_a1("1", true));
+        wb.handle_action_in_temp_status(input_a1("2", true));
+        assert_eq!(wb.version(), main_version);
+
+        // Discarded: the main history is exactly as it was.
+        wb.clean_temp_status();
+        assert_eq!(wb.version(), main_version);
+        assert!(matches!(a1_value(&wb), Some(CellValue::Number(5.0))));
+        assert!(wb.undo());
+        assert!(a1_value(&wb).is_none());
+
+        // Committed: the whole branch is ONE main step.
+        let mut wb = Controller::default();
+        wb.handle_action(EditAction::Payloads(input_a1("5", true)));
+        wb.handle_action_in_temp_status(input_a1("1", true));
+        wb.handle_action_in_temp_status(input_a1("2", true));
+        wb.commit_temp_status();
+        assert_eq!(wb.version(), main_version + 1);
+        assert!(wb.undo());
+        assert!(matches!(a1_value(&wb), Some(CellValue::Number(5.0))));
+    }
+
+    #[test]
+    fn test_temp_init_action_keeps_main_history() {
+        let mut wb = Controller::default();
+        wb.handle_action(EditAction::Payloads(input_a1("5", true)));
+        let mut init = input_a1("1", false);
+        init.init = true;
+        wb.handle_action_in_temp_status(init);
+        wb.clean_temp_status();
+        assert!(wb.undo(), "a temp `init` must not reset the main history");
     }
 
     #[test]
