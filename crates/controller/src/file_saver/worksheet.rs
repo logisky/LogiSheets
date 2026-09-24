@@ -496,9 +496,13 @@ fn save_cols<S: SaverTrait>(
         .col_info
         .get_all_col_info()
         .into_iter()
-        .map(|(id, info)| {
-            let idx = saver.fetch_col_idx(&sheet_id, &id).unwrap();
-            (idx, info)
+        // Older workbooks can still carry formatting for a column whose ID
+        // has been deleted. Such metadata cannot belong to a live column.
+        .filter_map(|(id, info)| {
+            saver
+                .fetch_col_idx(&sheet_id, &id)
+                .ok()
+                .map(|idx| (idx, info))
         })
         .sorted_by_key(|a| a.0)
         .map(|(idx, col_info)| CtCol {

@@ -337,6 +337,12 @@ impl ContainerExecutor {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.sheet_idx)
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                // Column formatting is keyed by stable column IDs. The
+                // navigator removes these IDs below, so collect them while
+                // the pre-deletion coordinates are still available.
+                let deleted_col_ids = (p.start..p.start + p.count as usize)
+                    .filter_map(|col| ctx.fetch_col_id(&sheet_id, col).ok())
+                    .collect::<Vec<_>>();
                 let bids =
                     ctx.get_affected_blockplace(sheet_id, p.start, p.count as usize, false)?;
 
@@ -363,7 +369,12 @@ impl ContainerExecutor {
                     .into_iter()
                     .for_each(|c| deleted_cells.push(CellId::NormalCell(c)));
 
-                let container = self.container.delete_cells(sheet_id, &deleted_cells);
+                let mut container = self.container.delete_cells(sheet_id, &deleted_cells);
+                if let Some(sheet) = container.data.get_mut(&sheet_id) {
+                    for col_id in deleted_col_ids {
+                        sheet.col_info.remove_col_info(col_id);
+                    }
+                }
                 let mut cells_removed = self.cells_removed;
                 deleted_cells.into_iter().for_each(|c| {
                     cells_removed.push((sheet_id, c));

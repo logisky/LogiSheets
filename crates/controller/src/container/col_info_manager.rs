@@ -19,6 +19,10 @@ impl ColInfoManager {
         self.data.insert(col_id, info);
     }
 
+    pub fn remove_col_info(&mut self, col_id: ColId) {
+        self.data.remove(&col_id);
+    }
+
     pub fn get_all_col_info(&self) -> Vec<(ColId, &ColInfo)> {
         self.data.iter().map(|(k, v)| (*k, v)).collect()
     }

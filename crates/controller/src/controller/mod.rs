@@ -728,7 +728,7 @@ mod tests {
         Alignment, BindFormSchema, BlockLineNameFieldUpdate, BlockLineStyleUpdate, CellInput,
         CellStyleUpdate, CreateBlock, CreateSheet, DeleteCols, DeleteRows, DeleteSheet, EditAction,
         EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertRows,
-        LineStyleUpdate, PayloadsAction, SchemaFieldSpec, StatusCode, StyleUpdateType,
+        LineStyleUpdate, PayloadsAction, SchemaFieldSpec, SetColWidth, StatusCode, StyleUpdateType,
         VerticalAlignment,
     };
 
@@ -1538,6 +1538,39 @@ mod tests {
         assert!(result.col_inserted.is_empty());
         assert!(result.row_inserted.is_empty());
         assert!(result.row_removed.is_empty());
+    }
+
+    #[test]
+    fn delete_formatted_col_can_be_saved_after_undo_and_redo() {
+        let mut wb = Controller::default();
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::SetColWidth(SetColWidth {
+                sheet_idx: 0,
+                col: 1,
+                width: 18.0,
+            })],
+            undoable: true,
+            init: false,
+        }));
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads: vec![EditPayload::DeleteCols(DeleteCols {
+                sheet_idx: 0,
+                start: 1,
+                count: 1,
+            })],
+            undoable: true,
+            init: false,
+        }));
+
+        let bytes = wb
+            .save()
+            .expect("deleted column should not break XLSX save");
+        Controller::from_file("after-delete".into(), &bytes).expect("saved workbook should load");
+
+        assert!(wb.undo());
+        wb.save().expect("undo should save");
+        assert!(wb.redo());
+        wb.save().expect("redo should save");
     }
 
     #[test]
