@@ -344,9 +344,35 @@ fn sheet_name_needs_quoting(name: &str) -> bool {
         c.is_whitespace()
             || matches!(
                 c,
-                '!' | '"' | '#' | '$' | '%' | '&' | '\'' | '(' | ')' | '*' | '+' | ','
-                    | '-' | '/' | ':' | ';' | '<' | '=' | '>' | '?' | '@' | '[' | '\\'
-                    | ']' | '^' | '`' | '{' | '|' | '}' | '~'
+                '!' | '"'
+                    | '#'
+                    | '$'
+                    | '%'
+                    | '&'
+                    | '\''
+                    | '('
+                    | ')'
+                    | '*'
+                    | '+'
+                    | ','
+                    | '-'
+                    | '/'
+                    | ':'
+                    | ';'
+                    | '<'
+                    | '='
+                    | '>'
+                    | '?'
+                    | '@'
+                    | '['
+                    | '\\'
+                    | ']'
+                    | '^'
+                    | '`'
+                    | '{'
+                    | '|'
+                    | '}'
+                    | '~'
             )
     })
 }
@@ -360,9 +386,10 @@ fn sheet_name_needs_quoting(name: &str) -> bool {
 /// `Sheet1:Sheet3` and around `[Book]Sheet` alike, never around a single piece
 /// of either.
 fn quote_sheet_prefix(prefix: &str) -> String {
-    if !prefix.chars().any(|c| {
-        c.is_whitespace() || matches!(c, '\'' | '[' | ']')
-    }) && !sheet_name_needs_quoting(prefix)
+    if !prefix
+        .chars()
+        .any(|c| c.is_whitespace() || matches!(c, '\'' | '[' | ']'))
+        && !sheet_name_needs_quoting(prefix)
     {
         return prefix.to_string();
     }

@@ -216,12 +216,13 @@ fn every_corpus_file_round_trips() {
                                 .filter(|k| byte_compared(k) && !first.contains_key(*k))
                                 .map(|k| format!("gained {k}")),
                         )
-                        .chain(first.iter().filter(|(k, _)| byte_compared(k)).filter_map(|(k, v)| {
-                            second
-                                .get(k)
-                                .filter(|w| *w != v)
-                                .map(|w| format!("{k} changed ({} -> {} bytes)", v.len(), w.len()))
-                        }))
+                        .chain(first.iter().filter(|(k, _)| byte_compared(k)).filter_map(
+                            |(k, v)| {
+                                second.get(k).filter(|w| *w != v).map(|w| {
+                                    format!("{k} changed ({} -> {} bytes)", v.len(), w.len())
+                                })
+                            },
+                        ))
                         .collect();
                     drifted.sort();
                     if !drifted.is_empty() {
@@ -278,9 +279,7 @@ fn cells_and_styles_differ(a: &Workbook, b: &Workbook) -> Option<String> {
                 let va = format!("{:?}", ia.value);
                 let vb = format!("{:?}", ib.value);
                 if va != vb {
-                    return Some(format!(
-                        "sheet {idx} ({row},{col}) value {va} then {vb}"
-                    ));
+                    return Some(format!("sheet {idx} ({row},{col}) value {va} then {vb}"));
                 }
                 // Styles are compared only where the cell HOLDS something.
                 //
@@ -301,9 +300,7 @@ fn cells_and_styles_differ(a: &Workbook, b: &Workbook) -> Option<String> {
                 let ga = format!("{:?}", ia.style);
                 let gb = format!("{:?}", ib.style);
                 if ga != gb {
-                    return Some(format!(
-                        "sheet {idx} ({row},{col}) style changed"
-                    ));
+                    return Some(format!("sheet {idx} ({row},{col}) style changed"));
                 }
             }
         }

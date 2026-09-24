@@ -152,7 +152,12 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
         &mut extra_defaults,
     )?;
 
-    let ps = write_xl(wb.xl, &mut writer, &mut extra_overrides, &mut extra_defaults)?;
+    let ps = write_xl(
+        wb.xl,
+        &mut writer,
+        &mut extra_overrides,
+        &mut extra_defaults,
+    )?;
     proofs.extend(ps);
 
     write_content_types(proofs, extra_overrides, extra_defaults, &mut writer)?;
@@ -820,9 +825,7 @@ fn get_content_type(rtype: RType) -> &'static str {
         PIVOT_CACHE_RECORDS => {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml"
         }
-        PIVOT_TABLE => {
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml"
-        }
+        PIVOT_TABLE => "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml",
         TABLE => "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml",
         // Our own part. Not an OOXML type, but a part still needs a real
         // content type: an `Override` with an empty one makes the whole package
@@ -1006,7 +1009,9 @@ mod tests {
     /// `tests/one_cell_anchor.xlsx`) — but it has to be there.
     #[test]
     fn a_generated_chart_anchor_carries_an_xfrm() {
-        use crate::ooxml::drawing_part::{CtMarker, CtOneCellAnchor, CtPositiveSize2D, CtTwoCellAnchor};
+        use crate::ooxml::drawing_part::{
+            CtMarker, CtOneCellAnchor, CtPositiveSize2D, CtTwoCellAnchor,
+        };
 
         let two = CtTwoCellAnchor::new_chart_anchor(
             CtMarker::new(5, 4),
@@ -1179,7 +1184,10 @@ mod tests {
         assert_eq!(t.table.totals_row_count, 1);
 
         let ct = read_zip_entry(&out, "[Content_Types].xml");
-        assert!(ct.contains("/xl/tables/table1.xml"), "table override missing");
+        assert!(
+            ct.contains("/xl/tables/table1.xml"),
+            "table override missing"
+        );
         assert!(
             ct.contains("spreadsheetml.table+xml"),
             "table content-type missing"

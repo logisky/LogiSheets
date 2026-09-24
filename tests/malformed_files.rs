@@ -73,7 +73,9 @@ fn a_malformed_file_never_panics() {
             "shared-string index out of range",
             vec![(
                 SHEET1,
-                Some(sheet(r#"<row r="1"><c r="A1" t="s"><v>99999</v></c></row>"#)),
+                Some(sheet(
+                    r#"<row r="1"><c r="A1" t="s"><v>99999</v></c></row>"#,
+                )),
             )],
         ),
         (
@@ -100,7 +102,9 @@ fn a_malformed_file_never_panics() {
             "formula that cannot be parsed",
             vec![(
                 SHEET1,
-                Some(sheet(r#"<row r="1"><c r="A1"><f>SUM(((</f><v>0</v></c></row>"#)),
+                Some(sheet(
+                    r#"<row r="1"><c r="A1"><f>SUM(((</f><v>0</v></c></row>"#,
+                )),
             )],
         ),
         (
@@ -156,10 +160,7 @@ fn a_malformed_file_never_panics() {
             "not XML at all",
             vec![(SHEET1, Some(String::from("this is not xml")))],
         ),
-        (
-            "empty worksheet part",
-            vec![(SHEET1, Some(String::new()))],
-        ),
+        ("empty worksheet part", vec![(SHEET1, Some(String::new()))]),
         (
             // The part every load starts from.
             "workbook part missing",
@@ -169,10 +170,7 @@ fn a_malformed_file_never_panics() {
             "relationships missing",
             vec![("xl/_rels/workbook.xml.rels", None)],
         ),
-        (
-            "content types missing",
-            vec![("[Content_Types].xml", None)],
-        ),
+        ("content types missing", vec![("[Content_Types].xml", None)]),
     ];
 
     // A panic prints its own message, which would bury the report below.

@@ -243,7 +243,11 @@ pub fn write_date(t: char, fmt: &str, val: &DateCode, ss0: i64) -> Result<String
                 return Ok(pad0_i(val.sec, flen));
             }
             let tt: i64 = if ss0 >= 2 {
-                if ss0 == 3 { 1000 } else { 100 }
+                if ss0 == 3 {
+                    1000
+                } else {
+                    100
+                }
             } else if ss0 == 1 {
                 10
             } else {

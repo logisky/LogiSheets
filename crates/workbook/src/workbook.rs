@@ -1,7 +1,9 @@
 use crate::logisheets::LogiSheetsData;
 use crate::ooxml::comments::Comments;
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
-use crate::ooxml::drawing_part::{CtMarker, CtOneCellAnchor, CtPositiveSize2D, CtTwoCellAnchor, CtWsDr};
+use crate::ooxml::drawing_part::{
+    CtMarker, CtOneCellAnchor, CtPositiveSize2D, CtTwoCellAnchor, CtWsDr,
+};
 use crate::ooxml::external_links::*;
 use crate::ooxml::persons::Persons;
 use crate::ooxml::relationships::CtRelationship;

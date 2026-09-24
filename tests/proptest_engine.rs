@@ -39,7 +39,10 @@ enum Expr {
     /// found here, but the "treat a small divisor as zero" bug was not, because
     /// reaching a small number took an expression like `7^(-12)` that the
     /// generator produced only by luck.
-    Dec { mantissa: i64, scale: u32 },
+    Dec {
+        mantissa: i64,
+        scale: u32,
+    },
     Neg(Box<Expr>),
     Bin(Op, Box<Expr>, Box<Expr>),
     /// A call to a pure numeric function. The ones chosen are those where the
@@ -244,11 +247,7 @@ fn eval_call(f: Func, args: &[f64]) -> Option<f64> {
         }
         Func::Power => {
             let r = args[0].powf(args[1]);
-            if r.is_finite() {
-                Some(r)
-            } else {
-                None
-            }
+            if r.is_finite() { Some(r) } else { None }
         }
         Func::Min => args.iter().copied().reduce(f64::min),
         Func::Max => args.iter().copied().reduce(f64::max),
@@ -422,10 +421,7 @@ fn arb_cmp() -> impl Strategy<Value = Comparison> {
     let independent = (op.clone(), arb_expr(), arb_expr())
         .prop_map(|(op, left, right)| Comparison { op, left, right });
     let near = (op, arb_expr(), 1i64..=9, 4u32..=9).prop_map(|(op, base, m, scale)| {
-        let delta = Expr::Dec {
-            mantissa: m,
-            scale,
-        };
+        let delta = Expr::Dec { mantissa: m, scale };
         Comparison {
             op,
             left: base.clone(),

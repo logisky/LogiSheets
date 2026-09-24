@@ -74,7 +74,11 @@ fn chars_substr(f: &[char], i: usize, len: usize) -> String {
 fn substr(s: &str, start: i32, len: i32) -> String {
     let b = s.as_bytes();
     let n = b.len() as i32;
-    let st = if start < 0 { (n + start).max(0) } else { start.min(n) };
+    let st = if start < 0 {
+        (n + start).max(0)
+    } else {
+        start.min(n)
+    };
     let l = if len < 0 { 0 } else { len.min(n - st) };
     String::from_utf8_lossy(&b[st as usize..(st + l) as usize]).into_owned()
 }
@@ -298,7 +302,10 @@ pub fn eval_fmt(fmt: &str, v: &Value, date1904: bool, flen: usize) -> Result<Str
                 if !isgeneral_chars(&ev.f, ev.i) {
                     return Err(format!("unrecognized character {} in {}", c, fmt));
                 }
-                ev.out.push(Tok { t: 'G', v: "General".into() });
+                ev.out.push(Tok {
+                    t: 'G',
+                    v: "General".into(),
+                });
                 ev.i += 7;
             }
             '"' => {
@@ -315,15 +322,24 @@ pub fn eval_fmt(fmt: &str, v: &Value, date1904: bool, flen: usize) -> Result<Str
                 ev.i += 1;
                 let w = ev.f.get(ev.i).copied().unwrap_or('\0');
                 let t = if w == '(' || w == ')' { w } else { 't' };
-                ev.out.push(Tok { t, v: w.to_string() });
+                ev.out.push(Tok {
+                    t,
+                    v: w.to_string(),
+                });
                 ev.i += 1;
             }
             '_' => {
-                ev.out.push(Tok { t: 't', v: " ".into() });
+                ev.out.push(Tok {
+                    t: 't',
+                    v: " ".into(),
+                });
                 ev.i += 2;
             }
             '@' => {
-                ev.out.push(Tok { t: 'T', v: v.as_text() });
+                ev.out.push(Tok {
+                    t: 'T',
+                    v: v.as_text(),
+                });
                 ev.i += 1;
             }
             'B' | 'b' => {
@@ -354,7 +370,10 @@ pub fn eval_fmt(fmt: &str, v: &Value, date1904: bool, flen: usize) -> Result<Str
                 }
             }
             'A' | 'a' | '上' => {
-                let mut q = Tok { t: c, v: c.to_string() };
+                let mut q = Tok {
+                    t: c,
+                    v: c.to_string(),
+                };
                 if ev.dt.is_none() {
                     ev.dt = parse_date_code(vnum, date1904, false);
                 }
@@ -459,7 +478,10 @@ pub fn eval_fmt(fmt: &str, v: &Value, date1904: bool, flen: usize) -> Result<Str
             }
             '(' | ')' => {
                 let tt = if flen == 1 { 't' } else { c };
-                ev.out.push(Tok { t: tt, v: c.to_string() });
+                ev.out.push(Tok {
+                    t: tt,
+                    v: c.to_string(),
+                });
                 ev.i += 1;
             }
             '1'..='9' => {
@@ -478,18 +500,27 @@ pub fn eval_fmt(fmt: &str, v: &Value, date1904: bool, flen: usize) -> Result<Str
                 ev.out.push(Tok { t: 'D', v: o });
             }
             ' ' => {
-                ev.out.push(Tok { t: ' ', v: " ".into() });
+                ev.out.push(Tok {
+                    t: ' ',
+                    v: " ".into(),
+                });
                 ev.i += 1;
             }
             '$' => {
-                ev.out.push(Tok { t: 't', v: "$".into() });
+                ev.out.push(Tok {
+                    t: 't',
+                    v: "$".into(),
+                });
                 ev.i += 1;
             }
             _ => {
                 if !ALLOWED.contains(c) {
                     return Err(format!("unrecognized character {} in {}", c, fmt));
                 }
-                ev.out.push(Tok { t: 't', v: c.to_string() });
+                ev.out.push(Tok {
+                    t: 't',
+                    v: c.to_string(),
+                });
                 ev.i += 1;
             }
         }
@@ -602,13 +633,11 @@ pub fn eval_fmt(fmt: &str, v: &Value, date1904: bool, flen: usize) -> Result<Str
                     let cond = c == '?'
                         || c == 'D'
                         || ((c == ' ' || c == 't')
-                            && next.map_or(false, |nx| {
-                                nx.t == '?' || (nx.t == 't' && nx.v == "/")
-                            }))
+                            && next
+                                .map_or(false, |nx| nx.t == '?' || (nx.t == 't' && nx.v == "/")))
                         || (c == 't'
                             && (cur.v == "/"
-                                || (cur.v == " "
-                                    && next.map_or(false, |nx| nx.t == '?'))));
+                                || (cur.v == " " && next.map_or(false, |nx| nx.t == '?'))));
                     if !cond {
                         break;
                     }
@@ -709,7 +738,10 @@ pub fn eval_fmt(fmt: &str, v: &Value, date1904: bool, flen: usize) -> Result<Str
                 out[lasti].v = format!("{}{}", substr(&ostr, 0, jj + 1), out[lasti].v);
             }
             // fraction part (left-to-right from decpt)
-            jj = ostr.find('.').map(|x| x as i32 + 1).unwrap_or(ostr.len() as i32);
+            jj = ostr
+                .find('.')
+                .map(|x| x as i32 + 1)
+                .unwrap_or(ostr.len() as i32);
             for k in decpt..out.len() {
                 if out[k].t != '(' && !is_np(out[k].t) && k != decpt {
                     continue;
@@ -741,11 +773,7 @@ pub fn eval_fmt(fmt: &str, v: &Value, date1904: bool, flen: usize) -> Result<Str
     for k in 0..ev.out.len() {
         let t = ev.out[k].t;
         if t == 'n' || t == '?' {
-            let myv = if flen > 1
-                && vnum < 0.0
-                && k > 0
-                && ev.out[k - 1].v == "-"
-            {
+            let myv = if flen > 1 && vnum < 0.0 && k > 0 && ev.out[k - 1].v == "-" {
                 -vnum
             } else {
                 vnum

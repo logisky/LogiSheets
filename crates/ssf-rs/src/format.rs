@@ -69,21 +69,36 @@ fn choose_fmt(f: &str, v: &Value) -> Result<(usize, String), String> {
     fmt = match fmt.len() {
         1 => {
             if lat {
-                vec!["General".into(), "General".into(), "General".into(), fmt[0].clone()]
+                vec![
+                    "General".into(),
+                    "General".into(),
+                    "General".into(),
+                    fmt[0].clone(),
+                ]
             } else {
                 vec![fmt[0].clone(), fmt[0].clone(), fmt[0].clone(), "@".into()]
             }
         }
         2 => {
             if lat {
-                vec![fmt[0].clone(), fmt[0].clone(), fmt[0].clone(), fmt[1].clone()]
+                vec![
+                    fmt[0].clone(),
+                    fmt[0].clone(),
+                    fmt[0].clone(),
+                    fmt[1].clone(),
+                ]
             } else {
                 vec![fmt[0].clone(), fmt[1].clone(), fmt[0].clone(), "@".into()]
             }
         }
         3 => {
             if lat {
-                vec![fmt[0].clone(), fmt[1].clone(), fmt[0].clone(), fmt[2].clone()]
+                vec![
+                    fmt[0].clone(),
+                    fmt[1].clone(),
+                    fmt[0].clone(),
+                    fmt[2].clone(),
+                ]
             } else {
                 vec![fmt[0].clone(), fmt[1].clone(), fmt[2].clone(), "@".into()]
             }

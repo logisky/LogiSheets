@@ -241,4 +241,3 @@ pub enum PivotRecordItem {
     #[xmlserde(name = b"x")]
     Index(CtX),
 }
-

@@ -9,13 +9,12 @@
 use xmlserde::Unparsed;
 use xmlserde_derives::{XmlDeserialize, XmlSerialize};
 
+use super::complex_types::CtPivotArea;
 use super::defaults::{
     default_false, default_one_u32, default_ten_u32, default_true, default_zero_i32,
-    default_zero_u32, default_zero_u8, st_data_consolidate_function_sum,
-    st_field_sort_type_manual, st_format_action_formatting, st_item_type_data,
-    st_scope_selection, st_show_data_as_normal,
+    default_zero_u8, default_zero_u32, st_data_consolidate_function_sum, st_field_sort_type_manual,
+    st_format_action_formatting, st_item_type_data, st_scope_selection, st_show_data_as_normal,
 };
-use super::complex_types::CtPivotArea;
 use super::pivot_shared::CtX;
 use super::simple_types::{
     StAxis, StDataConsolidateFunction, StFieldSortType, StFormatAction, StItemType, StScope,
