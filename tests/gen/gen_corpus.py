@@ -37,6 +37,7 @@ Output (both committed, so CI needs no Python):
 import json
 import os
 from openpyxl import Workbook
+from openpyxl.workbook.defined_name import DefinedName
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "generated")
 
@@ -67,8 +68,11 @@ def boolean(v, note, diverges=None):
     return _exp("bool", bool(v), note, diverges)
 
 
-def build(name, sheets):
-    """`sheets` is [(title, rows, checks)]; rows is {cell: value-or-formula}."""
+def build(name, sheets, names=None):
+    """`sheets` is [(title, rows, checks)]; rows is {cell: value-or-formula}.
+
+    `names` is an optional {name: "'sheet'!$A$1"} of workbook-scoped defined
+    names, written into `xl/workbook.xml` the way any producer would."""
     wb = Workbook()
     wb.remove(wb.active)
     checks = []
@@ -78,6 +82,8 @@ def build(name, sheets):
             ws[cell] = value
         for cell, exp in cs.items():
             checks.append({"sheet": title, "cell": cell, **exp})
+    for n, target in (names or {}).items():
+        wb.defined_names[n] = DefinedName(n, attr_text=target)
     path = os.path.join(OUT, name)
     wb.save(path)
     return {"file": name, "checks": checks}
@@ -996,6 +1002,46 @@ def realistic():
     return build("realistic.xlsx", [("model", rows, checks)])
 
 
+# --- 22. defined names ------------------------------------------------------
+
+
+def named_ranges():
+    """A name is a reference the file carries, resolved at load. Nothing here
+    says `A1`; if the names do not bind, every formula on the sheet is wrong."""
+    values = [10.0, 20.0, 30.0, 40.0]
+    rows = {f"A{i + 1}": v for i, v in enumerate(values)}
+    rows["B1"] = 0.07
+    rows["C1"] = "north"
+    rows["C2"] = "south"
+    rows["C3"] = "north"
+    rows["C4"] = "south"
+    checks = {}
+
+    def case(cell, formula, exp):
+        rows[cell] = formula
+        checks[cell] = exp
+
+    case("E1", "=Rate", num(0.07, "a name standing for one cell"))
+    case("E2", "=Rate*100", num(7, "and used in arithmetic"))
+    case("E3", "=SUM(Data)", num(sum(values), "a name standing for a range"))
+    case("E4", "=AVERAGE(Data)", num(sum(values) / len(values), "any aggregate takes it"))
+    case("E5", "=COUNT(Data)", num(len(values), "COUNT sees all four cells, not one"))
+    case("E6", "=MAX(Data)", num(max(values), "MAX over a named range"))
+    case("E7", "=SUM(Data)*Rate", num(sum(values) * 0.07, "two names in one expression"))
+    case("E8", "=INDEX(Data,2)", num(values[1], "a name where a range is expected"))
+    case("E9", '=SUMIF(Region,"north",Data)', num(values[0] + values[2], "two named ranges as criteria and sum"))
+    case("E10", "=SUM(Data)-SUM(A1:A4)", num(0, "the name and the literal range are the same cells"))
+    return build(
+        "names.xlsx",
+        [("nm", rows, checks)],
+        names={
+            "Rate": "'nm'!$B$1",
+            "Data": "'nm'!$A$1:$A$4",
+            "Region": "'nm'!$C$1:$C$4",
+        },
+    )
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     manifest = [
@@ -1020,6 +1066,7 @@ def main():
         subtotals(),
         coercion(),
         realistic(),
+        named_ranges(),
     ]
     with open(os.path.join(OUT, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
