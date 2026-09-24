@@ -21,9 +21,9 @@
 // Re-export the main Workbook and Worksheet types from controller/api
 pub use logisheets_controller::api::{
     BlockOpForPayload, BlockOpPolicy, BlockSortOrder, CellInfo, CellRefRange, CfRuleInfo,
-    DependentCell, DuplicateBlockKey, EnumSetInfo, EnumVariantInfo, FieldValidationVerdict,
-    FillRange, PivotExcelNote, PivotPlan, PivotSpecParts, ReproducibleCell, SaveFileResult,
-    SheetCoordinate, SheetDimension, Workbook, Worksheet,
+    DefinedNameInfo, DependentCell, DuplicateBlockKey, EnumSetInfo, EnumVariantInfo,
+    FieldValidationVerdict, FillRange, PivotExcelNote, PivotPlan, PivotSpecParts, ReproducibleCell,
+    SaveFileResult, SheetCoordinate, SheetDimension, Workbook, Worksheet,
 };
 
 // Re-export display types
@@ -41,14 +41,14 @@ pub use logisheets_controller::edit_action::{
     ActionEffect, Alignment, AsyncFuncResult, AxisScaleUpdate, BindFormSchema, BindRandomSchema,
     BlockActor, BlockInput, BlockLineNameFieldUpdate, BlockLineStyleUpdate, BlockModifyInfo,
     BlockOp, BlockPermissions, CellClear, CellFormatBrush, CellInput, CellStyleUpdate,
-    CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DeleteCellImage, DeleteCols,
-    DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction, EditPayload,
-    EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock, InsertRows,
-    InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, ModifyPolicy, MoveBlock,
-    OfPieSplitUpdate, PayloadsAction, RemoveBlock, ReproduceCells, ResizeBlock,
-    SetBlockDescription, SetBlockPermissions, SetCellImage, SetColWidth, SetRowHeight,
-    SetSheetColor, SetSheetVisible, SheetCellId, SheetRename, SplitMergedCells, StatusCode,
-    StyleUpdateType, UpsertFieldRenderInfo, VerticalAlignment,
+    CreateAppendix, CreateBlock, CreateDiyCell, CreateSheet, DefineName, DeleteCellImage,
+    DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction,
+    EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock,
+    InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, ModifyPolicy,
+    MoveBlock, OfPieSplitUpdate, PayloadsAction, RemoveBlock, RemoveName, RenameName,
+    ReproduceCells, ResizeBlock, SetBlockDescription, SetBlockPermissions, SetCellImage,
+    SetColWidth, SetRowHeight, SetSheetColor, SetSheetVisible, SheetCellId, SheetRename,
+    SplitMergedCells, StatusCode, StyleUpdateType, UpsertFieldRenderInfo, VerticalAlignment,
 };
 
 // Re-export style types

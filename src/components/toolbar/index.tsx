@@ -21,6 +21,8 @@ import {Cell, ErrorMessage} from 'logisheets-engine'
 import {useEngine, useOps} from '@/core/engine/provider'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {ConditionalFormattingDialog} from '@/components/conditional-formatting'
+import {NameManagerDialog} from '@/components/name-manager'
+import {goToNameRange, rangeRefersTo} from '@/core/defined-names'
 import {BorderSettingComponent} from './border-setting'
 import {GithubStar} from './github-star'
 import {generateFontPayload, generateWrapTextPayload} from 'logisheets-core'
@@ -96,6 +98,7 @@ import {
     NorthEastOutlined as NorthEastOutlinedIcon,
     SouthWestOutlined as SouthWestOutlinedIcon,
     LayersClearOutlined as LayersClearOutlinedIcon,
+    LabelOutlined as LabelOutlinedIcon,
     PaletteOutlined as PaletteOutlinedIcon,
     TextIncrease,
     TextDecrease,
@@ -452,6 +455,26 @@ export const Toolbar = observer(
             endRow: number
             endCol: number
         } | null>(null)
+
+        // The name manager, opened from the Formulas tab. `refersTo` seeds a
+        // new name with the current selection.
+        const [nameManager, setNameManager] = useState<{
+            sheetIdx: number
+            refersTo: string
+        } | null>(null)
+        const openNameManager = async () => {
+            const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+            const r = selectedData
+                ? getSelectedCellRange(selectedData)
+                : undefined
+            const sheetName =
+                await DATA_SERVICE.getWorkbook().getSheetNameByIdx(sheetIdx)
+            const refersTo =
+                r && !isErrorMessage(sheetName)
+                    ? rangeRefersTo({sheetName, ...r})
+                    : ''
+            setNameManager({sheetIdx, refersTo})
+        }
 
         // Alignment popover
         const [alignAnchor, setAlignAnchor] = useState<HTMLElement | null>(null)
@@ -1705,6 +1728,22 @@ export const Toolbar = observer(
                                     disabled={!globalStore.traceResult}
                                 />
                             </div>
+                            <Divider
+                                orientation="vertical"
+                                flexItem
+                                className={styles.divider}
+                            />
+                            {/* Defined names */}
+                            <div className={styles.section}>
+                                <ToolButton
+                                    label={t('toolbar.formulas.nameManager')}
+                                    tip={t('toolbar.formulas.nameManagerTip')}
+                                    icon={
+                                        <LabelOutlinedIcon fontSize="small" />
+                                    }
+                                    onClick={() => void openNameManager()}
+                                />
+                            </div>
                         </>
                     ) : null}
                     {activeTab === 'advanced' ? (
@@ -2427,6 +2466,37 @@ export const Toolbar = observer(
                             sheetIdx={cfRange.sheetIdx}
                             range={cfRange}
                             onClose={() => setCfRange(null)}
+                        />
+                    )}
+                </Dialog>
+
+                <Dialog
+                    open={!!nameManager}
+                    onClose={() => setNameManager(null)}
+                    disableScrollLock
+                    disableRestoreFocus
+                    container={document.body}
+                    PaperProps={{sx: {zIndex: 2000, p: 0}}}
+                >
+                    {nameManager && (
+                        <NameManagerDialog
+                            dataSvc={DATA_SERVICE}
+                            sheetIdx={nameManager.sheetIdx}
+                            initialRefersTo={nameManager.refersTo}
+                            onGoTo={(range) => {
+                                const setSelection =
+                                    globalStore.activeViewContext?.setSelection
+                                if (!setSelection) return
+                                void goToNameRange(
+                                    DATA_SERVICE,
+                                    range,
+                                    DATA_SERVICE.getCurrentSheetIdx(),
+                                    setActiveSheet,
+                                    setSelection
+                                )
+                                setNameManager(null)
+                            }}
+                            onClose={() => setNameManager(null)}
                         />
                     )}
                 </Dialog>

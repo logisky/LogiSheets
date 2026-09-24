@@ -25,6 +25,7 @@ import {
     makeLlmClient,
 } from '@/components/watson/lib/llm-factory'
 import {modelForTier} from '@/components/watson/lib/providers'
+import {globalStore} from '@/store'
 
 export type AiUnavailable = 'no-key' | 'denied' | 'offline' | 'unsupported'
 export type AiAvailability = {ok: true} | {ok: false; reason: AiUnavailable}
@@ -37,6 +38,16 @@ export interface AskOpts {
 export interface CraftAi {
     available(): Promise<AiAvailability>
     ask(role: string, input: string, opts?: AskOpts): Promise<unknown>
+    /**
+     * Ask the host to open its own LLM setup, for a craft that found
+     * `available()` false and wants to offer the user a way out.
+     *
+     * Deliberately takes nothing and returns nothing: the craft cannot pass a
+     * key, cannot read one back, and cannot tell whether the user went
+     * through with it — it re-checks `available()` like anyone else. The host
+     * owns the credential and the UI for it.
+     */
+    configure(): void
 }
 
 /** `/lights-out/index.html` → `lights-out`. The panel keys crafts by URL. */
@@ -96,6 +107,7 @@ export function makeCraftAi(deps: CraftAiDeps): CraftAi {
 
     return {
         available,
+        configure: () => globalStore.requestLlmSetup(),
         async ask(roleName, input, opts) {
             const m = await manifest()
             const roles = rolesOf(m)

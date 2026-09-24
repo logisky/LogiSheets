@@ -1,3 +1,4 @@
+use super::utils::scalar_arg_as_number;
 use super::{CalcValue, CalcVertex, Value};
 use crate::calc_engine::connector::Connector;
 use logisheets_parser::ast;
@@ -36,12 +37,14 @@ where
     }
 }
 
+/// The value one SUM argument contributes.
+///
+/// The Scalar and Range arms differ on purpose — see `scalar_arg_as_number`.
 fn sum_calc_value(value: CalcValue) -> Result<f64, ast::Error> {
     match value {
         CalcValue::Scalar(s) => match s {
-            Value::Number(f) => Ok(f),
             Value::Error(e) => Err(e),
-            _ => Ok(0_f64),
+            other => Ok(scalar_arg_as_number(&other).unwrap_or(0_f64)),
         },
         CalcValue::Range(r) => {
             let result = r.into_iter().try_fold(0_f64, |s, e| match e {
@@ -90,8 +93,12 @@ mod tests {
         ];
         let mut fetcher = TestFetcher {};
         let result = super::calc(args, &mut fetcher);
+        // TRUE(1) + FALSE(0) + -1 + "text"(0) + the range's single number(1).
+        // Was 0 while a logical ARGUMENT was ignored; Excel counts one typed
+        // into the argument list and ignores one inside a range, and the
+        // range's text "1" is still not counted.
         if let CalcVertex::Value(CalcValue::Scalar(Value::Number(f))) = result {
-            assert!((f - 0.0).abs() < 1e-10)
+            assert!((f - 1.0).abs() < 1e-10, "expected 1, got {f}")
         } else {
             panic!()
         }

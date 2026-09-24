@@ -1,0 +1,2265 @@
+[
+  {
+    "checks": [
+      {
+        "cell": "A1",
+        "kind": "number",
+        "note": "* binds tighter than +",
+        "sheet": "ops",
+        "value": 7.0
+      },
+      {
+        "cell": "A2",
+        "kind": "number",
+        "note": "parens win",
+        "sheet": "ops",
+        "value": 9.0
+      },
+      {
+        "cell": "A3",
+        "kind": "number",
+        "note": "/ and * are left-associative, not / then *",
+        "sheet": "ops",
+        "value": 25.0
+      },
+      {
+        "cell": "A4",
+        "kind": "number",
+        "note": "- is left-associative",
+        "sheet": "ops",
+        "value": 5.0
+      },
+      {
+        "cell": "A5",
+        "kind": "number",
+        "note": "^ is left-associative in Excel: (2^3)^2, not 2^(3^2)",
+        "sheet": "ops",
+        "value": 64.0
+      },
+      {
+        "cell": "A6",
+        "kind": "number",
+        "note": "unary minus binds tighter than ^: (-2)^2, not -(2^2)",
+        "sheet": "ops",
+        "value": 4.0
+      },
+      {
+        "cell": "A7",
+        "kind": "number",
+        "note": "negative exponent",
+        "sheet": "ops",
+        "value": 0.5
+      },
+      {
+        "cell": "A8",
+        "kind": "number",
+        "note": "division is not integer division",
+        "sheet": "ops",
+        "value": 3.5
+      },
+      {
+        "cell": "A9",
+        "kind": "number",
+        "note": "double unary minus",
+        "sheet": "ops",
+        "value": 1.0
+      },
+      {
+        "cell": "A10",
+        "kind": "number",
+        "note": "^ then * then +",
+        "sheet": "ops",
+        "value": 19.0
+      }
+    ],
+    "file": "arith.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "D1",
+        "kind": "number",
+        "note": "SUM skips blank and text",
+        "sheet": "agg",
+        "value": 108.0
+      },
+      {
+        "cell": "D2",
+        "kind": "number",
+        "note": "AVERAGE divides by numeric count only",
+        "sheet": "agg",
+        "value": 18.0
+      },
+      {
+        "cell": "D3",
+        "kind": "number",
+        "note": "MIN",
+        "sheet": "agg",
+        "value": 4.0
+      },
+      {
+        "cell": "D4",
+        "kind": "number",
+        "note": "MAX",
+        "sheet": "agg",
+        "value": 42.0
+      },
+      {
+        "cell": "D5",
+        "kind": "number",
+        "note": "COUNT counts numbers only, not the text cell",
+        "sheet": "agg",
+        "value": 6.0
+      },
+      {
+        "cell": "D6",
+        "kind": "number",
+        "note": "COUNTA counts the text cell too, not the blank",
+        "sheet": "agg",
+        "value": 7.0
+      },
+      {
+        "cell": "D7",
+        "kind": "number",
+        "note": "SUMIF over a criteria column",
+        "sheet": "agg",
+        "value": 42.0
+      },
+      {
+        "cell": "D8",
+        "kind": "number",
+        "note": "COUNTIF",
+        "sheet": "agg",
+        "value": 3.0
+      },
+      {
+        "cell": "D9",
+        "kind": "number",
+        "note": "PRODUCT",
+        "sheet": "agg",
+        "value": 480.0
+      },
+      {
+        "cell": "D10",
+        "kind": "number",
+        "note": "SUMPRODUCT pairs elementwise",
+        "sheet": "agg",
+        "value": 878.0
+      }
+    ],
+    "file": "aggregate.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "G1",
+        "kind": "number",
+        "note": "VLOOKUP exact match",
+        "sheet": "tbl",
+        "value": 30.0
+      },
+      {
+        "cell": "G2",
+        "kind": "number",
+        "note": "INDEX+MATCH, the VLOOKUP alternative",
+        "sheet": "tbl",
+        "value": 20.0
+      },
+      {
+        "cell": "G3",
+        "kind": "number",
+        "note": "MATCH returns a 1-based position",
+        "sheet": "tbl",
+        "value": 3.0
+      },
+      {
+        "cell": "G4",
+        "kind": "text",
+        "note": "VLOOKUP TRUE takes the last row not greater than 250",
+        "sheet": "tbl",
+        "value": "B"
+      },
+      {
+        "cell": "G5",
+        "kind": "number",
+        "note": "INDEX by position",
+        "sheet": "tbl",
+        "value": 40.0
+      }
+    ],
+    "file": "lookup.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "C1",
+        "kind": "number",
+        "note": "LEN",
+        "sheet": "txt",
+        "value": 10.0
+      },
+      {
+        "cell": "C2",
+        "kind": "text",
+        "note": "LEFT",
+        "sheet": "txt",
+        "value": "Logi"
+      },
+      {
+        "cell": "C3",
+        "kind": "text",
+        "note": "RIGHT",
+        "sheet": "txt",
+        "value": "Sheets"
+      },
+      {
+        "cell": "C4",
+        "kind": "text",
+        "note": "MID is 1-based, so MID(_,5,5) is Python [4:9]",
+        "sheet": "txt",
+        "value": "Sheet"
+      },
+      {
+        "cell": "C5",
+        "kind": "text",
+        "note": "UPPER",
+        "sheet": "txt",
+        "value": "LOGISHEETS"
+      },
+      {
+        "cell": "C6",
+        "kind": "text",
+        "note": "LOWER",
+        "sheet": "txt",
+        "value": "logisheets"
+      },
+      {
+        "cell": "C7",
+        "kind": "text",
+        "note": "TRIM strips both ends",
+        "sheet": "txt",
+        "value": "padded"
+      },
+      {
+        "cell": "C8",
+        "kind": "text",
+        "note": "SUBSTITUTE replaces every occurrence",
+        "sheet": "txt",
+        "value": "a-b-c"
+      },
+      {
+        "cell": "C9",
+        "kind": "text",
+        "note": "CONCATENATE",
+        "sheet": "txt",
+        "value": "LogiSheets LogiSheets"
+      },
+      {
+        "cell": "C10",
+        "kind": "number",
+        "note": "FIND is 1-based",
+        "sheet": "txt",
+        "value": 5.0
+      },
+      {
+        "cell": "C11",
+        "kind": "text",
+        "note": "& concatenates",
+        "sheet": "txt",
+        "value": "LogiSheets!"
+      }
+    ],
+    "file": "text.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "C1",
+        "kind": "text",
+        "note": "IF picks the true branch",
+        "sheet": "logic",
+        "value": "big"
+      },
+      {
+        "cell": "C2",
+        "kind": "bool",
+        "note": "AND",
+        "sheet": "logic",
+        "value": true
+      },
+      {
+        "cell": "C3",
+        "kind": "bool",
+        "note": "OR",
+        "sheet": "logic",
+        "value": true
+      },
+      {
+        "cell": "C4",
+        "kind": "bool",
+        "note": "NOT",
+        "sheet": "logic",
+        "value": false
+      },
+      {
+        "cell": "C5",
+        "kind": "text",
+        "note": "IFERROR catches #DIV/0!",
+        "sheet": "logic",
+        "value": "div0"
+      },
+      {
+        "cell": "C6",
+        "kind": "bool",
+        "note": "ISNUMBER",
+        "sheet": "logic",
+        "value": true
+      },
+      {
+        "cell": "C7",
+        "kind": "number",
+        "note": "ROUND is half away from zero, so 2.5 -> 3 (Python gives 2)",
+        "sheet": "logic",
+        "value": 3.0
+      },
+      {
+        "cell": "C8",
+        "kind": "number",
+        "note": "and -2.5 -> -3 (Python gives -2)",
+        "sheet": "logic",
+        "value": -3.0
+      },
+      {
+        "cell": "C9",
+        "kind": "number",
+        "note": "ABS",
+        "sheet": "logic",
+        "value": 2.5
+      },
+      {
+        "cell": "C10",
+        "kind": "number",
+        "note": "INT floors toward negative infinity, so -2.5 -> -3",
+        "sheet": "logic",
+        "value": -3.0
+      },
+      {
+        "cell": "B5",
+        "kind": "number",
+        "note": "revenue",
+        "sheet": "model",
+        "value": 1140.0
+      },
+      {
+        "cell": "B6",
+        "kind": "number",
+        "note": "cost of goods",
+        "sheet": "model",
+        "value": 510.0
+      },
+      {
+        "cell": "B7",
+        "kind": "number",
+        "note": "gross profit, one level down the chain",
+        "sheet": "model",
+        "value": 630.0
+      },
+      {
+        "cell": "B8",
+        "kind": "number",
+        "note": "after tax, two levels down",
+        "sheet": "model",
+        "value": 504.0
+      },
+      {
+        "cell": "B9",
+        "kind": "number",
+        "note": "margin, three levels down",
+        "sheet": "model",
+        "value": 0.4421052631578947
+      },
+      {
+        "cell": "B10",
+        "kind": "number",
+        "note": "a reference across sheets",
+        "sheet": "model",
+        "value": 130.0
+      }
+    ],
+    "file": "model.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "C1",
+        "kind": "number",
+        "note": "a blank cell reads as 0 in arithmetic",
+        "sheet": "edge",
+        "value": 10.0
+      },
+      {
+        "cell": "C2",
+        "kind": "text",
+        "note": "a blank cell equals \"\" in a comparison",
+        "sheet": "edge",
+        "value": "blank"
+      },
+      {
+        "cell": "C3",
+        "kind": "bool",
+        "note": "ISBLANK sees it",
+        "sheet": "edge",
+        "value": true
+      },
+      {
+        "cell": "C4",
+        "kind": "number",
+        "note": "numeric text \"5\" coerces to 5 in arithmetic",
+        "sheet": "edge",
+        "value": 6.0
+      },
+      {
+        "cell": "C5",
+        "kind": "number",
+        "note": "SUM ignores text, even numeric-looking text",
+        "sheet": "edge",
+        "value": 10.0
+      },
+      {
+        "cell": "C6",
+        "kind": "number",
+        "note": "TRUE is 1 in arithmetic",
+        "sheet": "edge",
+        "value": 2.0
+      },
+      {
+        "cell": "C7",
+        "kind": "bool",
+        "note": "= compares text case-insensitively",
+        "sheet": "edge",
+        "value": true
+      },
+      {
+        "cell": "C8",
+        "kind": "bool",
+        "note": "EXACT is the case-sensitive comparison",
+        "sheet": "edge",
+        "value": false
+      },
+      {
+        "cell": "C9",
+        "kind": "text",
+        "note": "& concatenates, it does not add",
+        "sheet": "edge",
+        "value": "12"
+      },
+      {
+        "cell": "C10",
+        "kind": "number",
+        "note": "INT floors toward negative infinity",
+        "sheet": "edge",
+        "value": -3.0
+      },
+      {
+        "cell": "C11",
+        "kind": "number",
+        "note": "TRUNC chops toward zero",
+        "sheet": "edge",
+        "value": -2.0
+      },
+      {
+        "cell": "C12",
+        "kind": "number",
+        "note": "MOD takes the sign of the divisor",
+        "sheet": "edge",
+        "value": 1.0
+      },
+      {
+        "cell": "C13",
+        "kind": "number",
+        "note": "and so is negative here",
+        "sheet": "edge",
+        "value": -1.0
+      },
+      {
+        "cell": "C14",
+        "kind": "number",
+        "note": "COUNTIF folds case",
+        "sheet": "edge",
+        "value": 2.0
+      },
+      {
+        "cell": "C15",
+        "kind": "number",
+        "note": "and so does a wildcard criterion",
+        "sheet": "edge",
+        "value": 2.0
+      },
+      {
+        "cell": "C16",
+        "kind": "number",
+        "note": "MATCH folds case",
+        "sheet": "edge",
+        "value": 1.0
+      },
+      {
+        "cell": "C17",
+        "kind": "number",
+        "note": "SUMIF agrees with COUNTIF",
+        "sheet": "edge",
+        "value": 10.0
+      },
+      {
+        "cell": "C18",
+        "kind": "number",
+        "note": "an ordering criterion folds case too",
+        "sheet": "edge",
+        "value": 1.0
+      },
+      {
+        "cell": "C19",
+        "kind": "bool",
+        "note": "ordering is case-insensitive: \"a\" sorts before \"B\"",
+        "sheet": "edge",
+        "value": true
+      },
+      {
+        "cell": "C20",
+        "kind": "text",
+        "note": "VLOOKUP returns what the sheet holds",
+        "sheet": "edge",
+        "value": "Apple"
+      },
+      {
+        "cell": "C21",
+        "kind": "bool",
+        "note": "a blank cell equals \"\"",
+        "sheet": "edge",
+        "value": true
+      },
+      {
+        "cell": "C22",
+        "kind": "bool",
+        "note": "and the comparison is symmetric",
+        "sheet": "edge",
+        "value": true
+      },
+      {
+        "cell": "C23",
+        "kind": "bool",
+        "note": "but it is not equal to non-empty text",
+        "sheet": "edge",
+        "value": false
+      }
+    ],
+    "file": "edges.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "C1",
+        "kind": "text",
+        "note": "IFERROR catches #DIV/0!",
+        "sheet": "err",
+        "value": "caught"
+      },
+      {
+        "cell": "C2",
+        "kind": "bool",
+        "note": "ISERROR sees the division error",
+        "sheet": "err",
+        "value": true
+      },
+      {
+        "cell": "C3",
+        "kind": "bool",
+        "note": "an error propagates through +",
+        "sheet": "err",
+        "value": true
+      },
+      {
+        "cell": "C4",
+        "kind": "bool",
+        "note": "and is NOT skipped by SUM the way text is",
+        "sheet": "err",
+        "value": true
+      },
+      {
+        "cell": "C5",
+        "kind": "text",
+        "note": "a failed exact VLOOKUP is #N/A",
+        "sheet": "err",
+        "value": "missing"
+      },
+      {
+        "cell": "C6",
+        "kind": "bool",
+        "note": "a failed MATCH is #N/A",
+        "sheet": "err",
+        "value": true
+      },
+      {
+        "cell": "C7",
+        "kind": "text",
+        "note": "non-numeric text in arithmetic is #VALUE!",
+        "sheet": "err",
+        "value": "bad"
+      },
+      {
+        "cell": "C8",
+        "kind": "bool",
+        "note": "a fine division is not an error",
+        "sheet": "err",
+        "value": false
+      }
+    ],
+    "file": "errors.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "A1",
+        "kind": "number",
+        "note": "a date is a day count from 1899-12-30",
+        "sheet": "d",
+        "value": 45322.0
+      },
+      {
+        "cell": "A2",
+        "kind": "number",
+        "note": "YEAR",
+        "sheet": "d",
+        "value": 2024.0
+      },
+      {
+        "cell": "A3",
+        "kind": "number",
+        "note": "MONTH",
+        "sheet": "d",
+        "value": 1.0
+      },
+      {
+        "cell": "A4",
+        "kind": "number",
+        "note": "DAY",
+        "sheet": "d",
+        "value": 31.0
+      },
+      {
+        "cell": "A5",
+        "kind": "number",
+        "note": "2024 is a leap year, so February has 29 days",
+        "sheet": "d",
+        "value": 29.0
+      },
+      {
+        "cell": "A6",
+        "kind": "number",
+        "note": "2023 is not",
+        "sheet": "d",
+        "value": 28.0
+      },
+      {
+        "cell": "A7",
+        "kind": "number",
+        "note": "EOMONTH finds the last day",
+        "sheet": "d",
+        "value": 45351.0
+      },
+      {
+        "cell": "A8",
+        "kind": "number",
+        "note": "EDATE clamps to a shorter month",
+        "sheet": "d",
+        "value": 45351.0
+      },
+      {
+        "cell": "A9",
+        "diverges": "we use a real calendar and return 60. Only dates before 1900-03-01 are affected; every modern date on this sheet matches",
+        "kind": "number",
+        "note": "the 1900 leap-year bug: day 61, not 60",
+        "sheet": "d",
+        "value": 61.0
+      }
+    ],
+    "file": "dates.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "A1",
+        "kind": "number",
+        "note": "ROUNDUP goes away from zero",
+        "sheet": "r",
+        "value": 3.0
+      },
+      {
+        "cell": "A2",
+        "kind": "number",
+        "note": "including for negatives",
+        "sheet": "r",
+        "value": -3.0
+      },
+      {
+        "cell": "A3",
+        "kind": "number",
+        "note": "ROUNDDOWN goes toward zero",
+        "sheet": "r",
+        "value": 2.0
+      },
+      {
+        "cell": "A4",
+        "kind": "number",
+        "note": "including for negatives",
+        "sheet": "r",
+        "value": -2.0
+      },
+      {
+        "cell": "A5",
+        "kind": "number",
+        "note": "ROUND is half away from zero",
+        "sheet": "r",
+        "value": -1.0
+      },
+      {
+        "cell": "A6",
+        "kind": "number",
+        "note": "in both directions",
+        "sheet": "r",
+        "value": 1.0
+      },
+      {
+        "cell": "A7",
+        "kind": "number",
+        "note": "round to 2 decimals",
+        "sheet": "r",
+        "value": 1234.57
+      },
+      {
+        "cell": "A8",
+        "kind": "number",
+        "note": "a negative digit count rounds left of the point",
+        "sheet": "r",
+        "value": 1200.0
+      },
+      {
+        "cell": "A9",
+        "kind": "number",
+        "note": "and ROUNDUP does too",
+        "sheet": "r",
+        "value": 1300.0
+      },
+      {
+        "cell": "A10",
+        "kind": "number",
+        "note": "MROUND to the nearest multiple",
+        "sheet": "r",
+        "value": 8.0
+      },
+      {
+        "cell": "A11",
+        "kind": "number",
+        "note": "MROUND needs matching signs",
+        "sheet": "r",
+        "value": -8.0
+      },
+      {
+        "cell": "A12",
+        "kind": "number",
+        "note": "TRUNC is ROUNDDOWN with a default",
+        "sheet": "r",
+        "value": 2.0
+      },
+      {
+        "cell": "A13",
+        "kind": "number",
+        "note": "Excel rounds the decimal it displayed, not the binary below it",
+        "sheet": "r",
+        "value": 2.68
+      },
+      {
+        "cell": "A14",
+        "kind": "number",
+        "note": "same trap, the textbook example",
+        "sheet": "r",
+        "value": 1.01
+      }
+    ],
+    "file": "rounding.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "F1",
+        "kind": "number",
+        "note": "SUM ignores a boolean sitting in a range",
+        "sheet": "rng",
+        "value": 6.0
+      },
+      {
+        "cell": "F2",
+        "kind": "number",
+        "note": "but counts one passed as an argument",
+        "sheet": "rng",
+        "value": 7.0
+      },
+      {
+        "cell": "F16",
+        "kind": "number",
+        "note": "FALSE as an argument is 0, not a skip",
+        "sheet": "rng",
+        "value": 6.0
+      },
+      {
+        "cell": "F17",
+        "kind": "number",
+        "note": "SUMSQ takes arguments the same way",
+        "sheet": "rng",
+        "value": 10.0
+      },
+      {
+        "cell": "F18",
+        "kind": "number",
+        "note": "COUNT counts a logical argument too",
+        "sheet": "rng",
+        "value": 4.0
+      },
+      {
+        "cell": "F19",
+        "kind": "number",
+        "note": "AVERAGE divides by 3, having counted both",
+        "sheet": "rng",
+        "value": 0.6666666666666666
+      },
+      {
+        "cell": "F3",
+        "kind": "number",
+        "note": "COUNT ignores the boolean and the text in a range",
+        "sheet": "rng",
+        "value": 3.0
+      },
+      {
+        "cell": "F4",
+        "kind": "number",
+        "note": "COUNTA counts everything non-blank, including both",
+        "sheet": "rng",
+        "value": 5.0
+      },
+      {
+        "cell": "F5",
+        "kind": "number",
+        "note": "COUNTBLANK finds the one gap",
+        "sheet": "rng",
+        "value": 1.0
+      },
+      {
+        "cell": "F6",
+        "kind": "number",
+        "note": "AVERAGE divides by COUNT, not by the range size",
+        "sheet": "rng",
+        "value": 2.0
+      },
+      {
+        "cell": "F7",
+        "kind": "number",
+        "note": "a rectangular range sums every cell",
+        "sheet": "rng",
+        "value": 10.0
+      },
+      {
+        "cell": "F8",
+        "kind": "number",
+        "note": "MAX over two dimensions",
+        "sheet": "rng",
+        "value": 4.0
+      },
+      {
+        "cell": "F9",
+        "kind": "number",
+        "note": "the long way round to an average",
+        "sheet": "rng",
+        "value": 20.0
+      },
+      {
+        "cell": "F10",
+        "kind": "number",
+        "note": "a one-cell range",
+        "sheet": "rng",
+        "value": 10.0
+      },
+      {
+        "cell": "F11",
+        "kind": "number",
+        "note": "SUMPRODUCT over two columns",
+        "sheet": "rng",
+        "value": 11.0
+      },
+      {
+        "cell": "F12",
+        "kind": "number",
+        "note": "a comparison criterion",
+        "sheet": "rng",
+        "value": 2.0
+      },
+      {
+        "cell": "F13",
+        "kind": "number",
+        "note": "a not-equal criterion",
+        "sheet": "rng",
+        "value": 2.0
+      },
+      {
+        "cell": "F14",
+        "kind": "number",
+        "note": "SUMIF with no separate sum range sums the tested one",
+        "sheet": "rng",
+        "value": 50.0
+      },
+      {
+        "cell": "F15",
+        "kind": "number",
+        "note": "COUNTIFS intersects its conditions",
+        "sheet": "rng",
+        "value": 2.0
+      }
+    ],
+    "file": "ranges.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "A40",
+        "kind": "number",
+        "note": "the end of a 40-deep chain of four alternating shapes",
+        "sheet": "deep",
+        "value": 1535.0
+      },
+      {
+        "cell": "A20",
+        "kind": "number",
+        "note": "the midpoint, so a failure localises",
+        "sheet": "deep",
+        "value": 47.0
+      },
+      {
+        "cell": "A1",
+        "kind": "number",
+        "note": "a reference into another sheet",
+        "sheet": "two",
+        "value": 15.0
+      },
+      {
+        "cell": "A2",
+        "kind": "number",
+        "note": "the same cell twice in one formula",
+        "sheet": "two",
+        "value": 10.0
+      },
+      {
+        "cell": "A1",
+        "kind": "number",
+        "note": "two hops: this sheet reads a sheet that reads a third",
+        "sheet": "three",
+        "value": 25.0
+      },
+      {
+        "cell": "A2",
+        "kind": "number",
+        "note": "a RANGE on another sheet",
+        "sheet": "three",
+        "value": 25.0
+      },
+      {
+        "cell": "A3",
+        "kind": "number",
+        "note": "two different sheets in one expression",
+        "sheet": "three",
+        "value": 75.0
+      }
+    ],
+    "file": "chain.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "C1",
+        "kind": "text",
+        "note": "LEFT past the end returns the whole string",
+        "sheet": "te",
+        "value": "abc"
+      },
+      {
+        "cell": "C2",
+        "kind": "text",
+        "note": "and so does RIGHT",
+        "sheet": "te",
+        "value": "abc"
+      },
+      {
+        "cell": "C3",
+        "kind": "text",
+        "note": "zero characters is the empty string, not an error",
+        "sheet": "te",
+        "value": ""
+      },
+      {
+        "cell": "C4",
+        "kind": "text",
+        "note": "MID starting past the end is empty",
+        "sheet": "te",
+        "value": ""
+      },
+      {
+        "cell": "C5",
+        "kind": "text",
+        "note": "MID asking for too many stops at the end",
+        "sheet": "te",
+        "value": "bc"
+      },
+      {
+        "cell": "C6",
+        "kind": "number",
+        "note": "the empty string has length 0",
+        "sheet": "te",
+        "value": 0.0
+      },
+      {
+        "cell": "C7",
+        "kind": "text",
+        "note": "a negative count is #VALUE!",
+        "sheet": "te",
+        "value": "err"
+      },
+      {
+        "cell": "C8",
+        "kind": "text",
+        "note": "a whole number loses its decimal point",
+        "sheet": "te",
+        "value": "1"
+      },
+      {
+        "cell": "C9",
+        "kind": "text",
+        "note": "a fraction keeps it",
+        "sheet": "te",
+        "value": "1.5"
+      },
+      {
+        "cell": "C10",
+        "kind": "text",
+        "note": "a boolean stringifies in upper case",
+        "sheet": "te",
+        "value": "TRUE"
+      },
+      {
+        "cell": "C11",
+        "kind": "text",
+        "note": "an exact binary fraction",
+        "sheet": "te",
+        "value": "0.25"
+      },
+      {
+        "cell": "C12",
+        "kind": "text",
+        "note": "15 significant digits, not 17",
+        "sheet": "te",
+        "value": "0.333333333333333"
+      },
+      {
+        "cell": "C21",
+        "kind": "text",
+        "note": "the residue is below the 15th digit and rounds away",
+        "sheet": "te",
+        "value": "0.3"
+      },
+      {
+        "cell": "C22",
+        "kind": "text",
+        "note": "rounds at the 15th, not truncates",
+        "sheet": "te",
+        "value": "0.666666666666667"
+      },
+      {
+        "cell": "C23",
+        "kind": "text",
+        "note": "a trailing zero at the 15th place is stripped",
+        "sheet": "te",
+        "value": "1.4142135623731"
+      },
+      {
+        "cell": "C24",
+        "kind": "number",
+        "note": "LEN agrees with what concatenation produced",
+        "sheet": "te",
+        "value": 17.0
+      },
+      {
+        "cell": "C25",
+        "kind": "text",
+        "note": "a text function fed a number sees the same string",
+        "sheet": "te",
+        "value": "0.333333333333333"
+      },
+      {
+        "cell": "C26",
+        "kind": "text",
+        "note": "twice in one expression",
+        "sheet": "te",
+        "value": "0.333333333333333|0.666666666666667"
+      },
+      {
+        "cell": "C27",
+        "kind": "text",
+        "note": "a small magnitude keeps decimal notation",
+        "sheet": "te",
+        "value": "0.0000001"
+      },
+      {
+        "cell": "C28",
+        "kind": "text",
+        "note": "and an ordinary number is untouched",
+        "sheet": "te",
+        "value": "1234.5678"
+      },
+      {
+        "cell": "C13",
+        "kind": "text",
+        "note": "REPT",
+        "sheet": "te",
+        "value": "ababab"
+      },
+      {
+        "cell": "C14",
+        "kind": "text",
+        "note": "TRIM also collapses runs inside the string",
+        "sheet": "te",
+        "value": "a b"
+      },
+      {
+        "cell": "C16",
+        "kind": "text",
+        "note": "nothing to do",
+        "sheet": "te",
+        "value": "a"
+      },
+      {
+        "cell": "C17",
+        "kind": "text",
+        "note": "all spaces collapses to nothing",
+        "sheet": "te",
+        "value": ""
+      },
+      {
+        "cell": "C18",
+        "kind": "text",
+        "note": "and the empty string survives",
+        "sheet": "te",
+        "value": ""
+      },
+      {
+        "cell": "C19",
+        "kind": "number",
+        "note": "one space left between the words",
+        "sheet": "te",
+        "value": 3.0
+      },
+      {
+        "cell": "C20",
+        "kind": "text",
+        "note": "a TAB is not a space; TRIM leaves it",
+        "sheet": "te",
+        "value": "a\tb"
+      },
+      {
+        "cell": "C15",
+        "kind": "text",
+        "note": "SUBSTITUTE with an instance number",
+        "sheet": "te",
+        "value": "aba"
+      }
+    ],
+    "file": "textedge.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "E1",
+        "kind": "number",
+        "note": "OFFSET by rows",
+        "sheet": "dyn",
+        "value": 30.0
+      },
+      {
+        "cell": "E2",
+        "kind": "number",
+        "note": "OFFSET by columns",
+        "sheet": "dyn",
+        "value": 100.0
+      },
+      {
+        "cell": "E3",
+        "kind": "number",
+        "note": "OFFSET with a height makes a range",
+        "sheet": "dyn",
+        "value": 90.0
+      },
+      {
+        "cell": "E4",
+        "kind": "number",
+        "note": "INDIRECT from a literal address",
+        "sheet": "dyn",
+        "value": 30.0
+      },
+      {
+        "cell": "E5",
+        "kind": "number",
+        "note": "INDIRECT from a built address",
+        "sheet": "dyn",
+        "value": 40.0
+      },
+      {
+        "cell": "E6",
+        "kind": "number",
+        "note": "INDIRECT can name a range",
+        "sheet": "dyn",
+        "value": 60.0
+      },
+      {
+        "cell": "E13",
+        "kind": "number",
+        "note": "the whole range, not its first cell",
+        "sheet": "dyn",
+        "value": 5.0
+      },
+      {
+        "cell": "E14",
+        "kind": "number",
+        "note": "MAX over an INDIRECT range",
+        "sheet": "dyn",
+        "value": 50.0
+      },
+      {
+        "cell": "E15",
+        "kind": "number",
+        "note": "a 2-D INDIRECT range",
+        "sheet": "dyn",
+        "value": 330.0
+      },
+      {
+        "cell": "E16",
+        "kind": "number",
+        "note": "written backwards is the same rectangle",
+        "sheet": "dyn",
+        "value": 60.0
+      },
+      {
+        "cell": "E17",
+        "kind": "number",
+        "note": "a one-cell range is still a range",
+        "sheet": "dyn",
+        "value": 20.0
+      },
+      {
+        "cell": "E18",
+        "kind": "number",
+        "note": "the range string can be built",
+        "sheet": "dyn",
+        "value": 30.0
+      },
+      {
+        "cell": "E7",
+        "kind": "number",
+        "note": "ROW of a reference",
+        "sheet": "dyn",
+        "value": 3.0
+      },
+      {
+        "cell": "E8",
+        "kind": "number",
+        "note": "COLUMN of a reference",
+        "sheet": "dyn",
+        "value": 3.0
+      },
+      {
+        "cell": "E9",
+        "kind": "number",
+        "note": "INDEX by position",
+        "sheet": "dyn",
+        "value": 30.0
+      },
+      {
+        "cell": "E10",
+        "diverges": "we give #VALUE!. In Excel INDEX yields a REFERENCE when it is used in reference context, which is what makes the `A1:INDEX(...)` dynamic-range idiom work; ours yields a value, so the range operator has nothing to bind to",
+        "kind": "number",
+        "note": "INDEX as one end of a range",
+        "sheet": "dyn",
+        "value": 60.0
+      },
+      {
+        "cell": "E11",
+        "kind": "text",
+        "note": "CHOOSE is 1-based",
+        "sheet": "dyn",
+        "value": "b"
+      },
+      {
+        "cell": "E12",
+        "kind": "text",
+        "note": "an unparseable address is #REF!",
+        "sheet": "dyn",
+        "value": "bad"
+      }
+    ],
+    "file": "dynrefs.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "C1",
+        "kind": "text",
+        "note": "nested IF, inner true branch",
+        "sheet": "n",
+        "value": "mid"
+      },
+      {
+        "cell": "C2",
+        "kind": "text",
+        "note": "nested IF in the false branch",
+        "sheet": "n",
+        "value": "neg"
+      },
+      {
+        "cell": "C3",
+        "kind": "text",
+        "note": "IF does not evaluate the branch it did not take",
+        "sheet": "n",
+        "value": "safe"
+      },
+      {
+        "cell": "C4",
+        "kind": "number",
+        "note": "and the same the other way round",
+        "sheet": "n",
+        "value": -1.0
+      },
+      {
+        "cell": "C5",
+        "kind": "text",
+        "note": "IFS takes the first true test",
+        "sheet": "n",
+        "value": "neg"
+      },
+      {
+        "cell": "C6",
+        "kind": "text",
+        "note": "SWITCH matches a value",
+        "sheet": "n",
+        "value": "two"
+      },
+      {
+        "cell": "C7",
+        "kind": "text",
+        "note": "SWITCH falls back",
+        "sheet": "n",
+        "value": "other"
+      },
+      {
+        "cell": "C8",
+        "kind": "bool",
+        "note": "AND over three tests",
+        "sheet": "n",
+        "value": true
+      },
+      {
+        "cell": "C9",
+        "kind": "bool",
+        "note": "OR finds the one true test",
+        "sheet": "n",
+        "value": true
+      },
+      {
+        "cell": "C10",
+        "kind": "bool",
+        "note": "NOT around AND",
+        "sheet": "n",
+        "value": true
+      },
+      {
+        "cell": "C11",
+        "kind": "bool",
+        "note": "XOR is odd-parity, not exactly-one",
+        "sheet": "n",
+        "value": true
+      },
+      {
+        "cell": "C12",
+        "kind": "number",
+        "note": "a function call as an argument",
+        "sheet": "n",
+        "value": 5.0
+      },
+      {
+        "cell": "C13",
+        "kind": "number",
+        "note": "functions nested three deep",
+        "sheet": "n",
+        "value": 0.0
+      }
+    ],
+    "file": "nesting.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "A1",
+        "kind": "number",
+        "note": "the largest exactly-representable integer",
+        "sheet": "num",
+        "value": 9007199254740992.0
+      },
+      {
+        "cell": "A2",
+        "kind": "number",
+        "note": "adding 1 past 2^53 is lost, as in every f64",
+        "sheet": "num",
+        "value": 0.0
+      },
+      {
+        "cell": "A3",
+        "kind": "number",
+        "note": "a small power",
+        "sheet": "num",
+        "value": 1024.0
+      },
+      {
+        "cell": "A4",
+        "kind": "number",
+        "note": "a large round number",
+        "sheet": "num",
+        "value": 1000000000000000.0
+      },
+      {
+        "cell": "A5",
+        "kind": "number",
+        "note": "subnormal territory still multiplies",
+        "sheet": "num",
+        "value": 1e-310
+      },
+      {
+        "cell": "A6",
+        "kind": "number",
+        "note": "three thirds come back to exactly 1 in binary64",
+        "sheet": "num",
+        "value": 1.0
+      },
+      {
+        "cell": "A7",
+        "kind": "number",
+        "note": "0.1+0.2 is not 0.3 in binary64, and the residue is the IEEE one",
+        "sheet": "num",
+        "value": 5.551115123125783
+      },
+      {
+        "cell": "A8",
+        "kind": "number",
+        "note": "negative zero is zero",
+        "sheet": "num",
+        "value": 0.0
+      },
+      {
+        "cell": "A9",
+        "kind": "number",
+        "note": "multiplying past the f64 range is #NUM!, not infinity",
+        "sheet": "num",
+        "value": -1.0
+      },
+      {
+        "cell": "A15",
+        "kind": "number",
+        "note": "overflow through + is #NUM!",
+        "sheet": "num",
+        "value": -1.0
+      },
+      {
+        "cell": "A16",
+        "kind": "number",
+        "note": "and through -",
+        "sheet": "num",
+        "value": -1.0
+      },
+      {
+        "cell": "A17",
+        "kind": "number",
+        "note": "and through ^",
+        "sheet": "num",
+        "value": -1.0
+      },
+      {
+        "cell": "A18",
+        "kind": "number",
+        "note": "division already guarded this",
+        "sheet": "num",
+        "value": -1.0
+      },
+      {
+        "cell": "A19",
+        "kind": "bool",
+        "note": "an overflow is testable with ISERROR, an infinity would not be",
+        "sheet": "num",
+        "value": true
+      },
+      {
+        "cell": "A10",
+        "kind": "number",
+        "note": "sqrt then square does not return exactly 2",
+        "sheet": "num",
+        "value": 2.0000000000000004
+      },
+      {
+        "cell": "A11",
+        "kind": "number",
+        "note": "very large magnitudes survive ABS",
+        "sheet": "num",
+        "value": 1e+100
+      },
+      {
+        "cell": "A12",
+        "kind": "number",
+        "note": "SIGN of a tiny negative",
+        "sheet": "num",
+        "value": -1.0
+      },
+      {
+        "cell": "A13",
+        "kind": "number",
+        "note": "POWER with a fractional exponent",
+        "sheet": "num",
+        "value": 1.4142135623730951
+      },
+      {
+        "cell": "A14",
+        "kind": "number",
+        "note": "MOD on positives",
+        "sheet": "num",
+        "value": 1.0
+      }
+    ],
+    "file": "numeric.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "D1",
+        "kind": "number",
+        "note": "the level payment on a 5-year loan",
+        "sheet": "fin",
+        "value": -377.4246728802198
+      },
+      {
+        "cell": "D2",
+        "kind": "number",
+        "note": "paying the PMT for NPER leaves nothing",
+        "sheet": "fin",
+        "value": 0.0
+      },
+      {
+        "cell": "D3",
+        "kind": "number",
+        "note": "PV of those payments is the principal back; PMT is negative, so this is positive",
+        "sheet": "fin",
+        "value": 20000.0
+      },
+      {
+        "cell": "D4",
+        "kind": "number",
+        "note": "NPV discounts the FIRST value by one period",
+        "sheet": "fin",
+        "value": -19.124376750222126
+      },
+      {
+        "cell": "D5",
+        "kind": "number",
+        "note": "so an at-time-zero flow is added outside",
+        "sheet": "fin",
+        "value": -21.0368144252443
+      },
+      {
+        "cell": "D6",
+        "kind": "number",
+        "note": "the first period is all balance x rate",
+        "sheet": "fin",
+        "value": -83.33333333333333
+      },
+      {
+        "cell": "D7",
+        "kind": "number",
+        "note": "interest plus principal is the payment",
+        "sheet": "fin",
+        "value": -377.4246728802198
+      },
+      {
+        "cell": "D8",
+        "kind": "number",
+        "note": "NPER inverts the payment",
+        "sheet": "fin",
+        "value": 60.0
+      },
+      {
+        "cell": "D9",
+        "kind": "number",
+        "note": "straight-line depreciation",
+        "sheet": "fin",
+        "value": 1800.0
+      },
+      {
+        "cell": "D10",
+        "kind": "number",
+        "note": "sum-of-years-digits, first year",
+        "sheet": "fin",
+        "value": 3000.0
+      }
+    ],
+    "file": "financial.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "A1",
+        "kind": "number",
+        "note": "noon is half a day",
+        "sheet": "t",
+        "value": 0.5
+      },
+      {
+        "cell": "A2",
+        "kind": "number",
+        "note": "a quarter past midnight in days",
+        "sheet": "t",
+        "value": 0.25
+      },
+      {
+        "cell": "A3",
+        "kind": "number",
+        "note": "an hour and a half",
+        "sheet": "t",
+        "value": 0.0625
+      },
+      {
+        "cell": "A4",
+        "kind": "number",
+        "note": "HOUR",
+        "sheet": "t",
+        "value": 13.0
+      },
+      {
+        "cell": "A5",
+        "kind": "number",
+        "note": "MINUTE",
+        "sheet": "t",
+        "value": 45.0
+      },
+      {
+        "cell": "A6",
+        "kind": "number",
+        "note": "SECOND",
+        "sheet": "t",
+        "value": 30.0
+      },
+      {
+        "cell": "A7",
+        "kind": "number",
+        "note": "a time rides on a date serial",
+        "sheet": "t",
+        "value": 9.0
+      },
+      {
+        "cell": "A8",
+        "kind": "number",
+        "note": "without moving the day",
+        "sheet": "t",
+        "value": 1.0
+      },
+      {
+        "cell": "A9",
+        "kind": "number",
+        "note": "adding past midnight wraps the hour",
+        "sheet": "t",
+        "value": 1.0
+      },
+      {
+        "cell": "A10",
+        "kind": "number",
+        "note": "TIME takes hours modulo 24",
+        "sheet": "t",
+        "value": 0.041666666666666664
+      },
+      {
+        "cell": "A11",
+        "kind": "number",
+        "note": "1 Jan 2024 was a Monday; WEEKDAY defaults to Sunday=1",
+        "sheet": "t",
+        "value": 2.0
+      },
+      {
+        "cell": "A12",
+        "kind": "number",
+        "note": "type 2 makes Monday=1",
+        "sheet": "t",
+        "value": 1.0
+      },
+      {
+        "cell": "A13",
+        "kind": "number",
+        "note": "days between, 2024 being a leap year",
+        "sheet": "t",
+        "value": 60.0
+      },
+      {
+        "cell": "A14",
+        "kind": "number",
+        "note": "and DAYS agrees",
+        "sheet": "t",
+        "value": 60.0
+      }
+    ],
+    "file": "times.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "C1",
+        "kind": "number",
+        "note": "an even count averages the middle pair",
+        "sheet": "s",
+        "value": 4.5
+      },
+      {
+        "cell": "C2",
+        "kind": "number",
+        "note": "population variance divides by n",
+        "sheet": "s",
+        "value": 4.0
+      },
+      {
+        "cell": "C3",
+        "kind": "number",
+        "note": "sample variance divides by n-1",
+        "sheet": "s",
+        "value": 4.571428571428571
+      },
+      {
+        "cell": "C4",
+        "kind": "number",
+        "note": "population sd",
+        "sheet": "s",
+        "value": 2.0
+      },
+      {
+        "cell": "C5",
+        "kind": "number",
+        "note": "sample sd",
+        "sheet": "s",
+        "value": 2.138089935299395
+      },
+      {
+        "cell": "C6",
+        "kind": "number",
+        "note": "the most frequent value",
+        "sheet": "s",
+        "value": 4.0
+      },
+      {
+        "cell": "C7",
+        "kind": "number",
+        "note": "second largest",
+        "sheet": "s",
+        "value": 7.0
+      },
+      {
+        "cell": "C8",
+        "kind": "number",
+        "note": "second smallest",
+        "sheet": "s",
+        "value": 4.0
+      },
+      {
+        "cell": "C9",
+        "kind": "number",
+        "note": "linear interpolation between the bracketing values",
+        "sheet": "s",
+        "value": 4.0
+      },
+      {
+        "cell": "C10",
+        "kind": "number",
+        "note": "the second quartile is the median",
+        "sheet": "s",
+        "value": 4.5
+      },
+      {
+        "cell": "C11",
+        "kind": "number",
+        "note": "RANK defaults to descending, so the largest is 1",
+        "sheet": "s",
+        "value": 1.0
+      },
+      {
+        "cell": "C12",
+        "kind": "number",
+        "note": "ascending makes the smallest 1",
+        "sheet": "s",
+        "value": 1.0
+      },
+      {
+        "cell": "C13",
+        "kind": "number",
+        "note": "mean absolute deviation",
+        "sheet": "s",
+        "value": 1.5
+      },
+      {
+        "cell": "C14",
+        "kind": "number",
+        "note": "sum of squared deviations",
+        "sheet": "s",
+        "value": 32.0
+      },
+      {
+        "cell": "C15",
+        "kind": "number",
+        "note": "how many fours",
+        "sheet": "s",
+        "value": 3.0
+      }
+    ],
+    "file": "stats.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "A4",
+        "kind": "number",
+        "note": "the first group's subtotal",
+        "sheet": "sub",
+        "value": 60.0
+      },
+      {
+        "cell": "A8",
+        "kind": "number",
+        "note": "the second group's",
+        "sheet": "sub",
+        "value": 150.0
+      },
+      {
+        "cell": "A9",
+        "kind": "number",
+        "note": "the grand total SKIPS the two subtotals in its range",
+        "sheet": "sub",
+        "value": 210.0
+      },
+      {
+        "cell": "C6",
+        "kind": "number",
+        "note": "AVERAGE skips them too, and divides by 6 not 8",
+        "sheet": "sub",
+        "value": 35.0
+      },
+      {
+        "cell": "C7",
+        "kind": "number",
+        "note": "COUNT sees six numbers, not eight",
+        "sheet": "sub",
+        "value": 6.0
+      },
+      {
+        "cell": "C8",
+        "kind": "number",
+        "note": "MAX is unaffected here but must still skip",
+        "sheet": "sub",
+        "value": 60.0
+      },
+      {
+        "cell": "C9",
+        "kind": "number",
+        "note": "the 101-111 range skips them as well",
+        "sheet": "sub",
+        "value": 210.0
+      },
+      {
+        "cell": "C10",
+        "kind": "number",
+        "note": "two refs, neither containing a subtotal",
+        "sheet": "sub",
+        "value": 210.0
+      },
+      {
+        "cell": "C11",
+        "kind": "number",
+        "note": "a subtotal referenced directly is skipped too, leaving nothing",
+        "sheet": "sub",
+        "value": 0.0
+      },
+      {
+        "cell": "A10",
+        "kind": "number",
+        "note": "a plain SUM does not, and double-counts",
+        "sheet": "sub",
+        "value": 420.0
+      },
+      {
+        "cell": "C1",
+        "kind": "number",
+        "note": "function 1 is AVERAGE",
+        "sheet": "sub",
+        "value": 20.0
+      },
+      {
+        "cell": "C2",
+        "kind": "number",
+        "note": "2 is COUNT",
+        "sheet": "sub",
+        "value": 3.0
+      },
+      {
+        "cell": "C3",
+        "kind": "number",
+        "note": "4 is MAX",
+        "sheet": "sub",
+        "value": 30.0
+      },
+      {
+        "cell": "C4",
+        "kind": "number",
+        "note": "5 is MIN",
+        "sheet": "sub",
+        "value": 10.0
+      },
+      {
+        "cell": "C5",
+        "kind": "number",
+        "note": "109 is SUM ignoring hidden rows; none are hidden here",
+        "sheet": "sub",
+        "value": 60.0
+      }
+    ],
+    "file": "subtotal.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "C1",
+        "kind": "number",
+        "note": "VALUE parses numeric text",
+        "sheet": "co",
+        "value": 5.0
+      },
+      {
+        "cell": "C2",
+        "kind": "number",
+        "note": "including a decimal",
+        "sheet": "co",
+        "value": 5.5
+      },
+      {
+        "cell": "C3",
+        "kind": "number",
+        "note": "surrounding spaces are tolerated",
+        "sheet": "co",
+        "value": 7.0
+      },
+      {
+        "cell": "C4",
+        "kind": "text",
+        "note": "non-numeric text is #VALUE!",
+        "sheet": "co",
+        "value": "bad"
+      },
+      {
+        "cell": "C5",
+        "kind": "number",
+        "note": "numeric text coerces in arithmetic",
+        "sheet": "co",
+        "value": 10.0
+      },
+      {
+        "cell": "C6",
+        "kind": "text",
+        "note": "but & keeps them as text",
+        "sheet": "co",
+        "value": "55.5"
+      },
+      {
+        "cell": "C7",
+        "kind": "number",
+        "note": "N does NOT parse text; it gives 0",
+        "sheet": "co",
+        "value": 0.0
+      },
+      {
+        "cell": "C8",
+        "kind": "number",
+        "note": "N passes a number through",
+        "sheet": "co",
+        "value": 5.0
+      },
+      {
+        "cell": "C9",
+        "kind": "number",
+        "note": "and turns TRUE into 1",
+        "sheet": "co",
+        "value": 1.0
+      },
+      {
+        "cell": "C10",
+        "kind": "bool",
+        "note": "the string \"5\" is not a number",
+        "sheet": "co",
+        "value": false
+      },
+      {
+        "cell": "C11",
+        "kind": "bool",
+        "note": "it is text",
+        "sheet": "co",
+        "value": true
+      },
+      {
+        "cell": "C12",
+        "kind": "bool",
+        "note": "once parsed it is",
+        "sheet": "co",
+        "value": true
+      },
+      {
+        "cell": "C13",
+        "kind": "text",
+        "note": "T returns text unchanged",
+        "sheet": "co",
+        "value": "5"
+      },
+      {
+        "cell": "C14",
+        "kind": "text",
+        "note": "and gives empty for a number",
+        "sheet": "co",
+        "value": ""
+      },
+      {
+        "cell": "C15",
+        "kind": "number",
+        "note": "TYPE: 1 number, 2 text, 4 logical, 16 error",
+        "sheet": "co",
+        "value": 2.0
+      },
+      {
+        "cell": "C16",
+        "kind": "number",
+        "note": "a number",
+        "sheet": "co",
+        "value": 1.0
+      },
+      {
+        "cell": "C17",
+        "kind": "number",
+        "note": "a logical",
+        "sheet": "co",
+        "value": 4.0
+      }
+    ],
+    "file": "coercion.xlsx"
+  },
+  {
+    "checks": [
+      {
+        "cell": "F2",
+        "kind": "number",
+        "note": "revenue for Widget",
+        "sheet": "model",
+        "value": 1140.0
+      },
+      {
+        "cell": "H2",
+        "kind": "number",
+        "note": "gross for Widget",
+        "sheet": "model",
+        "value": 630.0
+      },
+      {
+        "cell": "I2",
+        "kind": "number",
+        "note": "margin for Widget",
+        "sheet": "model",
+        "value": 0.5526315789473685
+      },
+      {
+        "cell": "F3",
+        "kind": "number",
+        "note": "revenue for Gadget",
+        "sheet": "model",
+        "value": 1920.0
+      },
+      {
+        "cell": "H3",
+        "kind": "number",
+        "note": "gross for Gadget",
+        "sheet": "model",
+        "value": 1040.0
+      },
+      {
+        "cell": "I3",
+        "kind": "number",
+        "note": "margin for Gadget",
+        "sheet": "model",
+        "value": 0.5416666666666666
+      },
+      {
+        "cell": "F4",
+        "kind": "number",
+        "note": "revenue for Doohickey",
+        "sheet": "model",
+        "value": 750.0
+      },
+      {
+        "cell": "H4",
+        "kind": "number",
+        "note": "gross for Doohickey",
+        "sheet": "model",
+        "value": 510.0
+      },
+      {
+        "cell": "I4",
+        "kind": "number",
+        "note": "margin for Doohickey",
+        "sheet": "model",
+        "value": 0.68
+      },
+      {
+        "cell": "F5",
+        "kind": "number",
+        "note": "revenue for Thing",
+        "sheet": "model",
+        "value": 2700.0
+      },
+      {
+        "cell": "H5",
+        "kind": "number",
+        "note": "gross for Thing",
+        "sheet": "model",
+        "value": 967.5
+      },
+      {
+        "cell": "I5",
+        "kind": "number",
+        "note": "margin for Thing",
+        "sheet": "model",
+        "value": 0.35833333333333334
+      },
+      {
+        "cell": "F6",
+        "kind": "number",
+        "note": "revenue for Gizmo",
+        "sheet": "model",
+        "value": 651.0
+      },
+      {
+        "cell": "H6",
+        "kind": "number",
+        "note": "gross for Gizmo",
+        "sheet": "model",
+        "value": 356.5
+      },
+      {
+        "cell": "I6",
+        "kind": "number",
+        "note": "margin for Gizmo",
+        "sheet": "model",
+        "value": 0.5476190476190477
+      },
+      {
+        "cell": "F8",
+        "kind": "number",
+        "note": "total revenue",
+        "sheet": "model",
+        "value": 7161.0
+      },
+      {
+        "cell": "H8",
+        "kind": "number",
+        "note": "total gross",
+        "sheet": "model",
+        "value": 3504.0
+      },
+      {
+        "cell": "I8",
+        "kind": "number",
+        "note": "blended margin is NOT the average of the margins",
+        "sheet": "model",
+        "value": 0.4893171344784248
+      },
+      {
+        "cell": "K1",
+        "kind": "number",
+        "note": "SUMPRODUCT agrees with the column of products",
+        "sheet": "model",
+        "value": 7161.0
+      },
+      {
+        "cell": "K2",
+        "kind": "number",
+        "note": "revenue for one region",
+        "sheet": "model",
+        "value": 1890.0
+      },
+      {
+        "cell": "K3",
+        "kind": "number",
+        "note": "SUMIFS agrees with SUMIF",
+        "sheet": "model",
+        "value": 1890.0
+      },
+      {
+        "cell": "K4",
+        "kind": "number",
+        "note": "how many in that region",
+        "sheet": "model",
+        "value": 2.0
+      },
+      {
+        "cell": "K5",
+        "kind": "number",
+        "note": "best margin",
+        "sheet": "model",
+        "value": 0.68
+      },
+      {
+        "cell": "K6",
+        "kind": "text",
+        "note": "the product behind the largest gross, by lookup",
+        "sheet": "model",
+        "value": "Gadget"
+      },
+      {
+        "cell": "K7",
+        "kind": "number",
+        "note": "VLOOKUP into the computed columns",
+        "sheet": "model",
+        "value": 651.0
+      },
+      {
+        "cell": "K8",
+        "kind": "number",
+        "note": "the unweighted average margin",
+        "sheet": "model",
+        "value": 0.5360501253132832
+      },
+      {
+        "cell": "K9",
+        "kind": "number",
+        "note": "margin as a rounded percentage",
+        "sheet": "model",
+        "value": 48.9
+      }
+    ],
+    "file": "realistic.xlsx"
+  }
+]

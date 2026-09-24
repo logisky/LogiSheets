@@ -1,5 +1,25 @@
 use super::calc_vertex::Value;
 use logisheets_parser::ast;
+use std::cmp::Ordering;
+
+/// Compare two strings the way a spreadsheet does: **without regard to case**.
+///
+/// `="a"="A"` is TRUE in Excel, and the ordering follows the same rule, so "a"
+/// sorts before "B" rather than after it the way raw bytes would have it.
+/// `EXACT` is the case-sensitive comparison, and the only one.
+///
+/// This decides more than the `=` operator: every `*IF` criterion, `VLOOKUP`
+/// and `MATCH` route through here, and while they were case-sensitive a
+/// formula's answer depended on which of them the comparison happened to go
+/// through — `MATCH` matched "A" against "a" and `COUNTIF` did not.
+///
+/// Folded character by character rather than through `to_lowercase()` so a
+/// comparison inside a `COUNTIF` over a long range allocates nothing.
+pub fn cmp_text(lhs: &str, rhs: &str) -> Ordering {
+    lhs.chars()
+        .flat_map(char::to_lowercase)
+        .cmp(rhs.chars().flat_map(char::to_lowercase))
+}
 
 pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
     match (lhs, rhs) {
@@ -17,7 +37,16 @@ pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
                 CompareResult::Equal
             }
         }
-        (Value::Blank, Value::Text(_)) => CompareResult::Less,
+        // A blank cell reads as `""` against text, exactly as it reads as 0
+        // against a number two arms up: `=A1=""` on an empty A1 is TRUE. It is
+        // still less than any text that has something in it.
+        (Value::Blank, Value::Text(t)) => {
+            if t.is_empty() {
+                CompareResult::Equal
+            } else {
+                CompareResult::Less
+            }
+        }
         (Value::Blank, Value::Boolean(_)) => CompareResult::Less,
         (Value::Blank, Value::Error(e)) => CompareResult::Error(e.clone()),
         (Value::Number(num), Value::Blank) => {
@@ -41,17 +70,19 @@ pub fn compare(lhs: &Value, rhs: &Value) -> CompareResult {
         (Value::Number(_), Value::Text(_)) => CompareResult::Less,
         (Value::Number(_), Value::Boolean(_)) => CompareResult::Less,
         (Value::Number(_), Value::Error(e)) => CompareResult::Error(e.clone()),
-        (Value::Text(_), Value::Blank) => CompareResult::Greater,
-        (Value::Text(_), Value::Number(_)) => CompareResult::Greater,
-        (Value::Text(l_text), Value::Text(r_text)) => {
-            if l_text > r_text {
-                CompareResult::Greater
-            } else if l_text < r_text {
-                CompareResult::Less
-            } else {
+        (Value::Text(t), Value::Blank) => {
+            if t.is_empty() {
                 CompareResult::Equal
+            } else {
+                CompareResult::Greater
             }
         }
+        (Value::Text(_), Value::Number(_)) => CompareResult::Greater,
+        (Value::Text(l_text), Value::Text(r_text)) => match cmp_text(l_text, r_text) {
+            Ordering::Greater => CompareResult::Greater,
+            Ordering::Less => CompareResult::Less,
+            Ordering::Equal => CompareResult::Equal,
+        },
         (Value::Text(_), Value::Boolean(_)) => CompareResult::Less,
         (Value::Text(_), Value::Error(e)) => CompareResult::Error(e.clone()),
         (Value::Boolean(_), Value::Blank) => CompareResult::Greater,

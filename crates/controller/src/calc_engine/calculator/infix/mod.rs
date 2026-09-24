@@ -4,9 +4,29 @@ pub mod range;
 use super::super::connector::Connector;
 use super::calc_vertex::{CalcValue, CalcVertex, Value};
 use super::compare::{CompareResult, compare};
+use crate::calc_engine::calculator::number_text::number_to_text;
 use intersect::intersect;
 use logisheets_parser::ast;
 use range::get_range;
+
+/// A result an f64 can hold, or `#NUM!`.
+///
+/// **No arithmetic operator may return an infinity or a NaN.** A spreadsheet
+/// has no such value: Excel reports an overflow as `#NUM!`, and an error is a
+/// thing formulas downstream can test for with `ISERROR` and recover from with
+/// `IFERROR`, where an `inf` silently poisons every total it reaches and then
+/// has to be written into a file that cannot represent it.
+///
+/// Division already did this and the other four arms did not — `1E308*10` came
+/// back as a number reading `inf`. Shared so the next operator added cannot
+/// forget it.
+fn finite(r: f64) -> Result<f64, ast::Error> {
+    if r.is_finite() {
+        Ok(r)
+    } else {
+        Err(ast::Error::Num)
+    }
+}
 
 pub fn calc_infix(
     lhs: CalcVertex,
@@ -17,17 +37,17 @@ pub fn calc_infix(
     match op {
         ast::InfixOperator::Plus => {
             let func =
-                |lhs: &Value, rhs: &Value| infix_number(lhs, rhs, |a: &f64, b: &f64| Ok(a + b));
+                |lhs: &Value, rhs: &Value| infix_number(lhs, rhs, |a: &f64, b: &f64| finite(a + b));
             calc(lhs, rhs, func, fetcher)
         }
         ast::InfixOperator::Minus => {
             let func =
-                |lhs: &Value, rhs: &Value| infix_number(lhs, rhs, |a: &f64, b: &f64| Ok(a - b));
+                |lhs: &Value, rhs: &Value| infix_number(lhs, rhs, |a: &f64, b: &f64| finite(a - b));
             calc(lhs, rhs, func, fetcher)
         }
         ast::InfixOperator::Multiply => {
             let func =
-                |lhs: &Value, rhs: &Value| infix_number(lhs, rhs, |a: &f64, b: &f64| Ok(a * b));
+                |lhs: &Value, rhs: &Value| infix_number(lhs, rhs, |a: &f64, b: &f64| finite(a * b));
             calc(lhs, rhs, func, fetcher)
         }
         ast::InfixOperator::Divide => {
@@ -41,14 +61,7 @@ pub fn calc_infix(
                     if *b == 0.0 {
                         Err(ast::Error::Div0)
                     } else {
-                        let r = a / b;
-                        // A quotient too large for an f64 is #NUM!, the way
-                        // Excel reports an overflow.
-                        if r.is_finite() {
-                            Ok(r)
-                        } else {
-                            Err(ast::Error::Num)
-                        }
+                        finite(a / b)
                     }
                 })
             };
@@ -56,7 +69,7 @@ pub fn calc_infix(
         }
         ast::InfixOperator::Exp => {
             let func = |lhs: &Value, rhs: &Value| {
-                infix_number(lhs, rhs, |a: &f64, b: &f64| Ok(a.powf(*b)))
+                infix_number(lhs, rhs, |a: &f64, b: &f64| finite(a.powf(*b)))
             };
             calc(lhs, rhs, func, fetcher)
         }
@@ -233,7 +246,7 @@ fn expect_number(n: &Value) -> Result<f64, ast::Error> {
 fn expect_string(n: &Value) -> Result<String, ast::Error> {
     match n {
         Value::Blank => Ok(String::new()),
-        Value::Number(f) => Ok(f.to_string()),
+        Value::Number(f) => Ok(number_to_text(*f)),
         Value::Text(t) => Ok(t.clone()),
         Value::Boolean(b) => {
             if *b {

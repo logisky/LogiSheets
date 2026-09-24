@@ -6,6 +6,7 @@ pub use crate::{
 };
 mod block_policy;
 mod cell_positioner;
+mod defined_names;
 mod duplicate_keys;
 mod enum_sets;
 mod field_validation;
@@ -23,6 +24,7 @@ mod test;
 /// name the type to declare a pivot.
 pub use crate::block_manager::schema_manager::field_type::PivotSpecParts;
 pub use block_policy::{BlockOpForPayload, BlockOpPolicy};
+pub use defined_names::DefinedNameInfo;
 pub use duplicate_keys::DuplicateBlockKey;
 pub use enum_sets::{EnumSetInfo, EnumVariantInfo};
 pub use field_validation::FieldValidationVerdict;

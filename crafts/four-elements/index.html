@@ -47,6 +47,11 @@
     .total { font-weight: 800; font-size: 15px; }
     .err { color: #b91c1c; font-size: 12px; }
     .hidden { display: none !important; }
+    /* Loud enough to be seen before the first move, quiet enough not to look
+       like an error — nothing is broken, the game just has one side fewer. */
+    .notice { border-color: #fcd34d; background: #fffbeb; }
+    .notice-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+    .notice-body { color: #713f12; font-size: 12px; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -67,6 +72,16 @@
     </div>
     <div class="err hidden" id="err"></div>
     <div class="muted hidden" id="ai-note" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card notice hidden" id="no-key">
+    <div class="notice-title" data-i18n="noKeyTitle">Playing two-handed</div>
+    <div class="notice-body" data-i18n="noKeyBody"></div>
+    <div class="row" style="margin-top:9px">
+      <button class="btn btn-primary" id="setup-btn" data-i18n="setUpAi">Set up AI</button>
+      <button class="btn" id="recheck-btn" data-i18n="recheck">Done — check again</button>
+      <span class="muted" id="recheck-note"></span>
+    </div>
   </div>
 
   <div class="card" id="choices-card">
@@ -141,6 +156,11 @@
           aiSays: 'AI: {taunt}',
           aiOff: 'AI turned off — play its side by hand, or try again.',
           aiUnavailable: 'AI opponent unavailable: {reason}.',
+          noKeyTitle: 'Playing two-handed',
+          noKeyBody: 'Both sides are yours until an AI provider is set up. Add a key and the AI takes its own side, and the coach will read the board for you.',
+          setUpAi: 'Set up AI',
+          recheck: 'Done — check again',
+          stillNoKey: 'Still no provider configured.',
           fire: 'fire', wind: 'wind', earth: 'earth', water: 'water',
           triple: 'triple', chain: 'chain', split: 'split', none: 'none'
         },
@@ -173,6 +193,11 @@
           aiSays: 'AI：{taunt}',
           aiOff: 'AI 已关闭 — 手动替它出牌，或再试一次。',
           aiUnavailable: 'AI 对手不可用：{reason}。',
+          noKeyTitle: '当前是双人对战',
+          noKeyBody: '还没配置 AI 服务商，两边都由你来下。填好密钥后 AI 会自己执子，军师也能帮你读盘。',
+          setUpAi: '配置 AI',
+          recheck: '配好了，重新检测',
+          stillNoKey: '仍未配置服务商。',
           fire: '火', wind: '风', earth: '土', water: '水',
           triple: '三连', chain: '顺子', split: '夹心', none: '无'
         }
@@ -425,6 +450,42 @@
       // wrong language while we wait for the host to inject.
       applyLocale(undefined)
 
+      /**
+       * Re-ask the host whether a model is reachable, and show or hide the
+       * banner accordingly. Called at startup and again after the user has
+       * been sent to set a key up — `configure()` tells us nothing about
+       * whether they went through with it, so we look again.
+       */
+      async function checkAi(announce) {
+        var st = null
+        try {
+          st = window.craftAi ? await window.craftAi.available() : null
+        } catch (e) {
+          st = null
+        }
+        aiAvailable = !!(st && st.ok)
+        $('ai-wrap').style.display = aiAvailable ? '' : 'none'
+        // The banner is for the one cause the user can actually fix. Any
+        // other reason goes to the quiet note — telling someone to add a key
+        // when the craft declares no roles would just waste their time.
+        var fixable = !aiAvailable && st && st.reason === 'no-key'
+        $('no-key').classList.toggle('hidden', !fixable)
+        if (aiAvailable) note(null)
+        else if (st && !fixable) note(T('aiUnavailable', {reason: st.reason}))
+        if (announce && !aiAvailable)
+          $('recheck-note').textContent = T('stillNoKey')
+        if (aiAvailable) $('recheck-note').textContent = ''
+        return aiAvailable
+      }
+
+      $('setup-btn').addEventListener('click', function () {
+        if (window.craftAi && window.craftAi.configure) window.craftAi.configure()
+      })
+      $('recheck-btn').addEventListener('click', async function () {
+        await checkAi(true)
+        await refresh().catch(function () {})
+      })
+
       whenHostReady(async function () {
         FE = window.FourElements
         // `window.locale` is authoritative once it exists, and the user can
@@ -436,14 +497,7 @@
         game = new FE.Game(window.workbook, 0)
         // The AI is offered only when the host can actually reach a model;
         // otherwise the game is simply two-player and nothing is broken.
-        try {
-          var st = window.craftAi ? await window.craftAi.available() : null
-          aiAvailable = !!(st && st.ok)
-          if (aiAvailable) $('ai-wrap').style.display = ''
-          else if (st) note(T('aiUnavailable', {reason: st.reason}))
-        } catch (e) {
-          note(T('aiUnavailable', {reason: '—'}))
-        }
+        await checkAi(false)
         try {
           // Reopening a workbook that already holds a game picks it back up;
           // the sheet is the save file.

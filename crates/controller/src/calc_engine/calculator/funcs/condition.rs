@@ -1,4 +1,6 @@
 use crate::calc_engine::calculator::calc_vertex::Value;
+use crate::calc_engine::calculator::compare::cmp_text;
+use std::cmp::Ordering;
 
 #[derive(Debug, Clone)]
 pub enum Condition<'a> {
@@ -115,10 +117,11 @@ pub fn match_condition(cond: &Condition, value: &Value) -> bool {
             ConditionValue::Text(rhs) => match &l.op {
                 Op::Eq => match_text_pattern(rhs, &lhs),
                 Op::Neq => !match_text_pattern(&rhs, &lhs),
-                Op::Ge => lhs >= *rhs,
-                Op::Gt => lhs > *rhs,
-                Op::Le => lhs <= *rhs,
-                Op::Lt => lhs < *rhs,
+                // Ordering folds case too, so ">a" admits "B".
+                Op::Ge => cmp_text(&lhs, rhs) != Ordering::Less,
+                Op::Gt => cmp_text(&lhs, rhs) == Ordering::Greater,
+                Op::Le => cmp_text(&lhs, rhs) != Ordering::Greater,
+                Op::Lt => cmp_text(&lhs, rhs) == Ordering::Less,
             },
         },
         (Condition::TextPattern(_), ConditionValue::Number(_)) => false,
@@ -126,9 +129,17 @@ pub fn match_condition(cond: &Condition, value: &Value) -> bool {
     }
 }
 
+/// Match a criterion against a cell's text, wildcards and all.
+///
+/// Case-insensitive, like every other text comparison a spreadsheet makes:
+/// `COUNTIF(A:A,"apple")` counts "Apple", and so does `COUNTIF(A:A,"a*")`.
+/// This used to be the odd one out — `MATCH` folded case and this did not, so
+/// the answer depended on which function you asked.
 pub fn match_text_pattern(pattern: &str, text: &str) -> bool {
-    let pattern = wildescape::WildMatch::new(pattern);
-    pattern.matches(text)
+    // Folded before the matcher is built, because the wildcards have to be
+    // matched against the folded text too.
+    let pattern = wildescape::WildMatch::new(&pattern.to_lowercase());
+    pattern.matches(&text.to_lowercase())
 }
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 import {useTranslation} from 'react-i18next'
 import {
     buildSelectedDataFromCell,
+    buildSelectedDataFromCellRange,
     getSelectedCellRange,
 } from 'logisheets-engine'
 import {Cell, ErrorMessage} from 'logisheets-engine'
@@ -29,11 +30,22 @@ import {
     createEngineFormulaSource,
 } from 'logisheets-formula-editor'
 import {getFormulaFunctions} from '@/core/snippet'
+import type {DefinedNameInfo} from 'logisheets-engine'
+import {
+    commitNamePayload,
+    findDefinedName,
+    goToNameRange,
+    loadDefinedNames,
+    parseNameRange,
+    rangeRefersTo,
+} from '@/core/defined-names'
 
 export interface EditBarProps {
     selectedData: SelectedData
     selectedData$: (e: SelectedData) => void
     selectedDataContentChanged: object
+    /** Lets the name box jump to a named range on another sheet. */
+    setActiveSheet?: (idx: number) => void
 }
 
 // Build the editor display string from a Cell. Formulas keep their leading
@@ -48,6 +60,7 @@ export const EditBarComponent = observer(function EditBarComponent({
     selectedData: propSelectedData,
     selectedData$: propSelectedData$,
     selectedDataContentChanged,
+    setActiveSheet,
 }: EditBarProps) {
     const {t} = useTranslation()
     const engine = useEngine()
@@ -68,6 +81,7 @@ export const EditBarComponent = observer(function EditBarComponent({
     const [formulaText, setFormulaText] = useState('')
     const [rawValue, setRawValue] = useState('')
     const [isEditing, setIsEditing] = useState(false)
+    const [nameBoxEditing, setNameBoxEditing] = useState(false)
     const [showFormula, setShowFormula] = useState(true)
     // `showValidation` overrides the value/formula toggle when true: the
     // input box displays the block field's validation formula (the
@@ -76,6 +90,16 @@ export const EditBarComponent = observer(function EditBarComponent({
     const [showValidation, setShowValidation] = useState(false)
     const [validationText, setValidationText] = useState('')
     const [sheetName, setSheetName] = useState('')
+    // Defined names, for the name box: its dropdown, jumping to one, and
+    // showing a name in place of the address when the selection is exactly it.
+    const [names, setNames] = useState<readonly DefinedNameInfo[]>([])
+    const refreshNames = useCallback(
+        () => loadDefinedNames(dataSvc).then(setNames),
+        [dataSvc]
+    )
+    useEffect(() => {
+        void refreshNames()
+    }, [refreshNames, selectedDataContentChanged])
     const editorRef = useRef<FormulaEditorRef>(null)
 
     // The field-formula template governing the selected cell, if any. The
@@ -163,13 +187,34 @@ export const EditBarComponent = observer(function EditBarComponent({
         [dataSvc, engine, sheetIdx]
     )
 
+    // The name box shows the selection's address — or its name, when the
+    // selection is exactly a named range. It has its own editing flag: the
+    // formula editor's can outlive an edit, and would freeze the box.
+    useEffect(() => {
+        if (nameBoxEditing) return
+        const r = getSelectedCellRange(selectedData)
+        if (!r) return
+        const named = names.find((n) => {
+            const nr = parseNameRange(n.formula)
+            return (
+                nr &&
+                nr.sheetName === sheetName &&
+                nr.startRow === r.startRow &&
+                nr.startCol === r.startCol &&
+                nr.endRow === r.endRow &&
+                nr.endCol === r.endCol
+            )
+        })
+        setCoordinate(
+            named ? named.name : `${toA1notation(r.startCol)}${r.startRow + 1}`
+        )
+    }, [selectedData, nameBoxEditing, names, sheetName])
+
     useEffect(() => {
         if (isEditing) return
         const selectedCell = getSelectedCellRange(selectedData)
         if (!selectedCell) return
         const {startRow: row, startCol: col} = selectedCell
-        const notation = toA1notation(col)
-        setCoordinate(`${notation}${row + 1}`)
         dataSvc
             .getCellInfo(sheetIdx, row, col)
             .then((c: Cell | ErrorMessage) => {
@@ -260,17 +305,76 @@ export const EditBarComponent = observer(function EditBarComponent({
         refocusGrid()
     }
 
-    const locationChange = (newText: string) => {
-        const result = parseA1notation(newText)
-        setIsEditing(false)
-        if (!result) {
+    // The name box takes an address (`B3`, `A1:C9`), the name of a defined
+    // range to jump to, or a new name — which is then defined for the current
+    // selection, the way Excel's name box works.
+    const locationChange = async (newText: string) => {
+        // Focus and leave without typing: keep the selection as it is.
+        if (!nameBoxEditing) return
+        const text = newText.trim()
+        setNameBoxEditing(false)
+        const resetBox = () => {
             const cell = getFirstCell(selectedData)
             setCoordinate(`${toA1notation(cell.x)}${cell.y + 1}`)
+        }
+        if (!text) return resetBox()
+        const result = parseA1notation(text)
+        if (result) {
+            selectedData$(
+                buildSelectedDataFromCellRange(
+                    Math.min(result.rs, result.re ?? result.rs),
+                    Math.min(result.cs, result.ce ?? result.cs),
+                    Math.max(result.rs, result.re ?? result.rs),
+                    Math.max(result.cs, result.ce ?? result.cs),
+                    'editbar'
+                )
+            )
             return
         }
-        selectedData$(
-            buildSelectedDataFromCell(result.rs, result.cs, 'editbar')
-        )
+        const existing = findDefinedName(await loadDefinedNames(dataSvc), text)
+        if (existing) {
+            const range = parseNameRange(existing.formula)
+            const moved =
+                range &&
+                (await goToNameRange(
+                    dataSvc,
+                    range,
+                    sheetIdx,
+                    setActiveSheet,
+                    selectedData$
+                ))
+            if (!moved) {
+                toast(
+                    String(
+                        t('ui.nameManager.notARange', {name: existing.name})
+                    ),
+                    {
+                        type: 'info',
+                    }
+                )
+                resetBox()
+            }
+            return
+        }
+        const selected = getSelectedCellRange(selectedData)
+        if (!selected || !sheetName) return resetBox()
+        const err = await commitNamePayload(dataSvc, {
+            type: 'defineName',
+            value: {
+                name: text,
+                formula: rangeRefersTo({sheetName, ...selected}),
+                sheetIdx,
+            },
+        })
+        if (err) {
+            toast(err, {type: 'error'})
+            resetBox()
+            return
+        }
+        toast(String(t('ui.nameManager.defined', {name: text})), {
+            type: 'success',
+        })
+        await refreshNames()
     }
 
     const onToggleShowFormularOrValue = () => {
@@ -283,14 +387,31 @@ export const EditBarComponent = observer(function EditBarComponent({
         <div className={styles.host}>
             <input
                 className={styles.a1notation}
+                aria-label={String(t('ui.editBar.nameBox'))}
+                title={String(t('ui.editBar.nameBoxTip'))}
+                list="ls-defined-names"
                 value={coordinate}
                 onChange={(e) => {
                     setCoordinate(e.target.value)
-                    setIsEditing(true)
+                    setNameBoxEditing(true)
                 }}
-                onBlur={(e) => locationChange(e.target.value)}
+                onFocus={(e) => {
+                    void refreshNames()
+                    e.target.select()
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.blur()
+                }}
+                onBlur={(e) => void locationChange(e.target.value)}
                 disabled={!hasSelectedData}
             />
+            <datalist id="ls-defined-names">
+                {names.map((n) => (
+                    <option key={n.name} value={n.name}>
+                        {n.formula}
+                    </option>
+                ))}
+            </datalist>
             <div className={styles.fx}>fx</div>
             {!hasSelectedData ? (
                 <input className={styles.formula} value="" disabled readOnly />

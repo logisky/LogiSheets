@@ -88,6 +88,7 @@
         "fuse-beads",
         "sudoku",
         "minesweeper",
+        "four-elements",
         "memory-grid",
         "lights-out"
       ],
@@ -111,6 +112,7 @@
         "what-if-calculator",
         "markdown-table-extractor",
         "minesweeper",
+        "four-elements",
         "sudoku",
         "memory-grid",
         "fuse-beads"
@@ -131,7 +133,8 @@
         "memory-grid",
         "lights-out",
         "sudoku",
-        "minesweeper"
+        "minesweeper",
+        "four-elements"
       ]
     }
   }

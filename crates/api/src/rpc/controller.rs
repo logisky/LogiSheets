@@ -501,6 +501,15 @@ pub fn get_enum_sets(mgr: &Manager, id: usize) -> Result<Vec<crate::EnumSetInfo>
     Ok(wb.get_enum_sets())
 }
 
+/// The workbook's defined names, each with its definition sheet-qualified.
+pub fn get_defined_names(
+    mgr: &Manager,
+    id: usize,
+) -> Result<Vec<crate::DefinedNameInfo>, ErrorMessage> {
+    let wb = mgr.workbook(id)?;
+    Ok(wb.get_defined_names())
+}
+
 pub fn duplicate_block_keys(
     mgr: &Manager,
     id: usize,

@@ -43,7 +43,7 @@ where
 {
     match value {
         Value::Blank => Value::Text(func("")),
-        Value::Number(n) => Value::Text(func(&n.to_string())),
+        Value::Number(n) => Value::Text(func(&super::super::number_text::number_to_text(*n))),
         Value::Text(t) => Value::Text(func(t)),
         Value::Boolean(b) => {
             if *b {
@@ -56,11 +56,27 @@ where
     }
 }
 
+/// `TRIM(text)` — strip the ends AND collapse every internal run of spaces to
+/// a single one.
+///
+/// Not `str::trim`, which only does the ends. Excel documents TRIM as removing
+/// "all spaces from text except for single spaces between words", and that
+/// second half is the whole reason the function exists rather than people
+/// writing a strip: it is meant for text imported with irregular spacing.
+///
+/// Only the SPACE character, deliberately: Excel's TRIM leaves tabs and other
+/// whitespace alone (CLEAN is the one that removes control characters), so
+/// `split_whitespace` would take too much.
 pub fn calc_trim<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    calc(args, fetcher, |a| a.trim().to_string())
+    calc(args, fetcher, |a| {
+        a.split(' ')
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ")
+    })
 }
 
 pub fn calc_upper<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex

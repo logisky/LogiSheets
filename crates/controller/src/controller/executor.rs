@@ -215,6 +215,37 @@ impl<'a> Executor<'a> {
             return Ok(result);
         }
 
+        // Defined names are workbook-level and touch nothing but the name
+        // table and the formula graph, so like a sheet rename they bypass the
+        // per-manager pipeline. Dirtying the name's vertex recalculates every
+        // formula that uses it.
+        let name_vertex = match payload {
+            EditPayload::DefineName(p) => Some(super::defined_names::define_name(
+                &mut result.status,
+                result.book_name,
+                &mut *result.sid_assigner,
+                p,
+            )?),
+            EditPayload::RenameName(p) => {
+                Some(super::defined_names::rename_name(&mut result.status, p)?)
+            }
+            EditPayload::RemoveName(p) => {
+                Some(super::defined_names::remove_name(&mut result.status, p)?)
+            }
+            payload => {
+                return result.execute_pipeline(payload);
+            }
+        };
+        if let Some(v) = name_vertex {
+            result.dirty_vertices.insert(v);
+            result.cell_updated = true;
+        }
+        Ok(result)
+    }
+
+    fn execute_pipeline(self, payload: EditPayload) -> Result<Self, Error> {
+        let mut result = self;
+
         // Deleting a sheet must also release its name from the sheet-id
         // manager so a later CreateSheet can reuse that name. The per-manager
         // delete executors below drop the sheet's data, position and nav

@@ -4,8 +4,10 @@ use crate::calc_engine::{
 };
 
 use super::condition::match_text_pattern;
+use crate::calc_engine::calculator::compare::cmp_text;
 use logisheets_base::matrix_value::MatrixValue;
 use logisheets_parser::ast;
+use std::cmp::Ordering;
 
 pub fn calc_vlookup<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
@@ -164,7 +166,10 @@ fn match_text(pattern: &str, values: &[Value], approximatly: bool) -> Option<usi
                     if match_text_pattern(pattern, s) {
                         return Some(i);
                     }
-                } else if s == pattern {
+                } else if cmp_text(s, pattern) == Ordering::Equal {
+                    // Case-insensitively, like every other text comparison.
+                    // Raw `==` here is what made VLOOKUP disagree with MATCH,
+                    // which folded case two functions down this same file.
                     return Some(i);
                 }
             }
@@ -224,13 +229,12 @@ fn match_exact_position(lookup: &Value, values: &[Value]) -> Option<usize> {
         Value::Boolean(b) => values
             .iter()
             .position(|v| matches!(v, Value::Boolean(x) if x == b)),
-        Value::Text(p) => {
-            let pl = p.to_lowercase();
-            values.iter().position(|v| match v {
-                Value::Text(s) => match_text_pattern(&pl, &s.to_lowercase()),
-                _ => false,
-            })
-        }
+        Value::Text(p) => values.iter().position(|v| match v {
+            // `match_text_pattern` folds case itself; doing it again here only
+            // allocated twice more per cell.
+            Value::Text(s) => match_text_pattern(p, s),
+            _ => false,
+        }),
         _ => None,
     }
 }

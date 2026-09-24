@@ -22,13 +22,13 @@ where
         true
     };
     let result = if a1_ref {
-        parse_a1_ref(&r)
+        parse_reference(&r, &parse_a1_ref)
     } else {
-        parse_r1c1_ref(&r)
+        parse_reference(&r, &parse_r1c1_ref)
     };
     assert_or_return!(result.is_some(), ast::Error::Value);
 
-    let (sheet_name, row_idx, col_idx) = result.unwrap();
+    let (sheet_name, reference) = result.unwrap();
     let mut sheet_id = fetcher.get_active_sheet();
     if let Some(name) = sheet_name {
         if let Ok(id) = fetcher.get_sheet_id_by_name(&name) {
@@ -38,11 +38,49 @@ where
     CalcVertex::Reference(CalcReference {
         from_sheet: None,
         sheet: sheet_id,
-        reference: Reference::Addr(Addr {
-            row: row_idx,
-            col: col_idx,
-        }),
+        reference,
     })
+}
+
+/// An address string as a reference: `"A1"` is one cell, `"A1:A3"` a range.
+///
+/// The colon is split off BEFORE the address parser runs, because that parser
+/// matches the first address in whatever it is given — so `"A1:A3"` used to
+/// come back as plain `A1`, and `SUM(INDIRECT("A1:A3"))` silently totalled one
+/// cell instead of three. A quiet wrong answer, with nothing on screen to
+/// suggest it.
+///
+/// The sheet prefix is written once, on the left (`Sheet2!A1:B2`), so the
+/// right-hand address inherits it.
+fn parse_reference<F>(s: &str, parse_addr: &F) -> Option<(Option<String>, Reference)>
+where
+    F: Fn(&str) -> Option<(Option<String>, usize, usize)>,
+{
+    match s.split_once(':') {
+        None => {
+            let (sheet, row, col) = parse_addr(s)?;
+            Some((sheet, Reference::Addr(Addr { row, col })))
+        }
+        Some((start, end)) => {
+            let (sheet, r1, c1) = parse_addr(start)?;
+            let (_, r2, c2) = parse_addr(end)?;
+            // Written the wrong way round is still a rectangle; Excel accepts
+            // `A3:A1` and means the same three cells.
+            Some((
+                sheet,
+                Reference::Range(
+                    Addr {
+                        row: r1.min(r2),
+                        col: c1.min(c2),
+                    },
+                    Addr {
+                        row: r1.max(r2),
+                        col: c1.max(c2),
+                    },
+                ),
+            ))
+        }
+    }
 }
 
 fn parse_a1_ref(s: &str) -> Option<(Option<String>, usize, usize)> {

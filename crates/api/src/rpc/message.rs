@@ -5,7 +5,7 @@ use crate::{
     ActionEffect, AppData, AppendixWithCell, BlockActor, BlockDataRow, BlockField, BlockInfo,
     BlockModifyInfo, BlockOp, BlockOpForPayload, BlockOpPolicy, BlockSortOrder,
     CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
-    CfRuleInfo, ChartInfo, ColId, Comment, DependentCell, DisplayWindow,
+    CfRuleInfo, ChartInfo, ColId, Comment, DefinedNameInfo, DependentCell, DisplayWindow,
     DisplayWindowWithStartPoint, DuplicateBlockKey, EditPayload, EnumSetInfo, ErrorMessage,
     FieldValidationVerdict, FormulaDisplayInfo, LinkInfo, MergeCell, PivotExcelNote, PivotPlan,
     PivotSpecParts, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId,
@@ -87,6 +87,7 @@ pub enum Message {
     GetAllBlockFields,
     DuplicateBlockKeys,
     GetEnumSets,
+    GetDefinedNames,
     GetBlockOpForPayloads,
     GetBlockOpPolicies(GetBlockOpPoliciesParams),
     Undo,
@@ -955,6 +956,7 @@ pub struct WorkbookMethods {
     pub duplicate_block_keys:
         fn(book_id: Option<usize>) -> Result<Vec<DuplicateBlockKey>, ErrorMessage>,
     pub get_enum_sets: fn(book_id: Option<usize>) -> Result<Vec<EnumSetInfo>, ErrorMessage>,
+    pub get_defined_names: fn(book_id: Option<usize>) -> Result<Vec<DefinedNameInfo>, ErrorMessage>,
     pub get_block_op_for_payloads:
         fn(book_id: Option<usize>) -> Result<Vec<BlockOpForPayload>, ErrorMessage>,
     pub get_block_op_policies: fn(

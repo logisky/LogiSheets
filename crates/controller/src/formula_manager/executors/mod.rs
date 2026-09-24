@@ -1,5 +1,7 @@
 mod input_formula;
 
+pub(crate) use input_formula::get_all_vertices_from_ast;
+
 use std::collections::HashSet;
 
 pub use input_formula::{

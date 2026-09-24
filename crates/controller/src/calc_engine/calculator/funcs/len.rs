@@ -59,7 +59,7 @@ where
 {
     match value {
         Value::Blank => 0_usize,
-        Value::Number(f) => f.to_string().len(),
+        Value::Number(f) => super::super::number_text::number_to_text(*f).len(),
         Value::Text(t) => func(t),
         Value::Boolean(b) => {
             if *b {

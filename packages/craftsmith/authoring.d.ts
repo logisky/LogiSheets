@@ -207,4 +207,13 @@ export interface CraftAi<Roles = Record<string, unknown>> {
         input: string,
         opts?: AskOpts
     ): Promise<Roles[K]>
+    /**
+     * Ask the host to open its LLM setup, when `available()` came back
+     * `{ok: false, reason: 'no-key'}` and you want to offer a way out.
+     *
+     * Takes nothing, returns nothing, and tells you nothing: a craft never
+     * sees a key. Re-check `available()` afterwards — the user may have
+     * closed the dialog without doing anything.
+     */
+    configure(): void
 }

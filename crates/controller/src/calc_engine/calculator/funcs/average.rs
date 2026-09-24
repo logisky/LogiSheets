@@ -1,5 +1,6 @@
 use crate::calc_engine::connector::Connector;
 
+use super::utils::scalar_arg_as_number;
 use super::{CalcValue, CalcVertex, Value};
 use logisheets_parser::ast;
 
@@ -79,10 +80,11 @@ where
     F: Fn(f64, f64) -> f64,
 {
     match value {
+        // An argument, not a range cell: a logical typed here participates.
+        // See `scalar_arg_as_number`.
         CalcValue::Scalar(s) => match s {
-            Value::Number(n) => Ok((n, 1_u32)),
             Value::Error(e) => Err(e),
-            _ => Ok((0_f64, 0_u32)),
+            other => Ok(scalar_arg_as_number(&other).map_or((0_f64, 0_u32), |n| (n, 1_u32))),
         },
         CalcValue::Range(r) => r
             .into_iter()

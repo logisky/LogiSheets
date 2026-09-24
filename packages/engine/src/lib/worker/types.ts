@@ -126,6 +126,7 @@ export enum MethodName {
     GetAllBlockFields = 'getAllBlockFields',
     DuplicateBlockKeys = 'duplicateBlockKeys',
     GetEnumSets = 'getEnumSets',
+    GetDefinedNames = 'getDefinedNames',
     GetBlockOpForPayloads = 'getBlockOpForPayloads',
     GetBlockOpPolicies = 'getBlockOpPolicies',
     GetAppData = 'getAppData',
