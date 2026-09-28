@@ -49,3 +49,9 @@ jobs:
 
       - name: Test logisheets-logician
         run: yarn workspace logisheets-logician test
+
+      # Packs the published tarballs and imports them from plain Node, so it
+      # needs every dist above it. Runs alone: it is subprocess-bound and the
+      # other suites saturate the runner.
+      - name: Test npm packaging (published tarballs)
+        run: yarn workspace logisheets test:packaging

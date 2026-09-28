@@ -20,19 +20,33 @@
 //
 // Requires the packages to be built (`packages/*/dist`). ci-build.sh does that
 // before any test step; locally, run each package's `build` first.
+//
+// This file runs in its OWN vitest config (`yarn workspace logisheets
+// test:packaging`, vitest.packaging.config.ts), not alongside the rest of
+// __tests__. It spends its time in child processes — npm, tar, node — and the
+// other 19 files in here each stand up a WASM engine, so sharing a pool on a
+// 2-core CI runner starved this one's setup until it hit the hook timeout.
+// Every subprocess call below is async for the same reason: a synchronous one
+// blocks the worker thread, and vitest's own RPC to the main process
+// ("Timeout calling onTaskUpdate") dies with it.
 
 import {describe, it, expect, beforeAll, afterAll} from 'vitest'
-import {execFileSync} from 'node:child_process'
+import {execFile} from 'node:child_process'
+import {promisify} from 'node:util'
 import {
     mkdtempSync,
     rmSync,
     mkdirSync,
     writeFileSync,
     existsSync,
+    readdirSync,
+    readFileSync,
 } from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {tmpdir} from 'node:os'
 import {join, resolve, dirname} from 'node:path'
+
+const execFileAsync = promisify(execFile)
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
@@ -61,16 +75,17 @@ const NODE_PACKAGES = [
 let nodeConsumer: string
 let webConsumer: string
 
-function run(cmd: string, args: string[], cwd: string): string {
-    return execFileSync(cmd, args, {
+async function run(cmd: string, args: string[], cwd: string): Promise<string> {
+    const {stdout} = await execFileAsync(cmd, args, {
         cwd,
         encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
+        maxBuffer: 10 * 1024 * 1024,
     })
+    return stdout
 }
 
 /** Pack `names` and unpack them into a throwaway consumer outside the repo. */
-function makeConsumer(names: readonly string[]): string {
+async function makeConsumer(names: readonly string[]): Promise<string> {
     const dir = mkdtempSync(join(tmpdir(), 'logisheets-packaging-'))
     expect(dir.startsWith(REPO)).toBe(false)
 
@@ -83,7 +98,7 @@ function makeConsumer(names: readonly string[]): string {
 
         // `--ignore-scripts`: pack the tree as it stands (already built by
         // ci-build.sh) rather than re-running each package's prepack.
-        const out = run(
+        const out = await run(
             'npm',
             ['pack', '--ignore-scripts', '--silent', '--pack-destination', dir],
             from
@@ -92,7 +107,11 @@ function makeConsumer(names: readonly string[]): string {
 
         const into = join(dir, 'node_modules', name)
         mkdirSync(into, {recursive: true})
-        run('tar', ['-xzf', tarball, '-C', into, '--strip-components=1'], REPO)
+        await run(
+            'tar',
+            ['-xzf', tarball, '-C', into, '--strip-components=1'],
+            REPO
+        )
     }
 
     writeFileSync(
@@ -102,17 +121,35 @@ function makeConsumer(names: readonly string[]): string {
     return dir
 }
 
-/** Run `source` as an ESM script inside `consumer`, via a real `node`. */
-function probe(consumer: string, label: string, source: string): void {
+/**
+ * Run `source` as an ESM script inside `consumer`, via a real `node`. The
+ * script asserts for itself; a non-zero exit rejects, and vitest then reports
+ * the child's stderr, which is the part worth reading.
+ */
+async function probe(
+    consumer: string,
+    label: string,
+    source: string
+): Promise<void> {
     const file = join(consumer, `probe-${label.replace(/\W/g, '-')}.mjs`)
     writeFileSync(file, source)
-    expect(() => run(process.execPath, [file], consumer)).not.toThrow()
+    await run(process.execPath, [file], consumer)
 }
 
-beforeAll(() => {
-    nodeConsumer = makeConsumer(NODE_PACKAGES)
-    webConsumer = makeConsumer(['logisheets-web'])
-}, 300_000)
+/** Every .js file under `dir`, recursively. */
+function jsFiles(dir: string): string[] {
+    if (!existsSync(dir)) return []
+    return readdirSync(dir, {withFileTypes: true}).flatMap((e) => {
+        const p = join(dir, e.name)
+        if (e.isDirectory()) return jsFiles(p)
+        return e.isFile() && e.name.endsWith('.js') ? [p] : []
+    })
+}
+
+beforeAll(async () => {
+    nodeConsumer = await makeConsumer(NODE_PACKAGES)
+    webConsumer = await makeConsumer(['logisheets-web'])
+}, 600_000)
 
 afterAll(() => {
     for (const dir of [nodeConsumer, webConsumer]) {
@@ -121,10 +158,10 @@ afterAll(() => {
 })
 
 describe('published packages load under plain Node ESM', () => {
-    it.each(NODE_PACKAGES)('imports %s', (name) => {
+    it.each(NODE_PACKAGES)('imports %s', async (name) => {
         // A separate `node` process, so this exercises Node's own ESM
         // resolver against the unpacked tarballs — not vitest's.
-        probe(
+        await probe(
             nodeConsumer,
             name,
             `const m = await import(${JSON.stringify(name)})\n` +
@@ -132,12 +169,12 @@ describe('published packages load under plain Node ESM', () => {
         )
     })
 
-    it('imports logisheets-web/pure', () => {
+    it('imports logisheets-web/pure', async () => {
         // The engine-free subset, which logisheets-logician imports. Its
         // `node` condition resolves to a bundle, because the generated
         // `src/bindings` (290 gents-emitted files) import each other without
         // file extensions and Node ESM will not resolve those.
-        probe(
+        await probe(
             webConsumer,
             'web-pure',
             [
@@ -148,11 +185,11 @@ describe('published packages load under plain Node ESM', () => {
         )
     })
 
-    it('runs a workbook end to end through logisheets-runtime', () => {
+    it('runs a workbook end to end through logisheets-runtime', async () => {
         // Importing proves the module graph resolves; this proves the WASM
         // engine still loads from the packed layout, which is a separate path
         // (a lazy `createRequire` of the logisheets tarball's glue).
-        probe(
+        await probe(
             nodeConsumer,
             'smoke',
             [
@@ -184,32 +221,16 @@ describe('published packages load under plain Node ESM', () => {
         // glue, so it cannot be loaded outside a bundler. Nothing on the Node
         // path may reach for it — it is not even installed here. Guard the
         // artifacts directly: a `.d.ts` reference is fine (types are erased),
-        // an `import`/`export ... from` in emitted JS is the bug.
-        const offenders: string[] = []
-        for (const name of NODE_PACKAGES) {
-            const dist = join(nodeConsumer, 'node_modules', name, 'dist')
-            if (!existsSync(dist)) continue
-            let hits = ''
-            try {
-                hits = execFileSync(
-                    'grep',
-                    [
-                        '-rlE',
-                        // Anchored, so the doc comments that *mention*
-                        // `import ... from 'logisheets-web/wasm/...'` (a
-                        // documented browser subpath) do not match.
-                        `^[[:space:]]*(import|export)([^'"]*from)?[[:space:]]*['"]logisheets-web`,
-                        '--include=*.js',
-                        dist,
-                    ],
-                    {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}
-                ).trim()
-            } catch {
-                // grep exits 1 when nothing matches — the good case.
-                hits = ''
-            }
-            if (hits) offenders.push(...hits.split('\n'))
-        }
+        // an `import`/`export ... from` in emitted JS is the bug. Anchored, so
+        // the doc comments that *mention* `logisheets-web/wasm/...` (a
+        // documented browser subpath) do not match.
+        const offending =
+            /^[ \t]*(?:import|export)(?:[^'"]*from)?[ \t]*['"]logisheets-web/m
+        const offenders = NODE_PACKAGES.flatMap((name) =>
+            jsFiles(join(nodeConsumer, 'node_modules', name, 'dist')).filter(
+                (f) => offending.test(readFileSync(f, 'utf8'))
+            )
+        )
         expect(offenders).toEqual([])
     })
 })

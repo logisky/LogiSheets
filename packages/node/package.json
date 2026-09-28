@@ -9,6 +9,7 @@
     "link": "rm -rf ./src && cp -r ../web/src ./src",
     "build": "yarn wasm-build && npx tsc && cp -R wasm dist/",
     "test": "npx vitest run",
+    "test:packaging": "npx vitest run --config vitest.packaging.config.ts",
     "prepublishOnly": "yarn run link && yarn wasm-build && yarn build",
     "prepare": "yarn link && yarn wasm-build"
   },
