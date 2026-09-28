@@ -21,11 +21,16 @@ import {readFile, writeFile} from 'node:fs/promises'
 import {basename, resolve} from 'node:path'
 import {createRequire} from 'node:module'
 import type {Value, Client, SaveFileResult, ErrorMessage} from 'logisheets-web'
-import {isErrorMessage} from 'logisheets-web'
+import {isErrorMessage} from './error-message.js'
 import {WorkbookOps} from 'logisheets-core'
 
 // Re-export the core surface so consumers import everything from one place.
 export * from 'logisheets-core'
+
+// The `ErrorMessage` guard the docs below tell callers to use. It lives here
+// rather than being re-exported from `logisheets-web`, which cannot be loaded
+// under plain Node ESM — see ./error-message.ts.
+export {isErrorMessage} from './error-message.js'
 
 // ── WASM engine entry point (injectable) ─────────────────────────────────────
 //

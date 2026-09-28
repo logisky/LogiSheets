@@ -24,7 +24,15 @@
 // `initWasm`. `logisheets-web/pure` is the WASM-free subset (types, payload
 // builders, helpers) for code that must load without the engine.
 
-import initWasm, {format_number, format_text} from './wasm'
+// An explicit FILE, not the `./wasm` directory. tsc copies this specifier into
+// `dist/index.js` verbatim, and Node ESM does not honour a directory's
+// `package.json` `main` — so the directory form resolves only under a bundler.
+// `dist/wasm/` is where the build puts the glue (see the `build` script), which
+// is also where the `./*` export condition points `logisheets-web/wasm/*`.
+import initWasm, {
+    format_number,
+    format_text,
+} from './wasm/logisheets_wasm_server.js'
 
 export {initWasm}
 

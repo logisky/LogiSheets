@@ -1,6 +1,6 @@
 {
   "name": "logisheets",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "description": "Node.js bindings for LogiSheets — a Rust + WebAssembly spreadsheet engine that reads, edits, and writes real .xlsx (Excel) files (formulas, styles, and structure preserved) with no browser required.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +9,7 @@
     "link": "rm -rf ./src && cp -r ../web/src ./src",
     "build": "yarn wasm-build && npx tsc && cp -R wasm dist/",
     "test": "npx vitest run",
+    "test:packaging": "npx vitest run --config vitest.packaging.config.ts",
     "prepublishOnly": "yarn run link && yarn wasm-build && yarn build",
     "prepare": "yarn link && yarn wasm-build"
   },
