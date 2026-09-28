@@ -26,6 +26,7 @@ import type {
     JsonRpcResponse,
 } from 'logisheets-core'
 import type {Workbook} from './index.js'
+import {isErrorMessage} from './error-message.js'
 
 /**
  * A {@link CraftRuntime} bound to this runtime's {@link Workbook} — the shape a
@@ -384,12 +385,4 @@ function parseState(stateJson: string): CraftState | undefined {
         return undefined
     }
     return parsed as CraftState
-}
-
-function isErrorMessage(v: unknown): v is {msg: string} {
-    return (
-        typeof v === 'object' &&
-        v !== null &&
-        'msg' in (v as Record<string, unknown>)
-    )
 }

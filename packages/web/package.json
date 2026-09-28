@@ -13,13 +13,15 @@
     },
     "./pure": {
       "types": "./dist/src/pure.d.ts",
+      "node": "./dist/pure.node.js",
       "default": "./dist/src/pure.js"
     },
     "./*": "./dist/*"
   },
   "scripts": {
     "wasm-build": "wasm-pack build ../../crates/wasms/server --out-dir ../../../packages/web/wasm --target web && rm -f wasm/.gitignore",
-    "build": "yarn wasm-build && npx tsc && cp -R wasm dist/",
+    "build": "yarn wasm-build && npx tsc && rm -rf dist/wasm && cp -R wasm dist/ && yarn build:pure",
+    "build:pure": "npx esbuild src/pure.ts --bundle --format=esm --platform=node --outfile=dist/pure.node.js",
     "test": "npx vitest run",
     "prepublishOnly": "yarn wasm-build && yarn build",
     "prepare": "yarn wasm-build"
@@ -41,8 +43,7 @@
     "ooxml"
   ],
   "files": [
-    "dist",
-    "wasm"
+    "dist"
   ],
   "bugs": {
     "url": "https://github.com/logisky/LogiSheets/issues"
