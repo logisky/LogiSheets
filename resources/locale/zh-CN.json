@@ -480,6 +480,7 @@
             "file": "文件",
             "open": "打开",
             "save": "保存",
+            "importCsv": "导入 CSV…",
             "saving": "保存中…",
             "exportCsv": "导出为 CSV",
             "downloadTip": "下载为 .xlsx",
@@ -621,7 +622,11 @@
         "toast": {
             "optionListsUnreadable": "无法读取此文件的选项列表",
             "fileRead": "已读取文件 {{name}}",
-            "fileReadError": "读取文件出错，请稍后重试"
+            "fileReadError": "读取文件出错，请稍后重试",
+            "csvImported_one": "已导入 {{count}} 行到工作表「{{name}}」",
+            "csvImported_other": "已导入 {{count}} 行到工作表「{{name}}」",
+            "csvImporting": "正在导入 CSV…",
+            "csvImportError": "CSV 导入失败：{{reason}}"
         }
     },
     "block": {
@@ -777,7 +782,11 @@
             "refreshPivotStale_one": "刷新透视表（缺 {{count}} 个分组）",
             "refreshPivotStale_other": "刷新透视表（缺 {{count}} 个分组）",
             "sortAscending": "升序排列",
-            "sortDescending": "降序排列"
+            "sortDescending": "降序排列",
+            "hideRows": "隐藏数据块（按行）",
+            "hideRowsTip": "隐藏数据块所占的整行，这些行上的其他内容也会一并隐藏",
+            "hideCols": "隐藏数据块（按列）",
+            "hideColsTip": "隐藏数据块所占的整列，这些列中的其他内容也会一并隐藏"
         },
         "cell": {
             "addNewRow": "新增一行",
@@ -911,6 +920,10 @@
             "insertColsLeft": "在左侧插入列",
             "insertColsRight": "在右侧插入列",
             "deleteCols": "删除列",
+            "hideRows": "隐藏行",
+            "unhideRows": "取消隐藏行",
+            "hideCols": "隐藏列",
+            "unhideCols": "取消隐藏列",
             "count": "数量",
             "decrease": "减少",
             "increase": "增加",

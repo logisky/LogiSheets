@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Grid } from '$types/index'
-    import { toA1notation } from './utils'
+    import { hiddenLineBoundaries, toA1notation } from './utils'
     import HeaderResizer from './HeaderResizer.svelte'
 
     interface Props {
@@ -124,6 +124,9 @@
                 onResizeEnd={(deltaPx) => onResizeCol?.(col.idx, deltaPx)}
             />
         {/each}
+        {#each hiddenLineBoundaries(grid.columns.map((c) => ({ idx: c.idx, size: c.width })), grid.anchorX, grid.subOffsetX) as x}
+            <div class="hidden-marker" style="left: {Math.max(0, x - 1.5)}px;"></div>
+        {/each}
     {/if}
 </div>
 
@@ -131,10 +134,26 @@
     .column-headers {
         position: absolute;
         right: 0;
+        /* `clip`, not just `hidden`: a hidden overflow is still a scroll
+           container, and focusing a header button that pokes past the edge
+           (MUI hands focus back after a menu closes) scrolled it — sliding
+           the headers off the grid they label. `hidden` stays as fallback. */
         overflow: hidden;
+        overflow: clip;
         z-index: 1;
         background: #fafafa;
         border-bottom: 1px solid #e0e0e0;
+    }
+
+    /* Where columns are hidden: a thick rule across the boundary, so the gap
+       in the lettering has something to point at. */
+    .hidden-marker {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 3px;
+        background: #8a8a8a;
+        pointer-events: none;
     }
 
     .column-header {

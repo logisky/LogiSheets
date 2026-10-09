@@ -87,8 +87,15 @@ impl RangeManager {
 
 #[derive(Debug, Clone)]
 pub struct SheetRangeManager {
+    /// Change normal ranges only through `set_normal_range` /
+    /// `remove_normal_range`, which keep `multi_normal_ranges` in step.
     pub id_to_normal_range: HashMap<RangeId, NormalRange>,
     pub normal_range_to_id: HashMap<NormalRange, RangeId>,
+    /// The multi-cell entries of `id_to_normal_range`. Every input registers
+    /// a single-cell range for its own cell, so those are nearly all of them;
+    /// an input only has to test whether it falls inside the multi-cell ones,
+    /// and scanning the whole map made a bulk input quadratic.
+    pub multi_normal_ranges: HashMap<RangeId, NormalRange>,
     pub id_to_block_range: HashMap<RangeId, BlockRange>,
     pub block_range_to_id: HashMap<BlockRange, RangeId>,
     pub id_to_ephemeral_range: HashMap<RangeId, EphemeralId>,
@@ -109,6 +116,7 @@ impl SheetRangeManager {
         SheetRangeManager {
             id_to_normal_range: HashMap::new(),
             normal_range_to_id: HashMap::new(),
+            multi_normal_ranges: HashMap::new(),
             id_to_block_range: HashMap::new(),
             block_range_to_id: HashMap::new(),
             id_to_ephemeral_range: HashMap::new(),
@@ -132,13 +140,30 @@ impl SheetRangeManager {
         self.links.get(source).copied()
     }
 
+    /// Point `id` at `range`, dropping whatever normal range it had.
+    pub fn set_normal_range(&mut self, id: RangeId, range: NormalRange) {
+        self.remove_normal_range(&id);
+        if !range.is_single() {
+            self.multi_normal_ranges.insert(id, range.clone());
+        }
+        self.normal_range_to_id.insert(range.clone(), id);
+        self.id_to_normal_range.insert(id, range);
+    }
+
+    pub fn remove_normal_range(&mut self, id: &RangeId) -> Option<NormalRange> {
+        let range = self.id_to_normal_range.remove(id)?;
+        self.normal_range_to_id.remove(&range);
+        self.multi_normal_ranges.remove(id);
+        Some(range)
+    }
+
     pub fn convert_normal_range_to_block_range(
         &mut self,
         normal_range: NormalRange,
         block_range: BlockRange,
     ) {
-        if let Some(id) = self.normal_range_to_id.remove(&normal_range) {
-            self.id_to_normal_range.remove(&id);
+        if let Some(id) = self.normal_range_to_id.get(&normal_range).copied() {
+            self.remove_normal_range(&id);
             self.id_to_block_range.insert(id, block_range);
             self.block_range_to_id.insert(block_range, id);
         }
@@ -166,9 +191,7 @@ impl SheetRangeManager {
     }
 
     pub fn remove_range_id(&mut self, range_id: &RangeId) {
-        if let Some(range) = self.id_to_normal_range.remove(range_id) {
-            self.normal_range_to_id.remove(&range);
-        }
+        self.remove_normal_range(range_id);
         if let Some(range) = self.id_to_block_range.remove(range_id) {
             self.block_range_to_id.remove(&range);
         }
@@ -192,8 +215,7 @@ impl SheetRangeManager {
                     } else {
                         self.next_id + u16::MAX as u32
                     };
-                    self.normal_range_to_id.insert(r.clone(), id);
-                    self.id_to_normal_range.insert(id, r);
+                    self.set_normal_range(id, r);
                     self.next_id += 1;
                     id
                 }

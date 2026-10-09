@@ -11679,3 +11679,168 @@ fn three_d_reference_survives_losing_its_end_sheet() {
         crate::controller::display::Value::Error(_)
     ));
 }
+
+fn set_visible(wb: &mut Workbook, is_row: bool, start: usize, visible: bool) {
+    let effect = wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetVisible(crate::edit_action::SetVisible {
+            is_row,
+            sheet_idx: 0,
+            start,
+            visible,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    if let crate::edit_action::StatusCode::Err(e) = effect.status {
+        panic!("SetVisible rejected: {:?}", e);
+    }
+}
+
+#[test]
+fn hidden_row_takes_no_space_and_is_skipped() {
+    let mut wb = Workbook::default();
+    // Warm the position cache first: hiding must invalidate it.
+    let before = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_cell_position(40, 0)
+        .unwrap();
+    let row_h = wb.get_sheet_by_idx(0).unwrap().get_row_height(2).unwrap();
+
+    set_visible(&mut wb, true, 2, false);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(ws.is_row_hidden(2));
+    let after = ws.get_cell_position(40, 0).unwrap();
+    assert!((before.y - after.y - row_h).abs() < 1e-9);
+    // The hidden row starts where the next one does.
+    let y2 = ws.get_cell_position(2, 0).unwrap().y;
+    let y3 = ws.get_cell_position(3, 0).unwrap().y;
+    assert_eq!(y2, y3);
+    // Walking back from a cached far row gives the same answer.
+    let y1 = ws.get_cell_position(1, 0).unwrap().y;
+    assert!((y3 - y1 - row_h).abs() < 1e-9);
+
+    let w = ws.get_display_window(0, 0, 5, 3).unwrap();
+    let rows: Vec<usize> = w.rows.iter().map(|r| r.idx).collect();
+    assert_eq!(rows, vec![0, 1, 3, 4, 5]);
+    assert_eq!(w.cells.len(), rows.len() * w.cols.len());
+
+    wb.undo();
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(!ws.is_row_hidden(2));
+    assert_eq!(ws.get_cell_position(40, 0).unwrap().y, before.y);
+}
+
+#[test]
+fn hidden_col_skipped_in_every_row_of_display_window() {
+    let mut wb = Workbook::default();
+    // Hide the window's first column: it used to leave `cols` empty.
+    set_visible(&mut wb, false, 0, false);
+    set_visible(&mut wb, false, 3, false);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let w = ws.get_display_window(0, 0, 4, 5).unwrap();
+    let cols: Vec<usize> = w.cols.iter().map(|c| c.idx).collect();
+    assert_eq!(cols, vec![1, 2, 4, 5]);
+    assert_eq!(w.cells.len(), w.rows.len() * cols.len());
+    assert_eq!(ws.get_cell_position(0, 1).unwrap().x, 0.);
+
+    // Showing it again is a real change; showing a visible line is not.
+    set_visible(&mut wb, false, 0, true);
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(!ws.is_col_hidden(0));
+    assert!(ws.get_cell_position(0, 1).unwrap().x > 0.);
+}
+
+#[test]
+fn row_height_change_invalidates_cached_positions() {
+    // Only meaningful with `--features sequencer`, where the position cache
+    // is shared across `Worksheet`s and so can go stale.
+    let mut wb = Workbook::default();
+    let before = wb
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_cell_position(50, 0)
+        .unwrap();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::SetRowHeight(
+            crate::edit_action::SetRowHeight {
+                sheet_idx: 0,
+                row: 0,
+                height: 100.,
+            },
+        )],
+        undoable: true,
+        init: false,
+    }));
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    let after = ws.get_cell_position(50, 0).unwrap();
+    let default_h = ws.get_default_row_height();
+    assert!((after.y - before.y - (100. - default_h)).abs() < 1e-9);
+}
+
+#[test]
+fn hidden_lines_survive_save_load() {
+    let mut wb = Workbook::default();
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 4,
+            col: 4,
+            content: "x".to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+    set_visible(&mut wb, true, 4, false);
+    set_visible(&mut wb, false, 2, false);
+    let saved = wb.save().unwrap();
+    let wb = Workbook::from_file(&saved, "hidden".to_string()).unwrap();
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert!(ws.is_row_hidden(4));
+    assert!(ws.is_col_hidden(2));
+    assert!(!ws.is_row_hidden(3));
+}
+
+fn input(wb: &mut Workbook, row: usize, col: usize, content: &str) {
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col,
+            content: content.to_string(),
+        })],
+        undoable: true,
+        init: false,
+    }));
+}
+
+#[test]
+fn range_formulas_follow_inputs_through_the_multi_range_index() {
+    // An input only scans multi-cell ranges now; make sure the ones that
+    // matter are still found — before and after a row insert moves them.
+    let mut wb = Workbook::default();
+    input(&mut wb, 0, 2, "=SUM(A1:A3)");
+    input(&mut wb, 0, 3, "=SUM(B:B)");
+    input(&mut wb, 0, 0, "1");
+    input(&mut wb, 1, 0, "2");
+    let num = |wb: &Workbook, r, c| match wb.get_sheet_by_idx(0).unwrap().get_value(r, c) {
+        Ok(crate::Value::Number(n)) => n,
+        other => panic!("{:?}", other),
+    };
+    assert_eq!(num(&wb, 0, 2), 3.);
+
+    wb.handle_action(EditAction::Payloads(PayloadsAction {
+        payloads: vec![EditPayload::InsertRows(crate::edit_action::InsertRows {
+            sheet_idx: 0,
+            start: 1,
+            count: 1,
+        })],
+        undoable: true,
+        init: false,
+    }));
+    // A1:A3 is now A1:A4; a write into the moved part of it counts.
+    input(&mut wb, 3, 0, "10");
+    input(&mut wb, 1, 1, "5");
+    assert_eq!(num(&wb, 0, 2), 13.);
+    assert_eq!(num(&wb, 0, 3), 5.);
+}

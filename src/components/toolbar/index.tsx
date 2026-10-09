@@ -25,7 +25,11 @@ import {NameManagerDialog} from '@/components/name-manager'
 import {goToNameRange, rangeRefersTo} from '@/core/defined-names'
 import {BorderSettingComponent} from './border-setting'
 import {GithubStar} from './github-star'
-import {generateFontPayload, generateWrapTextPayload} from 'logisheets-core'
+import {
+    decodeCsvBytes,
+    generateFontPayload,
+    generateWrapTextPayload,
+} from 'logisheets-core'
 import {
     CellFormatBrushBuilder,
     HorizontalAlignment,
@@ -108,8 +112,9 @@ import {
     BarChart as BarChartIcon,
     GridViewOutlined as GridViewIcon,
     Download as DownloadIcon,
+    UploadFile as UploadFileIcon,
 } from '@mui/icons-material'
-import {isErrorMessage} from 'logisheets-web'
+import {isErrorMessage, type SheetInfo} from 'logisheets-web'
 import {StandardColor, StandardFont} from '@/core/standable'
 import {useToast} from '@/ui/notification/useToast'
 import {TextField} from '@mui/material'
@@ -1204,6 +1209,65 @@ export const Toolbar = observer(
                 </svg>
             )
         }
+        // CSV import: the file becomes a new sheet (see WorkbookOps.importCsv),
+        // which is then shown.
+        const csvInputRef = useRef<HTMLInputElement>(null)
+        const onCsvFileChange = async (
+            e: React.ChangeEvent<HTMLInputElement>
+        ) => {
+            const file = e.target.files?.item(0)
+            if (!file) return
+            e.target.value = ''
+            // Switch only once the tab strip's sheet list has the new sheet:
+            // before that it clamps an index past its end straight back (see
+            // SheetsTab.addSheet). The list arrives by `sheetChange`, which can
+            // fire before the import resolves — so the target is known first:
+            // the import appends after the last sheet.
+            const before = await DATA_SERVICE.getWorkbook().getAllSheetInfo()
+            if (isErrorMessage(before)) return
+            const target = before.length
+            const onSheets = (sheets: readonly SheetInfo[]) => {
+                if (sheets.length <= target) return
+                engine.off('sheetChange', onSheets)
+                setActiveSheet(target)
+            }
+            engine.on('sheetChange', onSheets)
+            try {
+                const text = decodeCsvBytes(
+                    new Uint8Array(await file.arrayBuffer())
+                )
+                // A big file takes seconds (~1s per 10k cells), with nothing
+                // on screen changing until it lands.
+                if (text.length > 1_000_000)
+                    toast(String(t('toolbar.toast.csvImporting')), {
+                        type: 'info',
+                    })
+                const res = await ops.importCsv(file.name, text)
+                toast(
+                    String(
+                        t('toolbar.toast.csvImported', {
+                            name: res.sheetName,
+                            count: res.rows,
+                        })
+                    ),
+                    {type: 'success'}
+                )
+            } catch (err) {
+                engine.off('sheetChange', onSheets)
+                toast(
+                    String(
+                        t('toolbar.toast.csvImportError', {
+                            reason:
+                                err instanceof Error
+                                    ? err.message
+                                    : String(err),
+                        })
+                    ),
+                    {type: 'error'}
+                )
+            }
+        }
+
         async function onExportCsv(): Promise<void> {
             const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
             const csv = await DATA_SERVICE.exportSheetToCsv(sheetIdx)
@@ -1268,6 +1332,14 @@ export const Toolbar = observer(
                     type="file"
                     style={{display: 'none'}}
                     onChange={onFileChange}
+                />
+                <input
+                    ref={csvInputRef}
+                    type="file"
+                    accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values"
+                    style={{display: 'none'}}
+                    data-testid="csv-import-input"
+                    onChange={onCsvFileChange}
                 />
 
                 {/* One chrome row: identity, the File menu and the tab
@@ -1334,6 +1406,19 @@ export const Toolbar = observer(
                                 style={{marginRight: 8}}
                             />
                             {t('toolbar.doc.save')}
+                        </MenuItem>
+                        <MenuItem
+                            onClick={() => {
+                                closeFileMenu()
+                                csvInputRef.current?.click()
+                            }}
+                            sx={{fontSize: 12}}
+                        >
+                            <UploadFileIcon
+                                fontSize="small"
+                                style={{marginRight: 8}}
+                            />
+                            {t('toolbar.doc.importCsv')}
                         </MenuItem>
                         <MenuItem
                             onClick={() => {

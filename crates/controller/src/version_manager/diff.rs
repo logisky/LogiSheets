@@ -271,7 +271,13 @@ fn convert_diff<C: VersionExecCtx>(
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(p.sheet_idx)
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
-            Ok(Some((Diff::SheetProperty, sheet_id)))
+            if p.is_row {
+                let row_id = ctx.fetch_row_id(&sheet_id, p.start)?;
+                Ok(Some((Diff::RowInfo(row_id), sheet_id)))
+            } else {
+                let col_id = ctx.fetch_col_id(&sheet_id, p.start)?;
+                Ok(Some((Diff::ColInfo(col_id), sheet_id)))
+            }
         }
         EditPayload::SheetRename(_) => Ok(Some((Diff::SheetProperty, 0))),
         EditPayload::CreateSheet(_) => Ok(Some((Diff::SheetProperty, 0))),

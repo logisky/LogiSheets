@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest'
 import type {Grid} from '$types/index'
 import {
+    hiddenLineBoundaries,
     xForColStart,
     xForColStartUnclamped,
     yForRowStart,
@@ -102,5 +103,31 @@ describe('xForColStartUnclamped', () => {
         expect(
             xForColStartUnclamped(3, grid({columns: []} as Partial<Grid>))
         ).toBe(0)
+    })
+})
+
+describe('hiddenLineBoundaries', () => {
+    const lines = (...idx: number[]) => idx.map((i) => ({idx: i, size: 20}))
+
+    it('marks a gap in the indexes at the boundary between the two lines', () => {
+        // Lines 3..4 hidden: the marker sits at the bottom of line 2.
+        expect(hiddenLineBoundaries(lines(0, 1, 2, 5, 6), 0, 0)).toEqual([60])
+    })
+
+    it('offsets by the partly-scrolled first line', () => {
+        expect(hiddenLineBoundaries(lines(10, 11, 13), 205, 5)).toEqual([35])
+    })
+
+    it('marks lines hidden before the first when the view is at the top', () => {
+        expect(hiddenLineBoundaries(lines(2, 3, 4), 0, 0)).toEqual([0])
+    })
+
+    it('does not guess when the first line is only scrolled away', () => {
+        expect(hiddenLineBoundaries(lines(10, 11, 12), 200, 0)).toEqual([])
+    })
+
+    it('is empty with no hidden lines', () => {
+        expect(hiddenLineBoundaries(lines(0, 1, 2), 0, 0)).toEqual([])
+        expect(hiddenLineBoundaries([], 0, 0)).toEqual([])
     })
 })

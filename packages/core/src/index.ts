@@ -10,6 +10,8 @@
 //     operation a host offers (cell input, sheets, blocks, form schemas,
 //     analysis blocks, pivots, formatting, validation) lives here once.
 //   - format generators (./format): pure selection -> style payload builders.
+//   - CSV import (./csv): byte decoding (incl. GB18030), RFC 4180 parsing and
+//     delimiter detection; WorkbookOps.importCsv writes the result.
 //   - craft contracts (./craft): CraftRuntime (the headless craft hooks),
 //     craft state (per-document, rides AppData), craft storage (per-device),
 //     canvas-input routing, the JSON-RPC wire types.
@@ -24,6 +26,7 @@
 
 export * from './port.js'
 export * from './ops/index.js'
+export * from './csv/index.js'
 export * from './format/index.js'
 export * from './craft-interactions/index.js'
 export * from './craft/index.js'

@@ -64,7 +64,7 @@ where
             }
         })
     };
-    let exec_ctx = exec_ctx.normal_range_update(&sheet, &mut normal_func)?;
+    let exec_ctx = exec_ctx.multi_normal_range_update(&sheet, &mut normal_func)?;
 
     let mut block_range_func = |range: &BlockRange,
                                 _: &RangeId|

@@ -399,11 +399,19 @@ impl<'a> Executor<'a> {
                     header_updated.insert(sheet_id);
                 }
             }
+            EditPayload::SetVisible(p) => {
+                if let Some(sheet_id) = result.status.sheet_info_manager.get_sheet_id(p.sheet_idx) {
+                    header_updated.insert(sheet_id);
+                }
+            }
             _ => {}
         }
 
-        let mut dirty_vertices = formula_executor.dirty_vertices;
-        dirty_vertices.extend(result.dirty_vertices);
+        // Fold this payload's few vertices into the transaction's running
+        // set, not the other way round: copying the running set into a fresh
+        // one per payload made a bulk input quadratic.
+        let mut dirty_vertices = result.dirty_vertices;
+        dirty_vertices.extend(formula_executor.dirty_vertices);
 
         Ok(Executor {
             status: Status {
