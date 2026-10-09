@@ -1120,8 +1120,7 @@ impl<'a> Worksheet<'a> {
     }
 
     /// Everything needed to paint the inclusive rectangle, skipping hidden
-    /// rows. Hidden columns are detected on `start_row` only, so a hidden
-    /// `start_row` leaves `cols` empty and hidden columns' cells included.
+    /// rows and columns: `cells` is row-major over exactly `rows` × `cols`.
     pub fn get_display_window(
         &self,
         start_row: usize,
@@ -1136,6 +1135,13 @@ impl<'a> Worksheet<'a> {
         let mut merge_cells: Vec<MergeCell> = vec![];
         let mut block_ids = HashSet::<BlockId>::new();
 
+        for col in start_col..=end_col {
+            let col_info = self.get_col_info(col).unwrap_or(ColInfo::default(col));
+            if !col_info.hidden {
+                col_infos.push(col_info);
+            }
+        }
+
         for row in start_row..=end_row {
             let row_info = self.get_row_info(row).unwrap_or(RowInfo::default(row));
             if row_info.hidden {
@@ -1143,15 +1149,7 @@ impl<'a> Worksheet<'a> {
             }
             row_infos.push(row_info);
 
-            'col: for col in start_col..=end_col {
-                if row == start_row {
-                    let col_info = self.get_col_info(col).unwrap_or(ColInfo::default(col));
-                    if col_info.hidden {
-                        continue 'col;
-                    }
-                    col_infos.push(col_info);
-                }
-
+            for col in col_infos.iter().map(|c| c.idx) {
                 if let Some(comment) = self.get_comment(row, col) {
                     comments.push(comment);
                 }
@@ -1211,12 +1209,13 @@ impl<'a> Worksheet<'a> {
         let reverse = curr > row;
 
         while curr != row {
-            if self.is_row_hidden(row) {
-                curr = advance(reverse, curr);
-                continue;
+            // The line crossed by this step: `curr` going forward, the one
+            // before it going back. Hidden lines take no space.
+            let line = if reverse { curr - 1 } else { curr };
+            if !self.is_row_hidden(line) {
+                let h = self.get_row_height(line)?;
+                result = if reverse { result - h } else { result + h };
             }
-            let h = self.get_row_height(curr)?;
-            result = if reverse { result - h } else { result + h };
             curr = advance(reverse, curr);
             positioner.add_cache(true, curr, result);
         }
@@ -1235,12 +1234,13 @@ impl<'a> Worksheet<'a> {
         let reverse = curr > col;
 
         while curr != col {
-            if self.is_col_hidden(col) {
-                curr = advance(reverse, curr);
-                continue;
+            // The line crossed by this step: `curr` going forward, the one
+            // before it going back. Hidden lines take no space.
+            let line = if reverse { curr - 1 } else { curr };
+            if !self.is_col_hidden(line) {
+                let w = self.get_col_width(line)?;
+                result = if reverse { result - w } else { result + w };
             }
-            let w = self.get_col_width(curr)?;
-            result = if reverse { result - w } else { result + w };
             curr = advance(reverse, curr);
             positioner.add_cache(false, curr, result);
         }

@@ -1746,10 +1746,10 @@ pub struct BlockStyleUpdate {
     pub style_update: StyleUpdateType,
 }
 
-/// Hide or show a row or column.
-///
-/// Known gap: no executor handles this payload yet, so it currently changes
-/// nothing (it is only recorded in the version diff).
+/// Hide or show one row (`is_row`) or column at index `start`. A hidden line
+/// keeps its size and contents; it is skipped by display windows, positions
+/// and arrow-key navigation, and saved as Excel's `hidden` attribute. Send one
+/// payload per line to hide a range.
 #[derive(Default, Debug, Clone, TS)]
 #[ts(file_name = "set_visible.ts", builder, rename_all = "camelCase")]
 pub struct SetVisible {

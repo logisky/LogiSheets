@@ -360,7 +360,33 @@ impl RangeExecutor {
         }
     }
 
-    pub fn normal_range_update<F>(mut self, sheet_id: &SheetId, func: &mut F) -> Result<Self, Error>
+    pub fn normal_range_update<F>(self, sheet_id: &SheetId, func: &mut F) -> Result<Self, Error>
+    where
+        F: FnMut(&NormalRange, &RangeId) -> Result<RangeUpdateType, Error>,
+    {
+        self.update_normal_ranges(sheet_id, func, false)
+    }
+
+    /// `normal_range_update` over the multi-cell ranges only, for an update
+    /// that leaves every single-cell range alone (`func` would answer `None`
+    /// for each) — an input. Skipping them keeps a bulk input linear.
+    pub fn multi_normal_range_update<F>(
+        self,
+        sheet_id: &SheetId,
+        func: &mut F,
+    ) -> Result<Self, Error>
+    where
+        F: FnMut(&NormalRange, &RangeId) -> Result<RangeUpdateType, Error>,
+    {
+        self.update_normal_ranges(sheet_id, func, true)
+    }
+
+    fn update_normal_ranges<F>(
+        mut self,
+        sheet_id: &SheetId,
+        func: &mut F,
+        only_multi: bool,
+    ) -> Result<Self, Error>
     where
         F: FnMut(&NormalRange, &RangeId) -> Result<RangeUpdateType, Error>,
     {
@@ -370,7 +396,12 @@ impl RangeExecutor {
         let mut dirty_ranges = self.dirty_ranges;
         let mut removed_ranges = self.removed_ranges;
         let mut to_convert = HashSet::new();
-        for (range, range_id) in manager.normal_range_to_id.iter() {
+        let ranges: Box<dyn Iterator<Item = (&NormalRange, &RangeId)>> = if only_multi {
+            Box::new(manager.multi_normal_ranges.iter().map(|(id, r)| (r, id)))
+        } else {
+            Box::new(manager.normal_range_to_id.iter())
+        };
+        for (range, range_id) in ranges {
             match func(range, range_id)? {
                 RangeUpdateType::Dirty => {
                     dirty_ranges.insert((*sheet_id, *range_id));
@@ -392,19 +423,11 @@ impl RangeExecutor {
         }
         to_update.into_iter().for_each(|new_range| {
             if let Range::Normal(range) = new_range.range {
-                if let Some(old_range) = manager.id_to_normal_range.get(&new_range.id) {
-                    manager.normal_range_to_id.remove(old_range);
-                }
-                manager
-                    .id_to_normal_range
-                    .insert(new_range.id, range.clone());
-                manager.normal_range_to_id.insert(range, new_range.id);
+                manager.set_normal_range(new_range.id, range);
             }
         });
         to_remove.into_iter().for_each(|range_id| {
-            if let Some(data) = manager.id_to_normal_range.get(&range_id) {
-                manager.normal_range_to_id.remove(data);
-                manager.id_to_normal_range.remove(&range_id);
+            if manager.remove_normal_range(&range_id).is_some() {
                 removed_ranges.insert((*sheet_id, range_id));
             }
         });
@@ -453,9 +476,7 @@ impl RangeExecutor {
             }
         });
         to_remove.into_iter().for_each(|range_id| {
-            if let Some(data) = manager.id_to_normal_range.get(&range_id) {
-                manager.normal_range_to_id.remove(data);
-                manager.id_to_normal_range.remove(&range_id);
+            if manager.remove_normal_range(&range_id).is_some() {
                 removed_ranges.insert((*sheet_id, range_id));
             } else {
                 if let Some(data) = manager.id_to_block_range.get(&range_id) {

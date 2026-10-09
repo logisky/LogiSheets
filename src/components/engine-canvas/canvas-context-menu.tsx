@@ -30,6 +30,8 @@ import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 import HideImageOutlinedIcon from '@mui/icons-material/HideImageOutlined'
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import Box from '@mui/material/Box'
 import Dialog from '@mui/material/Dialog'
@@ -55,6 +57,7 @@ import {inferBlockFromSelection} from '@/components/block-composer/infer-selecti
 import type {FieldSetting} from 'logisheets-core'
 import {useToast} from '@/ui/notification/useToast'
 import {globalStore} from '@/store'
+import {useOps} from '@/core/engine/provider'
 
 /** Payload of the engine/session `contextMenu` event. */
 export interface ContextMenuTrigger {
@@ -109,6 +112,7 @@ export function CanvasContextMenu({
 }: CanvasContextMenuProps): ReactNode {
     const {t} = useTranslation()
     const {toast} = useToast()
+    const ops = useOps()
     const [menu, setMenu] = useState<{
         x: number
         y: number
@@ -299,6 +303,29 @@ export function CanvasContextMenu({
             {type, value: {sheetIdx, start: lo, count: hi - lo + 1}} as Payload,
         ])
         if (!isErrorMessage(r)) setSelection({source: 'none'})
+    }
+
+    // Hide the selected lines, or show them again. Unhide also reaches the
+    // hidden runs right beside the selection — see WorkbookOps.unhideLines.
+    const setLinesHidden = async (
+        ctx: ContextMenuContext,
+        axis: 'row' | 'col',
+        hidden: boolean
+    ) => {
+        close()
+        const sheetIdx = getActiveSheet()
+        const [lo, hi] = selectedLineRange(ctx)
+        try {
+            if (hidden) {
+                await ops.setLinesVisible(sheetIdx, axis, lo, hi, false)
+                // A selection of hidden lines has nothing to sit on and is
+                // drawn over the next visible line instead — which would then
+                // look selected while Delete cleared the hidden ones.
+                setSelection({source: 'none'})
+            } else await ops.unhideLines(sheetIdx, axis, lo, hi)
+        } catch (e) {
+            toast(e instanceof Error ? e.message : String(e), {type: 'error'})
+        }
     }
 
     const stepper = (
@@ -665,6 +692,20 @@ export function CanvasContextMenu({
               >
                   {t('ui.menu.formatCellsShort')}
               </ContextMenuItem>,
+              <ContextMenuItem
+                  key="hide"
+                  icon={<VisibilityOffOutlinedIcon />}
+                  onClick={() => setLinesHidden(ctx, 'row', true)}
+              >
+                  {t('ui.menu.hideRows')}
+              </ContextMenuItem>,
+              <ContextMenuItem
+                  key="unhide"
+                  icon={<VisibilityOutlinedIcon />}
+                  onClick={() => setLinesHidden(ctx, 'row', false)}
+              >
+                  {t('ui.menu.unhideRows')}
+              </ContextMenuItem>,
               <Divider key="d2" />,
               <ContextMenuItem
                   key="del"
@@ -698,6 +739,20 @@ export function CanvasContextMenu({
                   onClick={() => openFormat(ctx)}
               >
                   {t('ui.menu.formatCellsShort')}
+              </ContextMenuItem>,
+              <ContextMenuItem
+                  key="hide"
+                  icon={<VisibilityOffOutlinedIcon />}
+                  onClick={() => setLinesHidden(ctx, 'col', true)}
+              >
+                  {t('ui.menu.hideCols')}
+              </ContextMenuItem>,
+              <ContextMenuItem
+                  key="unhide"
+                  icon={<VisibilityOutlinedIcon />}
+                  onClick={() => setLinesHidden(ctx, 'col', false)}
+              >
+                  {t('ui.menu.unhideCols')}
               </ContextMenuItem>,
               <Divider key="d2" />,
               <ContextMenuItem

@@ -326,6 +326,28 @@ impl ContainerExecutor {
                 info.ht = Some(p.height);
                 Ok((self, true))
             }
+            EditPayload::SetVisible(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let hidden = !p.visible;
+                if p.is_row {
+                    let row_id = ctx.fetch_row_id(&sheet_id, p.start)?;
+                    let info = self.container.get_row_info_mut(sheet_id, row_id);
+                    if info.hidden == hidden {
+                        return Ok((self, false));
+                    }
+                    info.hidden = hidden;
+                } else {
+                    let col_id = ctx.fetch_col_id(&sheet_id, p.start)?;
+                    let info = self.container.get_col_info_mut(sheet_id, col_id);
+                    if info.hidden == hidden {
+                        return Ok((self, false));
+                    }
+                    info.hidden = hidden;
+                }
+                Ok((self, true))
+            }
             EditPayload::DeleteSheet(p) => {
                 let sheet_id = ctx
                     .fetch_sheet_id_by_index(p.idx)

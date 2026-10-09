@@ -5,6 +5,7 @@ import TableRowsOutlinedIcon from '@mui/icons-material/TableRowsOutlined'
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined'
 import PivotTableChartOutlinedIcon from '@mui/icons-material/PivotTableChartOutlined'
 import RefreshIcon from '@mui/icons-material/Refresh'
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
 import styles from './block-interface.module.scss'
 import React from 'react'
 import {useTranslation} from 'react-i18next'
@@ -67,6 +68,12 @@ export interface MenuProps {
      * says so.
      */
     readonly onDelete: () => void
+    /**
+     * Hide the block by hiding the sheet rows (or columns) it spans. Whole
+     * lines are what a sheet can hide, so anything else on them goes too —
+     * the item's tooltip says so.
+     */
+    readonly onHide: (axis: 'row' | 'col') => void
 }
 
 export interface ClickableListProps {
@@ -112,11 +119,13 @@ export const MenuComponent = (props: MenuProps) => {
         onRefreshPivot,
         pivotStaleCount,
         onDelete,
+        onHide,
     } = props
 
     const items: Array<{
         label: React.ReactNode
         icon: React.ReactNode
+        title?: string
         danger?: boolean
         onClick: () => void
     }> = [
@@ -192,6 +201,21 @@ export const MenuComponent = (props: MenuProps) => {
         }
     }
 
+    items.push(
+        {
+            label: t('block.menu.hideRows'),
+            icon: <VisibilityOffOutlinedIcon />,
+            title: t('block.menu.hideRowsTip'),
+            onClick: () => onHide('row'),
+        },
+        {
+            label: t('block.menu.hideCols'),
+            icon: <VisibilityOffOutlinedIcon />,
+            title: t('block.menu.hideColsTip'),
+            onClick: () => onHide('col'),
+        }
+    )
+
     items.push({
         // Says up front that this is a two-block deletion. The dialog the
         // parent opens says which blocks.
@@ -221,6 +245,7 @@ export const MenuComponent = (props: MenuProps) => {
                 <ContextMenuItem
                     key={idx}
                     icon={item.icon}
+                    title={item.title}
                     danger={item.danger}
                     onClick={(e) => {
                         e.stopPropagation()

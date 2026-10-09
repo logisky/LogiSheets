@@ -480,6 +480,7 @@
             "file": "File",
             "open": "Open",
             "save": "Save",
+            "importCsv": "Import CSV…",
             "saving": "Saving…",
             "exportCsv": "Export as CSV",
             "downloadTip": "Download as .xlsx",
@@ -621,7 +622,11 @@
         "toast": {
             "optionListsUnreadable": "Could not read this file’s option lists",
             "fileRead": "Read file {{name}}",
-            "fileReadError": "Read file error, retry later"
+            "fileReadError": "Read file error, retry later",
+            "csvImported_one": "Imported {{count}} row into sheet “{{name}}”",
+            "csvImported_other": "Imported {{count}} rows into sheet “{{name}}”",
+            "csvImporting": "Importing the CSV…",
+            "csvImportError": "Could not import the CSV: {{reason}}"
         }
     },
     "block": {
@@ -777,7 +782,11 @@
             "refreshPivotStale_one": "Refresh pivot ({{count}} group missing)",
             "refreshPivotStale_other": "Refresh pivot ({{count}} groups missing)",
             "sortAscending": "Sort ascending",
-            "sortDescending": "Sort descending"
+            "sortDescending": "Sort descending",
+            "hideRows": "Hide block (by rows)",
+            "hideRowsTip": "Hide every row the block spans, along with anything else on those rows",
+            "hideCols": "Hide block (by columns)",
+            "hideColsTip": "Hide every column the block spans, along with anything else in those columns"
         },
         "cell": {
             "addNewRow": "Add new row",
@@ -911,6 +920,10 @@
             "insertColsLeft": "Insert columns left",
             "insertColsRight": "Insert columns right",
             "deleteCols": "Delete columns",
+            "hideRows": "Hide rows",
+            "unhideRows": "Unhide rows",
+            "hideCols": "Hide columns",
+            "unhideCols": "Unhide columns",
             "count": "Count",
             "decrease": "decrease",
             "increase": "increase",

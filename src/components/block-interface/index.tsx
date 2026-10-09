@@ -630,6 +630,22 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         }
     }
 
+    const handleHide = async (axis: 'row' | 'col') => {
+        const [start, cnt] =
+            axis === 'row' ? [rowStart, rowCnt] : [colStart, colCnt]
+        try {
+            await ops.setLinesVisible(
+                sheetIdx,
+                axis,
+                start,
+                start + cnt - 1,
+                false
+            )
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : String(e))
+        }
+    }
+
     /**
      * Create the block that analyses this one — a totals row below it.
      *
@@ -1893,6 +1909,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                             ? pivotHealth.missing
                             : undefined
                     }
+                    onHide={handleHide}
                     onDelete={() =>
                         analyzedBy.length > 0
                             ? setDeleteConfirm(true)

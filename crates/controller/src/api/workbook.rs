@@ -86,6 +86,7 @@ impl Workbook {
             _ => false,
         };
         let effect = self.controller.handle_action(action);
+        self.invalidate_positioners();
         self.resync_conditional_formatting(&effect, restores_snapshot);
         effect
     }
@@ -393,7 +394,9 @@ impl Workbook {
     /// Execute the `EditAction` on the temp branch. Subsequent calls accumulate on the same branch
     /// until `commit_temp_status` or `clean_temp_status` is called.
     pub fn handle_action_in_temp_status(&mut self, action: PayloadsAction) -> ActionEffect {
-        self.controller.handle_action_in_temp_status(action)
+        let effect = self.controller.handle_action_in_temp_status(action);
+        self.invalidate_positioners();
+        effect
     }
 
     /// Keep the temp branch and record it as one undo step. No-op without one.
@@ -405,6 +408,7 @@ impl Workbook {
     /// without one.
     pub fn clean_temp_status(&mut self) {
         self.controller.clean_temp_status();
+        self.invalidate_positioners();
     }
 
     /// No-op, kept for API compatibility.
@@ -554,13 +558,17 @@ impl Workbook {
     /// anything changed.
     #[inline]
     pub fn undo(&mut self) -> bool {
-        self.controller.undo()
+        let changed = self.controller.undo();
+        self.invalidate_positioners();
+        changed
     }
 
     /// Redo counterpart of [`Workbook::undo`], with the same caveat.
     #[inline]
     pub fn redo(&mut self) -> bool {
-        self.controller.redo()
+        let changed = self.controller.redo();
+        self.invalidate_positioners();
+        changed
     }
 
     /// Clear the undo/redo history, keeping the current state as the baseline.
@@ -652,8 +660,21 @@ impl Workbook {
         names
     }
 
+    /// Drop every cached row/column offset. Any edit can move them — a row
+    /// height, a hidden line, an insert, an undo — and the cache cannot tell
+    /// which, so each state change starts it over. (Only the `sequencer`
+    /// build shares the cache across `Worksheet`s; the standalone `RefCell`
+    /// one hands each a copy, so there it never outlives a call anyway.)
+    fn invalidate_positioners(&self) {
+        let positioners = locked_write(&self.cell_positioners);
+        for p in positioners.values() {
+            locked_write(p).clear();
+        }
+    }
+
     /// The per-sheet cache of row/column start offsets that `Worksheet`
-    /// position queries share. Created on first use and never invalidated.
+    /// position queries share. Created on first use; cleared by every state
+    /// change (see `invalidate_positioners`).
     #[inline]
     pub fn get_cell_positioner(&self, sheet: SheetId) -> Locked<CellPositionerDefault> {
         let mut cell_positioners = locked_write(&self.cell_positioners);

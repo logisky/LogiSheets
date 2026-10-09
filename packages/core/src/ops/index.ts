@@ -28,6 +28,7 @@ import type {
 } from 'logisheets-web'
 import type {Client} from '../port.js'
 import {makeTransaction} from '../transaction/index.js'
+import {csvFieldToInput, csvSheetName, parseCsv} from '../csv/index.js'
 import {
     checkValidations as checkValidationsPure,
     interpretValidation,
@@ -53,6 +54,9 @@ function isErrorMessage(v: unknown): v is {msg: string} {
         'msg' in (v as Record<string, unknown>)
     )
 }
+
+/** Excel's sheet size: the furthest a run of hidden lines can extend. */
+const MAX_LINES = {row: 1048576, col: 16384} as const
 
 /**
  * Tells WorkbookOps whether to mark transactions temp (speculative). The
@@ -567,6 +571,158 @@ export class WorkbookOps {
      */
     setSheetColor(idx: number, color: string): Promise<ActionEffect> {
         return this.apply([{type: 'setSheetColor', value: {idx, color}}], true)
+    }
+
+    /**
+     * Import CSV text as a new sheet after the last one, named after
+     * `fileName` (numbered if taken), in one undo step. Fields arrive as data:
+     * numbers and TRUE/FALSE are read as such, nothing becomes a formula (see
+     * `csvFieldToInput`). Empty fields write nothing. Throws when the engine
+     * refuses the import, unlike most summary-returning operations.
+     */
+    async importCsv(
+        fileName: string,
+        text: string,
+        delimiter?: string
+    ): Promise<{
+        sheetIdx: number
+        sheetName: string
+        rows: number
+        cols: number
+    }> {
+        const records = parseCsv(text, delimiter)
+        const sheets = await this.client.getAllSheetInfo()
+        if (isErrorMessage(sheets)) throw new Error(sheets.msg)
+        const sheetIdx = sheets.length
+        const sheetName = csvSheetName(
+            fileName,
+            sheets.map((s) => s.name)
+        )
+        const payloads: Payload[] = [
+            {type: 'createSheet', value: {idx: sheetIdx, newName: sheetName}},
+        ]
+        let cols = 0
+        records.forEach((record, row) => {
+            cols = Math.max(cols, record.length)
+            record.forEach((field, col) => {
+                if (field === '') return
+                payloads.push({
+                    type: 'cellInput',
+                    value: {
+                        sheetIdx,
+                        row,
+                        col,
+                        content: csvFieldToInput(field),
+                    },
+                })
+            })
+        })
+        const effect = await this.apply(payloads, true)
+        // A summary is returned, so a refusal is thrown rather than dropped.
+        if (effect.status.type === 'err')
+            throw new Error(effect.errorMessage ?? 'CSV import was rejected')
+        return {sheetIdx, sheetName, rows: records.length, cols}
+    }
+
+    // ---- row / column visibility ----------------------------------------
+
+    /**
+     * Hide or show lines `start..=end` (either order) as one undo step. A
+     * hidden line keeps its contents and size; it just takes no space. Hiding
+     * a block is this over the block's rows or columns — which hides
+     * whatever else shares those lines too.
+     */
+    setLinesVisible(
+        sheetIdx: number,
+        axis: 'row' | 'col',
+        start: number,
+        end: number,
+        visible: boolean
+    ): Promise<ActionEffect> {
+        const lo = Math.min(start, end)
+        const hi = Math.max(start, end)
+        const payloads: Payload[] = []
+        for (let i = lo; i <= hi; i++) {
+            payloads.push({
+                type: 'setVisible',
+                value: {isRow: axis === 'row', sheetIdx, start: i, visible},
+            })
+        }
+        return this.apply(payloads, true)
+    }
+
+    /**
+     * Show lines `start..=end` and any hidden run directly next to them.
+     *
+     * A hidden line cannot be clicked, so the range a user selects to get
+     * one back usually stops beside it — and one at the sheet's edge (row 1,
+     * column A) cannot be enclosed at all. Extending to the adjacent runs
+     * makes "select the neighbour, unhide" work for both.
+     */
+    async unhideLines(
+        sheetIdx: number,
+        axis: 'row' | 'col',
+        start: number,
+        end: number
+    ): Promise<ActionEffect> {
+        const lo = Math.min(start, end)
+        const hi = Math.max(start, end)
+        const before = await this.hiddenRunLength(sheetIdx, axis, lo, -1)
+        const after = await this.hiddenRunLength(sheetIdx, axis, hi + 1, 1)
+        return this.setLinesVisible(
+            sheetIdx,
+            axis,
+            lo - before,
+            hi + after,
+            true
+        )
+    }
+
+    /**
+     * How many consecutive hidden lines sit next to the boundary `edge`:
+     * going back (`dir` -1) that is lines `edge-k..edge-1`, going forward
+     * lines `edge..edge+k-1`. Hidden lines take no space, so a run is hidden
+     * exactly when its two boundaries share an offset — which lets this
+     * bracket and bisect in a logarithmic number of position queries
+     * instead of reading every line.
+     */
+    private async hiddenRunLength(
+        sheetIdx: number,
+        axis: 'row' | 'col',
+        edge: number,
+        dir: -1 | 1
+    ): Promise<number> {
+        const limit = dir < 0 ? edge : MAX_LINES[axis] - edge
+        if (limit <= 0) return 0
+        const offset = async (line: number): Promise<number> => {
+            const pos = await this.client.getCellPosition({
+                sheetIdx,
+                row: axis === 'row' ? line : 0,
+                col: axis === 'col' ? line : 0,
+            })
+            if (isErrorMessage(pos)) throw new Error(pos.msg)
+            return axis === 'row' ? pos.y : pos.x
+        }
+        const base = await offset(edge)
+        const allHidden = async (k: number) =>
+            (await offset(edge + dir * k)) === base
+        // Bracket: `good` lines are all hidden, `bad` are not.
+        let good = 0
+        let bad = 1
+        while (bad <= limit && (await allHidden(bad))) {
+            good = bad
+            bad *= 2
+        }
+        if (bad > limit) {
+            if (good === limit || (await allHidden(limit))) return limit
+            bad = limit
+        }
+        while (bad - good > 1) {
+            const mid = Math.floor((good + bad) / 2)
+            if (await allHidden(mid)) good = mid
+            else bad = mid
+        }
+        return good
     }
 
     // ---- blocks ---------------------------------------------------------

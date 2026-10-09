@@ -282,6 +282,31 @@ export const getPosition = (rowIdx: number, colIdx: number, grid: Grid) => {
 }
 
 /**
+ * Header-space offsets (px; the first laid-out line starts at `-subOffset`)
+ * of every boundary hiding lines, for the header's hidden-line marker.
+ *
+ * Between two laid-out lines a gap in their indexes is a hidden run. Before
+ * the first line it is ambiguous — the lines there may be hidden or merely
+ * scrolled away — except when the first line starts at document offset 0:
+ * hidden lines take no space, so then everything before it is hidden.
+ */
+export function hiddenLineBoundaries(
+    lines: readonly {idx: number; size: number}[],
+    anchor: number,
+    subOffset: number
+): number[] {
+    const result: number[] = []
+    if (lines.length === 0) return result
+    let pos = 0 - subOffset // not `-subOffset`, which is -0 at the top
+    if (lines[0].idx > 0 && Math.abs(anchor - subOffset) < 0.5) result.push(pos)
+    for (let i = 0; i < lines.length - 1; i++) {
+        pos += lines[i].size
+        if (lines[i + 1].idx > lines[i].idx + 1) result.push(pos)
+    }
+    return result
+}
+
+/**
  * Inclusive range of indexes INTO `grid.rows` (not sheet rows) that fit in
  * `height` px starting at document-y `anchor`. Note the row and column
  * variants disagree at the far edge: rows stop one before the row that
