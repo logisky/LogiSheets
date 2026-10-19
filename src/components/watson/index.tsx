@@ -43,7 +43,6 @@ import {
 } from 'logisheets-logician'
 import {getCraftState, setCraftState} from 'logisheets-core'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
-import {craftIdFromSrc} from '@/core/craft-ai'
 import {useTempModeControls} from '@/components/temp-mode'
 import {getLocale} from '@/core/i18n/i18n'
 import {useWorkbook} from '@/core/engine/provider'
@@ -51,7 +50,7 @@ import {globalStore} from '@/store'
 import {IdbConversationStore} from './lib/storage-idb'
 import {makeLlmClient} from './lib/llm-factory'
 import {isTauri} from './lib/net'
-import {WebCraftStore} from './lib/craft-store-web'
+import {createAppCraftStore} from './lib/craft-store-web'
 import {makeCraftInteractionsApi} from './lib/craft-interactions-adapter'
 import {Markdown} from './lib/markdown'
 import {
@@ -214,18 +213,9 @@ export const Watson = observer(function Watson({
             ...CHART_TOOLS,
             ...CRAFT_INTERACTION_TOOLS,
         ])
-        // `t.value` is the panel's iframe path (`/lights-out/index.html`), not
-        // a craft id — the store builds `/<craftId>/manifest.json` from this,
-        // so passing the path made every manifest fetch a malformed URL.
-        const installedIds = (
-            typeof __CRAFT_TOOLS__ !== 'undefined' ? __CRAFT_TOOLS__ : []
-        )
-            .map((t) => craftIdFromSrc(t.value))
-            .filter((id) => id !== 'watson')
-        // Give craft-skill tools scoped read/write to their own craftState, so
-        // they can operate a craft's stateful feature (e.g. a game board) and
-        // stay consistent with the craft's own persistence.
-        installCraftSkillTools(new WebCraftStore({installedIds}), r, {
+        // Built-in and installed crafts alike (the startup craft registry);
+        // Watson itself is not one of its own skills.
+        installCraftSkillTools(createAppCraftStore(['watson']), r, {
             craftState: (craftId) => ({
                 get: () => getCraftState(craftId),
                 set: (json) => setCraftState(craftId, json),

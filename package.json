@@ -21,6 +21,7 @@
         "dayjs": "^1.11.19",
         "dexie": "^4.0.0",
         "eslint-plugin-react-hooks": "^4.3.0",
+        "fflate": "^0.8.2",
         "lodash": "^4.17.21",
         "logisheets-core": "workspace:*",
         "logisheets-engine": "workspace:*",

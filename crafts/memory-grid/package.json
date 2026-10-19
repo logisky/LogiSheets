@@ -1,6 +1,7 @@
 {
     "name": "memory-grid",
     "version": "0.1.0",
+    "label": "Memory Grid",
     "description": "A 24-level memory game on an 8x8 LogiSheets grid: recall flashed colors/numbers",
     "main": "dist/memory-grid.js",
     "module": "dist/memory-grid.js",

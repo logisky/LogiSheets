@@ -1,6 +1,7 @@
 {
     "name": "minesweeper",
     "version": "0.1.0",
+    "label": "Minesweeper",
     "description": "Minesweeper on a LogiSheets grid — left-click to reveal, right-click to flag",
     "main": "dist/minesweeper.js",
     "module": "dist/minesweeper.js",

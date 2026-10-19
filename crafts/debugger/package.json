@@ -1,6 +1,7 @@
 {
     "name": "debugger",
     "version": "0.1.0",
+    "label": "Debugger (dev)",
     "description": "Dev-only craft: build big/realistic blocks in one click, then poke at them",
     "main": "dist/debugger.js",
     "module": "dist/debugger.js",

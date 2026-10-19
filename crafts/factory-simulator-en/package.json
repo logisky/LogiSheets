@@ -1,6 +1,7 @@
 {
     "name": "factory-simulator-en",
     "version": "0.1.0",
+    "label": "Factory Simulator",
     "description": "Run your factory! (English edition)",
     "main": "dist/factory-simulator.js",
     "module": "dist/factory-simulator.js",

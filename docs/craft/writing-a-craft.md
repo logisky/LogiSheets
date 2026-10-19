@@ -630,7 +630,7 @@ flight. A craft with no `@aiRole` cannot call `ask` at all.
 ```bash
 npx craftsmith check .   # validate the tool contract + purity — no writes
 npx craftsmith build .   # compile tools.ts/runtime.ts → dist/ + manifest.json
-npx craftsmith pack  .   # tar dist/ into a shippable <craftId>-<version>.tgz
+npx craftsmith pack  .   # zip dist/ into an installable <craftId>-<version>.craft
 ```
 
 `build` produces `dist/`:
@@ -666,7 +666,33 @@ matches your code:
 }
 ```
 
-**Publishing** is shipping that `dist/`: publish your package to the craft
-registry your deployment uses. Once installed, the host lists your craft by
-`craftId`, loads `tools.js` for Watson, `index.html` for the panel, and
-`runtime.js` for the server — **no change to the host required**.
+**Publishing** is shipping that `dist/`. `craftsmith pack` zips it into
+`<craftId>-<version>.craft`, which a user installs from the craft panel
+(the puzzle-piece button → **Install from file…**, or drop the file on the
+dialog); it appears after a reload. The host then lists your craft by
+`craftId`, loads `tools.js` for Watson and `index.html` for the panel —
+**no change to the host required**. (`runtime.js` is not yet loaded for
+installed crafts.)
+
+### Installed crafts: what is different
+
+An installed craft's page is built from the package in the browser, not
+served from a URL, so:
+
+- **Read the language from `window.locale` first.** It is set before any of
+  your scripts run. There is no `?lang=` in the address:
+  `pickLocale(tag || window.locale || urlLocale())`.
+- **Reference files only from `index.html`, by relative path** — `<script
+  src>`, `<link href>`, `<img src>` and the like, plus `import` from an inline
+  `<script type="module">`. A runtime `fetch('./data.json')` does not
+  resolve; bundle data into your JS.
+- **Don't route on `location`.** `location.href` is a `blob:` URL.
+- **Pick a `craftId` no built-in uses**, kebab-case and at most 32
+  characters. Built-in ids are refused at install.
+- **File names** must be ASCII letters, digits, `.`, `_` and `-`, in
+  `/`-separated folders. Limits: 5 MB a file, 20 MB a package.
+- Need a newer host API? Set `"craftHostApi"` in package.json; older hosts
+  refuse the package rather than run it broken.
+
+The user is warned at install that a craft has full access to the app; see
+[installable crafts](./installable-crafts) for why.

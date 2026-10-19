@@ -9,6 +9,7 @@ import reportWebVitals from './reportWebVitals'
 import {EngineProvider} from '@/core/engine/provider'
 import {initEngine} from '@/core/engine'
 import {installCraftStorageBackend} from '@/core/craft-storage'
+import {initCraftRegistry} from '@/core/craft-packages'
 import './core/i18n/i18n'
 import 'logisheets-engine/style.css'
 
@@ -16,7 +17,9 @@ import 'logisheets-engine/style.css'
 // before any craft iframe can mount.
 installCraftStorageBackend()
 
-initEngine().then(async (engine) => {
+// The craft list (built-ins + installed) is fixed before anything renders;
+// installing or uninstalling a craft takes effect on the next reload.
+Promise.all([initEngine(), initCraftRegistry()]).then(async ([engine]) => {
     const root = createRoot(document.getElementById('root') as HTMLElement)
 
     root.render(

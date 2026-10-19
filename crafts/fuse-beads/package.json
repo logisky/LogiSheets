@@ -1,6 +1,7 @@
 {
     "name": "fuse-beads",
     "version": "0.1.0",
+    "label": "Fuse Beads",
     "description": "Electronic fuse-beads (拼豆): paint a MARD-style bead board on a LogiSheets worksheet",
     "main": "dist/fuse-beads.js",
     "module": "dist/fuse-beads.js",

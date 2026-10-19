@@ -8,6 +8,9 @@ declare const __CRAFT_TOOLS__: {
     value: string
 }[]
 declare const __DEFAULT_CRAFT__: string
+// Every craft id in the registry, whichever distribution this is. An installed
+// craft may not reuse one.
+declare const __RESERVED_CRAFT_IDS__: string[]
 
 // The locale this distribution is built for (crafts.config.json → `locale`).
 // It is the DEFAULT only: a language the user picked explicitly outranks it.
