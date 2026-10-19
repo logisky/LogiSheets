@@ -1,10 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import {execFileSync} from 'node:child_process'
 import {build as esbuild} from 'esbuild'
+import {strToU8, zipSync} from 'fflate'
 import {extract, resolveCraft} from './extract.js'
 import type {Diagnostic} from './diagnostics.js'
-import type {ManifestRole} from './manifest.js'
+import type {CraftManifest, ManifestRole} from './manifest.js'
 
 function printDiagnostics(diags: Diagnostic[]): {
     errors: number
@@ -158,22 +158,86 @@ function writeRoleTypes(dir: string, roles: readonly ManifestRole[]): void {
 }
 
 /**
- * `craftsmith pack <dir>` — tarball dist/ into <craftId>-<version>.tgz in the
- * craft root. Needs a prior build (returns 1 without dist/manifest.json) and a
- * `tar` on PATH. Does not re-validate; the name comes from package.json.
+ * Files in dist/ that never ship in a `.craft`: type declarations and source
+ * maps are for the author, and the manifest is rewritten (with `files`) rather
+ * than copied.
+ */
+function packExcluded(rel: string): boolean {
+    return (
+        rel === 'manifest.json' || rel.endsWith('.d.ts') || rel.endsWith('.map')
+    )
+}
+
+function listFiles(root: string, rel = ''): string[] {
+    const out: string[] = []
+    for (const e of fs.readdirSync(path.join(root, rel), {
+        withFileTypes: true,
+    })) {
+        const r = rel ? `${rel}/${e.name}` : e.name
+        if (e.isDirectory()) out.push(...listFiles(root, r))
+        else if (e.isFile()) out.push(r)
+    }
+    return out.sort()
+}
+
+/**
+ * `craftsmith pack <dir>` — zip a built craft into `<craftId>-<version>.craft`
+ * in the craft root: the installable package a user picks in the app's
+ * "Install craft…" dialog.
+ *
+ * Re-runs the checks (returns 1 on any error) and needs a prior build (returns
+ * 1 without dist/manifest.json). Every file under dist/ ships, except
+ * `packExcluded` ones; the packed manifest.json is dist's plus `files`, the
+ * list of what was packed — the host serves exactly that list. Returns 1 if an
+ * entry the manifest names (`url`, a tool's `entry`) is not in dist/.
  */
 export function pack(dir: string): number {
     const paths = resolveCraft(dir)
+    const {diagnostics} = extract(dir)
+    if (diagnostics.some((d) => d.level === 'error')) {
+        printDiagnostics(diagnostics)
+        console.error('\ncheck failed — not packed.')
+        return 1
+    }
     const dist = path.join(paths.root, 'dist')
-    if (!fs.existsSync(path.join(dist, 'manifest.json'))) {
+    const manifestPath = path.join(dist, 'manifest.json')
+    if (!fs.existsSync(manifestPath)) {
         console.error('no dist/manifest.json — run `craftsmith build` first')
         return 1
     }
-    const pkg = JSON.parse(fs.readFileSync(paths.packageJson, 'utf8'))
-    const id = pkg.craftId ?? pkg.name
-    const out = path.join(paths.root, `${id}-${pkg.version ?? '0.0.0'}.tgz`)
-    execFileSync('tar', ['-czf', out, '-C', dist, '.'])
-    console.error(`packed → ${path.relative(process.cwd(), out)}`)
+    const manifest = JSON.parse(
+        fs.readFileSync(manifestPath, 'utf8')
+    ) as CraftManifest
+    const files = listFiles(dist).filter((f) => !packExcluded(f))
+    const needed = [
+        ...(manifest.url ? [manifest.url] : []),
+        ...(manifest.tools ?? []).map((t) => t.entry),
+    ]
+    const missing = [...new Set(needed)].filter((f) => !files.includes(f))
+    if (missing.length) {
+        console.error(
+            `dist/ is missing ${missing.join(', ')} — run the full build first`
+        )
+        return 1
+    }
+    const entries: Record<string, Uint8Array> = {
+        'manifest.json': strToU8(
+            JSON.stringify({...manifest, files}, null, 2) + '\n'
+        ),
+    }
+    for (const f of files)
+        entries[f] = new Uint8Array(fs.readFileSync(path.join(dist, f)))
+    const out = path.join(
+        paths.root,
+        `${manifest.craftId}-${manifest.version}.craft`
+    )
+    fs.writeFileSync(out, zipSync(entries, {level: 9}))
+    console.error(
+        `packed ${files.length + 1} file(s) → ${path.relative(
+            process.cwd(),
+            out
+        )}`
+    )
     return 0
 }
 

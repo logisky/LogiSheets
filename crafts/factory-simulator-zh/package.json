@@ -1,6 +1,7 @@
 {
     "name": "factory-simulator-zh",
     "version": "0.1.0",
+    "label": "Factory Simulator (中文)",
     "description": "Run your factory! (Chinese edition)",
     "main": "dist/factory-simulator.js",
     "module": "dist/factory-simulator.js",

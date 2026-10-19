@@ -153,7 +153,9 @@
 
     /** Nearest language we actually have, for whatever the host reports. */
     function pickLocale(tag) {
-      var want = tag || urlLocale()
+      // An installed craft has no ?lang= (its page is a blob URL); the host
+      // presets window.locale before any script runs instead.
+      var want = tag || window.locale || urlLocale()
       if (!want) return 'zh-CN'
       if (STRINGS[want]) return want
       var base = String(want).replace('_', '-').split('-')[0].toLowerCase()

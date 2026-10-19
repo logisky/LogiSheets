@@ -1,6 +1,7 @@
 {
     "name": "markdown-table-extractor",
     "version": "0.1.0",
+    "label": "Markdown Table Extractor",
     "description": "Parse GitHub-flavored Markdown tables into structured JSON (UMD bundle)",
     "main": "dist/markdown-table-extractor.js",
     "module": "dist/markdown-table-extractor.js",

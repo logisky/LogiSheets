@@ -16,6 +16,7 @@ import type {
     InstalledCraftStore,
     InstalledCraftSummary,
 } from 'logisheets-logician'
+import {getCraftPackageStore, getCraftRegistry} from '@/core/craft-packages'
 
 export interface WebCraftStoreOptions {
     /** Craft ids considered installed (e.g. the current distribution's list). */
@@ -26,6 +27,32 @@ export interface WebCraftStoreOptions {
     fetchImpl?: typeof fetch
     /** Override module import (tests). Defaults to dynamic import(). */
     importImpl?: (url: string) => Promise<Record<string, unknown>>
+    /**
+     * Crafts the user installed (see src/core/craft-packages). They have no
+     * server path: their manifest and tool modules are read from the package
+     * store instead of fetched. Their ids must also be in `installedIds`.
+     */
+    packages?: {
+        ids: ReadonlySet<string>
+        readFile(craftId: string, path: string): Promise<Uint8Array | undefined>
+    }
+}
+
+/** Import a self-contained ES module from bytes (see importSelfContained). */
+async function importBytes(
+    bytes: Uint8Array
+): Promise<Record<string, unknown>> {
+    const blobUrl = URL.createObjectURL(
+        new Blob([bytes as BlobPart], {type: 'text/javascript'})
+    )
+    try {
+        return (await import(/* @vite-ignore */ blobUrl)) as Record<
+            string,
+            unknown
+        >
+    } finally {
+        URL.revokeObjectURL(blobUrl)
+    }
 }
 
 /**
@@ -67,6 +94,7 @@ export class WebCraftStore implements InstalledCraftStore {
     private base: string
     private doFetch: typeof fetch
     private doImport: (url: string) => Promise<Record<string, unknown>>
+    private packages: WebCraftStoreOptions['packages']
 
     private manifestCache = new Map<string, CraftManifest | undefined>()
     private moduleCache = new Map<string, Promise<Record<string, unknown>>>()
@@ -76,6 +104,11 @@ export class WebCraftStore implements InstalledCraftStore {
         this.base = (opts.baseUrl ?? '/').replace(/\/+$/, '') + '/'
         this.doFetch = opts.fetchImpl ?? ((...a) => fetch(...a))
         this.doImport = opts.importImpl ?? importSelfContained
+        this.packages = opts.packages
+    }
+
+    private isPackage(craftId: string): boolean {
+        return !!this.packages?.ids.has(craftId)
     }
 
     private urlFor(craftId: string, file: string): string {
@@ -86,6 +119,22 @@ export class WebCraftStore implements InstalledCraftStore {
         if (this.manifestCache.has(craftId))
             return this.manifestCache.get(craftId)
         let manifest: CraftManifest | undefined
+        if (this.isPackage(craftId)) {
+            try {
+                const bytes = await this.packages!.readFile(
+                    craftId,
+                    'manifest.json'
+                )
+                if (bytes)
+                    manifest = JSON.parse(
+                        new TextDecoder().decode(bytes)
+                    ) as CraftManifest
+            } catch {
+                manifest = undefined
+            }
+            this.manifestCache.set(craftId, manifest)
+            return manifest
+        }
         try {
             const res = await this.doFetch(
                 this.urlFor(craftId, 'manifest.json')
@@ -121,9 +170,40 @@ export class WebCraftStore implements InstalledCraftStore {
         const url = this.urlFor(craftId, entry)
         let mod = this.moduleCache.get(url)
         if (!mod) {
-            mod = this.doImport(url)
+            mod = this.isPackage(craftId)
+                ? this.packages!.readFile(craftId, entry).then((bytes) => {
+                      if (!bytes)
+                          throw new Error(`craft module ${url}: not installed`)
+                      return importBytes(bytes)
+                  })
+                : this.doImport(url)
             this.moduleCache.set(url, mod)
         }
         return mod
     }
+}
+
+/**
+ * The store over every craft this page knows: the startup craft registry,
+ * built-ins fetched from their server path, installed crafts read from the
+ * package store.
+ */
+export function createAppCraftStore(
+    exclude: readonly string[] = []
+): WebCraftStore {
+    const entries = getCraftRegistry().filter(
+        (e) => !exclude.includes(e.craftId)
+    )
+    const packageStore = getCraftPackageStore()
+    return new WebCraftStore({
+        installedIds: entries.map((e) => e.craftId),
+        packages: {
+            ids: new Set(
+                entries
+                    .filter((e) => e.source === 'installed')
+                    .map((e) => e.craftId)
+            ),
+            readFile: (craftId, path) => packageStore.readFile(craftId, path),
+        },
+    })
 }

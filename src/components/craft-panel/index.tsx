@@ -15,6 +15,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesomeOutlined'
+import ExtensionIcon from '@mui/icons-material/ExtensionOutlined'
 import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
@@ -31,7 +32,14 @@ import {
 } from 'logisheets-core'
 import {CALLER_UUID_PARAM_KEY} from '@/core/permissions/patch'
 import {makeCraftAi, craftIdFromSrc} from '@/core/craft-ai'
-import {WebCraftStore} from '@/components/watson/lib/craft-store-web'
+import {createAppCraftStore} from '@/components/watson/lib/craft-store-web'
+import {
+    findCraftEntry,
+    getCraftPackageStore,
+    getCraftRegistry,
+} from '@/core/craft-packages'
+import {loadInstalledCraftPage} from '@/core/craft-packages/loader'
+import {CraftManager} from './craft-manager'
 import type {AiRole} from 'logisheets-logician'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
@@ -81,22 +89,25 @@ export const CraftPanel = ({
     // for every language stores it under `en`.
     const craftLabel = (label: Record<string, string>) =>
         label[getLocale()] ?? label.en ?? Object.values(label)[0] ?? ''
-    const [iframeSrc, setIframeSrc] = useState(
-        initialCraftSrc ?? __DEFAULT_CRAFT__
-    )
-    // The craft list is injected at build time from crafts.config.json (webpack
-    // DefinePlugin → resolveCraftTools), selected by the CRAFT_DIST
-    // distribution. Add crafts / distributions there, not here.
-    const tools = __CRAFT_TOOLS__
-    // One store over the whole distribution, so a craft's manifest and tool
-    // module are fetched and cached once.
-    const craftStore = useMemo(
-        () =>
-            new WebCraftStore({
-                installedIds: tools.map((t) => craftIdFromSrc(t.value)),
-            }),
-        [tools]
-    )
+    // The craft registry, fixed at startup: this distribution's built-ins
+    // (crafts.config.json, selected by CRAFT_DIST — add crafts there, not
+    // here) followed by the crafts the user installed. Tools-only crafts have
+    // no page, so the panel does not offer them.
+    const tools = useMemo(() => getCraftRegistry().filter((e) => e.hasUi), [])
+    // `iframeSrc` is the craft's KEY (`/<craftId>/index.html`), the string the
+    // host keys craft state, block ownership and canvas input by. For a
+    // built-in it is also the page's URL; an installed craft's page is built
+    // by the loader (see `iframeUrl`).
+    const [iframeSrc, setIframeSrc] = useState(() => {
+        const wanted = initialCraftSrc ?? __DEFAULT_CRAFT__
+        return tools.some((e) => e.key === wanted)
+            ? wanted
+            : tools[0]?.key ?? wanted
+    })
+    const [managerOpen, setManagerOpen] = useState(false)
+    // One store over every craft, so a craft's manifest and tool module are
+    // fetched (or read from the package store) and cached once.
+    const craftStore = useMemo(() => createAppCraftStore(), [])
     // A craft is asking the AI right now; the header shows it.
     const [aiBusy, setAiBusy] = useState(false)
     // Pending consent request, if a craft has asked and the user has not
@@ -122,11 +133,52 @@ export const CraftPanel = ({
      * change would change `src` and RELOAD the running craft, throwing away
      * its state — a switch is already delivered live through `win.locale` and
      * the onLocaleChange listeners.
+     *
+     * An installed craft has no server path: the loader builds its page from
+     * the package store as a blob URL (same-origin, so `inject()` still
+     * reaches its window) with `window.locale` preset in place of `?lang=`.
+     * Undefined while that is being built; the blob URLs are revoked when the
+     * panel switches craft.
      */
-    const iframeUrl = useMemo(
-        () => withLocaleParam(iframeSrc, getLocale()),
-        [iframeSrc]
-    )
+    const [iframeUrl, setIframeUrl] = useState<string | undefined>(undefined)
+    useEffect(() => {
+        const entry = findCraftEntry(iframeSrc)
+        if (entry?.source !== 'installed' || !entry.manifest) {
+            setIframeUrl(withLocaleParam(iframeSrc, getLocale()))
+            return
+        }
+        setIframeUrl(undefined)
+        let cancelled = false
+        let dispose: (() => void) | undefined
+        loadInstalledCraftPage(
+            getCraftPackageStore(),
+            entry.manifest,
+            getLocale()
+        ).then(
+            (page) => {
+                if (cancelled) {
+                    page.dispose()
+                    return
+                }
+                dispose = page.dispose
+                setIframeUrl(page.url)
+            },
+            (e) => {
+                if (cancelled) return
+                toast.error(
+                    String(
+                        t('ui.craft.pageLoadFailed', {
+                            message: e instanceof Error ? e.message : String(e),
+                        })
+                    )
+                )
+            }
+        )
+        return () => {
+            cancelled = true
+            dispose?.()
+        }
+    }, [iframeSrc])
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
     // Crafts that need to react to the sheet selection subscribe here instead
     // of polling `window.selection`. The set persists across `inject()` re-runs
@@ -175,9 +227,9 @@ export const CraftPanel = ({
             }
         )
         win.__craftUuid = craftUuid
-        // The ids of all crafts shipped in this distribution — so a craft (e.g.
-        // Watson) can discover its siblings' skills by fetching /<id>/manifest.json.
-        win.installedCrafts = tools.map((t) => t.value)
+        // The keys (`/<id>/index.html`) of every craft the panel offers,
+        // built-in and installed.
+        win.installedCrafts = tools.map((t) => t.key)
         win.blockManager = BLOCK_MANAGER
         win.setCellLayouts = setCellLayouts
         win.setSelection = (sheetIdx: number, row: number, col: number) => {
@@ -407,8 +459,8 @@ export const CraftPanel = ({
                     >
                         {tools.map((tool) => (
                             <MenuItem
-                                key={tool.value}
-                                value={tool.value}
+                                key={tool.key}
+                                value={tool.key}
                                 sx={{fontSize: '0.85rem'}}
                             >
                                 {craftLabel(tool.label)}
@@ -416,6 +468,16 @@ export const CraftPanel = ({
                         ))}
                     </Select>
                 </FormControl>
+                <Tooltip title={String(t('ui.craft.manage.openTip'))}>
+                    <IconButton
+                        size="small"
+                        color="default"
+                        aria-label={String(t('ui.craft.manage.openTip'))}
+                        onClick={() => setManagerOpen(true)}
+                    >
+                        <ExtensionIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
                 {aiBusy && (
                     <Tooltip title={String(t('ui.craft.aiBusyTip'))}>
                         <AutoAwesomeIcon
@@ -434,6 +496,10 @@ export const CraftPanel = ({
                     <CloseIcon fontSize="small" />
                 </IconButton>
             </Box>
+            <CraftManager
+                open={managerOpen}
+                onClose={() => setManagerOpen(false)}
+            />
             {aiConsent && (
                 <Dialog
                     open
@@ -497,23 +563,25 @@ export const CraftPanel = ({
                     minHeight: 0,
                 }}
             >
-                <iframe
-                    ref={iframeRef}
-                    src={iframeUrl}
-                    onLoad={() => {
-                        // Re-inject for the freshly loaded document. Listeners
-                        // are NOT cleared here — by now the new page may have
-                        // registered its own; the craft-change effect above is
-                        // what drops the outgoing page's.
-                        inject()
-                    }}
-                    style={{
-                        border: 'none',
-                        width: '100%',
-                        height: '100%',
-                        display: 'block',
-                    }}
-                />
+                {iframeUrl && (
+                    <iframe
+                        ref={iframeRef}
+                        src={iframeUrl}
+                        onLoad={() => {
+                            // Re-inject for the freshly loaded document. Listeners
+                            // are NOT cleared here — by now the new page may have
+                            // registered its own; the craft-change effect above is
+                            // what drops the outgoing page's.
+                            inject()
+                        }}
+                        style={{
+                            border: 'none',
+                            width: '100%',
+                            height: '100%',
+                            display: 'block',
+                        }}
+                    />
+                )}
             </Box>
         </Box>
     )

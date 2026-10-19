@@ -1,5 +1,6 @@
 #[cfg(feature = "native-engine")]
 mod commands;
+mod crafts;
 mod net;
 mod storage;
 
@@ -26,8 +27,8 @@ pub fn run() {
         });
 
     // `invoke_handler` can be set only once, so the full command list is chosen
-    // per configuration: craft-storage always, plus the native engine `handle`
-    // when that feature is on.
+    // per configuration: craft-storage and installed crafts always, plus the
+    // native engine `handle` when that feature is on.
     #[cfg(feature = "native-engine")]
     let builder = builder
         .manage(commands::AppState::default())
@@ -38,6 +39,10 @@ pub fn run() {
             storage::craft_storage_keys,
             storage::craft_storage_clear,
             net::llm_fetch,
+            crafts::craft_pkg_list,
+            crafts::craft_pkg_install,
+            crafts::craft_pkg_remove,
+            crafts::craft_pkg_read,
             commands::handle,
         ]);
 
@@ -49,6 +54,10 @@ pub fn run() {
         storage::craft_storage_keys,
         storage::craft_storage_clear,
         net::llm_fetch,
+        crafts::craft_pkg_list,
+        crafts::craft_pkg_install,
+        crafts::craft_pkg_remove,
+        crafts::craft_pkg_read,
     ]);
 
     builder

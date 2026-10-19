@@ -32,6 +32,8 @@ reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
     "charset",
 ] }
+# Package bytes cross IPC as base64 (src/crafts.rs).
+base64 = "0.22"
 logisheets-rs = { path = "../../../crates/api", features = ["rpc"], optional = true }
 
 [features]

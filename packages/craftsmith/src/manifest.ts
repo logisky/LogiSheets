@@ -124,6 +124,24 @@ export interface CraftManifest {
     version: string
     /** package.json `label`, else `name`, else the craftId. */
     label: string
+    /** package.json `description`. Shown when a user installs the craft. */
+    description?: string
+    /**
+     * package.json `publisher`, else `author` (string or `{name}`). Free text,
+     * NOT verified: the install dialog shows it, nothing trusts it.
+     */
+    publisher?: string
+    /**
+     * Lowest host API version the craft needs (package.json `craftHostApi`,
+     * default 1). A host older than this refuses to install the package.
+     */
+    hostApi?: number
+    /**
+     * Every file in a packed `.craft`, package-relative with `/` separators.
+     * Written by `craftsmith pack` only — absent from dist/manifest.json. An
+     * installed craft's loader serves exactly these files and nothing else.
+     */
+    files?: string[]
     /** Present iff the craft has an index.html. Package-relative. */
     url?: string
     /** Present iff the craft has a runtime.ts (CraftRuntime lifecycle). */

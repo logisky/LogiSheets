@@ -17,6 +17,7 @@ function resolveCraftTools(dev: boolean): {
     tools: {label: Record<string, string>; value: string}[]
     defaultCraft: string
     locale: string
+    reservedIds: string[]
 } {
     const cfg = JSON.parse(
         fs.readFileSync(path.resolve(__dirname, 'crafts.config.json'), 'utf8')
@@ -53,7 +54,10 @@ function resolveCraftTools(dev: boolean): {
     const defaultCraft = dist.defaultCraft
         ? `/${dist.defaultCraft}/index.html`
         : tools[0]?.value ?? '/factory-simulator-en/index.html'
-    return {tools, defaultCraft, locale}
+    // Every registry id, in any distribution: an installed craft may not take
+    // one (see reservedCraftIds in src/core/craft-packages).
+    const reservedIds = Object.keys(cfg.registry)
+    return {tools, defaultCraft, locale, reservedIds}
 }
 
 export default defineConfig(({command}) => {
@@ -93,6 +97,7 @@ export default defineConfig(({command}) => {
         define: {
             __CRAFT_TOOLS__: JSON.stringify(craft.tools),
             __DEFAULT_CRAFT__: JSON.stringify(craft.defaultCraft),
+            __RESERVED_CRAFT_IDS__: JSON.stringify(craft.reservedIds),
             __APP_LOCALE__: JSON.stringify(craft.locale),
         },
         // PORT env keeps the contract the webpack dev server had (Playwright

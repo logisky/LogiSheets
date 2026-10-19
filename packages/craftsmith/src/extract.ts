@@ -73,6 +73,19 @@ interface Identity {
     craftId: string
     version: string
     label: string
+    description?: string
+    publisher?: string
+    hostApi: number
+}
+
+/** package.json `author` is a string or `{name, email, url}`. */
+function authorName(author: unknown): string | undefined {
+    if (typeof author === 'string') return author || undefined
+    if (author && typeof author === 'object') {
+        const name = (author as {name?: unknown}).name
+        if (typeof name === 'string' && name) return name
+    }
+    return undefined
 }
 
 function readIdentity(paths: CraftPaths, diags: Diagnostic[]): Identity {
@@ -90,10 +103,28 @@ function readIdentity(paths: CraftPaths, diags: Diagnostic[]): Identity {
             message: `craftId "${pkg.craftId}" must be kebab-case (a-z, 0-9, "-")`,
             file: paths.packageJson,
         })
+    const hostApi = pkg.craftHostApi ?? 1
+    if (!Number.isInteger(hostApi) || hostApi < 1)
+        diags.push({
+            level: 'error',
+            message: `craftHostApi must be a positive integer, got ${JSON.stringify(
+                hostApi
+            )}`,
+            file: paths.packageJson,
+        })
     return {
         craftId: craftId ?? 'unknown',
         version: pkg.version ?? '0.0.0',
         label: pkg.label ?? pkg.name ?? craftId ?? 'unknown',
+        description:
+            typeof pkg.description === 'string' && pkg.description
+                ? pkg.description
+                : undefined,
+        publisher:
+            typeof pkg.publisher === 'string' && pkg.publisher
+                ? pkg.publisher
+                : authorName(pkg.author),
+        hostApi,
     }
 }
 
@@ -551,7 +582,10 @@ export function extract(root: string): ExtractResult {
         craftId: id.craftId,
         version: id.version,
         label: id.label,
+        hostApi: id.hostApi,
     }
+    if (id.description) manifest.description = id.description
+    if (id.publisher) manifest.publisher = id.publisher
     if (paths.indexHtml) manifest.url = 'index.html'
     if (paths.runtimeTs) manifest.rtJs = 'runtime.js'
 

@@ -13,8 +13,10 @@
 // about `minesweeper`. Worse, once distributions differ by language, a table
 // that lists every craft happily deep-links a Chinese-only game inside the
 // English build, where those files were never published: an iframe pointed at
-// a 404. So the list comes from `__CRAFT_TOOLS__`, which vite already filtered
-// down to this distribution.
+// a 404. So the list comes from the craft registry: this distribution's
+// built-ins (vite already filtered them) plus the crafts the user installed.
+
+import {getCraftRegistry} from '@/core/craft-packages'
 
 export interface CraftDeepLink {
     iframeSrc: string
@@ -26,9 +28,8 @@ function dirOf(src: string): string {
 }
 
 function shippedCrafts(): Map<string, string> {
-    const tools = typeof __CRAFT_TOOLS__ !== 'undefined' ? __CRAFT_TOOLS__ : []
     const map = new Map<string, string>()
-    for (const t of tools) map.set(dirOf(t.value), t.value)
+    for (const e of getCraftRegistry()) if (e.hasUi) map.set(e.craftId, e.key)
     return map
 }
 

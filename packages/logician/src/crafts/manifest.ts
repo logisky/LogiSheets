@@ -63,6 +63,13 @@ export interface CraftManifest {
     craftId: string
     version: string
     label: string
+    description?: string
+    /** Unverified free text from the package. */
+    publisher?: string
+    /** Lowest host API version the craft needs. */
+    hostApi?: number
+    /** Every file in a packed `.craft` (absent from dist/manifest.json). */
+    files?: string[]
     /** Present iff the craft has an index.html. Package-relative. */
     url?: string
     /** Present iff the craft has a runtime.ts (CraftRuntime lifecycle). */

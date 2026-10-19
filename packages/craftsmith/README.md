@@ -12,7 +12,7 @@ The full authoring guide lives in
 ```
 craftsmith check [dir]     Validate a craft (conventions + tool contract). No writes.
 craftsmith build [dir]     Validate, compile tools.ts/runtime.ts, emit dist/manifest.json.
-craftsmith pack  [dir]     Tarball dist/ into <craftId>-<version>.tgz.
+craftsmith pack  [dir]     Zip dist/ into an installable <craftId>-<version>.craft.
 craftsmith new   <name>    Scaffold a new craft directory.
 ```
 

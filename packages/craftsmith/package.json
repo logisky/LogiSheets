@@ -26,6 +26,7 @@
     "private": true,
     "dependencies": {
         "esbuild": "^0.21.0",
+        "fflate": "^0.8.2",
         "typescript": "^6.0.0"
     },
     "files": [
