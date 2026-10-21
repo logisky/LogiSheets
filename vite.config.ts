@@ -18,6 +18,8 @@ function resolveCraftTools(dev: boolean): {
     defaultCraft: string
     locale: string
     reservedIds: string[]
+    autoInstall: string[]
+    registryUrl: string
 } {
     const cfg = JSON.parse(
         fs.readFileSync(path.resolve(__dirname, 'crafts.config.json'), 'utf8')
@@ -54,10 +56,18 @@ function resolveCraftTools(dev: boolean): {
     const defaultCraft = dist.defaultCraft
         ? `/${dist.defaultCraft}/index.html`
         : tools[0]?.value ?? '/factory-simulator-en/index.html'
-    // Every registry id, in any distribution: an installed craft may not take
+    // Every bundled id, in any distribution: an installed craft may not take
     // one (see reservedCraftIds in src/core/craft-packages).
     const reservedIds = Object.keys(cfg.registry)
-    return {tools, defaultCraft, locale, reservedIds}
+    // Registry crafts the app installs on its first online start (see
+    // src/core/craft-packages/auto-install.ts). The dev server adds the
+    // dev-only ones, the way it adds devOnly bundled crafts above.
+    const autoInstall: string[] = [
+        ...(dist.install ?? []),
+        ...(dev ? cfg.devInstall ?? [] : []),
+    ]
+    const registryUrl: string = cfg.craftRegistry ?? ''
+    return {tools, defaultCraft, locale, reservedIds, autoInstall, registryUrl}
 }
 
 export default defineConfig(({command}) => {
@@ -98,6 +108,11 @@ export default defineConfig(({command}) => {
             __CRAFT_TOOLS__: JSON.stringify(craft.tools),
             __DEFAULT_CRAFT__: JSON.stringify(craft.defaultCraft),
             __RESERVED_CRAFT_IDS__: JSON.stringify(craft.reservedIds),
+            __CRAFT_AUTO_INSTALL__: JSON.stringify(craft.autoInstall),
+            __CRAFT_REGISTRY_URL__: JSON.stringify(craft.registryUrl),
+            // The dev server lists `unlisted` registry crafts (the debugger)
+            // in Browse, the way it offers devOnly bundled crafts.
+            __SHOW_UNLISTED_CRAFTS__: JSON.stringify(command === 'serve'),
             __APP_LOCALE__: JSON.stringify(craft.locale),
         },
         // PORT env keeps the contract the webpack dev server had (Playwright

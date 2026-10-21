@@ -73,9 +73,11 @@ interface Identity {
     craftId: string
     version: string
     label: string
+    labels?: Record<string, string>
     description?: string
     publisher?: string
     hostApi: number
+    unlisted: boolean
 }
 
 /** package.json `author` is a string or `{name, email, url}`. */
@@ -112,10 +114,32 @@ function readIdentity(paths: CraftPaths, diags: Diagnostic[]): Identity {
             )}`,
             file: paths.packageJson,
         })
+    // `label` is one name, or a name per language ({en, 'zh-CN'}) — the host
+    // picks one at render. The manifest's `label` stays a plain string (English,
+    // else the first) so a consumer that knows nothing of languages still works.
+    let labels: Record<string, string> | undefined
+    let label: string | undefined
+    if (pkg.label && typeof pkg.label === 'object') {
+        const entries = Object.entries(pkg.label).filter(
+            ([, v]) => typeof v === 'string' && v
+        ) as [string, string][]
+        if (!entries.length)
+            diags.push({
+                level: 'error',
+                message: 'package.json "label" object has no names',
+                file: paths.packageJson,
+            })
+        labels = Object.fromEntries(entries)
+        label = labels.en ?? entries[0]?.[1]
+    } else if (typeof pkg.label === 'string' && pkg.label) {
+        label = pkg.label
+    }
     return {
         craftId: craftId ?? 'unknown',
         version: pkg.version ?? '0.0.0',
-        label: pkg.label ?? pkg.name ?? craftId ?? 'unknown',
+        label: label ?? pkg.name ?? craftId ?? 'unknown',
+        labels,
+        unlisted: pkg.craftUnlisted === true,
         description:
             typeof pkg.description === 'string' && pkg.description
                 ? pkg.description
@@ -432,13 +456,26 @@ function toSnake(name: string): string {
  * separated by a blank line, so TS attaches it to no node — a raw-comment scan
  * finds it regardless of placement.
  */
+// `parseIsolatedJSDocComment` is exported at runtime but marked @internal, so
+// it is missing from the public typings — declared here rather than cast at
+// the call. If a TypeScript upgrade drops it, `check`/`build` fail loudly.
+const parseIsolatedJSDocComment = (
+    ts as unknown as {
+        parseIsolatedJSDocComment(
+            content: string,
+            start: number,
+            length: number
+        ): {jsDoc: ts.JSDoc} | undefined
+    }
+).parseIsolatedJSDocComment
+
 function scanJsDocBlocks(sf: ts.SourceFile): ts.JSDoc[] {
     const text = sf.getFullText()
     const blocks: ts.JSDoc[] = []
     const re = /\/\*\*[\s\S]*?\*\//g
     let m: RegExpExecArray | null
     while ((m = re.exec(text))) {
-        const parsed = ts.parseIsolatedJSDocComment(m[0], 0, m[0].length)
+        const parsed = parseIsolatedJSDocComment(m[0], 0, m[0].length)
         if (parsed?.jsDoc) blocks.push(parsed.jsDoc)
     }
     return blocks
@@ -584,6 +621,8 @@ export function extract(root: string): ExtractResult {
         label: id.label,
         hostApi: id.hostApi,
     }
+    if (id.labels) manifest.labels = id.labels
+    if (id.unlisted) manifest.unlisted = true
     if (id.description) manifest.description = id.description
     if (id.publisher) manifest.publisher = id.publisher
     if (paths.indexHtml) manifest.url = 'index.html'

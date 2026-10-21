@@ -1,8 +1,8 @@
 ---
-description: Design for installable crafts — a user downloads a craft package and it works after a reload, on web and desktop. Phase 1 only.
+description: Design for installable crafts — a user downloads a craft package and it works after a reload, on web and desktop — and the craft registry they come from.
 ---
 
-# Installable crafts (design, phase 1)
+# Installable crafts (design)
 
 Status: **phase 1 implemented** — `src/core/craft-packages/`, the craft
 panel's manager dialog, `craftsmith pack`, and
@@ -308,3 +308,92 @@ hand in the dev server; the Playwright test is not written yet.
 8. e2e: install the `lights-out` fixture under a different id, reload, open
    it, click a cell, uninstall.
 9. Update `writing-a-craft.md` with the constraints above.
+
+## Phase 2: the craft registry
+
+Status: **implemented**: the registry repo, runtime install, update and
+Browse in the app, and first-start auto-install. Verified in Chromium against
+a local copy of the registry. The registry is **not live yet** (see Bootstrap
+below).
+
+### Where things live
+
+- **Source**: the [logisky/crafts](https://github.com/logisky/crafts) repo,
+  one craft per `packages/<craftId>/`. Every craft except factory-simulator
+  moved there; factory-simulator stays in this repo's `crafts/` and is the only
+  craft bundled with the app. A PR is reviewed as source and CI builds the
+  package, so what is published is what was reviewed. The contributor rules
+  are in its README.
+- **Packages**: the repo's `gh-pages` branch, served by GitHub Pages at
+  `https://logisky.github.io/crafts/`. CI only ever adds to it.
+- **Index**: `index.json` at the site root. Per craft it holds the labels,
+  description, publisher, AI tool names, `unlisted`, and every published
+  version with its `url`, `sha256`, `size` and `hostApi`. The format is in
+  the registry README.
+
+### Versions are immutable
+
+`craftsmith pack` is deterministic (fixed entry timestamps, sorted entries),
+so the same `dist/` always gives the same sha256. The registry's
+`scripts/registry.mjs` relies on that: an unchanged craft packs to the hash
+already published and is skipped, while a different hash under a published
+version fails the PR check (`verify`) and the publish job (`publish`).
+Changing a craft therefore means bumping its version, and a version always
+means the same bytes.
+
+`craftsmith pack` also applies the host's install rules (id, file names,
+sizes), so a package that packs is a package that installs.
+
+### The app installs from the registry at runtime
+
+Registry crafts are never bundled. `src/core/craft-packages/remote.ts` reads
+`<registry>/index.json`, picks the newest version whose `hostApi` this app
+supports, downloads it, and refuses it unless its sha256 matches the index.
+It then goes through the same `parseCraftPackage` → `installCraftPackage` path
+as a local file. The host the bytes come from therefore does not matter;
+what was published does.
+
+- **Registry URL**: crafts.config.json `craftRegistry`, injected as
+  `__CRAFT_REGISTRY_URL__`. localStorage `logisheets.craftRegistry` overrides
+  it, e.g. with a local build of the site or a private registry.
+- **Browse tab** (Installed crafts dialog) lists the index, with Install,
+  "Update to x" or Installed for each craft. The Installed tab also offers
+  updates. A registry install says so in the confirm dialog. `unlisted`
+  crafts (the debugger) appear only in the dev server.
+- **Auto-install** (`auto-install.ts`): a distribution's `install` list is
+  installed on the first start that reaches the registry, before the craft
+  list is built, so those crafts are in the panel on that first start without
+  a reload. Startup waits at most 8 s for this. Anything that did not finish
+  is retried on the next start, and an offline start opens with the bundled
+  crafts. localStorage `logisheets.craftAutoInstalled` records what was done,
+  so each craft is installed at most once: one the user uninstalls stays
+  uninstalled, and a craft that a later release adds to the list still
+  arrives. The dev server also installs `devInstall` (the debugger).
+- **Saved state carries over.** An installed craft keeps the key
+  `/<id>/index.html` it had as a built-in, so workbooks saved with the old
+  built-in still find their craft state and block owners.
+- **Reserved ids** are now only the bundled crafts' ids.
+
+### Bootstrap (not done yet)
+
+1. Publish `logisheets-craftsmith` to npm. Every craft in the registry
+   depends on it.
+2. In the registry repo, run `yarn install` (this creates the lockfile CI
+   needs), then commit and push. The first publish run creates `gh-pages`.
+3. Enable Pages on `gh-pages` and check that
+   `https://logisky.github.io/crafts/index.json` loads.
+
+Until step 3, the app starts with factory-simulator only: auto-install finds
+no registry and retries on every start. The build does not depend on the
+registry.
+
+### Still to do
+
+- **Desktop**: the download is a plain webview `fetch`, which Pages allows
+  (it sends `Access-Control-Allow-Origin: *`), but this has not been run in
+  the Tauri app.
+- **No automatic updates**: updates are offered in the dialog and only
+  applied when the user clicks.
+- The Four Elements engine tests moved with the craft and run against the
+  published `logisheets` from npm, so an engine change in this repo no longer
+  runs them before release.

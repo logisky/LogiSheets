@@ -1,5 +1,6 @@
 {
-  "$comment": "Single source of truth for which crafts ship AND what language a build speaks. `registry` maps a craft directory (under crafts/, served at /<dir>/index.html) to its panel label; a label may be a string or a per-locale object {en, zh-CN}. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). A distribution's `locale` becomes the app's DEFAULT language (injected as __APP_LOCALE__; a language the user picks explicitly outranks it). Consumed by Vite (craft list + locale, via `define` in vite.config.ts), publish-crafts.sh (what lands in dist/, via scripts/craft-dist.mjs) and the desktop CI (product name/id/title, via `craft-dist.mjs tauri`). Add a craft: add it here + register nothing else. Add a distribution: add an entry here. A registry entry marked `devOnly` is offered ONLY by the dev server: it stays in `registry` (so dist/ pruning still removes it) but is filtered out of every distribution's craft list, so it is never published or bundled.",
+  "$comment": "Single source of truth for which crafts a build offers AND what language it speaks. `registry` maps a BUNDLED craft (built from crafts/<id>/ in this repo, served at /<id>/index.html) to its panel label; a label may be a string or a per-locale object {en, zh-CN}. Every other craft lives in the craft registry (https://github.com/logisky/crafts), published at `craftRegistry`; the app downloads and installs those at RUNTIME. `distributions` define named build targets; pick one at build time with the CRAFT_DIST env var (default: 'default'). A distribution's `crafts` are the bundled crafts it ships; its `install` are registry craft ids the app installs automatically the first time it starts online (each at most once: one the user uninstalls stays uninstalled); `defaultCraft` may name either kind. `devInstall` is added to `install` by the dev server only. A distribution's `locale` becomes the app's DEFAULT language (injected as __APP_LOCALE__; a language the user picks explicitly outranks it). Consumed by Vite (craft lists, registry URL + locale, via `define` in vite.config.ts), publish-crafts.sh (what lands in dist/, via scripts/craft-dist.mjs) and the desktop CI (product name/id/title, via `craft-dist.mjs tauri`). A registry entry marked `devOnly` is offered ONLY by the dev server: it stays in `registry` (so dist/ pruning still removes it) but is filtered out of every distribution's craft list, so it is never published or bundled.",
+  "craftRegistry": "https://logisky.github.io/crafts",
   "registry": {
     "factory-simulator-zh": {
       "label": {
@@ -12,63 +13,11 @@
         "en": "Factory Simulator",
         "zh-CN": "Factory Simulator (English)"
       }
-    },
-    "what-if-calculator": {
-      "label": {
-        "en": "What-if Calculator",
-        "zh-CN": "假设分析计算器"
-      }
-    },
-    "markdown-table-extractor": {
-      "label": {
-        "en": "Markdown Table Extractor",
-        "zh-CN": "Markdown 表格提取"
-      }
-    },
-    "fuse-beads": {
-      "label": {
-        "en": "Fuse Beads",
-        "zh-CN": "电子拼豆"
-      }
-    },
-    "memory-grid": {
-      "label": {
-        "en": "Memory Grid",
-        "zh-CN": "记忆挑战"
-      }
-    },
-    "lights-out": {
-      "label": {
-        "en": "Lights Out",
-        "zh-CN": "关灯"
-      }
-    },
-    "sudoku": {
-      "label": {
-        "en": "Sudoku",
-        "zh-CN": "数独"
-      }
-    },
-    "minesweeper": {
-      "label": {
-        "en": "Minesweeper",
-        "zh-CN": "扫雷"
-      }
-    },
-    "debugger": {
-      "label": {
-        "en": "Debugger (dev)",
-        "zh-CN": "Debugger (dev)"
-      },
-      "devOnly": true
-    },
-    "four-elements": {
-      "label": {
-        "en": "Four Elements",
-        "zh-CN": "四象"
-      }
     }
   },
+  "devInstall": [
+    "debugger"
+  ],
   "distributions": {
     "default": {
       "productName": "LogiSheets",
@@ -76,6 +25,16 @@
       "windowTitle": "LogiSheets",
       "defaultCraft": "factory-simulator-en",
       "crafts": "all",
+      "install": [
+        "what-if-calculator",
+        "markdown-table-extractor",
+        "fuse-beads",
+        "memory-grid",
+        "lights-out",
+        "sudoku",
+        "minesweeper",
+        "four-elements"
+      ],
       "locale": "en"
     },
     "games": {
@@ -84,7 +43,9 @@
       "windowTitle": "LogiSheets",
       "defaultCraft": "sudoku",
       "crafts": [
-        "factory-simulator-zh",
+        "factory-simulator-zh"
+      ],
+      "install": [
         "fuse-beads",
         "sudoku",
         "minesweeper",
@@ -107,7 +68,9 @@
       "windowTitle": "LogiSheets",
       "defaultCraft": "factory-simulator-en",
       "crafts": [
-        "factory-simulator-en",
+        "factory-simulator-en"
+      ],
+      "install": [
         "lights-out",
         "what-if-calculator",
         "markdown-table-extractor",
@@ -126,7 +89,9 @@
       "windowTitle": "LogiSheets",
       "defaultCraft": "factory-simulator-zh",
       "crafts": [
-        "factory-simulator-zh",
+        "factory-simulator-zh"
+      ],
+      "install": [
         "what-if-calculator",
         "markdown-table-extractor",
         "fuse-beads",

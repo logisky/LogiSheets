@@ -10,6 +10,7 @@ import {EngineProvider} from '@/core/engine/provider'
 import {initEngine} from '@/core/engine'
 import {installCraftStorageBackend} from '@/core/craft-storage'
 import {initCraftRegistry} from '@/core/craft-packages'
+import {autoInstallCrafts} from '@/core/craft-packages/auto-install'
 import './core/i18n/i18n'
 import 'logisheets-engine/style.css'
 
@@ -17,18 +18,22 @@ import 'logisheets-engine/style.css'
 // before any craft iframe can mount.
 installCraftStorageBackend()
 
-// The craft list (built-ins + installed) is fixed before anything renders;
-// installing or uninstalling a craft takes effect on the next reload.
-Promise.all([initEngine(), initCraftRegistry()]).then(async ([engine]) => {
-    const root = createRoot(document.getElementById('root') as HTMLElement)
+// The craft list (bundled + installed) is fixed before anything renders;
+// installing or uninstalling a craft takes effect on the next reload. On the
+// first online start, the distribution's registry crafts are installed first
+// so they are already in that list.
+Promise.all([initEngine(), autoInstallCrafts().then(initCraftRegistry)]).then(
+    async ([engine]) => {
+        const root = createRoot(document.getElementById('root') as HTMLElement)
 
-    root.render(
-        <React.StrictMode>
-            <EngineProvider engine={engine}>
-                <App />
-            </EngineProvider>
-        </React.StrictMode>
-    )
-})
+        root.render(
+            <React.StrictMode>
+                <EngineProvider engine={engine}>
+                    <App />
+                </EngineProvider>
+            </React.StrictMode>
+        )
+    }
+)
 
 reportWebVitals()

@@ -3,6 +3,7 @@ import {
     Alert,
     Box,
     Button,
+    CircularProgress,
     Dialog,
     DialogActions,
     DialogContent,
@@ -11,6 +12,8 @@ import {
     List,
     ListItem,
     ListItemText,
+    Tab,
+    Tabs,
     Typography,
 } from '@mui/material'
 import {useEffect, useRef, useState} from 'react'
@@ -23,22 +26,40 @@ import {
     type CraftInstallPreview,
     type InstalledCraftRecord,
 } from '@/core/craft-packages'
+import {
+    compareVersions,
+    downloadRegistryPackage,
+    fetchRegistryIndex,
+    pickVersion,
+    type RegistryCraft,
+    type RegistryIndex,
+} from '@/core/craft-packages/remote'
+import {getLocale} from '@/core/i18n/i18n'
 
 type Props = {
     open: boolean
     onClose: () => void
 }
 
+type Preview = CraftInstallPreview & {fromRegistry: boolean}
+
 /**
- * Install / list / uninstall user crafts. Changes apply on reload — the craft
- * list is fixed at startup — so every change ends in a "Reload now" offer.
+ * Install / update / uninstall crafts: from the craft registry (Browse) or
+ * from a `.craft` file. Changes apply on reload — the craft list is fixed at
+ * startup — so every change ends in a "Reload now" offer.
  */
 export const CraftManager = ({open, onClose}: Props) => {
     const {t} = useTranslation()
     const fileInput = useRef<HTMLInputElement | null>(null)
+    const [tab, setTab] = useState<'installed' | 'browse'>('installed')
     const [installed, setInstalled] = useState<InstalledCraftRecord[]>([])
-    const [preview, setPreview] = useState<CraftInstallPreview | null>(null)
+    const [index, setIndex] = useState<RegistryIndex | null>(null)
+    const [indexError, setIndexError] = useState<string | null>(null)
+    const [indexLoading, setIndexLoading] = useState(false)
+    const [preview, setPreview] = useState<Preview | null>(null)
     const [error, setError] = useState<string | null>(null)
+    // Id of the craft being downloaded, for its row's spinner.
+    const [downloading, setDownloading] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
     // Something changed since startup; the panel is out of date until reload.
     const [needsReload, setNeedsReload] = useState(false)
@@ -53,14 +74,24 @@ export const CraftManager = ({open, onClose}: Props) => {
             )
             .catch(() => setInstalled([]))
 
+    const loadIndex = () => {
+        setIndexLoading(true)
+        setIndexError(null)
+        fetchRegistryIndex()
+            .then(setIndex)
+            .catch((e) => setIndexError(errorText(e)))
+            .finally(() => setIndexLoading(false))
+    }
+
     useEffect(() => {
-        if (open) {
-            setError(null)
-            void refresh()
-        }
+        if (!open) return
+        setError(null)
+        void refresh()
+        // Both tabs use it: Browse lists it, Installed offers updates from it.
+        loadIndex()
     }, [open])
 
-    const errorText = (e: unknown): string => {
+    function errorText(e: unknown): string {
         if (e instanceof CraftPackageError)
             return String(t(`ui.craft.manage.error.${e.code}`, e.params))
         return String(
@@ -70,16 +101,40 @@ export const CraftManager = ({open, onClose}: Props) => {
         )
     }
 
+    const labelOf = (c: {label: string; labels?: Record<string, string>}) =>
+        c.labels?.[getLocale()] ?? c.labels?.en ?? c.label
+
     const readFile = async (file: File) => {
         setError(null)
         setBusy(true)
         try {
             const bytes = new Uint8Array(await file.arrayBuffer())
-            setPreview(await previewCraftPackage(bytes))
+            setPreview({
+                ...(await previewCraftPackage(bytes)),
+                fromRegistry: false,
+            })
         } catch (e) {
             setError(errorText(e))
         } finally {
             setBusy(false)
+        }
+    }
+
+    const fromRegistry = async (craft: RegistryCraft) => {
+        const v = pickVersion(craft)
+        if (!v) return
+        setError(null)
+        setDownloading(craft.craftId)
+        try {
+            const bytes = await downloadRegistryPackage(v)
+            setPreview({
+                ...(await previewCraftPackage(bytes)),
+                fromRegistry: true,
+            })
+        } catch (e) {
+            setError(errorText(e))
+        } finally {
+            setDownloading(null)
         }
     }
 
@@ -114,6 +169,54 @@ export const CraftManager = ({open, onClose}: Props) => {
         }
     }
 
+    const registryCraft = (craftId: string) =>
+        index?.crafts.find((c) => c.craftId === craftId)
+    /** A newer version this app can run, if the registry has one. */
+    const updateFor = (r: InstalledCraftRecord) => {
+        const c = registryCraft(r.craftId)
+        const v = c && pickVersion(c)
+        return c && v && compareVersions(v.version, r.version) > 0
+            ? {craft: c, version: v.version}
+            : undefined
+    }
+
+    const browsable = (index?.crafts ?? []).filter(
+        (c) =>
+            !c.unlisted ||
+            (typeof __SHOW_UNLISTED_CRAFTS__ !== 'undefined' &&
+                __SHOW_UNLISTED_CRAFTS__)
+    )
+
+    const rowAction = (c: RegistryCraft) => {
+        const mine = installed.find((r) => r.craftId === c.craftId)
+        const v = pickVersion(c)
+        if (downloading === c.craftId) return <CircularProgress size={20} />
+        if (!v)
+            return (
+                <Typography variant="caption" color="text.secondary">
+                    {t('ui.craft.manage.needsNewerApp')}
+                </Typography>
+            )
+        if (mine && compareVersions(v.version, mine.version) <= 0)
+            return (
+                <Typography variant="caption" color="text.secondary">
+                    {t('ui.craft.manage.installedStatus')}
+                </Typography>
+            )
+        return (
+            <Button
+                size="small"
+                variant={mine ? 'outlined' : 'contained'}
+                disabled={busy || !!downloading}
+                onClick={() => void fromRegistry(c)}
+            >
+                {mine
+                    ? t('ui.craft.manage.updateTo', {version: v.version})
+                    : t('ui.craft.manage.install')}
+            </Button>
+        )
+    }
+
     const m = preview?.parsed.manifest
     const isDowngrade =
         !!m &&
@@ -123,7 +226,23 @@ export const CraftManager = ({open, onClose}: Props) => {
     return (
         <>
             <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-                <DialogTitle>{t('ui.craft.manage.title')}</DialogTitle>
+                <DialogTitle sx={{pb: 0}}>
+                    {t('ui.craft.manage.title')}
+                </DialogTitle>
+                <Tabs
+                    value={tab}
+                    onChange={(_, v) => setTab(v)}
+                    sx={{px: 3, borderBottom: '1px solid #e0e0e0'}}
+                >
+                    <Tab
+                        value="installed"
+                        label={t('ui.craft.manage.tabInstalled')}
+                    />
+                    <Tab
+                        value="browse"
+                        label={t('ui.craft.manage.tabBrowse')}
+                    />
+                </Tabs>
                 <DialogContent
                     onDragOver={(e) => {
                         e.preventDefault()
@@ -137,6 +256,8 @@ export const CraftManager = ({open, onClose}: Props) => {
                         if (f) void readFile(f)
                     }}
                     sx={{
+                        pt: 2,
+                        minHeight: 260,
                         outline: dragging ? '2px dashed #90a4ae' : 'none',
                         outlineOffset: -8,
                     }}
@@ -163,36 +284,134 @@ export const CraftManager = ({open, onClose}: Props) => {
                             {error}
                         </Alert>
                     )}
-                    {installed.length === 0 ? (
-                        <DialogContentText>
-                            {t('ui.craft.manage.empty')}
-                        </DialogContentText>
-                    ) : (
-                        <List dense>
-                            {installed.map((r) => (
-                                <ListItem
-                                    key={r.craftId}
-                                    secondaryAction={
-                                        <Button
-                                            size="small"
-                                            color="error"
-                                            disabled={busy}
-                                            onClick={() =>
-                                                void remove(r.craftId)
+                    {tab === 'installed' &&
+                        (installed.length === 0 ? (
+                            <DialogContentText>
+                                {t('ui.craft.manage.empty')}
+                            </DialogContentText>
+                        ) : (
+                            <List dense>
+                                {installed.map((r) => {
+                                    const up = updateFor(r)
+                                    return (
+                                        <ListItem
+                                            key={r.craftId}
+                                            secondaryAction={
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        gap: 1,
+                                                        alignItems: 'center',
+                                                    }}
+                                                >
+                                                    {downloading ===
+                                                    r.craftId ? (
+                                                        <CircularProgress
+                                                            size={20}
+                                                        />
+                                                    ) : (
+                                                        up && (
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                disabled={
+                                                                    busy ||
+                                                                    !!downloading
+                                                                }
+                                                                onClick={() =>
+                                                                    void fromRegistry(
+                                                                        up.craft
+                                                                    )
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    'ui.craft.manage.updateTo',
+                                                                    {
+                                                                        version:
+                                                                            up.version,
+                                                                    }
+                                                                )}
+                                                            </Button>
+                                                        )
+                                                    )}
+                                                    <Button
+                                                        size="small"
+                                                        color="error"
+                                                        disabled={busy}
+                                                        onClick={() =>
+                                                            void remove(
+                                                                r.craftId
+                                                            )
+                                                        }
+                                                    >
+                                                        {t(
+                                                            'ui.craft.manage.uninstall'
+                                                        )}
+                                                    </Button>
+                                                </Box>
                                             }
                                         >
-                                            {t('ui.craft.manage.uninstall')}
-                                        </Button>
-                                    }
-                                >
-                                    <ListItemText
-                                        primary={`${r.manifest.label} · ${r.version}`}
-                                        secondary={r.craftId}
-                                    />
-                                </ListItem>
-                            ))}
-                        </List>
-                    )}
+                                            <ListItemText
+                                                primary={`${labelOf(
+                                                    r.manifest
+                                                )} · ${r.version}`}
+                                                secondary={r.craftId}
+                                            />
+                                        </ListItem>
+                                    )
+                                })}
+                            </List>
+                        ))}
+                    {tab === 'browse' &&
+                        (indexLoading ? (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    py: 4,
+                                }}
+                            >
+                                <CircularProgress size={28} />
+                            </Box>
+                        ) : indexError ? (
+                            <Alert
+                                severity="warning"
+                                action={
+                                    <Button
+                                        color="inherit"
+                                        size="small"
+                                        onClick={loadIndex}
+                                    >
+                                        {t('ui.craft.manage.retry')}
+                                    </Button>
+                                }
+                            >
+                                {indexError}
+                            </Alert>
+                        ) : browsable.length === 0 ? (
+                            <DialogContentText>
+                                {t('ui.craft.manage.browseEmpty')}
+                            </DialogContentText>
+                        ) : (
+                            <List dense>
+                                {browsable.map((c) => (
+                                    <ListItem
+                                        key={c.craftId}
+                                        secondaryAction={rowAction(c)}
+                                        sx={{pr: 16}}
+                                    >
+                                        <ListItemText
+                                            primary={`${labelOf(c)} · ${
+                                                c.latest
+                                            }`}
+                                            secondary={
+                                                c.description ?? c.craftId
+                                            }
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
+                        ))}
                     <Typography
                         variant="caption"
                         color="text.secondary"
@@ -231,7 +450,9 @@ export const CraftManager = ({open, onClose}: Props) => {
             {preview && m && (
                 <Dialog open onClose={() => setPreview(null)}>
                     <DialogTitle>
-                        {t('ui.craft.manage.confirmTitle', {craft: m.label})}
+                        {t('ui.craft.manage.confirmTitle', {
+                            craft: labelOf(m),
+                        })}
                     </DialogTitle>
                     <DialogContent>
                         <Box
@@ -257,6 +478,12 @@ export const CraftManager = ({open, onClose}: Props) => {
                                           to: m.version,
                                       })
                                     : m.version}
+                            </dd>
+                            <dt>{t('ui.craft.manage.fieldSource')}</dt>
+                            <dd>
+                                {preview.fromRegistry
+                                    ? t('ui.craft.manage.sourceRegistry')
+                                    : t('ui.craft.manage.sourceFile')}
                             </dd>
                             <dt>{t('ui.craft.manage.fieldPublisher')}</dt>
                             <dd>
@@ -285,8 +512,13 @@ export const CraftManager = ({open, onClose}: Props) => {
                                 {t('ui.craft.manage.downgradeWarning')}
                             </Alert>
                         )}
-                        <Alert severity="warning" sx={{mt: 2}}>
-                            {t('ui.craft.manage.trustWarning')}
+                        <Alert
+                            severity={preview.fromRegistry ? 'info' : 'warning'}
+                            sx={{mt: 2}}
+                        >
+                            {preview.fromRegistry
+                                ? t('ui.craft.manage.trustRegistry')
+                                : t('ui.craft.manage.trustWarning')}
                         </Alert>
                     </DialogContent>
                     <DialogActions>
@@ -307,20 +539,4 @@ export const CraftManager = ({open, onClose}: Props) => {
             )}
         </>
     )
-}
-
-/** Dotted numeric compare; a non-numeric part compares as text. */
-function compareVersions(a: string, b: string): number {
-    const pa = a.split(/[.+-]/)
-    const pb = b.split(/[.+-]/)
-    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-        const x = pa[i] ?? '0'
-        const y = pb[i] ?? '0'
-        const nx = Number(x)
-        const ny = Number(y)
-        const c =
-            Number.isNaN(nx) || Number.isNaN(ny) ? x.localeCompare(y) : nx - ny
-        if (c !== 0) return c
-    }
-    return 0
 }

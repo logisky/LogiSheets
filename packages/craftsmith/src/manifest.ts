@@ -124,6 +124,16 @@ export interface CraftManifest {
     version: string
     /** package.json `label`, else `name`, else the craftId. */
     label: string
+    /**
+     * The name per language, when package.json `label` is an object
+     * (`{en, 'zh-CN'}`). `label` is then its English entry, else its first.
+     */
+    labels?: Record<string, string>
+    /**
+     * package.json `craftUnlisted: true`: a registry still publishes the craft,
+     * but hosts leave it out of their browse list (dev tools, fixtures).
+     */
+    unlisted?: boolean
     /** package.json `description`. Shown when a user installs the craft. */
     description?: string
     /**
