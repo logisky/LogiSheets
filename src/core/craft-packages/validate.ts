@@ -24,6 +24,10 @@ export type CraftPackageErrorCode =
     | 'badPath'
     | 'missingFile'
     | 'tooLarge'
+    // Registry downloads (remote.ts)
+    | 'registryUnavailable'
+    | 'download'
+    | 'checksum'
 
 export class CraftPackageError extends Error {
     constructor(

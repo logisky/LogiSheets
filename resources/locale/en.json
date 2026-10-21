@@ -1112,8 +1112,22 @@
                     "badPath": "The package contains a file name that isn't allowed: {{file}}",
                     "missingFile": "The package is missing {{file}}.",
                     "tooLarge": "The package is too large (limit {{limitMb}} MB).",
-                    "unknown": "Couldn't install the craft: {{message}}"
-                }
+                    "unknown": "Couldn't install the craft: {{message}}",
+                    "registryUnavailable": "Couldn't reach the craft registry. Check your connection and try again.",
+                    "download": "Couldn't download the craft.",
+                    "checksum": "The downloaded craft doesn't match the registry's checksum, so it was not installed."
+                },
+                "tabInstalled": "Installed",
+                "tabBrowse": "Browse",
+                "browseEmpty": "The craft registry has no crafts yet.",
+                "retry": "Retry",
+                "installedStatus": "Installed",
+                "updateTo": "Update to {{version}}",
+                "needsNewerApp": "Needs a newer LogiSheets",
+                "fieldSource": "Source",
+                "sourceRegistry": "Craft registry",
+                "sourceFile": "Local file",
+                "trustRegistry": "From the LogiSheets craft registry: its source was reviewed before publishing, and this download matches the registry's checksum. Like any craft, it runs with full access to the app."
             },
             "pageLoadFailed": "Couldn't open the craft: {{message}}"
         },

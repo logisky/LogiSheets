@@ -1112,8 +1112,22 @@
                     "badPath": "包里有不允许的文件名：{{file}}",
                     "missingFile": "包里缺少 {{file}}。",
                     "tooLarge": "包太大了（上限 {{limitMb}} MB）。",
-                    "unknown": "无法安装挂件：{{message}}"
-                }
+                    "unknown": "无法安装挂件：{{message}}",
+                    "registryUnavailable": "无法连接挂件仓库，请检查网络后重试。",
+                    "download": "挂件下载失败。",
+                    "checksum": "下载的挂件与仓库记录的校验值不符，未安装。"
+                },
+                "tabInstalled": "已安装",
+                "tabBrowse": "浏览",
+                "browseEmpty": "挂件仓库里还没有挂件。",
+                "retry": "重试",
+                "installedStatus": "已安装",
+                "updateTo": "更新到 {{version}}",
+                "needsNewerApp": "需要更新版本的 LogiSheets",
+                "fieldSource": "来源",
+                "sourceRegistry": "挂件仓库",
+                "sourceFile": "本地文件",
+                "trustRegistry": "来自 LogiSheets 挂件仓库：源码在发布前经过审核，本次下载与仓库记录的校验值一致。与所有挂件一样，它拥有对应用的完全访问权限。"
             },
             "pageLoadFailed": "无法打开挂件：{{message}}"
         },

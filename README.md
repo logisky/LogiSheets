@@ -51,11 +51,10 @@ Every tool declares whether it mutates the workbook and carries a confirmation p
 
 ## Crafts — the plugin system
 
-**From sheets to systems.** Crafts are self-contained mini-apps that extend LogiSheets through the same public API the core uses. They're written in **plain JavaScript/TypeScript**, so the entire rich frontend ecosystem — UI libraries, charts, editors, AI SDKs — can be brought right into the spreadsheet. Shipped examples live under `crafts/`:
+**From sheets to systems.** Crafts are self-contained mini-apps that extend LogiSheets through the same public API the core uses. They're written in **plain JavaScript/TypeScript**, so the entire rich frontend ecosystem — UI libraries, charts, editors, AI SDKs — can be brought right into the spreadsheet.
 
-- **factory-simulator** — interactive simulation game (zh / en) showcasing Blocks, formulas, and craft interactions. **[▶ Try it live](https://www.logisheets.com/?craft=factory-simulator)**
-- **what-if-calculator** — scenario analysis over workbook values
-- **markdown-table-extractor** — turn Markdown tables into Blocks
+- **factory-simulator** (under `crafts/`) — interactive simulation game (zh / en) showcasing Blocks, formulas, and craft interactions. **[▶ Try it live](https://www.logisheets.com/?craft=factory-simulator)**
+- Every other craft — what-if-calculator, markdown-table-extractor, sudoku, minesweeper, four-elements and more — lives in the **[craft registry](https://github.com/logisky/crafts)**, which publishes them as ready-to-install `.craft` packages. The app installs them at runtime: each distribution installs its picks on first start (see `crafts.config.json`), and the craft panel's **Browse** tab offers the rest, plus updates.
 
 Scaffold, check, and build a craft with the **`craftsmith`** CLI (`npx craftsmith new`). A craft can also expose **tools** to **Watson** (the built-in AI assistant) just by annotating its functions — one implementation drives both your UI and the AI. See [Write your own craft](https://docs.logisheets.com/craft/writing-a-craft).
 

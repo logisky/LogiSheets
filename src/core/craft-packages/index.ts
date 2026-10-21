@@ -59,9 +59,10 @@ function builtinEntries(): CraftEntry[] {
 }
 
 /**
- * Ids an installed craft may not take: every built-in craft in ANY
+ * Ids an installed craft may not take: every craft bundled with the app in ANY
  * distribution (a workbook moves between builds, and its craft state and block
- * owners are keyed by id) and the host's own.
+ * owners are keyed by id) and the host's own. Registry crafts are not bundled,
+ * so their ids are free to install.
  */
 export function reservedCraftIds(): Set<string> {
     const ids =
@@ -111,7 +112,7 @@ export async function initCraftRegistry(): Promise<void> {
             .map((r) => ({
                 key: craftKey(r.craftId),
                 craftId: r.craftId,
-                label: {en: r.manifest.label},
+                label: r.manifest.labels ?? {en: r.manifest.label},
                 source: 'installed' as const,
                 hasUi: !!r.manifest.url,
                 version: r.version,

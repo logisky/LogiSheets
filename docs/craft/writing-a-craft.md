@@ -387,8 +387,8 @@ The host states which language it is in; your craft decides what to do about it.
 A craft with one language ignores both APIs and keeps working — nothing breaks,
 it just stays as it is.
 
-To follow along, keep a dictionary and re-render on change. `crafts/lights-out`
-is the worked example: text nodes carry `data-i18n="key"`, and one function
+To follow along, keep a dictionary and re-render on change. [`lights-out`](https://github.com/logisky/crafts/tree/main/packages/lights-out)
+in the craft registry is the worked example: text nodes carry `data-i18n="key"`, and one function
 swaps them.
 
 ```js
@@ -669,7 +669,14 @@ matches your code:
 **Publishing** is shipping that `dist/`. `craftsmith pack` zips it into
 `<craftId>-<version>.craft`, which a user installs from the craft panel
 (the puzzle-piece button → **Install from file…**, or drop the file on the
-dialog); it appears after a reload. The host then lists your craft by
+dialog); it appears after a reload.
+
+To publish to the **craft registry**, open a PR with your craft's *source*
+under `packages/<craftId>/` in
+[logisky/crafts](https://github.com/logisky/crafts). Its CI builds and packs
+the craft and, once merged, publishes it to
+`https://logisky.github.io/crafts/`. Published versions never change: to ship
+a change, bump `version`. The host then lists your craft by
 `craftId`, loads `tools.js` for Watson and `index.html` for the panel —
 **no change to the host required**. (`runtime.js` is not yet loaded for
 installed crafts.)

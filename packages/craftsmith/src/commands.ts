@@ -168,6 +168,33 @@ function packExcluded(rel: string): boolean {
     )
 }
 
+/*
+ * The rules a host applies when it installs a package (LogiSheets:
+ * src/core/craft-packages/validate.ts). Checked here too, so a package that
+ * packs is a package that installs — keep the two in step.
+ */
+const MAX_FILE_BYTES = 5 * 1024 * 1024
+const MAX_PACKAGE_BYTES = 20 * 1024 * 1024
+const MAX_CRAFT_ID_LENGTH = 32
+const PATH_SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/
+
+function isSafePackagePath(p: string): boolean {
+    return (
+        !!p &&
+        p.length <= 200 &&
+        p.split('/').every((s) => PATH_SEGMENT.test(s))
+    )
+}
+
+/**
+ * Every entry's timestamp. A zip records one per file, so packing the same
+ * bytes twice would otherwise give two different packages (and sha256s) — and
+ * a registry that refuses to republish a version with a new hash would then
+ * refuse an unchanged craft. Built from LOCAL components because the zip
+ * format stores local time: 1980-01-01 00:00 encodes the same in any timezone.
+ */
+const FIXED_MTIME = new Date(1980, 0, 1)
+
 function listFiles(root: string, rel = ''): string[] {
     const out: string[] = []
     for (const e of fs.readdirSync(path.join(root, rel), {
@@ -189,7 +216,11 @@ function listFiles(root: string, rel = ''): string[] {
  * 1 without dist/manifest.json). Every file under dist/ ships, except
  * `packExcluded` ones; the packed manifest.json is dist's plus `files`, the
  * list of what was packed — the host serves exactly that list. Returns 1 if an
- * entry the manifest names (`url`, a tool's `entry`) is not in dist/.
+ * entry the manifest names (`url`, a tool's `entry`) is not in dist/, or if
+ * the package would be refused at install (id, file names, sizes).
+ *
+ * Deterministic: the same dist/ always packs to the same bytes, so a package's
+ * sha256 identifies its content (see FIXED_MTIME).
  */
 export function pack(dir: string): number {
     const paths = resolveCraft(dir)
@@ -220,13 +251,42 @@ export function pack(dir: string): number {
         )
         return 1
     }
-    const entries: Record<string, Uint8Array> = {
-        'manifest.json': strToU8(
-            JSON.stringify({...manifest, files}, null, 2) + '\n'
-        ),
-    }
+    const problems: string[] = []
+    if (
+        manifest.craftId.length > MAX_CRAFT_ID_LENGTH ||
+        !/^[a-z0-9][a-z0-9-]*$/.test(manifest.craftId)
+    )
+        problems.push(
+            `craftId "${manifest.craftId}" must be kebab-case, at most ${MAX_CRAFT_ID_LENGTH} characters`
+        )
     for (const f of files)
-        entries[f] = new Uint8Array(fs.readFileSync(path.join(dist, f)))
+        if (!isSafePackagePath(f))
+            problems.push(
+                `file name "${f}" is not installable (ASCII letters, digits, ".", "_", "-")`
+            )
+    const entries: Record<string, [Uint8Array, {mtime: Date}]> = {}
+    const put = (name: string, data: Uint8Array) => {
+        entries[name] = [data, {mtime: FIXED_MTIME}]
+    }
+    put(
+        'manifest.json',
+        strToU8(JSON.stringify({...manifest, files}, null, 2) + '\n')
+    )
+    let total = 0
+    for (const f of files) {
+        const data = new Uint8Array(fs.readFileSync(path.join(dist, f)))
+        if (data.byteLength > MAX_FILE_BYTES)
+            problems.push(`${f} is over ${MAX_FILE_BYTES / 1024 / 1024} MB`)
+        total += data.byteLength
+        put(f, data)
+    }
+    if (total > MAX_PACKAGE_BYTES)
+        problems.push(`package is over ${MAX_PACKAGE_BYTES / 1024 / 1024} MB`)
+    if (problems.length) {
+        for (const p of problems) console.error(`  error: ${p}`)
+        console.error('\nnot packed.')
+        return 1
+    }
     const out = path.join(
         paths.root,
         `${manifest.craftId}-${manifest.version}.craft`

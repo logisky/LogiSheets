@@ -63,7 +63,11 @@ export interface CraftManifest {
     craftId: string
     version: string
     label: string
+    /** The name per language, when the package gives one. */
+    labels?: Record<string, string>
     description?: string
+    /** Published, but left out of a host's browse list. */
+    unlisted?: boolean
     /** Unverified free text from the package. */
     publisher?: string
     /** Lowest host API version the craft needs. */
