@@ -42,6 +42,13 @@ pub enum Error {
         payload: String,
         source: Box<Error>,
     },
+    /// A block's schema names a row or column the block does not have. The
+    /// schema is out of sync with the block's shape; reads report it rather
+    /// than guess an index.
+    #[error(
+        "block {block_id}'s schema names a {axis} that is not in the block; the schema no longer matches the block's shape"
+    )]
+    BlockSchemaAxisMissing { block_id: usize, axis: &'static str },
     /// [`BasicError::While`] for the layers above the coordinate/id
     /// conversions, which know the request in names and A1 rather than ids.
     #[error("{doing}: {source}")]
@@ -85,6 +92,7 @@ impl Error {
             Error::UnavailableSheetIdx(_) => 5,
             Error::PayloadError(_) => 6,
             Error::DuplicateBlockKey { .. } => 7,
+            Error::BlockSchemaAxisMissing { .. } => 8,
             Error::PayloadFailed { source, .. } => source.code(),
             Error::While { source, .. } => source.code(),
         }

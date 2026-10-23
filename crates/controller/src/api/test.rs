@@ -1003,7 +1003,7 @@ fn table_converts_to_block_on_load() {
 
     // Exactly one block, covering the DATA rows only (A2:C4), header excluded.
     let ws0 = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws0.get_all_blocks();
+    let blocks = ws0.get_all_blocks().unwrap();
     assert_eq!(blocks.len(), 1, "the table should have become one block");
     let b = &blocks[0];
     assert_eq!(
@@ -1056,7 +1056,7 @@ fn table_converts_to_block_on_load() {
     // same name, so the round trip is a fixed point rather than a drift.
     let wb2 = Workbook::from_file(&resaved, "tbl2".to_string()).unwrap();
     let ws2 = wb2.get_sheet_by_idx(0).unwrap();
-    let blocks2 = ws2.get_all_blocks();
+    let blocks2 = ws2.get_all_blocks().unwrap();
     assert_eq!(blocks2.len(), 1, "block survives save/reload");
     assert_eq!(
         blocks2[0].schema.as_ref().expect("still has a schema").name,
@@ -2829,6 +2829,7 @@ fn a_declared_header_line_is_not_a_record() {
     let ws = wb.get_sheet_by_idx(0).unwrap();
     let block = ws
         .get_all_blocks()
+        .unwrap()
         .into_iter()
         .find(|b| b.block_id == bid)
         .unwrap();
@@ -2852,6 +2853,7 @@ fn a_declared_header_line_is_not_a_record() {
         .get_sheet_by_idx(0)
         .unwrap()
         .get_all_blocks()
+        .unwrap()
         .into_iter()
         .find(|b| b.block_id == bid)
         .unwrap()
@@ -4075,7 +4077,11 @@ fn conditional_formatting_anchors_on_block_cells() {
 
     let mut wb = Workbook::from_file(&input, "cf".to_string()).unwrap();
     assert_eq!(
-        wb.get_sheet_by_idx(0).unwrap().get_all_blocks().len(),
+        wb.get_sheet_by_idx(0)
+            .unwrap()
+            .get_all_blocks()
+            .unwrap()
+            .len(),
         1,
         "the block must be present at load time for this test to mean anything"
     );
@@ -6474,7 +6480,7 @@ fn block_bound_chart_survives_save() {
     // Still bound, not frozen: growing the reloaded block grows the chart.
     let bid2 = {
         let ws = wb2.get_sheet_by_idx(0).unwrap();
-        ws.get_all_blocks()[0].block_id
+        ws.get_all_blocks().unwrap()[0].block_id
     };
     wb2.handle_action(EditAction::Payloads(PayloadsAction {
         payloads: vec![
@@ -7678,7 +7684,7 @@ fn a_fields_write_policy_is_declared_on_the_schema_and_survives_a_round_trip() {
 
     let read = |wb: &Workbook| -> Vec<(String, String)> {
         let ws = wb.get_sheet_by_idx(0).unwrap();
-        let blocks = ws.get_all_blocks();
+        let blocks = ws.get_all_blocks().unwrap();
         let schema = blocks[0].schema.as_ref().unwrap();
         let mut fields = schema.fields.clone();
         fields.sort_by_key(|f| f.idx);
@@ -8167,7 +8173,7 @@ fn the_declarations_survive_a_save_and_reload() {
 
     // The marker, and the total it produces.
     let ws = reopened.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let a = blocks.iter().find(|b| b.block_id == analysis).unwrap();
     assert_eq!(
         a.analyzes,
@@ -8189,7 +8195,11 @@ fn removing_the_source_removes_its_analyses() {
 
     let (mut wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
     assert_eq!(
-        wb.get_sheet_by_idx(0).unwrap().get_all_blocks().len(),
+        wb.get_sheet_by_idx(0)
+            .unwrap()
+            .get_all_blocks()
+            .unwrap()
+            .len(),
         2,
         "sanity: the pair exists"
     );
@@ -8211,7 +8221,7 @@ fn removing_the_source_removes_its_analyses() {
     // Both gone. An analysis block outliving its source would sit there
     // aggregating a block that no longer exists, reading empty with nothing to
     // say why.
-    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks().unwrap();
     assert!(
         blocks.is_empty(),
         "the analysis went with its source, got {:?}",
@@ -8221,7 +8231,7 @@ fn removing_the_source_removes_its_analyses() {
     // One undo brings the whole set back — which is why the cascade is extra
     // payloads in the same transaction rather than a special case.
     assert!(wb.undo());
-    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks().unwrap();
     assert_eq!(blocks.len(), 2, "undo restores both");
     assert!(blocks.iter().any(|b| b.block_id == analysis));
     assert_eq!(
@@ -8250,7 +8260,7 @@ fn removing_an_analysis_leaves_its_source_alone() {
         effect.status,
         crate::edit_action::StatusCode::Ok(_)
     ));
-    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks().unwrap();
     assert_eq!(blocks.len(), 1);
     assert_eq!(blocks[0].block_id, src);
 }
@@ -8326,7 +8336,7 @@ fn a_block_reports_its_analyses_and_they_report_it() {
 
     let (wb, src, analysis) = orders_with_analysis(AggFunc::Sum);
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
 
     let source = blocks.iter().find(|b| b.block_id == src).unwrap();
     assert_eq!(source.analyzes, None, "the table analyses nothing");
@@ -8429,7 +8439,7 @@ fn resize_t(
 
 fn field_names(wb: &Workbook, block_id: logisheets_base::BlockId) -> Vec<String> {
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let b = blocks.iter().find(|b| b.block_id == block_id).unwrap();
     b.schema
         .as_ref()
@@ -8591,7 +8601,7 @@ fn binding_before_shrinking_drops_a_column_and_leaves_no_orphan() {
 
     assert_eq!(field_names(&wb, id), vec!["key", "a"]);
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let b = blocks.iter().find(|b| b.block_id == id).unwrap();
     assert_eq!(b.col_cnt, 2, "the block really is narrower");
     assert_eq!(
@@ -8683,7 +8693,7 @@ fn a_reshape_is_one_undo() {
     wb.undo();
     assert_eq!(field_names(&wb, id), vec!["key", "a"]);
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let b = blocks.iter().find(|b| b.block_id == id).unwrap();
     assert_eq!((b.row_cnt, b.col_cnt), (1, 2), "the old shape is back");
 }
@@ -8837,7 +8847,7 @@ fn reported_pivot(
     block_id: logisheets_base::BlockId,
 ) -> Option<crate::block_manager::schema_manager::field_type::PivotSpecParts> {
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     blocks
         .iter()
         .find(|b| b.block_id == block_id)
@@ -8851,7 +8861,7 @@ fn a_pivot_is_declared_as_the_block_is_created_and_reported_back() {
     let (wb, src, pivot) = orders_with_pivot();
 
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
     assert_eq!(p.analyzes, Some(src), "a pivot is an analysis block");
 
@@ -8974,7 +8984,7 @@ fn an_uninterpretable_recipe_leaves_a_plain_analysis_block() {
     );
     assert_eq!(reported_pivot(&wb, id), None);
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let b = blocks.iter().find(|b| b.block_id == id).unwrap();
     assert_eq!(b.analyzes, Some(src), "but it is still an analysis block");
 }
@@ -9044,7 +9054,7 @@ fn the_recipe_can_be_changed_and_cleared_after_the_fact() {
         crate::edit_action::StatusCode::Ok(_)
     ));
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let b = blocks.iter().find(|b| b.block_id == pivot).unwrap();
     assert_eq!(b.analyzes, None);
     assert_eq!(b.pivot, None);
@@ -9080,7 +9090,7 @@ fn a_pivot_recipe_survives_a_real_xlsx_round_trip() {
     let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
 
     let ws = restored.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks
         .iter()
         .find(|b| b.block_id == pivot)
@@ -9131,7 +9141,7 @@ fn a_grouped_pivot_survives_without_gaining_a_column_dimension() {
     let bytes = wb.save().expect("save");
     let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
     let ws = restored.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
     assert_eq!(p.pivot.as_ref().unwrap().col_dim, None);
 }
@@ -10491,6 +10501,7 @@ fn a_counta_recipe_survives_a_real_xlsx_round_trip() {
     let ws = restored.get_sheet_by_idx(0).unwrap();
     let p = ws
         .get_all_blocks()
+        .unwrap()
         .into_iter()
         .find(|b| b.block_id == pivot)
         .expect("the pivot survived");
@@ -10940,7 +10951,7 @@ fn a_pivots_inherited_number_formats_survive_a_round_trip() {
     let bytes = wb.save().expect("save");
     let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
     let ws = restored.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
 
     let fmt_of = |render_id: &str| {
@@ -11167,7 +11178,7 @@ fn everything_in_section_nine_survives_a_real_xlsx_round_trip() {
     let restored = Workbook::from_file(&bytes, "rt".to_string()).expect("load");
 
     let ws = restored.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
     let s = p.pivot.as_ref().expect("the recipe survived");
     assert_eq!(s.order.as_deref(), Some("custom"));
@@ -11238,7 +11249,7 @@ fn renaming_a_source_field_carries_into_a_pivots_recipe() {
     assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "East Q1 still computes");
     assert_eq!(cell_num(&wb, 11, 1), Some(7.0), "South Q1 = 3 + 4");
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
     assert_eq!(
         p.pivot.as_ref().unwrap().row_dim,
@@ -11292,7 +11303,7 @@ fn renaming_a_measure_carries_into_the_recipe_and_the_declared_columns() {
     assert_eq!(cell_num(&wb, 10, 1), Some(10.0), "the derived column");
     assert_eq!(cell_num(&wb, 10, 2), Some(15.0), "and the declared one");
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
     assert_eq!(p.pivot.as_ref().unwrap().measure, "amount");
     let declared = p
@@ -11352,7 +11363,7 @@ fn renaming_a_filtered_field_carries_into_the_filter() {
     // would collapse to 0 — while still looking like a filtered pivot.
     assert_eq!(cell_num(&wb, 10, 1), Some(10.0));
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
     assert_eq!(
         p.pivot.as_ref().unwrap().filters.as_ref().unwrap()[0].field,
@@ -11393,7 +11404,7 @@ fn renaming_a_source_field_carries_into_a_total_rows_aggregate() {
     ));
     assert_eq!(cell_num(&wb, 3, 1), Some(60.0), "the total still totals");
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let a = blocks.iter().find(|b| b.block_id == analysis).unwrap();
     let amt = a
         .schema
@@ -11449,7 +11460,7 @@ fn adding_and_reordering_fields_is_not_read_as_a_rename() {
         effect.error_message
     );
     let ws = wb.get_sheet_by_idx(0).unwrap();
-    let blocks = ws.get_all_blocks();
+    let blocks = ws.get_all_blocks().unwrap();
     let p = blocks.iter().find(|b| b.block_id == pivot).unwrap();
     assert_eq!(p.pivot.as_ref().unwrap().row_dim, "region", "untouched");
     assert_eq!(cell_num(&wb, 10, 1), Some(10.0));
@@ -11843,4 +11854,220 @@ fn range_formulas_follow_inputs_through_the_multi_range_index() {
     input(&mut wb, 1, 1, "5");
     assert_eq!(num(&wb, 0, 2), 13.);
     assert_eq!(num(&wb, 0, 3), 5.);
+}
+
+// ---- Block refresh: remove a block and recreate it under the same id ----
+//
+// A craft refreshing a query result removes its block and creates a new one in
+// one transaction. Formulas name the block by its ref name, so the refreshed
+// block has to be able to reuse both the id and the name.
+
+fn block_input(
+    block_id: logisheets_base::BlockId,
+    row: usize,
+    col: usize,
+    input: &str,
+) -> EditPayload {
+    EditPayload::BlockInput(crate::edit_action::BlockInput {
+        sheet_idx: 0,
+        block_id,
+        row,
+        col,
+        input: input.into(),
+    })
+}
+
+fn create_t(id: logisheets_base::BlockId, row_cnt: usize, col_cnt: usize) -> EditPayload {
+    EditPayload::CreateBlock(CreateBlock {
+        sheet_idx: 0,
+        id,
+        master_row: 0,
+        master_col: 0,
+        row_cnt,
+        col_cnt,
+        owner: None,
+        modify_policy: None,
+        permissions: None,
+        description: None,
+        analyzes: None,
+        pivot: None,
+    })
+}
+
+fn remove_t(id: logisheets_base::BlockId) -> EditPayload {
+    EditPayload::RemoveBlock(crate::edit_action::RemoveBlock { sheet_idx: 0, id })
+}
+
+fn assert_ok(effect: &crate::edit_action::ActionEffect, what: &str) {
+    assert!(
+        matches!(effect.status, crate::edit_action::StatusCode::Ok(_)),
+        "{what}: {:?}",
+        effect.error_message
+    );
+}
+
+#[test]
+fn block_input_of_a_plain_value_replaces_a_formula() {
+    // `CellInput` drops a formula the plain value overwrites; `BlockInput` used
+    // to keep it, so the value was written and then recomputed away.
+    let (mut wb, id) = reshapable_block(2);
+    assert_ok(
+        &apply(&mut wb, vec![block_input(id, 0, 1, "=\"x\"")]),
+        "formula",
+    );
+    assert_eq!(
+        wb.get_sheet_by_idx(0).unwrap().get_formula(0, 1).unwrap(),
+        "\"x\""
+    );
+
+    assert_ok(&apply(&mut wb, vec![block_input(id, 0, 1, "42")]), "number");
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_formula(0, 1).unwrap(), "");
+    assert_eq!(cell_num(&wb, 0, 1), Some(42.0));
+
+    assert_ok(
+        &apply(
+            &mut wb,
+            vec![
+                block_input(id, 0, 1, "=\"y\""),
+                block_input(id, 0, 1, "abc"),
+            ],
+        ),
+        "text",
+    );
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(ws.get_formula(0, 1).unwrap(), "");
+    assert!(
+        matches!(ws.get_value(0, 1).unwrap(), crate::controller::display::Value::Str(ref s) if s == "abc")
+    );
+}
+
+#[test]
+fn removing_a_block_frees_its_ref_name_within_the_transaction() {
+    let (mut wb, id) = reshapable_block(2);
+    assert_ok(
+        &apply(&mut wb, vec![bind_t(id, &[("key", None), ("a", None)])]),
+        "bind",
+    );
+
+    let effect = apply(
+        &mut wb,
+        vec![
+            remove_t(id),
+            create_t(id, 1, 2),
+            bind_t(id, &[("key", None), ("a", None)]),
+        ],
+    );
+    assert_ok(&effect, "rebind the old name after removal");
+    assert_eq!(field_names(&wb, id), vec!["key", "a"]);
+}
+
+#[test]
+fn removing_a_block_frees_another_block_to_take_its_ref_name() {
+    let (mut wb, id) = reshapable_block(2);
+    assert_ok(
+        &apply(&mut wb, vec![bind_t(id, &[("key", None), ("a", None)])]),
+        "bind",
+    );
+    let other = id + 1;
+    let effect = apply(
+        &mut wb,
+        vec![
+            remove_t(id),
+            create_t(other, 1, 2),
+            bind_t(other, &[("key", None), ("a", None)]),
+        ],
+    );
+    assert_ok(&effect, "a fresh block takes the removed block's name");
+}
+
+#[test]
+fn recreating_a_block_under_the_same_id_starts_empty() {
+    let (mut wb, id) = reshapable_block(2);
+    assert_ok(
+        &apply(
+            &mut wb,
+            vec![
+                bind_t(id, &[("key", None), ("a", None)]),
+                block_input(id, 0, 0, "k"),
+                block_input(id, 0, 1, "=\"x\""),
+            ],
+        ),
+        "setup",
+    );
+
+    assert_ok(
+        &apply(&mut wb, vec![remove_t(id), create_t(id, 1, 2)]),
+        "recreate",
+    );
+    let ws = wb.get_sheet_by_idx(0).unwrap();
+    assert_eq!(
+        ws.get_formula(0, 1).unwrap(),
+        "",
+        "the old cell's formula is gone"
+    );
+    assert!(matches!(
+        ws.get_value(0, 1).unwrap(),
+        crate::controller::display::Value::Empty
+    ));
+    assert!(
+        ws.get_block_info(id).unwrap().schema.is_none(),
+        "the old schema is gone"
+    );
+}
+
+#[test]
+fn recreating_a_block_with_a_different_shape_can_be_read() {
+    // The old schema used to survive the removal and name field columns the
+    // new block does not have; reading blocks then panicked.
+    let (mut wb, id) = reshapable_block(3);
+    assert_ok(
+        &apply(
+            &mut wb,
+            vec![bind_t(id, &[("key", None), ("a", None), ("b", None)])],
+        ),
+        "bind",
+    );
+    assert_ok(
+        &apply(&mut wb, vec![remove_t(id), create_t(id, 2, 2)]),
+        "recreate narrower",
+    );
+
+    let blocks = wb.get_all_blocks(Some(0), None).expect("readable");
+    let b = blocks.iter().find(|b| b.block_id == id).unwrap();
+    assert_eq!(b.col_cnt, 2);
+    assert!(b.schema.is_none());
+}
+
+#[test]
+fn a_formula_naming_the_block_survives_a_refresh_under_the_same_id_and_name() {
+    // The point of being able to reuse both: a refresh must not break the
+    // formulas that read the block.
+    let (mut wb, id) = reshapable_block(2);
+    let load = |v: &str| {
+        vec![
+            bind_t(id, &[("key", None), ("a", None)]),
+            block_input(id, 0, 0, "k"),
+            block_input(id, 0, 1, v),
+        ]
+    };
+    assert_ok(&apply(&mut wb, load("1")), "load");
+    assert_ok(
+        &apply(
+            &mut wb,
+            vec![EditPayload::CellInput(CellInput {
+                sheet_idx: 0,
+                row: 0,
+                col: 5,
+                content: r#"=BLOCKREF("t", "k", "a") * 10"#.into(),
+            })],
+        ),
+        "reader",
+    );
+    assert_eq!(cell_num(&wb, 0, 5), Some(10.0));
+
+    let mut refresh = vec![remove_t(id), create_t(id, 1, 2)];
+    refresh.extend(load("7"));
+    assert_ok(&apply(&mut wb, refresh), "refresh");
+    assert_eq!(cell_num(&wb, 0, 5), Some(70.0));
 }

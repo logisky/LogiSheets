@@ -72,7 +72,7 @@ pub fn get_linkable_blocks(
 ) -> Result<Vec<BlockInfo>, ErrorMessage> {
     let wb = mgr.workbook(id)?;
     let ws = wb.get_sheet_by_idx(sheet_idx).map_err(ErrorMessage::from)?;
-    Ok(ws.get_linkable_blocks(col_cnt))
+    ws.get_linkable_blocks(col_cnt).map_err(ErrorMessage::from)
 }
 
 pub fn get_links(
@@ -101,7 +101,8 @@ pub fn get_all_fully_covered_blocks(
     if row_cnt == 0 || col_cnt == 0 {
         return Ok(vec![]);
     }
-    Ok(ws.get_all_fully_covered_blocks(row, col, row + row_cnt - 1, col + col_cnt - 1))
+    ws.get_all_fully_covered_blocks(row, col, row + row_cnt - 1, col + col_cnt - 1)
+        .map_err(ErrorMessage::from)
 }
 
 /// Row height in points.

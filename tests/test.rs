@@ -1586,7 +1586,7 @@ fn test_excel_table_round_trips_as_a_named_block() {
     let wb = Workbook::from_file(&mut buf, String::from("table")).unwrap();
 
     // Adopted under the table's own name, with its column headers as fields.
-    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks().unwrap();
     assert_eq!(blocks.len(), 1, "the table should have become one block");
     let schema = blocks[0].schema.as_ref().expect("the block has a schema");
     assert_eq!(schema.name, "Sales", "named after the table, not a serial");
@@ -1749,7 +1749,11 @@ fn test_block_is_saved_as_an_excel_table() {
     // app data.
     let mut bytes = saved.clone();
     let reopened = Workbook::from_file(&mut bytes, String::from("again")).expect("reopen");
-    let blocks = reopened.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    let blocks = reopened
+        .get_sheet_by_idx(0)
+        .unwrap()
+        .get_all_blocks()
+        .unwrap();
     assert_eq!(blocks.len(), 1, "the table and the app data are one block");
     assert_eq!(
         blocks[0].schema.as_ref().unwrap().name,
@@ -1861,7 +1865,7 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
     );
 
     // And the name still points where it did.
-    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks();
+    let blocks = wb.get_sheet_by_idx(0).unwrap().get_all_blocks().unwrap();
     assert_eq!(blocks.len(), 1);
     assert_eq!(blocks[0].schema.as_ref().unwrap().name, "dup");
     let fields: Vec<&str> = blocks[0]
@@ -1874,7 +1878,11 @@ fn test_block_ref_name_is_unique_across_the_workbook() {
         .collect();
     assert_eq!(fields, vec!["k", "value"], "the rebind took effect");
     assert!(
-        wb.get_sheet_by_idx(1).unwrap().get_all_blocks().is_empty(),
+        wb.get_sheet_by_idx(1)
+            .unwrap()
+            .get_all_blocks()
+            .unwrap()
+            .is_empty(),
         "the refused bind must not have left a block behind"
     );
 }

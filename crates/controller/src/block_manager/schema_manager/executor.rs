@@ -516,6 +516,22 @@ impl BlockSchemaExecutor {
             // `BlockAll` through the per-cell edge. Rows with no computed field
             // had the same bug. Dirty it explicitly for both directions rather
             // than relying on a side effect.
+            // The schema and its ref name are keyed by block id, and a block
+            // created later may reuse the id (or the name, even later in the
+            // same transaction). Free both, so neither the old fields nor the
+            // name outlive the block.
+            EditPayload::RemoveBlock(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let mut this = self;
+                let removed = this.manager.schemas.remove(&(sheet_id, p.id)).is_some();
+                this.manager
+                    .refs
+                    .retain(|_, owner| *owner != (sheet_id, p.id));
+                this.dirty_blocks.insert((sheet_id, p.id));
+                Ok((this, removed))
+            }
             EditPayload::InsertRowsInBlock(p) => {
                 Self::dirty_structural(self, ctx, p.sheet_idx, p.block_id)
             }
