@@ -34,7 +34,35 @@ reqwest = { version = "0.12", default-features = false, features = [
 ] }
 # Package bytes cross IPC as base64 (src/crafts.rs).
 base64 = "0.22"
+# Data connections (src/db.rs): SQL against Postgres / MySQL / SQLite for the
+# `dataConnections` craft capability. rustls for the same portability reason as
+# reqwest; bigdecimal so NUMERIC/DECIMAL round-trip exactly as strings.
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "tls-rustls",
+    "postgres",
+    "mysql",
+    "sqlite",
+    "chrono",
+    "bigdecimal",
+    "json",
+    "uuid",
+] }
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+futures-util = { version = "0.3", default-features = false }
+tokio = { version = "1", features = ["time"] }
+uuid = { version = "1", features = ["v4"] }
+# Connection passwords live in the OS keychain, never in the app-data file.
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "sync-secret-service",
+    "crypto-rust",
+] }
 logisheets-rs = { path = "../../../crates/api", features = ["rpc"], optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [features]
 # OFF by default. The default desktop build is a lean shell that runs the

@@ -72,6 +72,8 @@ export interface CraftManifest {
     publisher?: string
     /** Lowest host API version the craft needs. */
     hostApi?: number
+    /** Host capabilities the craft cannot run without (e.g. dataConnections). */
+    requires?: string[]
     /** Every file in a packed `.craft` (absent from dist/manifest.json). */
     files?: string[]
     /** Present iff the craft has an index.html. Package-relative. */

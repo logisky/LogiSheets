@@ -1,4 +1,5 @@
 import {HOST_API_VERSION} from './types'
+import {hostCapabilities, missingCapabilities} from './capabilities'
 import {CraftPackageError, MAX_PACKAGE_BYTES} from './validate'
 
 /**
@@ -30,6 +31,8 @@ export interface RegistryCraft {
 export interface RegistryVersion {
     version: string
     hostApi: number
+    /** Host capabilities this version needs; absent = none. */
+    requires?: string[]
     /** Relative to the registry base URL. */
     url: string
     sha256: string
@@ -78,16 +81,42 @@ export async function fetchRegistryIndex(
     return index
 }
 
+function runsHere(v: RegistryVersion, provided: ReadonlySet<string>): boolean {
+    return (
+        (v.hostApi ?? 1) <= HOST_API_VERSION &&
+        missingCapabilities(v.requires, provided).length === 0
+    )
+}
+
 /**
- * The newest version this host can run (`hostApi` ≤ HOST_API_VERSION), or
- * undefined if every version needs a newer app.
+ * The newest version this host can run — `hostApi` ≤ HOST_API_VERSION and
+ * every `requires` capability provided — or undefined if there is none.
  */
-export function pickVersion(craft: RegistryCraft): RegistryVersion | undefined {
+export function pickVersion(
+    craft: RegistryCraft,
+    provided: ReadonlySet<string> = hostCapabilities()
+): RegistryVersion | undefined {
     for (let i = craft.versions.length - 1; i >= 0; i--) {
         const v = craft.versions[i]
-        if ((v.hostApi ?? 1) <= HOST_API_VERSION) return v
+        if (runsHere(v, provided)) return v
     }
     return undefined
+}
+
+/**
+ * Why no version of `craft` runs here, judged by its newest version: it needs
+ * capabilities this host lacks (`missing`), or a newer app (`hostApi`).
+ * Undefined when some version runs.
+ */
+export function unavailableReason(
+    craft: RegistryCraft,
+    provided: ReadonlySet<string> = hostCapabilities()
+): {missing: string[]} | {hostApi: number} | undefined {
+    if (pickVersion(craft, provided)) return undefined
+    const newest = craft.versions[craft.versions.length - 1]
+    if (!newest) return undefined
+    const missing = missingCapabilities(newest.requires, provided)
+    return missing.length ? {missing} : {hostApi: newest.hostApi ?? 1}
 }
 
 /**

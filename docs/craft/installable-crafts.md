@@ -374,6 +374,30 @@ what was published does.
   built-in still find their craft state and block owners.
 - **Reserved ids** are now only the bundled crafts' ids.
 
+### Capabilities: what a craft needs, not where it runs
+
+Some crafts need a host API that not every host has. The first is
+database access: a webview cannot open the raw TCP connections Postgres or
+MySQL use, so only a host with a native side (desktop) can provide it.
+
+- A craft lists what it cannot run without in package.json
+  `"craftRequires": ["dataConnections"]`. craftsmith copies this into the
+  manifest as `requires`, and warns on a name no host knows. The registry
+  index records it per version, like `hostApi`.
+- A host states what it provides: `hostCapabilities()` in
+  `src/core/craft-packages/capabilities.ts`. A capability is added there in
+  the same change that injects its API into the craft panel, and not before.
+  Today no host provides any capability.
+- Install (from a file, from Browse, or by auto-install) refuses a package
+  that needs something missing (`unsupported`). Browse picks the newest
+  version that runs here; when none does, it says why ("needs database
+  connections" or "needs a newer LogiSheets"). An installed craft whose
+  needs are missing is kept, but left out of the panel.
+- Why not a platform list such as `["desktop"]`: if the web app gains a
+  capability (e.g. behind a database proxy), every craft that needs it starts
+  working there without being republished. A craft that only needs `fetch`
+  declares nothing and runs everywhere.
+
 ### Bootstrap (not done yet)
 
 1. Publish `logisheets-craftsmith` to npm. Every craft in the registry

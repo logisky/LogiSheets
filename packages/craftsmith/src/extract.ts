@@ -77,6 +77,7 @@ interface Identity {
     description?: string
     publisher?: string
     hostApi: number
+    requires: string[]
     unlisted: boolean
 }
 
@@ -114,6 +115,34 @@ function readIdentity(paths: CraftPaths, diags: Diagnostic[]): Identity {
             )}`,
             file: paths.packageJson,
         })
+    const requires: string[] = []
+    if (pkg.craftRequires !== undefined) {
+        if (
+            !Array.isArray(pkg.craftRequires) ||
+            !pkg.craftRequires.every(
+                (c: unknown) =>
+                    typeof c === 'string' && /^[a-z][A-Za-z0-9]*$/.test(c)
+            )
+        )
+            diags.push({
+                level: 'error',
+                message:
+                    'craftRequires must be an array of capability names (camelCase, e.g. "dataConnections")',
+                file: paths.packageJson,
+            })
+        else
+            for (const c of pkg.craftRequires as string[]) {
+                if (!KNOWN_CAPABILITIES.includes(c))
+                    diags.push({
+                        level: 'warn',
+                        message: `craftRequires: "${c}" is not a capability any LogiSheets host provides yet (known: ${KNOWN_CAPABILITIES.join(
+                            ', '
+                        )}) — every host will refuse this craft`,
+                        file: paths.packageJson,
+                    })
+                if (!requires.includes(c)) requires.push(c)
+            }
+    }
     // `label` is one name, or a name per language ({en, 'zh-CN'}) — the host
     // picks one at render. The manifest's `label` stays a plain string (English,
     // else the first) so a consumer that knows nothing of languages still works.
@@ -149,8 +178,16 @@ function readIdentity(paths: CraftPaths, diags: Diagnostic[]): Identity {
                 ? pkg.publisher
                 : authorName(pkg.author),
         hostApi,
+        requires,
     }
 }
+
+/**
+ * Capabilities some LogiSheets host provides (or is about to). Mirrors
+ * KNOWN_CAPABILITIES in the app's src/core/craft-packages/capabilities.ts —
+ * an unknown name is only a warning, since a newer host may know it.
+ */
+const KNOWN_CAPABILITIES: readonly string[] = ['dataConnections']
 
 // The craft's own tsconfig (searched from the craft root UPWARD, so a monorepo
 // craft may pick up a parent's) REPLACES these defaults rather than merging.
@@ -623,6 +660,7 @@ export function extract(root: string): ExtractResult {
     }
     if (id.labels) manifest.labels = id.labels
     if (id.unlisted) manifest.unlisted = true
+    if (id.requires.length) manifest.requires = id.requires
     if (id.description) manifest.description = id.description
     if (id.publisher) manifest.publisher = id.publisher
     if (paths.indexHtml) manifest.url = 'index.html'

@@ -147,6 +147,15 @@ export interface CraftManifest {
      */
     hostApi?: number
     /**
+     * Host capabilities the craft cannot run without (package.json
+     * `craftRequires`), e.g. `["dataConnections"]`. A capability names a host
+     * API the craft panel injects; a host that does not provide one refuses to
+     * install the package and its browse list says why. Absent = runs on any
+     * host. Not a platform list: a host decides what it provides, so a craft
+     * never has to change when a new host gains a capability.
+     */
+    requires?: string[]
+    /**
      * Every file in a packed `.craft`, package-relative with `/` separators.
      * Written by `craftsmith pack` only — absent from dist/manifest.json. An
      * installed craft's loader serves exactly these files and nothing else.

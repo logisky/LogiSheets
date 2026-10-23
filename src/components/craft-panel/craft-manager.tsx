@@ -31,14 +31,21 @@ import {
     downloadRegistryPackage,
     fetchRegistryIndex,
     pickVersion,
+    unavailableReason,
     type RegistryCraft,
     type RegistryIndex,
 } from '@/core/craft-packages/remote'
 import {getLocale} from '@/core/i18n/i18n'
+import {getDataConnectionsBackend} from '@/core/data-connections'
+import {DataConnectionsPane} from './data-connections-pane'
+
+export type CraftManagerTab = 'installed' | 'browse' | 'connections'
 
 type Props = {
     open: boolean
     onClose: () => void
+    /** The tab shown each time the dialog opens. */
+    initialTab?: CraftManagerTab
 }
 
 type Preview = CraftInstallPreview & {fromRegistry: boolean}
@@ -48,10 +55,16 @@ type Preview = CraftInstallPreview & {fromRegistry: boolean}
  * from a `.craft` file. Changes apply on reload — the craft list is fixed at
  * startup — so every change ends in a "Reload now" offer.
  */
-export const CraftManager = ({open, onClose}: Props) => {
+export const CraftManager = ({
+    open,
+    onClose,
+    initialTab = 'installed',
+}: Props) => {
     const {t} = useTranslation()
     const fileInput = useRef<HTMLInputElement | null>(null)
-    const [tab, setTab] = useState<'installed' | 'browse'>('installed')
+    const [tab, setTab] = useState<CraftManagerTab>(initialTab)
+    // Only hosts that can run SQL get the Connections tab.
+    const hasConnections = getDataConnectionsBackend() !== null
     const [installed, setInstalled] = useState<InstalledCraftRecord[]>([])
     const [index, setIndex] = useState<RegistryIndex | null>(null)
     const [indexError, setIndexError] = useState<string | null>(null)
@@ -85,13 +98,30 @@ export const CraftManager = ({open, onClose}: Props) => {
 
     useEffect(() => {
         if (!open) return
+        setTab(initialTab)
         setError(null)
         void refresh()
         // Both tabs use it: Browse lists it, Installed offers updates from it.
         loadIndex()
     }, [open])
 
+    /** Capability names as the user should read them. */
+    const capabilityNames = (caps: readonly string[]) =>
+        caps
+            .map((c) =>
+                String(t(`ui.craft.capability.${c}`, {defaultValue: c}))
+            )
+            .join(', ')
+
     function errorText(e: unknown): string {
+        if (e instanceof CraftPackageError && e.code === 'unsupported')
+            return String(
+                t('ui.craft.manage.error.unsupported', {
+                    caps: capabilityNames(
+                        String(e.params.missing ?? '').split(',')
+                    ),
+                })
+            )
         if (e instanceof CraftPackageError)
             return String(t(`ui.craft.manage.error.${e.code}`, e.params))
         return String(
@@ -191,12 +221,18 @@ export const CraftManager = ({open, onClose}: Props) => {
         const mine = installed.find((r) => r.craftId === c.craftId)
         const v = pickVersion(c)
         if (downloading === c.craftId) return <CircularProgress size={20} />
-        if (!v)
+        if (!v) {
+            const why = unavailableReason(c)
             return (
                 <Typography variant="caption" color="text.secondary">
-                    {t('ui.craft.manage.needsNewerApp')}
+                    {why && 'missing' in why
+                        ? t('ui.craft.manage.needsCapability', {
+                              caps: capabilityNames(why.missing),
+                          })
+                        : t('ui.craft.manage.needsNewerApp')}
                 </Typography>
             )
+        }
         if (mine && compareVersions(v.version, mine.version) <= 0)
             return (
                 <Typography variant="caption" color="text.secondary">
@@ -242,6 +278,12 @@ export const CraftManager = ({open, onClose}: Props) => {
                         value="browse"
                         label={t('ui.craft.manage.tabBrowse')}
                     />
+                    {hasConnections && (
+                        <Tab
+                            value="connections"
+                            label={t('ui.craft.manage.tabConnections')}
+                        />
+                    )}
                 </Tabs>
                 <DialogContent
                     onDragOver={(e) => {
@@ -284,6 +326,7 @@ export const CraftManager = ({open, onClose}: Props) => {
                             {error}
                         </Alert>
                     )}
+                    {tab === 'connections' && <DataConnectionsPane />}
                     {tab === 'installed' &&
                         (installed.length === 0 ? (
                             <DialogContentText>
@@ -496,6 +539,14 @@ export const CraftManager = ({open, onClose}: Props) => {
                                         {t('ui.craft.manage.fieldDescription')}
                                     </dt>
                                     <dd>{m.description}</dd>
+                                </>
+                            )}
+                            {!!m.requires?.length && (
+                                <>
+                                    <dt>
+                                        {t('ui.craft.manage.fieldRequires')}
+                                    </dt>
+                                    <dd>{capabilityNames(m.requires)}</dd>
                                 </>
                             )}
                             {!!m.tools?.length && (

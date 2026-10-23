@@ -1115,7 +1115,8 @@
                     "unknown": "无法安装挂件：{{message}}",
                     "registryUnavailable": "无法连接挂件仓库，请检查网络后重试。",
                     "download": "挂件下载失败。",
-                    "checksum": "下载的挂件与仓库记录的校验值不符，未安装。"
+                    "checksum": "下载的挂件与仓库记录的校验值不符，未安装。",
+                    "unsupported": "此挂件无法在这里运行：它需要{{caps}}。"
                 },
                 "tabInstalled": "已安装",
                 "tabBrowse": "浏览",
@@ -1127,9 +1128,51 @@
                 "fieldSource": "来源",
                 "sourceRegistry": "挂件仓库",
                 "sourceFile": "本地文件",
-                "trustRegistry": "来自 LogiSheets 挂件仓库：源码在发布前经过审核，本次下载与仓库记录的校验值一致。与所有挂件一样，它拥有对应用的完全访问权限。"
+                "trustRegistry": "来自 LogiSheets 挂件仓库：源码在发布前经过审核，本次下载与仓库记录的校验值一致。与所有挂件一样，它拥有对应用的完全访问权限。",
+                "needsCapability": "此处不可用：需要{{caps}}",
+                "fieldRequires": "需要",
+                "tabConnections": "连接"
             },
-            "pageLoadFailed": "无法打开挂件：{{message}}"
+            "pageLoadFailed": "无法打开挂件：{{message}}",
+            "capability": {
+                "dataConnections": "数据库连接"
+            },
+            "connections": {
+                "desktopOnly": "数据库连接仅在桌面版中可用。",
+                "empty": "还没有数据库连接。添加一个后，读取数据库的挂件即可查询它。",
+                "add": "添加连接",
+                "edit": "编辑",
+                "delete": "删除",
+                "confirmDelete": "确认删除",
+                "cancel": "取消",
+                "test": "测试",
+                "save": "保存",
+                "testOk": "连接成功。",
+                "testFailed": "无法连接：{{message}}",
+                "name": "名称",
+                "kind": "数据库",
+                "kinds": {
+                    "postgres": "PostgreSQL",
+                    "mysql": "MySQL / MariaDB",
+                    "sqlite": "SQLite"
+                },
+                "host": "主机",
+                "port": "端口",
+                "database": "数据库名",
+                "databaseFile": "数据库文件路径",
+                "user": "用户名",
+                "password": "密码",
+                "passwordKeep": "留空则保留已存储的密码",
+                "passwordHint": "保存在系统钥匙串中，不会再次显示，也不会存入工作簿。",
+                "clearPassword": "移除已存储的密码",
+                "ssl": "SSL",
+                "sslModes": {
+                    "disable": "关闭",
+                    "prefer": "可用时使用",
+                    "require": "必须"
+                },
+                "trustNote": "所有已安装的挂件都可以在这些连接上执行只读查询，但都无法读取密码。请使用只拥有所需权限的数据库用户。"
+            }
         },
         "view": {
             "active": "当前视图",
