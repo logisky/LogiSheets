@@ -373,6 +373,13 @@ Everything below appears **after** the iframe loads — guard with `whenReady`.
 - **Persistence** — `window.setCraftState(json)` / `getCraftState()` for
   per-document state the host folds into the saved workbook; `window.craftStorage`
   (async key/value) for device-scoped preferences that persist across documents.
+- **Databases** — `window.dataConnections` (desktop only, and only if you list
+  `dataConnections` in `craftRequires`): `list()` the connections the user saved
+  in the host, `query(connId, sql, {params, maxRows, timeoutMs})` one read-only
+  statement into typed rows, `openManager()` to let them add one. You never see
+  a password; save the connection **id** in craft state, never credentials. See
+  [data connections](./data-connections); `sql-query` in the registry is the
+  worked example.
 - **Host UI** — `window.notifyCraft('success'|'info'|'warn'|'error', msg)` shows a
   toast; `window.setCellLayouts([...])` overlays markers on cells.
 - **Language** — `window.locale` is the language the host is speaking (a BCP-47
@@ -700,6 +707,12 @@ served from a URL, so:
   `/`-separated folders. Limits: 5 MB a file, 20 MB a package.
 - Need a newer host API? Set `"craftHostApi"` in package.json; older hosts
   refuse the package rather than run it broken.
+- Need something only some hosts have (e.g. database connections)? List it
+  in `"craftRequires": ["dataConnections"]`. Name what you **need**, not where
+  you run: a host without it shows your craft as unavailable and refuses to
+  install it, and your craft starts working there as soon as that host gains
+  it. Still check at runtime (`if (!window.dataConnections) …`): a workbook
+  can carry your saved state to a host where your craft is not installed.
 
 The user is warned at install that a craft has full access to the app; see
 [installable crafts](./installable-crafts) for why.

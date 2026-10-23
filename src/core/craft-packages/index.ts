@@ -3,9 +3,17 @@ import {IndexedDbCraftPackageStore, isIndexedDbAvailable} from './indexeddb'
 import {MemoryCraftPackageStore} from './memory'
 import {TauriCraftPackageStore} from './tauri'
 import type {CraftPackageStore, InstalledCraftRecord} from './types'
+import {missingCapabilities} from './capabilities'
+import {isTauri} from '@/core/tauri'
 import {parseCraftPackage, type ParsedCraftPackage} from './validate'
 
 export * from './types'
+export {
+    KNOWN_CAPABILITIES,
+    hostCapabilities,
+    missingCapabilities,
+    type Capability,
+} from './capabilities'
 export {
     CraftPackageError,
     type CraftPackageErrorCode,
@@ -35,10 +43,6 @@ export interface CraftEntry {
 
 export function craftKey(craftId: string): string {
     return `/${craftId}/index.html`
-}
-
-function isTauri(): boolean {
-    return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
 
 function pickStore(): CraftPackageStore {
@@ -108,6 +112,12 @@ export async function initCraftRegistry(): Promise<void> {
         ...installed
             // A build that later ships a craft under the same id wins.
             .filter((r) => !reserved.has(r.craftId))
+            // Installed where it ran, but this host lacks something it needs
+            // (e.g. app data copied to another host): keep it installed, just
+            // do not offer it.
+            .filter(
+                (r) => missingCapabilities(r.manifest.requires).length === 0
+            )
             .sort((a, b) => a.craftId.localeCompare(b.craftId))
             .map((r) => ({
                 key: craftKey(r.craftId),

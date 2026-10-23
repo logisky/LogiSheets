@@ -1115,7 +1115,8 @@
                     "unknown": "Couldn't install the craft: {{message}}",
                     "registryUnavailable": "Couldn't reach the craft registry. Check your connection and try again.",
                     "download": "Couldn't download the craft.",
-                    "checksum": "The downloaded craft doesn't match the registry's checksum, so it was not installed."
+                    "checksum": "The downloaded craft doesn't match the registry's checksum, so it was not installed.",
+                    "unsupported": "This craft can't run here: it needs {{caps}}."
                 },
                 "tabInstalled": "Installed",
                 "tabBrowse": "Browse",
@@ -1127,9 +1128,51 @@
                 "fieldSource": "Source",
                 "sourceRegistry": "Craft registry",
                 "sourceFile": "Local file",
-                "trustRegistry": "From the LogiSheets craft registry: its source was reviewed before publishing, and this download matches the registry's checksum. Like any craft, it runs with full access to the app."
+                "trustRegistry": "From the LogiSheets craft registry: its source was reviewed before publishing, and this download matches the registry's checksum. Like any craft, it runs with full access to the app.",
+                "needsCapability": "Not available here: needs {{caps}}",
+                "fieldRequires": "Needs",
+                "tabConnections": "Connections"
             },
-            "pageLoadFailed": "Couldn't open the craft: {{message}}"
+            "pageLoadFailed": "Couldn't open the craft: {{message}}",
+            "capability": {
+                "dataConnections": "database connections"
+            },
+            "connections": {
+                "desktopOnly": "Database connections are available in the desktop app only.",
+                "empty": "No database connections yet. Add one, and crafts that read from databases can query it.",
+                "add": "Add connection",
+                "edit": "Edit",
+                "delete": "Delete",
+                "confirmDelete": "Delete for good",
+                "cancel": "Cancel",
+                "test": "Test",
+                "save": "Save",
+                "testOk": "Connected.",
+                "testFailed": "Could not connect: {{message}}",
+                "name": "Name",
+                "kind": "Database",
+                "kinds": {
+                    "postgres": "PostgreSQL",
+                    "mysql": "MySQL / MariaDB",
+                    "sqlite": "SQLite"
+                },
+                "host": "Host",
+                "port": "Port",
+                "database": "Database name",
+                "databaseFile": "Database file path",
+                "user": "User",
+                "password": "Password",
+                "passwordKeep": "Leave empty to keep the stored password",
+                "passwordHint": "Stored in the system keychain. It is never shown again or saved in a workbook.",
+                "clearPassword": "Remove the stored password",
+                "ssl": "SSL",
+                "sslModes": {
+                    "disable": "Off",
+                    "prefer": "Use if available",
+                    "require": "Required"
+                },
+                "trustNote": "Any installed craft can run read-only queries on these connections; none can read a password. Use a database user that only has the access you intend."
+            }
         },
         "view": {
             "active": "Active view",

@@ -1,6 +1,7 @@
 #[cfg(feature = "native-engine")]
 mod commands;
 mod crafts;
+mod db;
 mod net;
 mod storage;
 
@@ -23,11 +24,13 @@ pub fn run() {
         .setup(|app| {
             let store = storage::CraftStorageState::load(app.handle());
             app.manage(store);
+            // Saved data connections (metadata only; passwords are in the keychain).
+            app.manage(db::DbState::load(app.handle()));
             Ok(())
         });
 
     // `invoke_handler` can be set only once, so the full command list is chosen
-    // per configuration: craft-storage and installed crafts always, plus the
+    // per configuration: craft-storage, installed crafts and data connections always, plus the
     // native engine `handle` when that feature is on.
     #[cfg(feature = "native-engine")]
     let builder = builder
@@ -43,6 +46,11 @@ pub fn run() {
             crafts::craft_pkg_install,
             crafts::craft_pkg_remove,
             crafts::craft_pkg_read,
+            db::db_conn_list,
+            db::db_conn_save,
+            db::db_conn_delete,
+            db::db_conn_test,
+            db::db_query,
             commands::handle,
         ]);
 
@@ -58,6 +66,11 @@ pub fn run() {
         crafts::craft_pkg_install,
         crafts::craft_pkg_remove,
         crafts::craft_pkg_read,
+        db::db_conn_list,
+        db::db_conn_save,
+        db::db_conn_delete,
+        db::db_conn_test,
+        db::db_query,
     ]);
 
     builder

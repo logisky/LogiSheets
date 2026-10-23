@@ -1,6 +1,7 @@
 import {unzipSync, strFromU8} from 'fflate'
 import type {CraftManifest} from 'logisheets-logician'
 import {HOST_API_VERSION} from './types'
+import {hostCapabilities, missingCapabilities} from './capabilities'
 
 export const MAX_FILE_BYTES = 5 * 1024 * 1024
 export const MAX_PACKAGE_BYTES = 20 * 1024 * 1024
@@ -24,6 +25,7 @@ export type CraftPackageErrorCode =
     | 'badPath'
     | 'missingFile'
     | 'tooLarge'
+    | 'unsupported'
     // Registry downloads (remote.ts)
     | 'registryUnavailable'
     | 'download'
@@ -74,10 +76,15 @@ export function isValidCraftId(id: string): boolean {
  * the host uses for itself. Identity is the craft id — block ownership, craft
  * state and Watson's tool names all hang off it — so sharing one means sharing
  * those.
+ *
+ * `capabilities` is what this host provides; a package whose `requires` names
+ * anything else is refused (`unsupported`, with the missing names in
+ * `params.missing`, comma-separated).
  */
 export function parseCraftPackage(
     bytes: Uint8Array,
-    reservedIds: ReadonlySet<string>
+    reservedIds: ReadonlySet<string>,
+    capabilities: ReadonlySet<string> = hostCapabilities()
 ): ParsedCraftPackage {
     if (bytes.byteLength > MAX_PACKAGE_BYTES)
         throw new CraftPackageError('tooLarge', {
@@ -144,6 +151,18 @@ export function parseCraftPackage(
             need: String(hostApi),
             have: HOST_API_VERSION,
         })
+
+    if (
+        manifest.requires !== undefined &&
+        !(
+            Array.isArray(manifest.requires) &&
+            manifest.requires.every((c) => typeof c === 'string')
+        )
+    )
+        throw new CraftPackageError('badManifest')
+    const missing = missingCapabilities(manifest.requires, capabilities)
+    if (missing.length)
+        throw new CraftPackageError('unsupported', {missing: missing.join(',')})
 
     const files = new Map<string, Uint8Array>()
     files.set('manifest.json', rawManifest)

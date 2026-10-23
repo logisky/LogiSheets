@@ -114,6 +114,38 @@ describe('parseCraftPackage', () => {
         expect(code(() => parseCraftPackage(pkg(m), RESERVED))).toBe('hostApi')
     })
 
+    it('refuses a package needing a capability this host lacks', () => {
+        const m = manifest({requires: ['dataConnections']})
+        let err: unknown
+        try {
+            parseCraftPackage(pkg(m), RESERVED, new Set())
+        } catch (e) {
+            err = e
+        }
+        expect(err).toBeInstanceOf(CraftPackageError)
+        expect((err as CraftPackageError).code).toBe('unsupported')
+        expect((err as CraftPackageError).params.missing).toBe(
+            'dataConnections'
+        )
+    })
+
+    it('installs it on a host that provides the capability', () => {
+        const m = manifest({requires: ['dataConnections']})
+        const {manifest: parsed} = parseCraftPackage(
+            pkg(m),
+            RESERVED,
+            new Set(['dataConnections'])
+        )
+        expect(parsed.requires).toEqual(['dataConnections'])
+    })
+
+    it('refuses a malformed requires list', () => {
+        const m = manifest({requires: 'dataConnections'})
+        expect(code(() => parseCraftPackage(pkg(m), RESERVED))).toBe(
+            'badManifest'
+        )
+    })
+
     it('refuses a path that escapes the package', () => {
         const m = manifest({files: ['index.html', '../evil.js']})
         const bytes = pkg(m, {

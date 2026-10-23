@@ -26,6 +26,7 @@ import {
     getCraftState,
     setCraftState,
     makeCraftStorage,
+    makeDataConnections,
     registerCraftInputHandler,
     setActiveCraft,
     type CraftInputHandler,
@@ -39,7 +40,8 @@ import {
     getCraftRegistry,
 } from '@/core/craft-packages'
 import {loadInstalledCraftPage} from '@/core/craft-packages/loader'
-import {CraftManager} from './craft-manager'
+import {CraftManager, type CraftManagerTab} from './craft-manager'
+import {getDataConnectionsBackend} from '@/core/data-connections'
 import type {AiRole} from 'logisheets-logician'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
@@ -105,6 +107,7 @@ export const CraftPanel = ({
             : tools[0]?.key ?? wanted
     })
     const [managerOpen, setManagerOpen] = useState(false)
+    const [managerTab, setManagerTab] = useState<CraftManagerTab>('installed')
     // One store over every craft, so a craft's manifest and tool module are
     // fetched (or read from the package store) and cached once.
     const craftStore = useMemo(() => createAppCraftStore(), [])
@@ -314,6 +317,16 @@ export const CraftPanel = ({
         // ride the workbook — it persists across documents on this machine.
         // Bound to craftId so a craft only ever sees its own namespace.
         win.craftStorage = makeCraftStorage(craftId)
+        // SQL against connections the user saved in the host (desktop only;
+        // absent elsewhere, which crafts must check). Passwords stay in the
+        // OS keychain — see docs/craft/data-connections.md. Must agree with
+        // hostCapabilities(), which advertises `dataConnections` to installs.
+        const dataBackend = getDataConnectionsBackend()
+        if (dataBackend)
+            win.dataConnections = makeDataConnections(dataBackend, () => {
+                setManagerTab('connections')
+                setManagerOpen(true)
+            })
         // The craft→AI channel: the craft asks one of its declared @aiRoles a
         // question, and the model reads what it needs through the craft's own
         // read-only tools. Rebuilt per craft so consent and the busy indicator
@@ -473,7 +486,10 @@ export const CraftPanel = ({
                         size="small"
                         color="default"
                         aria-label={String(t('ui.craft.manage.openTip'))}
-                        onClick={() => setManagerOpen(true)}
+                        onClick={() => {
+                            setManagerTab('installed')
+                            setManagerOpen(true)
+                        }}
                     >
                         <ExtensionIcon fontSize="small" />
                     </IconButton>
@@ -498,6 +514,7 @@ export const CraftPanel = ({
             </Box>
             <CraftManager
                 open={managerOpen}
+                initialTab={managerTab}
                 onClose={() => setManagerOpen(false)}
             />
             {aiConsent && (
