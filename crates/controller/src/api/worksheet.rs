@@ -1813,8 +1813,8 @@ impl<'a> Worksheet<'a> {
         start_col: usize,
         end_row: usize,
         end_col: usize,
-    ) -> Vec<BlockInfo> {
-        let all_blocks = self.get_all_blocks();
+    ) -> Result<Vec<BlockInfo>> {
+        let all_blocks = self.get_all_blocks()?;
         let result = all_blocks
             .into_iter()
             .filter(|b| {
@@ -1828,12 +1828,12 @@ impl<'a> Worksheet<'a> {
                     && b.col_start >= start_col
             })
             .collect::<Vec<_>>();
-        result
+        Ok(result)
     }
 
     /// Blocks on this sheet a `col_cnt`-wide range can be linked to: same column
     /// count, and not already the target of a link.
-    pub fn get_linkable_blocks(&self, col_cnt: usize) -> Vec<BlockInfo> {
+    pub fn get_linkable_blocks(&self, col_cnt: usize) -> Result<Vec<BlockInfo>> {
         let linked: std::collections::HashSet<BlockId> = self
             .controller
             .status
@@ -1841,10 +1841,11 @@ impl<'a> Worksheet<'a> {
             .get_sheet_manager_assert(&self.sheet_id)
             .map(|m| m.links.values().map(|(_, br)| br.block_id()).collect())
             .unwrap_or_default();
-        self.get_all_blocks()
+        Ok(self
+            .get_all_blocks()?
             .into_iter()
             .filter(|b| b.col_cnt == col_cnt && !linked.contains(&b.block_id))
-            .collect()
+            .collect())
     }
 
     /// Every range on this sheet that is linked to a block, resolved to sheet
@@ -1896,265 +1897,24 @@ impl<'a> Worksheet<'a> {
             .collect()
     }
 
-    pub fn get_all_blocks(&self) -> Vec<BlockInfo> {
-        let sheet_nav = self
+    /// Every block on this sheet. Fails rather than panics when a block cannot
+    /// be described (see [`Self::get_block_info`]).
+    pub fn get_all_blocks(&self) -> Result<Vec<BlockInfo>> {
+        let Some(sheet_nav) = self
             .controller
             .status
             .navigator
             .sheet_navs
-            .get(&self.sheet_id);
-        if sheet_nav.is_none() {
-            return vec![];
-        }
-        let sheet_idx = self
-            .controller
-            .status
-            .sheet_info_manager
-            .get_sheet_idx(&self.sheet_id)
-            .unwrap();
-        let sheet_nav = sheet_nav.unwrap();
-        let blocks = sheet_nav
+            .get(&self.sheet_id)
+        else {
+            return Ok(vec![]);
+        };
+        sheet_nav
             .data
             .blocks
-            .clone()
-            .into_iter()
-            .map(|(id, block_place)| {
-                let mc = block_place.master;
-                let (row, col) = self
-                    .controller
-                    .status
-                    .navigator
-                    .fetch_normal_cell_idx(&self.sheet_id, &mc)
-                    .unwrap();
-                let schema = self
-                    .controller
-                    .status
-                    .block_schema_manager
-                    .schemas
-                    .get(&(self.sheet_id, id))
-                    .map(|s| {
-                        let text_fetcher = |id: TextId| {
-                            self.controller
-                                .status
-                                .text_id_manager
-                                .get_string(&id)
-                                .unwrap_or_default()
-                                .clone()
-                        };
-                        let key_value = |cell_id: BlockCellId| {
-                            self.controller
-                                .status
-                                .container
-                                .get_cell(self.sheet_id, &CellId::BlockCell(cell_id))
-                                .map(|cell| cell.value.to_string(&text_fetcher))
-                                .unwrap_or_default()
-                        };
-
-                        let (keys, fields, random_entries) = match s {
-                            Schema::RowSchema(schema) => {
-                                let keys = schema
-                                    .get_all_key_cell_ids(id, &block_place)
-                                    .into_iter()
-                                    .map(|cell_id| {
-                                        let idx = block_place
-                                            .rows
-                                            .iter()
-                                            .position(|row_id| row_id == &cell_id.row)
-                                            .unwrap();
-                                        crate::controller::display::BlockSchemaKeyEntry {
-                                            key: key_value(cell_id),
-                                            idx,
-                                        }
-                                    })
-                                    .collect::<Vec<_>>();
-                                let fields = schema
-                                    .fields
-                                    .iter()
-                                    .map(|(f, e)| {
-                                        let idx = block_place
-                                            .cols
-                                            .iter()
-                                            .position(|id| id == &e.field_axis_id)
-                                            .unwrap();
-                                        crate::controller::display::BlockSchemaFieldEntry::from_entry(f, idx, e)
-                                    })
-                                    .collect::<Vec<_>>();
-                                (keys, fields, vec![])
-                            }
-                            Schema::ColSchema(schema) => {
-                                let keys = schema
-                                    .get_all_key_cell_ids(id, &block_place)
-                                    .into_iter()
-                                    .map(|cell_id| {
-                                        let idx = block_place
-                                            .cols
-                                            .iter()
-                                            .position(|col_id| col_id == &cell_id.col)
-                                            .unwrap();
-                                        crate::controller::display::BlockSchemaKeyEntry {
-                                            key: key_value(cell_id),
-                                            idx,
-                                        }
-                                    })
-                                    .collect::<Vec<_>>();
-                                let fields = schema
-                                    .fields
-                                    .iter()
-                                    .map(|(f, e)| {
-                                        let idx = block_place
-                                            .rows
-                                            .iter()
-                                            .position(|id| id == &e.field_axis_id)
-                                            .unwrap();
-                                        crate::controller::display::BlockSchemaFieldEntry::from_entry(f, idx, e)
-                                    })
-                                    .collect::<Vec<_>>();
-                                (keys, fields, vec![])
-                            }
-                            Schema::RandomSchema(schema) => {
-                                let random_entries = schema
-                                    .key_field
-                                    .iter()
-                                    .map(|(k, row_id, col_id, render_id)| {
-                                        let row = block_place
-                                            .rows
-                                            .iter()
-                                            .position(|id| id == row_id)
-                                            .unwrap();
-                                        let col = block_place
-                                            .cols
-                                            .iter()
-                                            .position(|id| id == col_id)
-                                            .unwrap();
-                                        BlockSchemaRandomEntry {
-                                            key: k.clone(),
-                                            row,
-                                            col,
-                                            render_id: render_id.clone(),
-                                        }
-                                    })
-                                    .collect::<Vec<_>>();
-                                (vec![], vec![], random_entries)
-                            }
-                        };
-
-                        BlockSchema {
-                            name: s.get_ref_name(),
-                            schema_type: match s {
-                                Schema::RowSchema(_) => BlockSchemaType::Row,
-                                Schema::ColSchema(_) => BlockSchemaType::Col,
-                                Schema::RandomSchema(_) => BlockSchemaType::Random,
-                            },
-                            keys,
-                            fields,
-                            random_entries,
-                            header_idx: header_index(s, &block_place),
-                            key_idx: key_index(s, &block_place),
-                            unique_together: s
-                                .unique_together()
-                                .iter()
-                                .map(|g| crate::edit_action::UniqueTogetherGroup {
-                                    fields: g.clone(),
-                                })
-                                .collect(),
-                        }
-                    });
-
-                let mut field_renders = vec![];
-                let mut seen_render_ids = HashSet::new();
-                for i in block_place.rows.iter() {
-                    for j in block_place.cols.iter() {
-                        let cell_id = BlockCellId {
-                            block_id: id,
-                            row: *i,
-                            col: *j,
-                        };
-                        if let Some(render_id) = self
-                            .controller
-                            .status
-                            .block_schema_manager
-                            .get_render_id(&self.sheet_id, &cell_id)
-                        {
-                            if !seen_render_ids.insert(render_id.clone()) {
-                                continue;
-                            }
-                            if let Some(info) =
-                                self.controller.status.field_render_manager.get(&render_id)
-                            {
-                                let style = info.style.map(|sid| {
-                                    let raw_style =
-                                        self.controller.status.style_manager.get_style(sid);
-                                    let style_converter = StyleConverter {
-                                        theme_manager: &self.controller.settings.theme,
-                                    };
-                                    style_converter.convert_style(raw_style)
-                                });
-                                field_renders.push(crate::controller::display::FieldRenderEntry {
-                                    render_id,
-                                    style,
-                                    diy_render: info.diy_render.unwrap_or(false),
-                                });
-                            }
-                        }
-                    }
-                }
-                let mut cell_values = vec![];
-                for i in block_place.rows.iter() {
-                    for j in block_place.cols.iter() {
-                        let cell_id = CellId::BlockCell(BlockCellId {
-                            block_id: id,
-                            row: *i,
-                            col: *j,
-                        });
-                        let cell_value = self.get_value_by_id(&cell_id).unwrap();
-                        // BlockCellInfo.shadow_value is the legacy
-                        // single-shadow field; it now specifically
-                        // surfaces the Validation kind's shadow (the
-                        // only one the host's ValidationCell widget
-                        // currently subscribes to). Other kinds — e.g.
-                        // UserEditable — are queried directly via
-                        // get_shadow_cell_id and read separately.
-                        if let Some(shadow_id) = self.controller.sid_assigner.find_shadow_id(
-                            self.sheet_id,
-                            cell_id,
-                            crate::sid_assigner::ShadowKind::Validation,
-                        ) {
-                            let shadow_cell_id = CellId::EphemeralCell(shadow_id);
-                            let shadow_cell_value = self.get_value_by_id(&shadow_cell_id).unwrap();
-                            cell_values.push(BlockCellInfo {
-                                value: cell_value,
-                                shadow_value: Some(shadow_cell_value),
-                            });
-                        } else {
-                            cell_values.push(BlockCellInfo {
-                                value: cell_value,
-                                shadow_value: None,
-                            });
-                        }
-                    }
-                }
-                BlockInfo {
-                    analyzes: block_place.analyzes,
-                    pivot: block_place.pivot.as_ref().map(|p| p.to_parts()),
-                    analyzed_by: self.controller.status.navigator.analyzed_by(&self.sheet_id, id),
-                    sheet_idx,
-                    sheet_id: self.sheet_id,
-                    block_id: id,
-                    row_start: row,
-                    row_cnt: block_place.rows.len(),
-                    col_start: col,
-                    col_cnt: block_place.cols.len(),
-                    schema,
-                    field_renders,
-                    cells: cell_values,
-                    description: block_place.description.clone(),
-                    owner: block_place.owner.clone(),
-                    modify_policy: block_place.modify_policy,
-                    permissions: block_place.permissions.clone(),
-                }
-            })
-            .collect::<Vec<_>>();
-        return blocks;
+            .keys()
+            .map(|id| self.get_block_info(*id))
+            .collect()
     }
 
     /// Get the dimension of the sheet.
@@ -2718,48 +2478,55 @@ impl<'a> Worksheet<'a> {
             .status
             .navigator
             .get_block_place(&self.sheet_id, &block_id)?;
-        let schema = self
-            .controller
-            .status
-            .block_schema_manager
-            .schemas
-            .get(&(self.sheet_id, block_id))
-            .map(|s| {
-                let text_fetcher = |id: TextId| {
-                    self.controller
-                        .status
-                        .text_id_manager
-                        .get_string(&id)
-                        .unwrap_or_default()
-                        .clone()
-                };
-                let key_value = |cell_id: BlockCellId| {
-                    self.controller
-                        .status
-                        .container
-                        .get_cell(self.sheet_id, &CellId::BlockCell(cell_id))
-                        .map(|cell| cell.value.to_string(&text_fetcher))
-                        .unwrap_or_default()
-                };
+        let schema =
+            self.controller
+                .status
+                .block_schema_manager
+                .schemas
+                .get(&(self.sheet_id, block_id))
+                .map(|s| -> Result<BlockSchema> {
+                    // `position` of an axis id the schema names. Missing means the
+                    // schema outlived the shape it was bound to: report it, never
+                    // panic (this sits under the getAllBlocks RPC).
+                    let missing = |axis: &'static str| Error::BlockSchemaAxisMissing {
+                        block_id: block_id as usize,
+                        axis,
+                    };
+                    let text_fetcher = |id: TextId| {
+                        self.controller
+                            .status
+                            .text_id_manager
+                            .get_string(&id)
+                            .unwrap_or_default()
+                            .clone()
+                    };
+                    let key_value = |cell_id: BlockCellId| {
+                        self.controller
+                            .status
+                            .container
+                            .get_cell(self.sheet_id, &CellId::BlockCell(cell_id))
+                            .map(|cell| cell.value.to_string(&text_fetcher))
+                            .unwrap_or_default()
+                    };
 
-                let (keys, fields, random_entries) = match s {
-                    Schema::RowSchema(schema) => {
-                        let keys = schema
-                            .get_all_key_cell_ids(block_id, bp)
-                            .into_iter()
-                            .map(|cell_id| {
-                                let idx = block_place
-                                    .rows
-                                    .iter()
-                                    .position(|id| id == &cell_id.row)
-                                    .unwrap();
-                                crate::controller::display::BlockSchemaKeyEntry {
-                                    key: key_value(cell_id),
-                                    idx,
-                                }
-                            })
-                            .collect::<Vec<_>>();
-                        let fields = schema
+                    let (keys, fields, random_entries) = match s {
+                        Schema::RowSchema(schema) => {
+                            let keys = schema
+                                .get_all_key_cell_ids(block_id, bp)
+                                .into_iter()
+                                .map(|cell_id| {
+                                    let idx = block_place
+                                        .rows
+                                        .iter()
+                                        .position(|id| id == &cell_id.row)
+                                        .ok_or_else(|| missing("key row"))?;
+                                    Ok(crate::controller::display::BlockSchemaKeyEntry {
+                                        key: key_value(cell_id),
+                                        idx,
+                                    })
+                                })
+                                .collect::<Result<Vec<_>>>()?;
+                            let fields = schema
                             .fields
                             .iter()
                             .map(|(f, e)| {
@@ -2767,31 +2534,31 @@ impl<'a> Worksheet<'a> {
                                     .cols
                                     .iter()
                                     .position(|id| id == &e.field_axis_id)
-                                    .unwrap();
-                                crate::controller::display::BlockSchemaFieldEntry::from_entry(
+                                    .ok_or_else(|| missing("field axis"))?;
+                                Ok(crate::controller::display::BlockSchemaFieldEntry::from_entry(
                                     f, idx, e,
-                                )
+                                ))
                             })
-                            .collect::<Vec<_>>();
-                        (keys, fields, vec![])
-                    }
-                    Schema::ColSchema(schema) => {
-                        let keys = schema
-                            .get_all_key_cell_ids(block_id, bp)
-                            .into_iter()
-                            .map(|cell_id| {
-                                let idx = block_place
-                                    .cols
-                                    .iter()
-                                    .position(|id| id == &cell_id.col)
-                                    .unwrap();
-                                crate::controller::display::BlockSchemaKeyEntry {
-                                    key: key_value(cell_id),
-                                    idx,
-                                }
-                            })
-                            .collect::<Vec<_>>();
-                        let fields = schema
+                            .collect::<Result<Vec<_>>>()?;
+                            (keys, fields, vec![])
+                        }
+                        Schema::ColSchema(schema) => {
+                            let keys = schema
+                                .get_all_key_cell_ids(block_id, bp)
+                                .into_iter()
+                                .map(|cell_id| {
+                                    let idx = block_place
+                                        .cols
+                                        .iter()
+                                        .position(|id| id == &cell_id.col)
+                                        .ok_or_else(|| missing("key column"))?;
+                                    Ok(crate::controller::display::BlockSchemaKeyEntry {
+                                        key: key_value(cell_id),
+                                        idx,
+                                    })
+                                })
+                                .collect::<Result<Vec<_>>>()?;
+                            let fields = schema
                             .fields
                             .iter()
                             .map(|(f, e)| {
@@ -2799,54 +2566,61 @@ impl<'a> Worksheet<'a> {
                                     .rows
                                     .iter()
                                     .position(|id| id == &e.field_axis_id)
-                                    .unwrap();
-                                crate::controller::display::BlockSchemaFieldEntry::from_entry(
+                                    .ok_or_else(|| missing("field axis"))?;
+                                Ok(crate::controller::display::BlockSchemaFieldEntry::from_entry(
                                     f, idx, e,
-                                )
+                                ))
                             })
-                            .collect::<Vec<_>>();
-                        (keys, fields, vec![])
-                    }
-                    Schema::RandomSchema(schema) => {
-                        let random_entries = schema
-                            .key_field
-                            .iter()
-                            .map(|(k, row_id, col_id, render_id)| {
-                                let row =
-                                    block_place.rows.iter().position(|id| id == row_id).unwrap();
-                                let col =
-                                    block_place.cols.iter().position(|id| id == col_id).unwrap();
-                                BlockSchemaRandomEntry {
-                                    key: k.clone(),
-                                    row,
-                                    col,
-                                    render_id: render_id.clone(),
-                                }
-                            })
-                            .collect::<Vec<_>>();
-                        (vec![], vec![], random_entries)
-                    }
-                };
+                            .collect::<Result<Vec<_>>>()?;
+                            (keys, fields, vec![])
+                        }
+                        Schema::RandomSchema(schema) => {
+                            let random_entries = schema
+                                .key_field
+                                .iter()
+                                .map(|(k, row_id, col_id, render_id)| {
+                                    let row = block_place
+                                        .rows
+                                        .iter()
+                                        .position(|id| id == row_id)
+                                        .ok_or_else(|| missing("row"))?;
+                                    let col = block_place
+                                        .cols
+                                        .iter()
+                                        .position(|id| id == col_id)
+                                        .ok_or_else(|| missing("column"))?;
+                                    Ok(BlockSchemaRandomEntry {
+                                        key: k.clone(),
+                                        row,
+                                        col,
+                                        render_id: render_id.clone(),
+                                    })
+                                })
+                                .collect::<Result<Vec<_>>>()?;
+                            (vec![], vec![], random_entries)
+                        }
+                    };
 
-                BlockSchema {
-                    name: s.get_ref_name(),
-                    schema_type: match s {
-                        Schema::RowSchema(_) => BlockSchemaType::Row,
-                        Schema::ColSchema(_) => BlockSchemaType::Col,
-                        Schema::RandomSchema(_) => BlockSchemaType::Random,
-                    },
-                    keys,
-                    fields,
-                    random_entries,
-                    header_idx: header_index(s, &block_place),
-                    key_idx: key_index(s, &block_place),
-                    unique_together: s
-                        .unique_together()
-                        .iter()
-                        .map(|g| crate::edit_action::UniqueTogetherGroup { fields: g.clone() })
-                        .collect(),
-                }
-            });
+                    Ok(BlockSchema {
+                        name: s.get_ref_name(),
+                        schema_type: match s {
+                            Schema::RowSchema(_) => BlockSchemaType::Row,
+                            Schema::ColSchema(_) => BlockSchemaType::Col,
+                            Schema::RandomSchema(_) => BlockSchemaType::Random,
+                        },
+                        keys,
+                        fields,
+                        random_entries,
+                        header_idx: header_index(s, &block_place),
+                        key_idx: key_index(s, &block_place),
+                        unique_together: s
+                            .unique_together()
+                            .iter()
+                            .map(|g| crate::edit_action::UniqueTogetherGroup { fields: g.clone() })
+                            .collect(),
+                    })
+                })
+                .transpose()?;
 
         let mut field_renders = vec![];
         let mut seen_render_ids = HashSet::new();

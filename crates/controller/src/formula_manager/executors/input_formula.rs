@@ -302,6 +302,70 @@ pub fn remove_formula<C: FormulaExecCtx>(
     remove(executor, sheet, cell_id, ctx)
 }
 
+/// Drop the formula of a block cell addressed by (block_id, block_row,
+/// block_col). A no-op when the cell holds no formula.
+pub fn remove_block_formula<C: FormulaExecCtx>(
+    executor: FormulaExecutor,
+    sheet_idx: usize,
+    block_id: BlockId,
+    block_row: usize,
+    block_col: usize,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let sheet = ctx
+        .fetch_sheet_id_by_index(sheet_idx)
+        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+    let bcid = ctx.fetch_block_cell_id(&sheet, &block_id, block_row, block_col)?;
+    let cell_id = CellId::BlockCell(bcid);
+    if !executor.manager.formulas.contains_key(&(sheet, cell_id)) {
+        return Ok(executor);
+    }
+    remove(executor, sheet, cell_id, ctx)
+}
+
+/// Drop every formula a removed block owned: its cells' own and their shadow
+/// (validation / editability) formulas. Formulas are keyed by cell id, and a
+/// block created later under the same id hands out the same block cell ids, so
+/// leaving them would bring the old block's formulas back on the new one.
+///
+/// The block's ranges are already gone (the range executor runs first), so a
+/// cell formula is detached by hand rather than through [`remove`], which would
+/// allocate a fresh range id for the dead cell. Its dangling graph edges point
+/// at a removed range id, which is never reused, the same as for any deleted
+/// cell. Shadow cells keep their ranges and go through [`remove`].
+pub fn remove_block_formulas<C: FormulaExecCtx>(
+    mut executor: FormulaExecutor,
+    sheet: SheetId,
+    block_id: BlockId,
+    ctx: &mut C,
+) -> Result<FormulaExecutor, BasicError> {
+    let in_block = |cell: &CellId| matches!(cell, CellId::BlockCell(b) if b.block_id == block_id);
+    let mut shadows = vec![];
+    let mut cells = vec![];
+    for (s, cell) in executor.manager.formulas.keys() {
+        if *s != sheet {
+            continue;
+        }
+        match cell {
+            CellId::EphemeralCell(eid) => match ctx.get_cell_id_by_shadow_id(eid) {
+                Some((owner_sheet, owner)) if owner_sheet == sheet && in_block(&owner) => {
+                    shadows.push(*cell)
+                }
+                _ => {}
+            },
+            c if in_block(c) => cells.push(*c),
+            _ => {}
+        }
+    }
+    for cell in cells {
+        executor.manager.formulas.remove(&(sheet, cell));
+    }
+    for cell in shadows {
+        executor = remove(executor, sheet, cell, ctx)?;
+    }
+    Ok(executor)
+}
+
 pub fn remove_ephemeral_formula<C: FormulaExecCtx>(
     executor: FormulaExecutor,
     sheet_idx: usize,

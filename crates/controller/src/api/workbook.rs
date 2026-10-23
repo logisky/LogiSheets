@@ -898,12 +898,9 @@ impl Workbook {
                 };
             let ws = self.get_sheet_by_id(sid)?;
             for bid in block_ids {
-                // Skip blocks whose lookup fails (defensive — shouldn't
-                // happen with a consistent snapshot, but a missing block
-                // shouldn't sink the whole call).
-                if let Ok(info) = ws.get_block_info(bid) {
-                    out.push(info);
-                }
+                // A block that cannot be described is an engine bug; report
+                // it instead of silently leaving the block out.
+                out.push(ws.get_block_info(bid)?);
             }
         }
         Ok(out)

@@ -819,12 +819,12 @@ fn check(wb: &Workbook, stage: &str) {
     // Two blocks on sheet 1, three across the workbook — a block id colliding
     // across sheets must not merge them.
     assert_eq!(
-        ws1.get_all_blocks().len(),
+        ws1.get_all_blocks().unwrap().len(),
         3,
         "[{stage}] sheet 1 block count"
     );
     assert_eq!(
-        ws0.get_all_blocks().len(),
+        ws0.get_all_blocks().unwrap().len(),
         1,
         "[{stage}] sheet 0 block count"
     );

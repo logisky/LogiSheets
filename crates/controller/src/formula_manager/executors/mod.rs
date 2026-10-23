@@ -7,7 +7,8 @@ use std::collections::HashSet;
 pub use input_formula::{
     add_ast_node, convert_cells_to_block, input_block_cell_shadow_template,
     input_block_cell_template, input_block_formula, input_ephemeral_formula, input_formula,
-    rebuild_range_deps, remove_ephemeral_formula, remove_formula,
+    rebuild_range_deps, remove_block_formula, remove_block_formulas, remove_ephemeral_formula,
+    remove_formula,
 };
 use logisheets_base::{
     BlockId, BlockRange, CellId, CubeId, Range, RangeId, SheetId, errors::BasicError,
@@ -134,8 +135,10 @@ impl FormulaExecutor {
                 // Otherwise (no `=` prefix), fall through to the
                 // templated-field path: if the cell sits in a field
                 // with a schema-level valueFormula, that template is
-                // materialized; non-templated cells are a no-op here
-                // (the container path handles them).
+                // materialized. A non-templated cell takes the plain
+                // value from the container path; any formula it held is
+                // dropped here, or the next recalc would overwrite the
+                // value just written (the same reason `CellInput` drops it).
                 if let Some(formula) = p.input.strip_prefix('=') {
                     input_block_formula(
                         self,
@@ -147,7 +150,15 @@ impl FormulaExecutor {
                         ctx,
                     )
                 } else {
-                    input_block_cell_template(self, p.sheet_idx, p.block_id, p.row, p.col, ctx)
+                    let sheet = ctx
+                        .fetch_sheet_id_by_index(p.sheet_idx)
+                        .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                    let bcid = ctx.fetch_block_cell_id(&sheet, &p.block_id, p.row, p.col)?;
+                    if ctx.is_block_cell_templated(sheet, &bcid) {
+                        input_block_cell_template(self, p.sheet_idx, p.block_id, p.row, p.col, ctx)
+                    } else {
+                        remove_block_formula(self, p.sheet_idx, p.block_id, p.row, p.col, ctx)
+                    }
                 }
             }
             EditPayload::InsertRowsInBlock(p) => {
@@ -313,6 +324,12 @@ impl FormulaExecutor {
                     return Ok(self);
                 }
                 remove_formula(self, p.sheet_idx, p.row, p.col, ctx)
+            }
+            EditPayload::RemoveBlock(p) => {
+                let sheet = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                remove_block_formulas(self, sheet, p.id, ctx)
             }
             EditPayload::CreateLink(_) => {
                 // Creating a link remaps existing formulas' ranges to the block
