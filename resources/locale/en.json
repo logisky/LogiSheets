@@ -1081,7 +1081,7 @@
             "pointHint": "Left-click +1, right-click +5, hold Shift to subtract",
             "manage": {
                 "title": "Installed crafts",
-                "openTip": "Install or remove crafts",
+                "openTip": "Manage crafts",
                 "empty": "No crafts installed yet.",
                 "dropHint": "Pick a .craft file, or drop one here.",
                 "installFromFile": "Install from file…",

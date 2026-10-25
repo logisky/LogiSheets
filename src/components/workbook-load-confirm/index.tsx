@@ -1,14 +1,14 @@
 import React, {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
+import {Button} from '@mui/material'
+import {useEngine} from '@/core/engine/provider'
 import {
     Dialog,
-    DialogTitle,
+    DialogActions,
     DialogContent,
     DialogContentText,
-    DialogActions,
-    Button,
-} from '@mui/material'
-import {useEngine} from '@/core/engine/provider'
+    DialogTitle,
+} from '@/ui/dialog'
 
 /**
  * Guards every workbook load behind an overwrite confirmation.

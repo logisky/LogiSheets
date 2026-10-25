@@ -10,7 +10,6 @@ import {
 } from '@/core/i18n/i18n'
 import {globalStore} from '@/store'
 import styles from './toolbar.module.scss'
-import modalStyles from '../modal.module.scss'
 import {
     getSelectedCellRange,
     getSelectedLines,
@@ -52,7 +51,6 @@ import {
     loadPersistentCraftStates,
 } from 'logisheets-core'
 import {ColorResult, SketchPicker} from 'react-color'
-import Modal from 'react-modal'
 import Tooltip from '@mui/material/Tooltip'
 import Divider from '@mui/material/Divider'
 import Button from '@mui/material/Button'
@@ -80,7 +78,6 @@ import Popover from '@mui/material/Popover'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Tabs from '@mui/material/Tabs'
-import Dialog from '@mui/material/Dialog'
 import Tab from '@mui/material/Tab'
 import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -119,6 +116,7 @@ import {StandardColor, StandardFont} from '@/core/standable'
 import {useToast} from '@/ui/notification/useToast'
 import {TextField} from '@mui/material'
 import Select, {SelectChangeEvent} from '@mui/material/Select'
+import {Dialog} from '@/ui/dialog'
 
 // Common, widely-available font families offered in the picker. If the current
 // cell's font isn't in the list it's shown as an extra option so the value is
@@ -2438,32 +2436,30 @@ export const Toolbar = observer(
                 </div>
 
                 {/* Color pickers */}
-                <Modal
-                    isOpen={colorPicking !== ''}
-                    onRequestClose={() => setColorPicking('')}
-                    ariaHideApp={false}
-                    className={modalStyles.modalContent}
-                    overlayClassName={modalStyles.modalOverlay}
+                <Dialog
+                    open={colorPicking !== ''}
+                    onClose={() => setColorPicking('')}
+                    maxWidth={false}
+                    PaperProps={{sx: {p: 1.5}}}
                 >
                     <SketchPicker
                         color={colorPicking === 'font' ? fontColor : fillColor}
                         onChangeComplete={onPick}
                     />
-                </Modal>
+                </Dialog>
 
                 {/* Borders modal */}
-                <Modal
-                    isOpen={borderOpen}
-                    onRequestClose={() => setBorderOpen(false)}
-                    ariaHideApp={false}
-                    className={modalStyles.modalContent}
-                    overlayClassName={modalStyles.modalOverlay}
+                <Dialog
+                    open={borderOpen}
+                    onClose={() => setBorderOpen(false)}
+                    maxWidth={false}
+                    PaperProps={{sx: {p: 2}}}
                 >
                     <BorderSettingComponent
                         selectedData={selectedData}
                         close={() => setBorderOpen(false)}
                     />
-                </Modal>
+                </Dialog>
 
                 {/* Alignment popover (3x3 grid – we only wire horizontal choices) */}
                 <Popover

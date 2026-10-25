@@ -1081,7 +1081,7 @@
             "pointHint": "左键 +1，右键 +5，按住 Shift 为减",
             "manage": {
                 "title": "已安装的挂件",
-                "openTip": "安装或卸载挂件",
+                "openTip": "管理挂件",
                 "empty": "还没有安装任何挂件。",
                 "dropHint": "选择一个 .craft 文件，或拖放到这里。",
                 "installFromFile": "从文件安装…",

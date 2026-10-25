@@ -3,17 +3,7 @@ import {useTranslation} from 'react-i18next'
 import {observer} from 'mobx-react-lite'
 import {toast} from 'react-toastify'
 import {globalStore} from '@/store'
-import {
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    IconButton,
-    Tooltip,
-    Typography,
-} from '@mui/material'
+import {Box, Button, IconButton, Tooltip, Typography} from '@mui/material'
 import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import {
     Settings as SettingsIcon,
@@ -81,6 +71,7 @@ import {
     BLOCK_ON_SURFACE,
     BLOCK_TITLE_BG,
 } from './chrome'
+import {Dialog, DialogActions, DialogContent, DialogTitle} from '@/ui/dialog'
 
 export interface BlockInterfaceProps {
     grid: Grid

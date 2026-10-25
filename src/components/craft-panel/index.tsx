@@ -2,11 +2,6 @@ import {useTranslation} from 'react-i18next'
 import {
     Box,
     Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
     FormControl,
     IconButton,
     MenuItem,
@@ -15,7 +10,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesomeOutlined'
-import ExtensionIcon from '@mui/icons-material/ExtensionOutlined'
+import ManageIcon from '@mui/icons-material/SettingsOutlined'
 import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
@@ -48,6 +43,13 @@ import {blockEditBus} from '@/components/block-interface/edit-bus'
 import {globalStore} from '@/store'
 import {getLocale} from '@/core/i18n/i18n'
 import {toast} from 'react-toastify'
+import {
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+} from '@/ui/dialog'
 
 /**
  * `/lights-out/index.html` → `/lights-out/index.html?lang=zh-CN`.
@@ -491,7 +493,7 @@ export const CraftPanel = ({
                             setManagerOpen(true)
                         }}
                     >
-                        <ExtensionIcon fontSize="small" />
+                        <ManageIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
                 {aiBusy && (

@@ -8,14 +8,7 @@
 
 import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Typography,
-} from '@mui/material'
+import {Button, Typography} from '@mui/material'
 import {
     FieldRuleEditor,
     RULE_HELPER_TEXT,
@@ -24,6 +17,7 @@ import {
     ruleError,
 } from '@/components/block-composer/field-rule-editor'
 import type {FieldRuleKind} from '@/components/block-composer/field-formula'
+import {Dialog, DialogActions, DialogContent, DialogTitle} from '@/ui/dialog'
 
 export interface FieldRuleDialogProps {
     kind: FieldRuleKind

@@ -29,7 +29,9 @@
         "packages/**/wasm/**/*"
     ],
     "rules": {
-        "max-lines": ["off"],
+        "max-lines": [
+            "off"
+        ],
         "react/react-in-jsx-scope": "off",
         "no-console": "error",
         "no-alert": "error",
@@ -37,6 +39,50 @@
         "react/self-closing-comp": [
             "error"
         ],
-        "@typescript-eslint/no-unused-vars": "off"
-    }
+        "@typescript-eslint/no-unused-vars": "off",
+        "no-restricted-imports": [
+            "error",
+            {
+                "paths": [
+                    {
+                        "name": "@mui/material",
+                        "importNames": [
+                            "Dialog",
+                            "DialogTitle",
+                            "DialogContent",
+                            "DialogContentText",
+                            "DialogActions"
+                        ],
+                        "message": "Use the app's dialog from '@/ui/dialog' (same names and props as MUI's): it carries the shared rounded, hairline look. Stock MUI dialogs drift from the rest of the app."
+                    },
+                    {
+                        "name": "react-modal",
+                        "message": "Use the app's dialog from '@/ui/dialog' (same names and props as MUI's): it carries the shared rounded, hairline look. Stock MUI dialogs drift from the rest of the app."
+                    }
+                ],
+                "patterns": [
+                    {
+                        "group": [
+                            "@mui/material/Dialog",
+                            "@mui/material/DialogTitle",
+                            "@mui/material/DialogContent",
+                            "@mui/material/DialogContentText",
+                            "@mui/material/DialogActions"
+                        ],
+                        "message": "Use the app's dialog from '@/ui/dialog' (same names and props as MUI's): it carries the shared rounded, hairline look. Stock MUI dialogs drift from the rest of the app."
+                    }
+                ]
+            }
+        ]
+    },
+    "overrides": [
+        {
+            "files": [
+                "src/ui/dialog/**"
+            ],
+            "rules": {
+                "no-restricted-imports": "off"
+            }
+        }
+    ]
 }

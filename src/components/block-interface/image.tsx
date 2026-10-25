@@ -2,10 +2,6 @@ import {useState, MouseEvent} from 'react'
 import {useTranslation} from 'react-i18next'
 import {
     Box,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Button,
     TextField,
     FormControl,
@@ -21,6 +17,7 @@ import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import {BlockCellProps, valueToString} from './cell'
 import {pxToPt, pxToWidth} from '@/core'
 import {useEditable} from '@/core/permissions/use-editable'
+import {Dialog, DialogActions, DialogContent, DialogTitle} from '@/ui/dialog'
 
 type ImageSize = '50%' | '100%'
 

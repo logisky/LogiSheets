@@ -248,7 +248,7 @@ built-ins only.
 
 ## UI
 
-A puzzle-piece button in the craft panel header opens **Installed crafts**:
+A gear button (**Manage crafts**) in the craft panel header opens **Installed crafts**:
 the installed list with **Uninstall**, and **Install from file…** (a
 `.craft` file, or drop one on the dialog). Installing first shows id,
 version (old → new on an update, with a warning on a downgrade), publisher,

@@ -2,10 +2,6 @@ import {useMemo, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {
     Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     FormControl,
     InputLabel,
     Link,
@@ -17,6 +13,7 @@ import {
 } from '@mui/material'
 import type {BlockSchemaFieldEntry} from 'logisheets-engine'
 import type {AggFunc, AnalysisAggregate} from 'logisheets-core'
+import {Dialog, DialogActions, DialogContent, DialogTitle} from '@/ui/dialog'
 
 export interface AnalysisChoice {
     refName: string
