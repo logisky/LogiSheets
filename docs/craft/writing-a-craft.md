@@ -675,7 +675,7 @@ matches your code:
 
 **Publishing** is shipping that `dist/`. `craftsmith pack` zips it into
 `<craftId>-<version>.craft`, which a user installs from the craft panel
-(the puzzle-piece button → **Install from file…**, or drop the file on the
+(the gear button, **Manage crafts** → **Install from file…**, or drop the file on the
 dialog); it appears after a reload.
 
 To publish to the **craft registry**, open a PR with your craft's *source*

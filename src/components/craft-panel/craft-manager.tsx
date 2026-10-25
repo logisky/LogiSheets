@@ -263,7 +263,13 @@ export const CraftManager = ({
 
     return (
         <>
-            <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+            <Dialog
+                open={open}
+                onClose={onClose}
+                fullWidth
+                maxWidth={false}
+                PaperProps={{sx: {maxWidth: 720}}}
+            >
                 <DialogTitle sx={{pb: 0}}>
                     {t('ui.craft.manage.title')}
                 </DialogTitle>
@@ -307,7 +313,7 @@ export const CraftManager = ({
                         pt: 2,
                         // One height for every tab, so switching tabs does
                         // not make the dialog jump.
-                        height: 380,
+                        height: 440,
                         outline: dragging ? '2px dashed #90a4ae' : 'none',
                         outlineOffset: -8,
                     }}

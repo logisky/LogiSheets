@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesomeOutlined'
-import ExtensionIcon from '@mui/icons-material/ExtensionOutlined'
+import ManageIcon from '@mui/icons-material/SettingsOutlined'
 import {Selection, SelectedData, CellLayout} from 'logisheets-engine'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {useEngine} from '@/core/engine/provider'
@@ -493,7 +493,7 @@ export const CraftPanel = ({
                             setManagerOpen(true)
                         }}
                     >
-                        <ExtensionIcon fontSize="small" />
+                        <ManageIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
                 {aiBusy && (

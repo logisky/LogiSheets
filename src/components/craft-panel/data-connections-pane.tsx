@@ -137,136 +137,170 @@ export const DataConnectionsPane = () => {
         const c = draft.conn
         const isFile = c.kind === 'sqlite'
         return (
-            <Box sx={{display: 'flex', flexDirection: 'column', gap: 1.5}}>
+            // Compact rows: Name | Database, Type | Host | Port,
+            // User | Password, SSL (+ clear password).
+            <Box sx={{display: 'flex', flexDirection: 'column', gap: 1.25}}>
                 {error && <Alert severity="error">{error}</Alert>}
-                <TextField
-                    size="small"
-                    label={t('ui.craft.connections.name')}
-                    value={c.name}
-                    onChange={(e) => patch({name: e.target.value})}
-                    autoFocus
-                />
-                <TextField
-                    size="small"
-                    select
-                    label={t('ui.craft.connections.kind')}
-                    value={c.kind}
-                    onChange={(e) => {
-                        const kind = e.target.value as DataConnectionKind
-                        patch({kind, port: DEFAULT_PORT[kind]})
-                    }}
-                >
-                    {KINDS.map((k) => (
-                        <MenuItem key={k} value={k}>
-                            {t(`ui.craft.connections.kinds.${k}`)}
-                        </MenuItem>
-                    ))}
-                </TextField>
-                {!isFile && (
-                    <Box sx={{display: 'flex', gap: 1}}>
-                        <TextField
-                            size="small"
-                            label={t('ui.craft.connections.host')}
-                            value={c.host}
-                            onChange={(e) => patch({host: e.target.value})}
-                            sx={{flex: 1}}
-                        />
-                        <TextField
-                            size="small"
-                            type="number"
-                            label={t('ui.craft.connections.port')}
-                            value={c.port || ''}
-                            onChange={(e) =>
-                                patch({port: Number(e.target.value) || 0})
-                            }
-                            sx={{width: 110}}
-                        />
-                    </Box>
-                )}
-                <TextField
-                    size="small"
-                    label={t(
-                        isFile
-                            ? 'ui.craft.connections.databaseFile'
-                            : 'ui.craft.connections.database'
+                <Box sx={{display: 'flex', gap: 1}}>
+                    <TextField
+                        size="small"
+                        label={t('ui.craft.connections.name')}
+                        value={c.name}
+                        onChange={(e) => patch({name: e.target.value})}
+                        autoFocus
+                        sx={{flex: 1}}
+                    />
+                    <TextField
+                        size="small"
+                        label={t(
+                            isFile
+                                ? 'ui.craft.connections.databaseFile'
+                                : 'ui.craft.connections.database'
+                        )}
+                        value={c.database}
+                        onChange={(e) => patch({database: e.target.value})}
+                        // A file path is longer than a database name.
+                        sx={{flex: isFile ? 2 : 1}}
+                    />
+                </Box>
+                <Box sx={{display: 'flex', gap: 1}}>
+                    <TextField
+                        size="small"
+                        select
+                        label={t('ui.craft.connections.kind')}
+                        value={c.kind}
+                        onChange={(e) => {
+                            const kind = e.target.value as DataConnectionKind
+                            patch({kind, port: DEFAULT_PORT[kind]})
+                        }}
+                        sx={{width: 150, flexShrink: 0}}
+                    >
+                        {KINDS.map((k) => (
+                            <MenuItem key={k} value={k}>
+                                {t(`ui.craft.connections.kinds.${k}`)}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                    {!isFile && (
+                        <>
+                            <TextField
+                                size="small"
+                                label={t('ui.craft.connections.host')}
+                                value={c.host}
+                                onChange={(e) => patch({host: e.target.value})}
+                                sx={{flex: 1}}
+                            />
+                            <TextField
+                                size="small"
+                                type="number"
+                                label={t('ui.craft.connections.port')}
+                                value={c.port || ''}
+                                onChange={(e) =>
+                                    patch({port: Number(e.target.value) || 0})
+                                }
+                                sx={{width: 100, flexShrink: 0}}
+                            />
+                        </>
                     )}
-                    value={c.database}
-                    onChange={(e) => patch({database: e.target.value})}
-                />
+                </Box>
                 {!isFile && (
                     <>
-                        <TextField
-                            size="small"
-                            label={t('ui.craft.connections.user')}
-                            value={c.user}
-                            onChange={(e) => patch({user: e.target.value})}
-                        />
-                        <TextField
-                            size="small"
-                            type="password"
-                            autoComplete="new-password"
-                            label={t('ui.craft.connections.password')}
-                            // Keep the label up so the "kept" placeholder
-                            // shows without focusing the field.
-                            slotProps={{
-                                inputLabel: {
-                                    shrink: c.hasPassword || undefined,
-                                },
-                            }}
-                            placeholder={
-                                c.hasPassword
-                                    ? String(
-                                          t('ui.craft.connections.passwordKeep')
-                                      )
-                                    : ''
-                            }
-                            helperText={t('ui.craft.connections.passwordHint')}
-                            value={draft.password}
-                            disabled={draft.clearPassword}
-                            onChange={(e) =>
-                                setDraft({...draft, password: e.target.value})
-                            }
-                        />
-                        {c.hasPassword && (
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        size="small"
-                                        checked={draft.clearPassword}
-                                        onChange={(e) =>
-                                            setDraft({
-                                                ...draft,
-                                                password: '',
-                                                clearPassword: e.target.checked,
-                                            })
-                                        }
-                                    />
-                                }
-                                label={t('ui.craft.connections.clearPassword')}
+                        <Box sx={{display: 'flex', gap: 1}}>
+                            <TextField
+                                size="small"
+                                label={t('ui.craft.connections.user')}
+                                value={c.user}
+                                onChange={(e) => patch({user: e.target.value})}
+                                sx={{flex: 1}}
                             />
-                        )}
-                        <TextField
-                            size="small"
-                            select
-                            label={t('ui.craft.connections.ssl')}
-                            value={c.sslMode}
-                            onChange={(e) =>
-                                patch({
-                                    sslMode: e.target
-                                        .value as DataConnectionInfo['sslMode'],
-                                })
-                            }
+                            <TextField
+                                size="small"
+                                type="password"
+                                autoComplete="new-password"
+                                label={t('ui.craft.connections.password')}
+                                // Keep the label up so the "kept" placeholder
+                                // shows without focusing the field.
+                                slotProps={{
+                                    inputLabel: {
+                                        shrink: c.hasPassword || undefined,
+                                    },
+                                }}
+                                placeholder={
+                                    c.hasPassword
+                                        ? String(
+                                              t(
+                                                  'ui.craft.connections.passwordKeep'
+                                              )
+                                          )
+                                        : ''
+                                }
+                                value={draft.password}
+                                disabled={draft.clearPassword}
+                                onChange={(e) =>
+                                    setDraft({
+                                        ...draft,
+                                        password: e.target.value,
+                                    })
+                                }
+                                sx={{flex: 1}}
+                            />
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                gap: 1,
+                                alignItems: 'center',
+                            }}
                         >
-                            {(['disable', 'prefer', 'require'] as const).map(
-                                (m) => (
+                            <TextField
+                                size="small"
+                                select
+                                label={t('ui.craft.connections.ssl')}
+                                value={c.sslMode}
+                                onChange={(e) =>
+                                    patch({
+                                        sslMode: e.target
+                                            .value as DataConnectionInfo['sslMode'],
+                                    })
+                                }
+                                sx={{width: 150, flexShrink: 0}}
+                            >
+                                {(
+                                    ['disable', 'prefer', 'require'] as const
+                                ).map((m) => (
                                     <MenuItem key={m} value={m}>
                                         {t(
                                             `ui.craft.connections.sslModes.${m}`
                                         )}
                                     </MenuItem>
-                                )
+                                ))}
+                            </TextField>
+                            {c.hasPassword && (
+                                <FormControlLabel
+                                    sx={{ml: 0.5}}
+                                    control={
+                                        <Checkbox
+                                            size="small"
+                                            checked={draft.clearPassword}
+                                            onChange={(e) =>
+                                                setDraft({
+                                                    ...draft,
+                                                    password: '',
+                                                    clearPassword:
+                                                        e.target.checked,
+                                                })
+                                            }
+                                        />
+                                    }
+                                    label={t(
+                                        'ui.craft.connections.clearPassword'
+                                    )}
+                                />
                             )}
-                        </TextField>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                            {t('ui.craft.connections.passwordHint')}
+                        </Typography>
                     </>
                 )}
                 {testResult && (
