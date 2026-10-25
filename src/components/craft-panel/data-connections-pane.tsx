@@ -5,7 +5,6 @@ import {
     Button,
     Checkbox,
     CircularProgress,
-    DialogContentText,
     FormControlLabel,
     List,
     ListItem,
@@ -21,6 +20,7 @@ import type {
     DataConnectionTestResult,
 } from 'logisheets-core'
 import {getDataConnectionsBackend} from '@/core/data-connections'
+import {DialogContentText} from '@/ui/dialog'
 
 const KINDS: DataConnectionKind[] = ['postgres', 'mysql', 'sqlite']
 const DEFAULT_PORT: Record<DataConnectionKind, number> = {

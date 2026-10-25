@@ -2,11 +2,6 @@ import {useTranslation} from 'react-i18next'
 import {
     Box,
     Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
     FormControl,
     IconButton,
     MenuItem,
@@ -48,6 +43,13 @@ import {blockEditBus} from '@/components/block-interface/edit-bus'
 import {globalStore} from '@/store'
 import {getLocale} from '@/core/i18n/i18n'
 import {toast} from 'react-toastify'
+import {
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+} from '@/ui/dialog'
 
 /**
  * `/lights-out/index.html` → `/lights-out/index.html?lang=zh-CN`.

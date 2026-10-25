@@ -1,13 +1,6 @@
 import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
-import {
-    Box,
-    Button,
-    Typography,
-    Dialog,
-    DialogContent,
-    TextField,
-} from '@mui/material'
+import {Box, Button, Typography, TextField} from '@mui/material'
 import {
     getSelectedCellRange,
     SelectedData,
@@ -23,6 +16,7 @@ import {FieldList} from './field_list'
 import {FieldConfigPanel, type ExternalField} from './config_panel'
 import {dialogPaperSx} from './styles'
 import type {FieldSetting, FormBlockField} from 'logisheets-core'
+import {Dialog, DialogContent} from '@/ui/dialog'
 
 export * from './types'
 

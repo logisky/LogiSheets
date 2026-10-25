@@ -4,10 +4,6 @@ import {
     Box,
     Button,
     Collapse,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     Divider,
     FormControl,
     IconButton,
@@ -28,6 +24,7 @@ import type {
     PivotColumnSpec,
     PivotFilter,
 } from 'logisheets-core'
+import {Dialog, DialogActions, DialogContent, DialogTitle} from '@/ui/dialog'
 
 export interface PivotSpecChoice {
     refName: string

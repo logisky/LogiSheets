@@ -4,11 +4,6 @@ import {
     Box,
     Button,
     CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
     List,
     ListItem,
     ListItemText,
@@ -38,6 +33,13 @@ import {
 import {getLocale} from '@/core/i18n/i18n'
 import {getDataConnectionsBackend} from '@/core/data-connections'
 import {DataConnectionsPane} from './data-connections-pane'
+import {
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+} from '@/ui/dialog'
 
 export type CraftManagerTab = 'installed' | 'browse' | 'connections'
 
@@ -268,7 +270,11 @@ export const CraftManager = ({
                 <Tabs
                     value={tab}
                     onChange={(_, v) => setTab(v)}
-                    sx={{px: 3, borderBottom: '1px solid #e0e0e0'}}
+                    sx={{
+                        px: 2,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                    }}
                 >
                     <Tab
                         value="installed"
@@ -299,7 +305,9 @@ export const CraftManager = ({
                     }}
                     sx={{
                         pt: 2,
-                        minHeight: 260,
+                        // One height for every tab, so switching tabs does
+                        // not make the dialog jump.
+                        height: 380,
                         outline: dragging ? '2px dashed #90a4ae' : 'none',
                         outlineOffset: -8,
                     }}
@@ -438,12 +446,16 @@ export const CraftManager = ({
                         ) : (
                             <List dense>
                                 {browsable.map((c) => (
+                                    // Two flex columns, not `secondaryAction`:
+                                    // that slot is absolutely positioned, so a
+                                    // long status ("needs database
+                                    // connections") ran over the description.
                                     <ListItem
                                         key={c.craftId}
-                                        secondaryAction={rowAction(c)}
-                                        sx={{pr: 16}}
+                                        sx={{gap: 2, alignItems: 'center'}}
                                     >
                                         <ListItemText
+                                            sx={{flex: 1, minWidth: 0}}
                                             primary={`${labelOf(c)} · ${
                                                 c.latest
                                             }`}
@@ -451,18 +463,29 @@ export const CraftManager = ({
                                                 c.description ?? c.craftId
                                             }
                                         />
+                                        <Box
+                                            sx={{
+                                                flexShrink: 0,
+                                                maxWidth: 160,
+                                                textAlign: 'right',
+                                            }}
+                                        >
+                                            {rowAction(c)}
+                                        </Box>
                                     </ListItem>
                                 ))}
                             </List>
                         ))}
-                    <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        component="p"
-                        sx={{mt: 1}}
-                    >
-                        {t('ui.craft.manage.dropHint')}
-                    </Typography>
+                    {tab !== 'connections' && (
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            component="p"
+                            sx={{mt: 1}}
+                        >
+                            {t('ui.craft.manage.dropHint')}
+                        </Typography>
+                    )}
                     <input
                         ref={fileInput}
                         type="file"
@@ -481,13 +504,15 @@ export const CraftManager = ({
                     <Button onClick={onClose}>
                         {t('ui.craft.manage.close')}
                     </Button>
-                    <Button
-                        variant="contained"
-                        disabled={busy}
-                        onClick={() => fileInput.current?.click()}
-                    >
-                        {t('ui.craft.manage.installFromFile')}
-                    </Button>
+                    {tab !== 'connections' && (
+                        <Button
+                            variant="contained"
+                            disabled={busy}
+                            onClick={() => fileInput.current?.click()}
+                        >
+                            {t('ui.craft.manage.installFromFile')}
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
             {preview && m && (

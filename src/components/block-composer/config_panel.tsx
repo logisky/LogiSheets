@@ -17,10 +17,6 @@ import {
     FormControlLabel,
     Popover,
     Tooltip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
 } from '@mui/material'
 import {
     Add as AddIcon,
@@ -48,6 +44,7 @@ export interface ExternalField {
     name: string
 }
 import {useToast} from '@/ui/notification/useToast'
+import {Dialog, DialogActions, DialogContent, DialogTitle} from '@/ui/dialog'
 
 interface FieldConfigPanelProps {
     field: FieldSetting

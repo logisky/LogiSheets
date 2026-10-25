@@ -2,18 +2,18 @@ import type {SxProps, Theme} from '@mui/material/styles'
 
 /**
  * Shared "soft, rounded, hairline" look for the block composer, aligned with
- * the app's context menus (see `src/ui/context-menu`): a soft drop shadow,
+ * the app's context menus (see `src/ui/context-menu`) and dialogs
+ * (`src/ui/dialog`, which owns the dialog paper): a soft drop shadow,
  * `divider` hairlines, rounded corners, restrained monochrome buttons, and
  * small uppercase `text.secondary` section labels instead of heavy bold heads.
  */
 
-/** Dialog paper: rounded, hairline border, soft shadow (context-menu family). */
+/**
+ * Dialog paper: just the composer's size. The rounded, hairline, soft-shadow
+ * paper itself comes from the shared `@/ui/dialog`.
+ */
 export const dialogPaperSx: SxProps<Theme> = {
     height: '80vh',
-    borderRadius: 3,
-    border: '1px solid',
-    borderColor: 'divider',
-    boxShadow: '0 16px 48px rgba(0, 0, 0, 0.18)',
     overflow: 'hidden',
 }
 

@@ -34,7 +34,6 @@ import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import {ContextMenu, ContextMenuItem} from '@/ui/context-menu'
 import Box from '@mui/material/Box'
-import Dialog from '@mui/material/Dialog'
 import type {
     BlockInfo,
     ContextMenuContext,
@@ -58,6 +57,7 @@ import type {FieldSetting} from 'logisheets-core'
 import {useToast} from '@/ui/notification/useToast'
 import {globalStore} from '@/store'
 import {useOps} from '@/core/engine/provider'
+import {Dialog} from '@/ui/dialog'
 
 /** Payload of the engine/session `contextMenu` event. */
 export interface ContextMenuTrigger {

@@ -1,12 +1,7 @@
 import React from 'react'
 import {useTranslation} from 'react-i18next'
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-} from '@mui/material'
+import {Button} from '@mui/material'
+import {Dialog, DialogActions, DialogContent, DialogTitle} from '@/ui/dialog'
 
 export interface InvalidFormulaDialogProps {
     open: boolean
