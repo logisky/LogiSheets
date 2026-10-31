@@ -45,7 +45,7 @@ export default defineConfig({
             formats: ['es', 'umd'],
             fileName: (format) => `logisheets-engine.${format}.js`,
         },
-        rollupOptions: {
+        rolldownOptions: {
             // logisheets-web is bundled (not external) — it carries the WASM
             // bindings the worker needs.
             //
@@ -83,7 +83,13 @@ export default defineConfig({
             },
             mangle: {
                 properties: {
-                    regex: /^_/,
+                    // `_private` names only. `__`-prefixed ones belong to the
+                    // wasm-bindgen glue (`__wbg_*` imports, `__wbindgen_*`
+                    // exports) and must match the names compiled into the
+                    // .wasm — renaming them fails instantiation with a
+                    // LinkError. Since Vite 8 the inlined worker goes through
+                    // this pass too, so the glue is no longer spared.
+                    regex: /^_[^_]/,
                 },
             },
             format: {

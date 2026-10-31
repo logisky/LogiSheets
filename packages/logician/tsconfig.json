@@ -12,7 +12,7 @@
         "declarationDir": "dist",
         "outDir": "dist",
         "isolatedModules": true,
-        "lib": ["ES2018", "DOM"]
+        "lib": ["ES2020", "DOM"]
     },
     "include": ["src"]
 }

@@ -49,6 +49,6 @@
         "node": ">=18"
     },
     "devDependencies": {
-        "@types/node": "^18"
+        "@types/node": "^22"
     }
 }

@@ -28,7 +28,7 @@ export default defineConfig({
             },
             formats: ['es'],
         },
-        rollupOptions: {
+        rolldownOptions: {
             // logisheets-engine is a peer (only the /inline entry uses it).
             external: [
                 'react',
