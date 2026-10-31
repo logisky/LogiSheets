@@ -14,7 +14,7 @@ pub struct Object {
 pub struct KeyValue {
     pub key: String,
     pub value: Box<Value>,
-    pub position: usize,
+    pub position: u64,
 }
 
 #[derive(Debug)]

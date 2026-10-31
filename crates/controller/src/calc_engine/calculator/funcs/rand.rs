@@ -3,7 +3,7 @@ use crate::calc_engine::{
     connector::Connector,
 };
 use logisheets_parser::ast;
-use rand::{Rng, thread_rng};
+use rand::RngExt;
 
 pub fn calc<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
@@ -13,9 +13,7 @@ where
 
     let _ = fetcher.set_curr_as_dirty();
 
-    let mut rng = thread_rng();
-    // `gen` is a reserved keyword in edition 2024; call the method via r#.
-    CalcVertex::from_number(rng.r#gen())
+    CalcVertex::from_number(rand::rng().random())
 }
 
 pub fn calc_randbetween<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
@@ -36,6 +34,5 @@ where
     let bottom = start.trunc() as i32;
     let top = end.trunc() as i32;
 
-    let mut rng = thread_rng();
-    CalcVertex::from_number(rng.gen_range(bottom..=top) as f64)
+    CalcVertex::from_number(rand::rng().random_range(bottom..=top) as f64)
 }

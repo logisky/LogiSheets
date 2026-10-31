@@ -10,7 +10,7 @@ edition.workspace = true
 proc-macro = true
 
 [dependencies]
-syn = { version = "1.0.86", features = ["full"] }
-quote = "1.0.15"
-paste = "1.0.12"
-proc-macro2 = "1.0.36"
+syn = { version = "3.0.9", features = ["full"] }
+quote = "1.0.47"
+paste = "1.0.15"
+proc-macro2 = "1.0.107"

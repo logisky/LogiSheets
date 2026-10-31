@@ -7,12 +7,12 @@ description = "Collaborative editing server for LogiSheets — real-time multi-u
 license.workspace = true
 
 [dependencies]
-async-channel = "1.9.0"
-async-trait = "0.1.52"
-ezsockets = { version = "0.5.1" }
+async-channel = "2.5.0"
+async-trait = "0.1.92"
+ezsockets = { version = "0.7.2" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { version = "1.33" }
+tokio = { version = "1.54" }
 
 logisheets_controller = { workspace = true, features = ["sequencer"] }
 

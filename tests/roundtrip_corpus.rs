@@ -71,7 +71,7 @@ fn entries(bytes: &[u8]) -> HashMap<String, Vec<u8>> {
     let mut out = HashMap::new();
     for i in 0..zip.len() {
         let mut f = zip.by_index(i).unwrap();
-        let name = f.name().to_string();
+        let name = f.name().unwrap().to_string();
         if name.ends_with('/') {
             continue;
         }

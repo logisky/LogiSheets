@@ -7,7 +7,7 @@ use crate::xml_data::{Decl, KeyValue, Object, Value, XmlData};
 #[derive(Debug, PartialEq)]
 pub struct Element {
     pub tag: String,
-    pub positon: usize,
+    pub positon: u64,
 }
 
 impl From<KeyValue> for Element {
@@ -103,7 +103,7 @@ pub fn compare_object(obj1: Object, obj2: Object) -> Vec<Diff> {
     return result;
 }
 
-fn compare_value(tag: String, pos1: usize, v1: Value, v2: Value) -> Vec<Diff> {
+fn compare_value(tag: String, pos1: u64, v1: Value, v2: Value) -> Vec<Diff> {
     match (v1, v2) {
         (Value::Element(obj1), Value::Element(obj2)) => compare_object(obj1, obj2),
         (Value::AttrOrText(v1), Value::AttrOrText(v2)) => {

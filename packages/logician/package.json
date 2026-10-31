@@ -25,9 +25,9 @@
         "logisheets-web": "^1.16.1"
     },
     "devDependencies": {
-        "esbuild": "^0.21.0",
-        "typescript": "^6.0.0",
-        "vitest": "^3.2.6"
+        "esbuild": "^0.28.2",
+        "typescript": "^6.0.3",
+        "vitest": "^3.2.7"
     },
     "files": [
         "dist"

@@ -30,7 +30,9 @@ use sqlx::postgres::types::Oid;
 use sqlx::postgres::{PgConnectOptions, PgConnection, PgRow, PgSslMode, PgTypeInfo, PgTypeKind};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteConnection, SqliteRow};
 use sqlx::types::BigDecimal;
-use sqlx::{Column as _, Connection, Executor, Row, Statement, TypeInfo, ValueRef};
+use sqlx::{
+    Column as _, Connection, Executor, Row, SqlSafeStr as _, Statement, TypeInfo, ValueRef,
+};
 use tauri::{AppHandle, Manager, State};
 
 const FILE_NAME: &str = "data-connections.json";
@@ -433,6 +435,13 @@ pub struct QueryRequest<'a> {
     pub timeout: Duration,
 }
 
+/// The query text the user wrote. sqlx refuses a dynamic string unless it is
+/// asserted safe; running the user's own SQL is the point of a data
+/// connection, and every runner wraps it in a read-only transaction.
+fn user_sql(sql: &str) -> sqlx::SqlStr {
+    sqlx::AssertSqlSafe(sql.to_string()).into_sql_str()
+}
+
 fn sql_err(e: sqlx::Error) -> String {
     match e.as_database_error() {
         Some(db) => db.message().to_string(),
@@ -535,13 +544,16 @@ async fn run_pg(
     }
     let mut conn = PgConnection::connect_with(&opts).await.map_err(sql_err)?;
     conn.execute("BEGIN READ ONLY").await.map_err(sql_err)?;
-    conn.execute(format!("SET LOCAL statement_timeout = {}", req.timeout.as_millis()).as_str())
-        .await
-        .map_err(sql_err)?;
+    conn.execute(sqlx::AssertSqlSafe(format!(
+        "SET LOCAL statement_timeout = {}",
+        req.timeout.as_millis()
+    )))
+    .await
+    .map_err(sql_err)?;
 
     let types: Vec<PgTypeInfo> = req.params.iter().map(pg_param_type).collect();
     let stmt = (&mut conn)
-        .prepare_with(req.sql, &types)
+        .prepare_with(user_sql(req.sql), &types)
         .await
         .map_err(sql_err)?;
     let columns: Vec<ColumnInfo> = stmt
@@ -593,10 +605,15 @@ async fn run_mysql(
     // rejects the other's; whichever fails, the client deadline still holds.
     let ms = req.timeout.as_millis();
     let _ = conn
-        .execute(format!("SET SESSION max_execution_time = {ms}").as_str())
+        .execute(sqlx::AssertSqlSafe(format!(
+            "SET SESSION max_execution_time = {ms}"
+        )))
         .await;
     let _ = conn
-        .execute(format!("SET SESSION max_statement_time = {}", ms as f64 / 1000.0).as_str())
+        .execute(sqlx::AssertSqlSafe(format!(
+            "SET SESSION max_statement_time = {}",
+            ms as f64 / 1000.0
+        )))
         .await;
     // DDL commits implicitly in MySQL and would run OUTSIDE the transaction
     // below, so the session itself is made read-only too: that refuses
@@ -608,7 +625,10 @@ async fn run_mysql(
         .await
         .map_err(sql_err)?;
 
-    let stmt = (&mut conn).prepare(req.sql).await.map_err(sql_err)?;
+    let stmt = (&mut conn)
+        .prepare(user_sql(req.sql))
+        .await
+        .map_err(sql_err)?;
     let columns: Vec<ColumnInfo> = stmt
         .columns()
         .iter()
@@ -642,7 +662,10 @@ async fn run_sqlite(c: &ConnectionInfo, req: &QueryRequest<'_>) -> Result<QueryR
         .await
         .map_err(sql_err)?;
 
-    let stmt = (&mut conn).prepare(req.sql).await.map_err(sql_err)?;
+    let stmt = (&mut conn)
+        .prepare(user_sql(req.sql))
+        .await
+        .map_err(sql_err)?;
     let declared: Vec<Option<ColumnType>> = stmt
         .columns()
         .iter()

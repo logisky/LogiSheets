@@ -23,7 +23,7 @@ fn patch(bytes: &[u8], edits: &[(&str, Option<String>)]) -> Vec<u8> {
         let mut w = zip::ZipWriter::new(Cursor::new(&mut out));
         for i in 0..zip.len() {
             let mut f = zip.by_index(i).expect("entry");
-            let name = f.name().to_string();
+            let name = f.name().unwrap().to_string();
             if name.ends_with('/') {
                 continue;
             }
@@ -38,7 +38,7 @@ fn patch(bytes: &[u8], edits: &[(&str, Option<String>)]) -> Vec<u8> {
             };
             w.start_file(
                 name,
-                zip::write::FileOptions::default()
+                zip::write::SimpleFileOptions::default()
                     .compression_method(zip::CompressionMethod::Deflated),
             )
             .expect("start");
