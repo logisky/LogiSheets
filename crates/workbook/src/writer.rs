@@ -14,11 +14,11 @@ use crate::rtypes::{
     DRAWING, EXT_LINK, LOGISHEETS_APP_DATA, PERSON, PIVOT_CACHE_DEFINITION, PIVOT_CACHE_RECORDS,
     PIVOT_TABLE, RType, SST, STYLE, TABLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Write};
 use xmlserde::xml_serialize_with_decl;
 use zip::CompressionMethod;
-use zip::write::{FileOptions, ZipWriter};
+use zip::write::{SimpleFileOptions, ZipWriter};
 
 use crate::workbook::{DocProps, Wb, Worksheet, Xl};
 use zip::result::ZipResult;
@@ -55,6 +55,15 @@ impl From<&'static str> for FileLocation {
     }
 }
 
+impl std::fmt::Display for FileLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FileLocation::Ptr(s) => f.write_str(s),
+            FileLocation::Owned(s) => f.write_str(s),
+        }
+    }
+}
+
 impl From<FileLocation> for String {
     fn from(s: FileLocation) -> Self {
         match s {
@@ -70,7 +79,60 @@ pub struct WriteProof {
     pub rtype: RType<'static>,
 }
 
-type Writer<'a> = ZipWriter<Cursor<&'a mut Vec<u8>>>;
+/// A [`ZipWriter`] that remembers which entries it has written.
+///
+/// A preserved [`UnknownPart`](crate::workbook::UnknownPart) keeps its original
+/// path, so it can land on a path the modeled parts also use: WPS's
+/// `cellimages.xml` reaches the same `xl/media/` images a drawing does, and
+/// brings `xl/_rels/` and `xl/media/` along as directories. zip refuses a
+/// duplicate entry (older versions silently wrote two, which strict readers
+/// reject), so directories are added at most once and callers ask
+/// [`Writer::contains`] before writing a file someone else may own.
+struct Writer<'a> {
+    zip: ZipWriter<Cursor<&'a mut Vec<u8>>>,
+    names: HashSet<String>,
+}
+
+impl<'a> Writer<'a> {
+    fn new(buf: &'a mut Vec<u8>) -> Self {
+        Writer {
+            zip: ZipWriter::new(Cursor::new(buf)),
+            names: HashSet::new(),
+        }
+    }
+
+    fn contains(&self, name: &str) -> bool {
+        self.names.contains(name)
+    }
+
+    fn add_directory(&mut self, dir: &str, options: SimpleFileOptions) -> ZipResult<()> {
+        let dir = dir.trim_end_matches('/');
+        if !self.names.insert(format!("{}/", dir)) {
+            return Ok(());
+        }
+        self.zip.add_directory(dir, options)
+    }
+
+    fn start_file<S: ToString>(&mut self, name: S, options: SimpleFileOptions) -> ZipResult<()> {
+        let name = name.to_string();
+        self.names.insert(name.clone());
+        self.zip.start_file(name, options)
+    }
+
+    fn finish(self) -> ZipResult<()> {
+        self.zip.finish().map(|_| ())
+    }
+}
+
+impl Write for Writer<'_> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.zip.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.zip.flush()
+    }
+}
 
 /// Serialize a [`Wb`] into the bytes of an .xlsx (zip) package.
 ///
@@ -80,7 +142,7 @@ type Writer<'a> = ZipWriter<Cursor<&'a mut Vec<u8>>>;
 /// LogiSheets-only data, when present, goes to `logisheets/data.xml`.
 pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     let mut buf = Vec::<u8>::with_capacity(65535);
-    let mut writer: Writer = ZipWriter::new(Cursor::new(&mut buf));
+    let mut writer = Writer::new(&mut buf);
     let mut proofs = Vec::<WriteProof>::with_capacity(30);
 
     writer.add_directory("_rels", options())?;
@@ -165,8 +227,6 @@ pub fn write(wb: Wb) -> ZipResult<Vec<u8>> {
     write_relationships(Relationships { relationships }, &mut writer, "_rels/.rels")?;
 
     writer.finish()?;
-
-    drop(writer);
     Ok(buf)
 }
 
@@ -202,14 +262,14 @@ fn write_unknown_parts(
     overrides: &mut Vec<CtOverride>,
     defaults: &mut Vec<CtDefault>,
 ) -> ZipResult<()> {
-    use std::io::Write;
-    let mut dirs = std::collections::HashSet::<String>::new();
     for u in unknown {
         for part in u.parts.iter() {
+            // A modeled part already wrote these bytes from the same source path.
+            if writer.contains(&part.path) {
+                continue;
+            }
             if let Some((dir, _)) = part.path.rsplit_once('/') {
-                if dirs.insert(dir.to_string()) {
-                    let _ = writer.add_directory(dir, options());
-                }
+                writer.add_directory(dir, options())?;
             }
             writer.start_file(&part.path, options())?;
             writer.write_all(&part.data)?;
@@ -219,9 +279,7 @@ fn write_unknown_parts(
                     .and_then(|p| p.to_str().map(|s| s.to_string()));
                 if let Some(rp) = rp {
                     if let Some((dir, _)) = rp.rsplit_once('/') {
-                        if dirs.insert(dir.to_string()) {
-                            let _ = writer.add_directory(dir, options());
-                        }
+                        writer.add_directory(dir, options())?;
                     }
                     write_relationships(
                         Relationships {
@@ -293,7 +351,12 @@ fn write_xl(
     if !xl.medias.is_empty() {
         writer.add_directory("xl/media", options())?;
         for media in xl.medias.iter() {
-            writer.start_file(format!("xl/media/{}", media.name), options())?;
+            let path = format!("xl/media/{}", media.name);
+            // Already written as part of a preserved unknown part.
+            if writer.contains(&path) {
+                continue;
+            }
+            writer.start_file(path, options())?;
             writer.write(&media.data)?;
         }
     }
@@ -840,8 +903,8 @@ fn get_content_type(rtype: RType) -> &'static str {
     }
 }
 
-fn options() -> FileOptions {
-    FileOptions::default().compression_method(CompressionMethod::Stored)
+fn options() -> SimpleFileOptions {
+    SimpleFileOptions::default().compression_method(CompressionMethod::Stored)
 }
 
 #[cfg(test)]

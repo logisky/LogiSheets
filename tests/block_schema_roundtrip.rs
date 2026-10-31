@@ -1009,7 +1009,7 @@ fn data_xml(bytes: &[u8]) -> String {
         let mut f = zip.by_index(i).unwrap();
         // The archive also carries a bare `logisheets/` directory entry; match
         // the part itself, not its folder.
-        if f.name() != "logisheets/data.xml" {
+        if f.name().unwrap() != "logisheets/data.xml" {
             continue;
         }
         let mut s = String::new();

@@ -73,10 +73,6 @@ function resolveCraftTools(dev: boolean): {
 export default defineConfig(({command}) => {
     const craft = resolveCraftTools(command === 'serve')
     return {
-        // Keep function/class names through minification. The prebuilt engine's
-        // inlined Web Worker relies on names surviving; esbuild's default
-        // identifier mangling breaks its rendering in the production build.
-        esbuild: {keepNames: true},
         plugins: [
             react(),
             // Type-check in dev + build (parity with the old
@@ -130,6 +126,17 @@ export default defineConfig(({command}) => {
             // grid renders in a broken/partial state. Inlining (like the old
             // webpack `parser:{url:false}`) keeps the data URI intact.
             assetsInlineLimit: 20_000_000,
+            rolldownOptions: {
+                output: {
+                    // Keep function/class names through minification. The
+                    // prebuilt engine's inlined Web Worker relies on names
+                    // surviving; default identifier mangling breaks its
+                    // rendering in the production build. This was
+                    // `esbuild.keepNames` before Vite 8, which now ignores
+                    // that option without a warning.
+                    keepNames: true,
+                },
+            },
         },
         // Don't let esbuild's dep pre-bundler touch the giant engine bundle
         // (its inlined ~8MB data-URI WASM tripped webpack; skip pre-bundling it

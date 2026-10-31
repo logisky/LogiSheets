@@ -1605,7 +1605,7 @@ fn test_excel_table_round_trips_as_a_named_block() {
         let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
         for i in 0..zip.len() {
             let mut f = zip.by_index(i).unwrap();
-            if f.name().starts_with("xl/tables/") && f.name().ends_with(".xml") {
+            if f.name().unwrap().starts_with("xl/tables/") && f.name().unwrap().ends_with(".xml") {
                 use std::io::Read;
                 let mut s = String::new();
                 f.read_to_string(&mut s).unwrap();
@@ -1726,7 +1726,7 @@ fn test_block_is_saved_as_an_excel_table() {
         let mut found = String::new();
         for i in 0..zip.len() {
             let mut f = zip.by_index(i).unwrap();
-            if f.name().starts_with("xl/tables/") && f.name().ends_with(".xml") {
+            if f.name().unwrap().starts_with("xl/tables/") && f.name().unwrap().ends_with(".xml") {
                 use std::io::Read;
                 f.read_to_string(&mut found).unwrap();
             }
@@ -1903,7 +1903,7 @@ fn test_one_cell_anchor_chart_round_trips() {
         let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
         for i in 0..zip.len() {
             let mut f = zip.by_index(i).unwrap();
-            if f.name() == "xl/drawings/drawing1.xml" {
+            if f.name().unwrap() == "xl/drawings/drawing1.xml" {
                 use std::io::Read;
                 let mut s = String::new();
                 f.read_to_string(&mut s).unwrap();
@@ -1963,7 +1963,7 @@ fn test_chart_from_a_default_namespace_drawing_round_trips() {
         let mut found = String::new();
         for i in 0..zip.len() {
             let mut f = zip.by_index(i).unwrap();
-            if f.name() == "xl/drawings/drawing1.xml" {
+            if f.name().unwrap() == "xl/drawings/drawing1.xml" {
                 use std::io::Read;
                 f.read_to_string(&mut found).unwrap();
             }
@@ -1982,11 +1982,11 @@ fn test_chart_from_a_default_namespace_drawing_round_trips() {
     let mut has_chart_part = false;
     for i in 0..zip.len() {
         let mut f = zip.by_index(i).unwrap();
-        if f.name() == "xl/drawings/drawing1.xml" {
+        if f.name().unwrap() == "xl/drawings/drawing1.xml" {
             use std::io::Read;
             f.read_to_string(&mut drawing).unwrap();
         }
-        if f.name().starts_with("xl/charts/") && f.name().ends_with(".xml") {
+        if f.name().unwrap().starts_with("xl/charts/") && f.name().unwrap().ends_with(".xml") {
             has_chart_part = true;
         }
     }
@@ -2022,7 +2022,7 @@ fn test_pivot_table_and_cache_round_trip() {
     let parts = |bytes: &[u8]| -> Vec<String> {
         let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
         (0..zip.len())
-            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .map(|i| zip.by_index(i).unwrap().name().unwrap().to_string())
             .filter(|n| n.contains("pivot"))
             .collect()
     };
@@ -2075,14 +2075,14 @@ fn test_unmodeled_parts_survive_a_save() {
     let names = |bytes: &[u8]| -> Vec<String> {
         let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
         (0..zip.len())
-            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .map(|i| zip.by_index(i).unwrap().name().unwrap().to_string())
             .collect()
     };
     let text_of = |bytes: &[u8], want: &str| -> String {
         let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
         for i in 0..zip.len() {
             let mut f = zip.by_index(i).unwrap();
-            if f.name() == want {
+            if f.name().unwrap() == want {
                 use std::io::Read;
                 let mut s = String::new();
                 let _ = f.read_to_string(&mut s);

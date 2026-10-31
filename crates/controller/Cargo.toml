@@ -11,23 +11,22 @@ keywords = ["excel", "spreadsheet", "xlsx", "formula", "ooxml"]
 [dependencies]
 thiserror = { workspace = true }
 chrono = { workspace = true }
-futures = "0.3.19"
-colorsys = "0.6.7"
+futures = "0.3.34"
+colorsys = "0.7.3"
 imbl = { workspace = true }
-itertools = "0.10.5"
+itertools = "0.15.0"
 lazy_static = { workspace = true }
-num = "0.4.0"
-num-bigint = "0.4"
+num = "0.4.3"
+num-bigint = "0.5"
 num-traits = "0.2"
-quick-xml = { workspace = true, features = ["serialize"] }
-rand = "0.8.4"
+rand = "0.10.3"
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-statrs = "0.16.1"
-unicode-segmentation = "1.10.1"
+statrs = "0.19.1"
+unicode-segmentation = "1.13.3"
 wildescape = { workspace = true }
-uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
+uuid = { version = "1.29.0", features = ["v4", "fast-rng", "macro-diagnostics"] }
 
 ssf-rs = { workspace = true }
 

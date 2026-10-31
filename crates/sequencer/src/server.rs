@@ -24,16 +24,20 @@ impl ServerExt for SequencerServer {
     async fn on_connect(
         &mut self,
         _socket: ezsockets::Socket,
+        _request: ezsockets::Request,
         _address: std::net::SocketAddr,
-        _args: <Self::Session as SessionExt>::Args,
     ) -> Result<
         ezsockets::Session<<Self::Session as SessionExt>::ID, <Self::Session as SessionExt>::Call>,
-        Error,
+        Option<ezsockets::CloseFrame>,
     > {
         todo!()
     }
 
-    async fn on_disconnect(&mut self, _id: <Self::Session as SessionExt>::ID) -> Result<(), Error> {
+    async fn on_disconnect(
+        &mut self,
+        _id: <Self::Session as SessionExt>::ID,
+        _reason: Result<Option<ezsockets::CloseFrame>, Error>,
+    ) -> Result<(), Error> {
         todo!()
     }
 
@@ -53,19 +57,17 @@ struct SessionActor {
 impl SessionExt for SessionActor {
     type ID = UserId;
 
-    type Args = ();
-
     type Call = ();
 
     fn id(&self) -> &Self::ID {
         todo!()
     }
 
-    async fn on_text(&mut self, _text: String) -> Result<(), Error> {
+    async fn on_text(&mut self, _text: ezsockets::Utf8Bytes) -> Result<(), Error> {
         todo!()
     }
 
-    async fn on_binary(&mut self, _bytes: Vec<u8>) -> Result<(), Error> {
+    async fn on_binary(&mut self, _bytes: ezsockets::Bytes) -> Result<(), Error> {
         todo!()
     }
 

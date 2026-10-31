@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "esModuleInterop": true,
-    "types": ["reflect-metadata", "vitest/globals", "node"],
+    "types": ["vitest/globals", "node"],
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "isolatedModules": true,

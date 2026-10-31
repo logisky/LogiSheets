@@ -571,7 +571,7 @@ fn save_sheet_data<S: SaverTrait>(
         })
         .flatten()
         .sorted_by_key(|((r, _), _)| *r)
-        .group_by(|((row, _), _)| *row)
+        .chunk_by(|((row, _), _)| *row)
         .into_iter()
         .map(|(row, group)| {
             let cells = group

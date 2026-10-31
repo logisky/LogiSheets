@@ -57,6 +57,10 @@ pub async fn llm_fetch(req: HttpRequest) -> Result<HttpResponse, String> {
     let method = reqwest::Method::from_bytes(req.method.as_bytes())
         .map_err(|e| format!("invalid HTTP method '{}': {e}", req.method))?;
 
+    // reqwest is built without a bundled crypto provider (see Cargo.toml), and
+    // building a client without one panics. Installing is process-wide and
+    // fails harmlessly once one is already in place.
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let client = reqwest::Client::new();
     let mut builder = client.request(method, &req.url);
     for (name, value) in &req.headers {

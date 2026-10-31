@@ -28,16 +28,22 @@ serde_json = { version = "1" }
 # LLM providers (Kimi/Moonshot, Anthropic, ...) from Rust instead of the webview
 # fetch, sidestepping browser CORS. rustls avoids a system OpenSSL dependency so
 # the desktop build stays portable across CI runners.
-reqwest = { version = "0.12", default-features = false, features = [
-    "rustls-tls",
+#
+# `rustls-no-provider` + the explicit `rustls/ring` below, not plain `rustls`:
+# since 0.13 that pulls in aws-lc-rs (a C/cmake build), and sqlx already brings
+# ring. With both providers compiled in rustls cannot pick a default and the
+# first HTTPS request panics, so there must be exactly one.
+reqwest = { version = "0.13", default-features = false, features = [
+    "rustls-no-provider",
     "charset",
 ] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 # Package bytes cross IPC as base64 (src/crafts.rs).
-base64 = "0.22"
+base64 = "0.23"
 # Data connections (src/db.rs): SQL against Postgres / MySQL / SQLite for the
 # `dataConnections` craft capability. rustls for the same portability reason as
 # reqwest; bigdecimal so NUMERIC/DECIMAL round-trip exactly as strings.
-sqlx = { version = "0.8", default-features = false, features = [
+sqlx = { version = "0.9", default-features = false, features = [
     "runtime-tokio",
     "tls-rustls",
     "postgres",

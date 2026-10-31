@@ -13,7 +13,7 @@ regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-zip = { version = "0.6.0", default-features = false, features = ["deflate"] }
+zip = { version = "9.1.3", default-features = false, features = ["deflate"] }
 gents = { workspace = true }
 gents_derives = { workspace = true }
 xmlserde = { workspace = true }

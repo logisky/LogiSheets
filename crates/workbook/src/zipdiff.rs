@@ -9,11 +9,11 @@ pub fn zipdiff(zip1: &[u8], zip2: &[u8]) {
     let mut archive2 = ZipArchive::new(Cursor::new(zip2)).unwrap();
     let files1 = archive1
         .file_names()
-        .map(|s| String::from(s))
+        .map(|s| String::from(s.unwrap()))
         .collect::<HashSet<_>>();
     let files2 = archive2
         .file_names()
-        .map(|s| String::from(s))
+        .map(|s| String::from(s.unwrap()))
         .collect::<HashSet<_>>();
 
     for x in files1.difference(&files2) {

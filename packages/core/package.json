@@ -66,9 +66,9 @@
         "logisheets-web": "^1.16.1"
     },
     "devDependencies": {
-        "@types/node": "^18",
+        "@types/node": "^22",
         "logisheets-web": "workspace:*",
-        "typescript": "^6.0.0",
-        "vitest": "3.2.6"
+        "typescript": "^6.0.3",
+        "vitest": "5.0.5"
     }
 }

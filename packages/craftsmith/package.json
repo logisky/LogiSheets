@@ -25,9 +25,9 @@
     "author": "Jeremy He",
     "license": "MIT",
     "dependencies": {
-        "esbuild": "^0.21.0",
-        "fflate": "^0.8.2",
-        "typescript": "^6.0.0"
+        "esbuild": "^0.28.2",
+        "fflate": "^0.8.3",
+        "typescript": "^6.0.3"
     },
     "files": [
         "dist",
@@ -49,6 +49,6 @@
         "node": ">=18"
     },
     "devDependencies": {
-        "@types/node": "^18"
+        "@types/node": "^22"
     }
 }
