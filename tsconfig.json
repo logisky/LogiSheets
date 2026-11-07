@@ -3,8 +3,6 @@
     "allowJs": true,
     "esModuleInterop": true,
     "types": ["vitest/globals", "node"],
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "lib": [

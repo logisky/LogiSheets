@@ -1,4 +1,4 @@
-import {makeAutoObservable, observable} from 'mobx'
+import {makeAutoObservable} from 'mobx'
 import {SETTINGS} from './service'
 import {createContext} from 'react'
 
@@ -7,7 +7,6 @@ export class Settings {
         makeAutoObservable(this)
     }
 
-    @observable
     settings = SETTINGS
 }
 

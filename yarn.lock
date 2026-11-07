@@ -9016,44 +9016,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mobx-react-lite@npm:^4.1.1":
-  version: 4.1.1
-  resolution: "mobx-react-lite@npm:4.1.1"
-  dependencies:
-    use-sync-external-store: "npm:^1.4.0"
+"mobx-react-lite@npm:^5.1.2":
+  version: 5.1.2
+  resolution: "mobx-react-lite@npm:5.1.2"
   peerDependencies:
-    mobx: ^6.9.0
-    react: ^16.8.0 || ^17 || ^18 || ^19
-  peerDependenciesMeta:
-    react-dom:
-      optional: true
-    react-native:
-      optional: true
-  checksum: 10c0/296b29487dc9fae7b7dd8eb39454d980fcfe59bf4c160ac911faa55469f9ebe2953661efca588f6d7929a2b071f234c7c4d717beaf5819d548be9b58c39874f1
+    mobx: ^7.0.0
+    react: ^18 || ^19
+  checksum: 10c0/801f0a02758a0fa94fbe9c11685b5d0d4a4859a5e4eed21329f179b4b60babb171fe1e8292296e28a99218aac9db985f8c7cd3acff8379ca91a8ff7dcc0b430b
   languageName: node
   linkType: hard
 
-"mobx-react@npm:^9.2.2":
-  version: 9.2.2
-  resolution: "mobx-react@npm:9.2.2"
-  dependencies:
-    mobx-react-lite: "npm:^4.1.1"
-  peerDependencies:
-    mobx: ^6.9.0
-    react: ^16.8.0 || ^17 || ^18 || ^19
-  peerDependenciesMeta:
-    react-dom:
-      optional: true
-    react-native:
-      optional: true
-  checksum: 10c0/f2aeb194d1b3f405d1f4f89164cf004b38575fb004f0d4cbb7219927bac47ecc0c668521b24406b78f6d1ec71ac39bd6ae02b7b7dc2762188508888b4fb2a1c7
-  languageName: node
-  linkType: hard
-
-"mobx@npm:^6.16.1":
-  version: 6.16.1
-  resolution: "mobx@npm:6.16.1"
-  checksum: 10c0/8450dab51fa133c9dde9f6c9b42cdc9f16c70cf2b989acc25b2cf2c66948def053ad3f1fdfc3bc256ece394e607e9c15dbfe88792ffa81a041e2ec92ae268cdb
+"mobx@npm:^7.1.5":
+  version: 7.1.5
+  resolution: "mobx@npm:7.1.5"
+  checksum: 10c0/802105afe7655883881803e4b66f13351e1f33a5c433686a6b728833ee7dcbe5b5227066a848c07dc1afbd27757a01cebe9ef6e42bf673bce4531b1f1d5d37fd
   languageName: node
   linkType: hard
 
@@ -10648,8 +10624,8 @@ __metadata:
     logisheets-engine: "workspace:*"
     logisheets-logician: "workspace:*"
     logisheets-web: "workspace:*"
-    mobx: "npm:^6.16.1"
-    mobx-react: "npm:^9.2.2"
+    mobx: "npm:^7.1.5"
+    mobx-react-lite: "npm:^5.1.2"
     neverthrow: "npm:^8.2.0"
     numfmt: "npm:2.5.2"
     prettier: "npm:^2.8.8"
@@ -12009,15 +11985,6 @@ __metadata:
   peerDependencies:
     react: ^16.8.0 || ^17.0.0 || ^18.0.0
   checksum: 10c0/3d596e65a6b47b2f1818061599738e00daad1f9a9bb4e5ce1f014b20a35b297e50fe4bf1d8c1699ab43ea97f01f84649a736c15ceff96de83bfa696925f6cc6b
-  languageName: node
-  linkType: hard
-
-"use-sync-external-store@npm:^1.4.0":
-  version: 1.4.0
-  resolution: "use-sync-external-store@npm:1.4.0"
-  peerDependencies:
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: 10c0/ec011a5055962c0f6b509d6e78c0b143f8cd069890ae370528753053c55e3b360d3648e76cfaa854faa7a59eb08d6c5fb1015e60ffde9046d32f5b2a295acea5
   languageName: node
   linkType: hard
 
