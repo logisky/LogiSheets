@@ -9,6 +9,7 @@ import {
     type Locale,
 } from '@/core/i18n/i18n'
 import {globalStore} from '@/store'
+import {closePopoutWindow, openPopoutWindow} from '@/ui/popout-window'
 import styles from './toolbar.module.scss'
 import {
     getSelectedCellRange,
@@ -1525,6 +1526,25 @@ export const Toolbar = observer(
                                         checked: globalStore.splitView,
                                         onChange: (v: boolean) =>
                                             globalStore.setSplitView(v),
+                                    },
+                                    {
+                                        label: t('toolbar.view.popoutView'),
+                                        checked: !!globalStore.popoutWindow,
+                                        // Opened here, inside the click: a
+                                        // webview blocks it any later.
+                                        onChange: (v: boolean) => {
+                                            if (!v)
+                                                closePopoutWindow(
+                                                    globalStore.popoutWindow
+                                                )
+                                            globalStore.setPopoutWindow(
+                                                v
+                                                    ? openPopoutWindow(
+                                                          'logisheets-popout'
+                                                      )
+                                                    : null
+                                            )
+                                        },
                                     },
                                     {
                                         label: t('toolbar.view.diffLayer'),

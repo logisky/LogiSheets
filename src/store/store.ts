@@ -15,6 +15,9 @@ export interface ActiveViewContext {
     setSelection: (d: SelectedData) => void
 }
 
+/** View id of the pop-out window's view (see `popoutWindow`). */
+export const POPOUT_VIEW_ID = 'popout'
+
 export class GlobalStore {
     constructor() {
         makeObservable(this, {
@@ -22,6 +25,7 @@ export class GlobalStore {
             llmSetupRequests: observable,
             alwaysShowBlockInfo: observable,
             splitView: observable,
+            popoutWindow: observableRef,
             activeViewId: observable,
             activeViewContext: observableRef,
             diffLayerEnabled: observable,
@@ -36,6 +40,7 @@ export class GlobalStore {
             requestLlmSetup: action,
             setAlwaysShowBlockInfo: action,
             setSplitView: action,
+            setPopoutWindow: action,
             setActiveViewId: action,
             setActiveViewContext: action,
             setDiffLayerEnabled: action,
@@ -87,6 +92,18 @@ export class GlobalStore {
         this.splitView = v
         // Closing the split returns focus to the main view.
         if (!v) this.activeViewId = 'main'
+    }
+
+    // When set, a second view of the same workbook is shown in this OS
+    // window (a pop-out sharing this page's engine), e.g. on another screen.
+    // The window itself, not a flag: it must be opened in the click handler
+    // (see openPopoutWindow), before anything renders.
+    popoutWindow: Window | null = null
+
+    setPopoutWindow(w: Window | null) {
+        this.popoutWindow = w
+        if (!w && this.activeViewId === POPOUT_VIEW_ID)
+            this.activeViewId = 'main'
     }
 
     // Which view currently has focus. With a split view both views can hold

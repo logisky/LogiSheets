@@ -25,6 +25,7 @@ import type {Grid, EngineConfig, ZoomOrigin} from '$types/index'
 import {mount, unmount} from 'svelte'
 import Spreadsheet from './components/Spreadsheet.svelte'
 import type {ContextMenuContext} from './components/contextMenuTypes'
+import {hostWindow} from './components/utils'
 
 /** Events scoped to a single view. */
 export type SessionEventType =
@@ -252,7 +253,11 @@ export class Session {
     async initOffscreen(canvas: HTMLCanvasElement): Promise<void> {
         if ('transferControlToOffscreen' in canvas) {
             const offscreen = canvas.transferControlToOffscreen()
-            await this._dataService.initOffscreen(offscreen, this._canvasId)
+            await this._dataService.initOffscreen(
+                offscreen,
+                this._canvasId,
+                hostWindow(canvas).devicePixelRatio
+            )
         }
     }
 
@@ -393,7 +398,7 @@ export class Session {
         const result = await this._dataService.resize(
             width,
             height,
-            window.devicePixelRatio,
+            hostWindow(this._mountContainer).devicePixelRatio,
             this._canvasId
         )
         if (isErrorMessage(result)) {

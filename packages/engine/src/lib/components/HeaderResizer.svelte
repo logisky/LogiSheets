@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { hostWindow } from './utils'
     /**
      * HeaderResizer - A draggable handle for resizing column widths or row heights.
      * Shows visual guides during drag operation.
@@ -37,6 +38,7 @@
     let startPos: { x: number; y: number } | null = null
 
     function onMouseDown(e: MouseEvent) {
+        const win = hostWindow(e.target)
         e.preventDefault()
         e.stopPropagation()
         startPos = { x: e.clientX, y: e.clientY }
@@ -53,8 +55,8 @@
         }
 
         const onUp = (ue: MouseEvent) => {
-            window.removeEventListener('mousemove', onMove)
-            window.removeEventListener('mouseup', onUp)
+            win.removeEventListener('mousemove', onMove)
+            win.removeEventListener('mouseup', onUp)
             if (!startPos) return
             const dx = ue.clientX - startPos.x
             const dy = ue.clientY - startPos.y
@@ -65,8 +67,8 @@
             delta = 0
         }
 
-        window.addEventListener('mousemove', onMove)
-        window.addEventListener('mouseup', onUp)
+        win.addEventListener('mousemove', onMove)
+        win.addEventListener('mouseup', onUp)
     }
 
     // Computed styles

@@ -6,6 +6,7 @@ import {isErrorMessage} from 'logisheets-web'
 import {useWorkbook} from '@/core/engine/provider'
 import {LeftTop} from '@/core/settings'
 import {globalStore, type TraceRect} from '@/store'
+import {useHostWindow} from '@/ui/popout-window'
 
 export interface TraceLayerProps {
     grid: Grid
@@ -26,6 +27,7 @@ export interface TraceLayerProps {
  * Esc clears the trace.
  */
 export const TraceLayer = observer(({grid, activeSheet}: TraceLayerProps) => {
+    const hostWin = useHostWindow()
     const workbook = useWorkbook()
     const req = globalStore.traceRequest
 
@@ -94,9 +96,9 @@ export const TraceLayer = observer(({grid, activeSheet}: TraceLayerProps) => {
             if (e.key === 'Escape' && globalStore.traceResult)
                 globalStore.clearTrace()
         }
-        window.addEventListener('keydown', onKey)
-        return () => window.removeEventListener('keydown', onKey)
-    }, [])
+        hostWin.addEventListener('keydown', onKey)
+        return () => hostWin.removeEventListener('keydown', onKey)
+    }, [hostWin])
 
     const result = globalStore.traceResult
     if (!result) return null

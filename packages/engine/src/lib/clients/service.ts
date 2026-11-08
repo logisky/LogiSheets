@@ -175,8 +175,12 @@ export class DataService {
      * Register a transferred canvas under `canvasId`. Must precede any
      * render/resize for that id. Pair with {@link disposeOffscreen}.
      */
-    public initOffscreen(canvas: OffscreenCanvas, canvasId = 0): Resp<void> {
-        return this._offscreen.init(canvasId, canvas, window.devicePixelRatio)
+    public initOffscreen(
+        canvas: OffscreenCanvas,
+        canvasId = 0,
+        dpr = window.devicePixelRatio
+    ): Resp<void> {
+        return this._offscreen.init(canvasId, canvas, dpr)
     }
 
     /**

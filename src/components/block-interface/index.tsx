@@ -72,6 +72,7 @@ import {
     BLOCK_TITLE_BG,
 } from './chrome'
 import {Dialog, DialogActions, DialogContent, DialogTitle} from '@/ui/dialog'
+import {useHostWindow} from '@/ui/popout-window'
 
 export interface BlockInterfaceProps {
     grid: Grid
@@ -540,6 +541,9 @@ interface BlockInterfaceInternalProps {
 
 const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
     const {t} = useTranslation()
+    // Drags and hover track the window this view renders in (a pop-out's,
+    // else the main one).
+    const hostWin = useHostWindow()
     const {
         x,
         y,
@@ -982,11 +986,11 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                 mx >= left && mx <= right && my >= top && my <= bottom
             setIsHover(inside)
         }
-        window.addEventListener('mousemove', onMove)
+        hostWin.addEventListener('mousemove', onMove)
         return () => {
-            window.removeEventListener('mousemove', onMove)
+            hostWin.removeEventListener('mousemove', onMove)
         }
-    }, [x, y, width, height, canvasStartX, canvasStartY, isHover])
+    }, [x, y, width, height, canvasStartX, canvasStartY, isHover, hostWin])
 
     // Report hover to the parent, which is the only place that can light up
     // this block's PARTNER — a block and its analysis are siblings in the same
@@ -1212,8 +1216,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         }
 
         const onUp = async () => {
-            window.removeEventListener('mousemove', onMove)
-            window.removeEventListener('mouseup', onUp)
+            hostWin.removeEventListener('mousemove', onMove)
+            hostWin.removeEventListener('mouseup', onUp)
             checkToken++ // invalidate any in-flight live check
             setIsDragging(false)
             setDragGhost(null)
@@ -1230,8 +1234,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
             await ops.moveBlock(sheetIdx, blockId, master.row, master.col)
         }
 
-        window.addEventListener('mousemove', onMove)
-        window.addEventListener('mouseup', onUp)
+        hostWin.addEventListener('mousemove', onMove)
+        hostWin.addEventListener('mouseup', onUp)
     }
 
     // Field-header drag-to-reorder. Grab a field header and drop it at another
@@ -1290,8 +1294,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
         }
 
         const onUp = async () => {
-            window.removeEventListener('mousemove', onMove)
-            window.removeEventListener('mouseup', onUp)
+            hostWin.removeEventListener('mousemove', onMove)
+            hostWin.removeEventListener('mouseup', onUp)
             setFieldDrag(null)
             if (!dragging || ins === null) return
             // `move_line` is remove(from) then insert(to), so `to` is the
@@ -1310,8 +1314,8 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
             }
         }
 
-        window.addEventListener('mousemove', onMove)
-        window.addEventListener('mouseup', onUp)
+        hostWin.addEventListener('mousemove', onMove)
+        hostWin.addEventListener('mouseup', onUp)
     }
 
     return (

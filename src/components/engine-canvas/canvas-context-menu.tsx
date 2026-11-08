@@ -784,7 +784,6 @@ export function CanvasContextMenu({
                 disableAutoFocus
                 disableEnforceFocus
                 disableRestoreFocus
-                container={document.body}
                 PaperProps={{sx: {zIndex: 2000, p: 0}}}
             >
                 {cfRange && (
@@ -807,7 +806,6 @@ export function CanvasContextMenu({
                 disableAutoFocus
                 disableEnforceFocus
                 disableRestoreFocus
-                container={document.body}
                 PaperProps={{sx: {zIndex: 2000, p: 0}}}
             >
                 {fmtSelectedData && (
@@ -824,7 +822,6 @@ export function CanvasContextMenu({
                 open={linkOpen}
                 onClose={() => setLinkOpen(false)}
                 disableScrollLock
-                container={document.body}
                 PaperProps={{sx: {zIndex: 2000, minWidth: 320, p: 2}}}
             >
                 <Box sx={{fontWeight: 600, fontSize: 15, mb: 1}}>

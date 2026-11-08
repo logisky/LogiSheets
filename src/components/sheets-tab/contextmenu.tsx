@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {createPortal} from 'react-dom'
+import {useHostDocument} from '@/ui/popout-window'
 import {useOps} from '@/core/engine/provider'
 import {useToast} from '@/ui/notification/useToast'
 import {StandardColor} from '@/core/standable'
@@ -49,21 +50,24 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
     const [newName, setNewName] = useState(oldName)
     const ops = useOps()
     const toast = useToast()
+    // The tab strip renders in a pop-out too; focus juggling and the rename
+    // input belong to that window's document.
+    const hostDoc = useHostDocument()
 
     const openRename = () => {
         // Blur any focused element inside the Menu to avoid aria-hidden + focused descendent
-        const active = document.activeElement as HTMLElement | null
+        const active = hostDoc.activeElement as HTMLElement | null
         active?.blur?.()
         // Prefill with current name
         setNewName(sheetNames[index] || '')
         // Ensure there is always a safe, focusable target outside the modal tree
-        if (!document.body.hasAttribute('tabindex')) {
-            document.body.setAttribute('tabindex', '-1')
+        if (!hostDoc.body.hasAttribute('tabindex')) {
+            hostDoc.body.setAttribute('tabindex', '-1')
             bodyTabindexRef.current = true
         }
-        document.body.focus?.()
+        hostDoc.body.focus?.()
         // Temporarily inert the MUI modal root to fully prevent focus
-        modalRootRef.current = document.querySelector(
+        modalRootRef.current = hostDoc.querySelector(
             '.MuiModal-root'
         ) as HTMLElement | null
         modalRootRef.current?.setAttribute('inert', '')
@@ -211,7 +215,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                             modalRootRef.current = null
                         }
                         if (bodyTabindexRef.current) {
-                            document.body.removeAttribute('tabindex')
+                            hostDoc.body.removeAttribute('tabindex')
                             bodyTabindexRef.current = false
                         }
                         if (pendingRename) {
@@ -354,7 +358,7 @@ export const ContextMenuComponent = (props: ContextMenuProps) => {
                             }}
                         />
                     </div>,
-                    document.body
+                    hostDoc.body
                 )}
         </>
     )

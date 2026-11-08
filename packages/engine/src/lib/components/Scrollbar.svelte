@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { hostWindow } from './utils'
     interface Props {
         /** Used-range extent in pixels (from getSheetDimension). */
         totalLength: number
@@ -80,6 +81,7 @@
 
     // ---- Thumb drag: map pixel travel back to document position ----------
     function handleThumbMouseDown(e: MouseEvent) {
+        const win = hostWindow(e.target)
         e.stopPropagation()
         e.preventDefault()
 
@@ -96,13 +98,13 @@
         }
 
         function handleMouseUp() {
-            window.removeEventListener('mousemove', handleMouseMove)
-            window.removeEventListener('mouseup', handleMouseUp)
+            win.removeEventListener('mousemove', handleMouseMove)
+            win.removeEventListener('mouseup', handleMouseUp)
             onBlur?.()
         }
 
-        window.addEventListener('mousemove', handleMouseMove)
-        window.addEventListener('mouseup', handleMouseUp)
+        win.addEventListener('mousemove', handleMouseMove)
+        win.addEventListener('mouseup', handleMouseUp)
     }
 
     // ---- Click on the empty track pages toward the click ------------------
@@ -117,13 +119,18 @@
     }
 
     // ---- End buttons: single step, with hold-to-repeat --------------------
-    let repeatTimeout: ReturnType<typeof setTimeout> | null = null
-    let repeatInterval: ReturnType<typeof setInterval> | null = null
+    let repeatTimeout: number | null = null
+    let repeatInterval: number | null = null
+    // Timers run on the window the button lives in (a pop-out's, else the
+    // main one): a hidden main window would throttle them. Ids are
+    // per-window, so clearing goes through the same one.
+    let repeatWin: Window = window
 
-    function startRepeat(dir: number) {
+    function startRepeat(dir: number, win: Window) {
+        repeatWin = win
         scrollBy(dir * step)
-        repeatTimeout = setTimeout(() => {
-            repeatInterval = setInterval(
+        repeatTimeout = win.setTimeout(() => {
+            repeatInterval = win.setInterval(
                 () => scrollBy(dir * step),
                 REPEAT_INTERVAL
             )
@@ -132,11 +139,11 @@
 
     function stopRepeat() {
         if (repeatTimeout) {
-            clearTimeout(repeatTimeout)
+            repeatWin.clearTimeout(repeatTimeout)
             repeatTimeout = null
         }
         if (repeatInterval) {
-            clearInterval(repeatInterval)
+            repeatWin.clearInterval(repeatInterval)
             repeatInterval = null
         }
         onBlur?.()
@@ -155,7 +162,7 @@
         aria-label={orientation === 'x' ? 'Scroll left' : 'Scroll up'}
         onmousedown={(e) => {
             e.preventDefault()
-            startRepeat(-1)
+            startRepeat(-1, hostWindow(e.target))
         }}
         onmouseup={stopRepeat}
         onmouseleave={stopRepeat}
@@ -185,7 +192,7 @@
         aria-label={orientation === 'x' ? 'Scroll right' : 'Scroll down'}
         onmousedown={(e) => {
             e.preventDefault()
-            startRepeat(1)
+            startRepeat(1, hostWindow(e.target))
         }}
         onmouseup={stopRepeat}
         onmouseleave={stopRepeat}

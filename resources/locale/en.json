@@ -500,6 +500,8 @@
         },
         "view": {
             "splitView": "Split view (2nd view)",
+            "popoutView": "Separate window",
+            "popoutTitle": "LogiSheets — second view",
             "diffLayer": "Diff layer",
             "blockOverlays": "Block overlays always visible",
             "showGridlines": "Show gridlines",

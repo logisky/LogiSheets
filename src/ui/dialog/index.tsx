@@ -10,6 +10,7 @@ import MuiDialogContentText, {
 } from '@mui/material/DialogContentText'
 import MuiDialogTitle, {type DialogTitleProps} from '@mui/material/DialogTitle'
 import type {SxProps, Theme} from '@mui/material/styles'
+import {useHostDocument} from '@/ui/popout-window'
 
 /**
  * The app's one dialog look — use these instead of MUI's `Dialog*`
@@ -62,10 +63,14 @@ const paperSx: SxProps<Theme> = {
 
 // Paper styles go through `PaperProps` (no caller here uses
 // `slotProps.paper`): MUI 6 reads one or the other, not a merge of both.
-export function Dialog({PaperProps, ...props}: DialogProps) {
+export function Dialog({PaperProps, container, ...props}: DialogProps) {
+    // Open on the screen of the window the caller renders in (a pop-out, or
+    // the main window) — MUI defaults to the global document.
+    const hostDoc = useHostDocument()
     return (
         <MuiDialog
             {...props}
+            container={container ?? hostDoc.body}
             PaperProps={{
                 ...PaperProps,
                 sx: mergeSx(paperSx, PaperProps?.sx),

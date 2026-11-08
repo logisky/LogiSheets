@@ -14,6 +14,7 @@ import {InlineCellEditor} from './inline-cell-editor'
 import {ActiveViewBadge} from './active-view-badge'
 import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
 import {useCraftInputInterception} from '@/core/craft-input/use-interception'
+import {useHostWindow} from '@/ui/popout-window'
 
 /**
  * A self-contained, independent view of the shared workbook.
@@ -36,6 +37,7 @@ export const SpreadsheetView = observer(function SpreadsheetView({
     viewId: string
 }) {
     const engine = useEngine()
+    const hostWin = useHostWindow()
     const dataSvc = engine.getDataService()
     const containerRef = useRef<HTMLDivElement | null>(null)
     const sessionRef = useRef<Session | null>(null)
@@ -59,6 +61,17 @@ export const SpreadsheetView = observer(function SpreadsheetView({
     const getActiveSheet = useCallback(() => activeSheetRef.current, [])
     const setSelection = useCallback((d: SelectedData) => {
         sessionRef.current?.setSelection(d)
+        setSelectedData(d)
+    }, [])
+    // The in-cell editor reports both selections it makes itself (Enter
+    // stepping down after a commit) and ones the session already emitted.
+    // Push only the former into the session: re-setting an equal selection
+    // would emit `selectionChange` straight back to the editor.
+    const syncEditorSelection = useCallback((d: SelectedData) => {
+        const s = sessionRef.current
+        if (s && JSON.stringify(s.getSelection()) !== JSON.stringify(d)) {
+            s.setSelection(d)
+        }
         setSelectedData(d)
     }, [])
     // Select a cell and scroll it into view. Handed to the block overlay,
@@ -141,16 +154,19 @@ export const SpreadsheetView = observer(function SpreadsheetView({
         // hover target a panel-width away from the block. Observe the canvas
         // itself and the miss goes away.
         const canvas = containerRef.current?.querySelector('canvas')
-        const observer = new ResizeObserver(update)
+        // This view may live in a pop-out: observe from ITS window (a
+        // ResizeObserver from another realm never reports).
+        const win = hostWin as typeof window
+        const observer = new win.ResizeObserver(update)
         if (canvas) observer.observe(canvas)
-        window.addEventListener('resize', update)
-        window.addEventListener('scroll', update, true)
+        win.addEventListener('resize', update)
+        win.addEventListener('scroll', update, true)
         return () => {
             observer.disconnect()
-            window.removeEventListener('resize', update)
-            window.removeEventListener('scroll', update, true)
+            win.removeEventListener('resize', update)
+            win.removeEventListener('scroll', update, true)
         }
-    }, [grid])
+    }, [grid, hostWin])
 
     const isActive = globalStore.activeViewId === viewId
     return (
@@ -181,7 +197,7 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                         dataSvc={dataSvc}
                         containerRef={containerRef}
                         editingRef={editingRef}
-                        onSelectionChange={setSelectedData}
+                        onSelectionChange={syncEditorSelection}
                         setViewSheet={(idx) => {
                             setActiveSheet(idx)
                             sessionRef.current?.setCurrentSheetIndex(idx)

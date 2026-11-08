@@ -554,7 +554,8 @@ export function createInlineCellEditor(
             onBlur: (v) => {
                 if (!isEditingFormula()) commitEdit(v, false)
             },
-            onSubmit: (v) => commitEdit(v, true),
+            // Enter commits and steps down, Shift+Enter up (Excel behavior).
+            onSubmit: (v, shift) => commitEdit(v, true, shift ? -1 : 1),
             onCancel: cancelEdit,
             // Point mode: default to moving the grid selection (host may override).
             onArrowKey: onArrowKey ?? movePoint,
@@ -565,7 +566,15 @@ export function createInlineCellEditor(
         updateFormulaRegistration()
     }
 
-    async function commitEdit(value: string, restoreSelection = true) {
+    /**
+     * `step` moves the selection that many rows from the edited cell after a
+     * restoring commit (Enter: 1, Shift+Enter: -1); 0 re-selects the cell.
+     */
+    async function commitEdit(
+        value: string,
+        restoreSelection = true,
+        step = 0
+    ) {
         if (!ctx) return
         const {row, col, sheetIdx: editSheetIdx} = ctx
         const newText = value.trim()
@@ -581,7 +590,9 @@ export function createInlineCellEditor(
             // If the user built the formula from another sheet, return to the
             // edited cell's sheet before selecting it (Excel behavior).
             if (getViewSheetIdx() !== editSheetIdx) setViewSheet?.(editSheetIdx)
-            setSelection(buildSelectedDataFromCell(row, col, 'none'))
+            setSelection(
+                buildSelectedDataFromCell(Math.max(0, row + step), col, 'none')
+            )
         }
         finishEditing()
         onContentChanged?.()

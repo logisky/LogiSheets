@@ -185,8 +185,9 @@ export function useCraftInputInterception(
         })
         container.addEventListener('keydown', onKey, cap)
         container.addEventListener('keyup', onKey, cap)
-        window.addEventListener('mousemove', onWindowMouse, cap)
-        window.addEventListener('mouseup', onWindowMouse, cap)
+        const win = container.ownerDocument.defaultView ?? window
+        win.addEventListener('mousemove', onWindowMouse, cap)
+        win.addEventListener('mouseup', onWindowMouse, cap)
 
         return () => {
             CONTAINER_MOUSE.forEach((t) =>
@@ -195,8 +196,8 @@ export function useCraftInputInterception(
             container.removeEventListener('wheel', onContainerMouse, cap)
             container.removeEventListener('keydown', onKey, cap)
             container.removeEventListener('keyup', onKey, cap)
-            window.removeEventListener('mousemove', onWindowMouse, cap)
-            window.removeEventListener('mouseup', onWindowMouse, cap)
+            win.removeEventListener('mousemove', onWindowMouse, cap)
+            win.removeEventListener('mouseup', onWindowMouse, cap)
         }
     }, [containerRef, hitTester, viewId])
 }
