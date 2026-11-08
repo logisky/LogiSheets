@@ -46,7 +46,7 @@ const RulePreview: React.FC<{rule: CfRuleInfo}> = ({rule}) => {
     const fill = style?.fill
     const bg =
         fill && fill.type === 'patternFill'
-            ? cssColor(fill.value.fgColor) ?? cssColor(fill.value.bgColor)
+            ? (cssColor(fill.value.fgColor) ?? cssColor(fill.value.bgColor))
             : undefined
     const font = style?.font
     return (

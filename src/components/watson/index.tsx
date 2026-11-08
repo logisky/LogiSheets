@@ -271,6 +271,7 @@ export const Watson = observer(function Watson({
             ),
             confirm,
             craftInteractions,
+            // eslint-disable-next-line no-console
             log: (msg) => console.log('[watson]', msg),
         })
     }, [
@@ -374,6 +375,7 @@ export const Watson = observer(function Watson({
             if (ctrl.signal.aborted) {
                 setStatus('stopped')
             } else {
+                // eslint-disable-next-line no-console
                 console.error('[watson] runTurn error', err)
                 setStatus('error')
                 setTurnError(friendlyError(err, PROVIDERS[provider], t))
@@ -584,10 +586,10 @@ const Bubble = ({bubble: b}: {bubble: ChatBubble}) => {
         b.user_confirm && !b.user_confirm.approved
             ? 'declined'
             : b.pending
-            ? '…running'
-            : b.error
-            ? 'error'
-            : `${b.duration_ms ?? 0}ms`
+              ? '…running'
+              : b.error
+                ? 'error'
+                : `${b.duration_ms ?? 0}ms`
     const body = {
         input: b.input,
         ...(b.output !== undefined ? {output: b.output} : {}),

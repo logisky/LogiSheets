@@ -151,7 +151,7 @@ const series = (over: Record<string, unknown>) =>
         formattedValues: ['1'],
         sizes: [],
         ...over,
-    } as ChartInfo['series'][number])
+    }) as ChartInfo['series'][number]
 
 describe('chartSourceRanges', () => {
     it('lists the categories first, then each series', () => {

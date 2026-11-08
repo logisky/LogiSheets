@@ -72,8 +72,7 @@ function byName(bookId: number, name: string): Block {
 /** The number in a sheet cell, or undefined when it holds anything else. */
 function num(bookId: number, row: number, col: number): number | undefined {
     const v = rpc('getValue', {sheetIdx: 0, row, col}, bookId) as
-        | {type: string; value: number}
-        | string
+        {type: string; value: number} | string
     return typeof v === 'object' && v.type === 'number' ? v.value : undefined
 }
 

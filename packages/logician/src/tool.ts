@@ -29,13 +29,7 @@ export type WorkbookClient = Client
 
 /** JSON Schema draft-07 subset; kept loose on purpose. */
 export type JSONSchemaType =
-    | 'object'
-    | 'array'
-    | 'string'
-    | 'number'
-    | 'integer'
-    | 'boolean'
-    | 'null'
+    'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null'
 
 export type JSONSchema = {
     /** A single type or a union (e.g. ['string', 'null'] for nullable). */

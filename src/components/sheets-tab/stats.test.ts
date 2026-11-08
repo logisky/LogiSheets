@@ -9,7 +9,7 @@ import {
 
 /** A cell carrying one value; the rest of `CellInfo` is irrelevant here. */
 const cell = (value: CellInfo['value']): CellInfo =>
-    ({value} as unknown as CellInfo)
+    ({value}) as unknown as CellInfo
 
 const num = (n: number) => cell({type: 'number', value: n})
 const str = (s: string) => cell({type: 'str', value: s})

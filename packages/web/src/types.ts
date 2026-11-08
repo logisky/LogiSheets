@@ -15,8 +15,7 @@ export interface Selection {
  *  nothing is selected. */
 export interface SelectedData {
     readonly data?:
-        | {ty: 'line'; d: SelectedLines}
-        | {ty: 'cellRange'; d: SelectedCellRange}
+        {ty: 'line'; d: SelectedLines} | {ty: 'cellRange'; d: SelectedCellRange}
     readonly source: 'editbar' | 'none'
 }
 

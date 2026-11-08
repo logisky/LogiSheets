@@ -190,10 +190,10 @@ export function cycleReferenceAbsolute(text: string): string | null {
         !first.colAbs && !first.rowAbs
             ? 0
             : first.colAbs && first.rowAbs
-            ? 1
-            : !first.colAbs && first.rowAbs
-            ? 2
-            : 3
+              ? 1
+              : !first.colAbs && first.rowAbs
+                ? 2
+                : 3
     const [colAbs, rowAbs] = [
         [false, false],
         [true, true],

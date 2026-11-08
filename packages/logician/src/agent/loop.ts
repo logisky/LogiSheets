@@ -62,11 +62,7 @@ export interface LlmResponse {
     /** Anthropic-style response content. */
     content: AgentContentBlock[]
     stop_reason:
-        | 'end_turn'
-        | 'tool_use'
-        | 'max_tokens'
-        | 'stop_sequence'
-        | string
+        'end_turn' | 'tool_use' | 'max_tokens' | 'stop_sequence' | string
     usage?: {
         input_tokens: number
         output_tokens: number
@@ -380,7 +376,7 @@ export class Agent {
                 tool_use_id: call.id,
                 output: result.canceled
                     ? {canceled: true}
-                    : result.data ?? null,
+                    : (result.data ?? null),
                 duration_ms: nowMs() - start,
             }
             await this.store.appendEvent(e)

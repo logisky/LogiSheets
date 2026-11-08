@@ -67,8 +67,7 @@ function value(
     col: number
 ): string | number | undefined {
     const v = rpc('getValue', {sheetIdx: 0, row, col}, bookId) as
-        | {type: string; value: string | number}
-        | string
+        {type: string; value: string | number} | string
     if (typeof v !== 'object') return undefined
     return v.type === 'number' || v.type === 'str' ? v.value : undefined
 }

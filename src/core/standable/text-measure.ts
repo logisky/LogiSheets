@@ -3,9 +3,7 @@
  */
 
 let canvasContext:
-    | CanvasRenderingContext2D
-    | OffscreenCanvasRenderingContext2D
-    | null = null
+    CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null
 
 /**
  * Measure text dimensions using a canvas context.

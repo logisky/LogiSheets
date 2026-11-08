@@ -889,8 +889,8 @@ export const createBlock: Tool<CreateBlockInput, {block_id: number}> = {
                             f.user_editable === false
                                 ? 'ownerOnly'
                                 : f.user_editable === true
-                                ? 'anyone'
-                                : 'inherit',
+                                  ? 'anyone'
+                                  : 'inherit',
                     }))
                 )
                 .row(true)
@@ -1151,8 +1151,8 @@ export const addBlockRows: Tool<AddBlockRowsInput, {added: number}> = {
             anchorKey === undefined
                 ? 'Appended'
                 : input.after_key !== undefined
-                ? `Inserted after "${anchorKey}":`
-                : `Inserted before "${anchorKey}":`
+                  ? `Inserted after "${anchorKey}":`
+                  : `Inserted before "${anchorKey}":`
         return {
             data: {added: cnt},
             display: `${where} ${cnt} row(s) in "${input.block}" (block row ${blockStart}, sheet row ${sheetStart}).`,
@@ -1572,7 +1572,7 @@ export const setFieldRule: Tool<SetFieldRuleInput, {applied: string[]}> = {
                     ? updated === null
                         ? ''
                         : normalizeFormula(updated)
-                    : existing(f) ?? ''
+                    : (existing(f) ?? '')
             )
 
         const fieldFormulas =
@@ -2391,7 +2391,7 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
         if (block.pivot) {
             const p = block.pivot
             const src = block.analyzes
-                ? nameOfBlock(block.analyzes) ?? `block#${block.analyzes}`
+                ? (nameOfBlock(block.analyzes) ?? `block#${block.analyzes}`)
                 : '?'
             // Everything the recipe says. A reader who cannot see the filters
             // cannot tell that records are being excluded — the same "correct
@@ -2424,8 +2424,8 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
                           ', '
                       )}), any others after`
                     : p.order === 'firstSeen'
-                    ? "; rows in the source's own order"
-                    : '') +
+                      ? "; rows in the source's own order"
+                      : '') +
                 (declared.length ? `; ${declared.map(says).join('; ')}` : '')
 
             // Whether it survives a save to .xlsx as a real pivot. The saver
@@ -2507,7 +2507,7 @@ export const describeBlock: Tool<DescribeBlockInput, DescribeBlockOutput> = {
             block: input.name,
             analyzes:
                 block.analyzes !== undefined
-                    ? nameOfBlock(block.analyzes) ?? `block#${block.analyzes}`
+                    ? (nameOfBlock(block.analyzes) ?? `block#${block.analyzes}`)
                     : undefined,
             // Defaulted, not asserted: an app can ship a wasm older than this
             // tool, and describe_block failing outright would be a much worse
@@ -4610,8 +4610,8 @@ export const editPivot: Tool<
         const rowDim = input.rows ?? was.rowDim
         const colDim =
             input.columns === undefined
-                ? was.colDim ?? undefined
-                : input.columns ?? undefined
+                ? (was.colDim ?? undefined)
+                : (input.columns ?? undefined)
         const measure = input.measure ?? was.measure
         const func = (input.func ?? was.func) as AggFunc
 
@@ -4654,7 +4654,7 @@ export const editPivot: Tool<
                       colValue:
                           f.pivotColValue === '*'
                               ? null
-                              : f.pivotColValue ?? null,
+                              : (f.pivotColValue ?? null),
                       func: f.pivotFunc as AggFunc | undefined,
                       measure: f.pivotMeasure,
                   }))

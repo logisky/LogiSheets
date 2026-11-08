@@ -106,7 +106,7 @@ export const CraftPanel = ({
         const wanted = initialCraftSrc ?? __DEFAULT_CRAFT__
         return tools.some((e) => e.key === wanted)
             ? wanted
-            : tools[0]?.key ?? wanted
+            : (tools[0]?.key ?? wanted)
     })
     const [managerOpen, setManagerOpen] = useState(false)
     const [managerTab, setManagerTab] = useState<CraftManagerTab>('installed')
@@ -611,12 +611,10 @@ const TX_METHODS = new Set([
     'handleTransactionWithoutEvents',
 ])
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 /** Whether a transaction created or removed an option list. */
 function touchesEnumSets(params: Record<string, unknown>): boolean {
     const tx = params?.transaction as
-        | {payloads?: readonly {type?: string}[]}
-        | undefined
+        {payloads?: readonly {type?: string}[]} | undefined
     return !!tx?.payloads?.some(
         (p) => p?.type === 'upsertEnumSet' || p?.type === 'removeEnumSet'
     )

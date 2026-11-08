@@ -109,11 +109,7 @@ interface WireResponse {
         | {type: 'tool_use'; id: string; name: string; input: unknown}
     >
     stop_reason:
-        | 'end_turn'
-        | 'tool_use'
-        | 'max_tokens'
-        | 'stop_sequence'
-        | string
+        'end_turn' | 'tool_use' | 'max_tokens' | 'stop_sequence' | string
     usage?: {
         input_tokens: number
         output_tokens: number

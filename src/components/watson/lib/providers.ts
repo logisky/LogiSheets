@@ -16,12 +16,7 @@
  */
 
 export type ProviderId =
-    | 'anthropic'
-    | 'kimi'
-    | 'openai'
-    | 'deepseek'
-    | 'openrouter'
-    | 'ollama'
+    'anthropic' | 'kimi' | 'openai' | 'deepseek' | 'openrouter' | 'ollama'
 
 export interface ModelOption {
     id: string

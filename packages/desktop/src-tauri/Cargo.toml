@@ -59,12 +59,10 @@ futures-util = { version = "0.3", default-features = false }
 tokio = { version = "1", features = ["time"] }
 uuid = { version = "1", features = ["v4"] }
 # Connection passwords live in the OS keychain, never in the app-data file.
-keyring = { version = "3", features = [
-    "apple-native",
-    "windows-native",
-    "sync-secret-service",
-    "crypto-rust",
-] }
+# keyring 4 split the stores into their own crates; its default `v1` feature
+# keeps the old `Entry` API over the native stores (Keychain, Windows
+# Credential Manager, Secret Service via zbus).
+keyring = "4"
 logisheets-rs = { path = "../../../crates/api", features = ["rpc"], optional = true }
 
 [dev-dependencies]

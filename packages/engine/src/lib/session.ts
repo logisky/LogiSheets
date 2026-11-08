@@ -307,7 +307,6 @@ export class Session {
      * canvases when switching sheets after a file load.
      */
     async loadFile(buffer: Uint8Array, filename: string): Promise<Grid | null> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.loadWorkbook === 'function') {
             // The mounted component returns false when the beforeLoad gate vetoed
@@ -340,7 +339,6 @@ export class Session {
      * col|bar|line|area|pie|doughnut|scatter.
      */
     insertChart(chartType: string = 'col'): void {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.insertChart === 'function') {
             mounted.insertChart(chartType)
@@ -353,7 +351,6 @@ export class Session {
      * mounted UI.
      */
     updateChart(id: string, opts: ChartUpdate): void {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.updateChart === 'function') {
             mounted.updateChart(id, opts)
@@ -431,7 +428,7 @@ export class Session {
         // overlay re-renders and its auto-scroll $effect fires. Without this
         // delegation, the engine's internal state and the canvas-side state
         // diverge.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.setSelectedData === 'function') {
             mounted.setSelectedData(selection)
@@ -454,7 +451,6 @@ export class Session {
         clientX: number,
         clientY: number
     ): {row: number; col: number} | null {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.hitTestCell === 'function') {
             return mounted.hitTestCell(clientX, clientY)
@@ -470,7 +466,6 @@ export class Session {
      * (Engine.setZoom guarantees this).
      */
     applyZoom(ratio: number, origin?: ZoomOrigin): Promise<void> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.applyZoom === 'function') {
             return mounted.applyZoom(ratio, origin)
@@ -500,7 +495,7 @@ export class Session {
         // When the UI is mounted, delegate to the Spreadsheet component's own
         // setActiveSheet so it can refresh its internal grid state (and thus
         // column/row headers and overlays).
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.setActiveSheet === 'function') {
             mounted.setActiveSheet(index)

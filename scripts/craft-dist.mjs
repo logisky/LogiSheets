@@ -26,7 +26,10 @@ function resolve() {
     const registry = CONFIG.registry
     const selected = dist.crafts === 'all' ? Object.keys(registry) : dist.crafts
     for (const d of selected) {
-        if (!registry[d]) throw new Error(`Craft "${d}" (in distribution "${name}") is not in the registry`)
+        if (!registry[d])
+            throw new Error(
+                `Craft "${d}" (in distribution "${name}") is not in the registry`
+            )
     }
     // `devOnly` crafts (the debugger) are offered by the dev server only —
     // vite.config.ts applies the same filter to the panel's list. Dropping

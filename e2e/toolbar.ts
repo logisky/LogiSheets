@@ -10,12 +10,7 @@ import {expect, type Page} from '@playwright/test'
  */
 
 export type ToolbarTab =
-    | 'Home'
-    | 'Insert'
-    | 'Formulas'
-    | 'Data'
-    | 'View'
-    | 'Advanced'
+    'Home' | 'Insert' | 'Formulas' | 'Data' | 'View' | 'Advanced'
 
 /** Switch the ribbon to `tab` and wait for it to actually be selected. */
 export async function openToolbarTab(page: Page, tab: ToolbarTab) {

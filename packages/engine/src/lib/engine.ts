@@ -49,11 +49,7 @@ import MyWorker from './worker/worker.ts?worker&inline'
 
 /** Workbook-level events, shared across all views. */
 export type EngineEventType =
-    | 'ready'
-    | 'sheetChange'
-    | 'cellChange'
-    | 'zoomChange'
-    | 'error'
+    'ready' | 'sheetChange' | 'cellChange' | 'zoomChange' | 'error'
 
 export interface EngineEventMap {
     ready: void

@@ -34,8 +34,7 @@ function commit(bookId: number, payloads: any[]) {
 /** The number in a sheet cell, or undefined when it holds anything else. */
 function num(bookId: number, row: number, col: number): number | undefined {
     const v = rpc('getValue', {sheetIdx: 0, row, col}, bookId) as
-        | {type: string; value: number}
-        | string
+        {type: string; value: number} | string
     return typeof v === 'object' && v.type === 'number' ? v.value : undefined
 }
 
@@ -166,7 +165,6 @@ function salesWithPivot(bookId: number): {src: number; pivot: number} {
     return {src, pivot}
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addSale(bookId: number, src: number, at: number, row: string[]) {
     const eff = commit(bookId, [
         {

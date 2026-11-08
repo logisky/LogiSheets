@@ -568,202 +568,202 @@ export function CanvasContextMenu({
     const items: ReactNode = !ctx
         ? null
         : ctx.target === 'cell'
-        ? [
-              <ContextMenuItem
-                  key="format"
-                  icon={<TuneOutlinedIcon />}
-                  onClick={() => openFormat(ctx)}
-              >
-                  {t('ui.menu.formatCells')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="clear"
-                  icon={<BackspaceOutlinedIcon />}
-                  onClick={() => clearCells(ctx)}
-              >
-                  {t('ui.menu.clearCells')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="comment"
-                  icon={<AddCommentOutlinedIcon />}
-                  onClick={() => addComment(ctx)}
-              >
-                  {t('ui.menu.addComment')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="link"
-                  icon={<LinkOutlinedIcon />}
-                  onClick={() => openLink(ctx)}
-              >
-                  {t('ui.menu.linkToBlock')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="convert-block"
-                  icon={<GridOnOutlinedIcon />}
-                  onClick={() => convertToBlock(ctx)}
-              >
-                  {t('ui.menu.convertToBlock')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="conditional-formatting"
-                  icon={<PaletteOutlinedIcon />}
-                  onClick={() => openConditionalFormatting(ctx)}
-              >
-                  {t('ui.menu.conditionalFormatting')}
-              </ContextMenuItem>,
-              ...(editCandidate
-                  ? [
-                        <ContextMenuItem
-                            key="edit-block"
-                            icon={<EditOutlinedIcon />}
-                            onClick={openEditBlock}
-                        >
-                            {t('ui.menu.editBlock')}
-                        </ContextMenuItem>,
-                    ]
-                  : []),
-              <Divider key="traced" />,
-              <ContextMenuItem
-                  key="trace-prec"
-                  icon={<NorthEastOutlinedIcon />}
-                  onClick={() => traceCell(ctx, 'precedents')}
-              >
-                  {t('ui.menu.tracePrecedents')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="trace-dep"
-                  icon={<SouthWestOutlinedIcon />}
-                  onClick={() => traceCell(ctx, 'dependents')}
-              >
-                  {t('ui.menu.traceDependents')}
-              </ContextMenuItem>,
-              ...(globalStore.traceResult
-                  ? [
-                        <ContextMenuItem
-                            key="trace-clear"
-                            icon={<LayersClearOutlinedIcon />}
-                            onClick={() => {
-                                close()
-                                globalStore.clearTrace()
-                            }}
-                        >
-                            {t('ui.menu.clearTrace')}
-                        </ContextMenuItem>,
-                    ]
-                  : []),
-              <Divider key="imgd" />,
-              <ContextMenuItem
-                  key="insert-image"
-                  icon={<ImageOutlinedIcon />}
-                  onClick={() => insertImage(ctx)}
-              >
-                  {t('ui.menu.insertImage')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="remove-image"
-                  icon={<HideImageOutlinedIcon />}
-                  onClick={() => removeImage(ctx)}
-              >
-                  {t('ui.menu.removeImage')}
-              </ContextMenuItem>,
-          ]
-        : ctx.target === 'row'
-        ? [
-              <ContextMenuItem
-                  key="ia"
-                  icon={<AddOutlinedIcon />}
-                  onClick={() => insertLines(ctx, 'row', 'before')}
-              >
-                  {t('ui.menu.insertRowsAbove')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="ib"
-                  icon={<AddOutlinedIcon />}
-                  onClick={() => insertLines(ctx, 'row', 'after')}
-              >
-                  {t('ui.menu.insertRowsBelow')}
-              </ContextMenuItem>,
-              <Box key="stepper">{stepper}</Box>,
-              <Divider key="d1" />,
-              <ContextMenuItem
-                  key="fmt"
-                  icon={<TuneOutlinedIcon />}
-                  onClick={() => openFormat(ctx)}
-              >
-                  {t('ui.menu.formatCellsShort')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="hide"
-                  icon={<VisibilityOffOutlinedIcon />}
-                  onClick={() => setLinesHidden(ctx, 'row', true)}
-              >
-                  {t('ui.menu.hideRows')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="unhide"
-                  icon={<VisibilityOutlinedIcon />}
-                  onClick={() => setLinesHidden(ctx, 'row', false)}
-              >
-                  {t('ui.menu.unhideRows')}
-              </ContextMenuItem>,
-              <Divider key="d2" />,
-              <ContextMenuItem
-                  key="del"
-                  icon={<DeleteOutlinedIcon />}
-                  danger
-                  onClick={() => deleteLines(ctx, 'row')}
-              >
-                  {t('ui.menu.deleteRows')}
-              </ContextMenuItem>,
-          ]
-        : [
-              <ContextMenuItem
-                  key="il"
-                  icon={<AddOutlinedIcon />}
-                  onClick={() => insertLines(ctx, 'col', 'before')}
-              >
-                  {t('ui.menu.insertColsLeft')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="ir"
-                  icon={<AddOutlinedIcon />}
-                  onClick={() => insertLines(ctx, 'col', 'after')}
-              >
-                  {t('ui.menu.insertColsRight')}
-              </ContextMenuItem>,
-              <Box key="stepper">{stepper}</Box>,
-              <Divider key="d1" />,
-              <ContextMenuItem
-                  key="fmt"
-                  icon={<TuneOutlinedIcon />}
-                  onClick={() => openFormat(ctx)}
-              >
-                  {t('ui.menu.formatCellsShort')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="hide"
-                  icon={<VisibilityOffOutlinedIcon />}
-                  onClick={() => setLinesHidden(ctx, 'col', true)}
-              >
-                  {t('ui.menu.hideCols')}
-              </ContextMenuItem>,
-              <ContextMenuItem
-                  key="unhide"
-                  icon={<VisibilityOutlinedIcon />}
-                  onClick={() => setLinesHidden(ctx, 'col', false)}
-              >
-                  {t('ui.menu.unhideCols')}
-              </ContextMenuItem>,
-              <Divider key="d2" />,
-              <ContextMenuItem
-                  key="del"
-                  icon={<DeleteOutlinedIcon />}
-                  danger
-                  onClick={() => deleteLines(ctx, 'col')}
-              >
-                  {t('ui.menu.deleteCols')}
-              </ContextMenuItem>,
-          ]
+          ? [
+                <ContextMenuItem
+                    key="format"
+                    icon={<TuneOutlinedIcon />}
+                    onClick={() => openFormat(ctx)}
+                >
+                    {t('ui.menu.formatCells')}
+                </ContextMenuItem>,
+                <ContextMenuItem
+                    key="clear"
+                    icon={<BackspaceOutlinedIcon />}
+                    onClick={() => clearCells(ctx)}
+                >
+                    {t('ui.menu.clearCells')}
+                </ContextMenuItem>,
+                <ContextMenuItem
+                    key="comment"
+                    icon={<AddCommentOutlinedIcon />}
+                    onClick={() => addComment(ctx)}
+                >
+                    {t('ui.menu.addComment')}
+                </ContextMenuItem>,
+                <ContextMenuItem
+                    key="link"
+                    icon={<LinkOutlinedIcon />}
+                    onClick={() => openLink(ctx)}
+                >
+                    {t('ui.menu.linkToBlock')}
+                </ContextMenuItem>,
+                <ContextMenuItem
+                    key="convert-block"
+                    icon={<GridOnOutlinedIcon />}
+                    onClick={() => convertToBlock(ctx)}
+                >
+                    {t('ui.menu.convertToBlock')}
+                </ContextMenuItem>,
+                <ContextMenuItem
+                    key="conditional-formatting"
+                    icon={<PaletteOutlinedIcon />}
+                    onClick={() => openConditionalFormatting(ctx)}
+                >
+                    {t('ui.menu.conditionalFormatting')}
+                </ContextMenuItem>,
+                ...(editCandidate
+                    ? [
+                          <ContextMenuItem
+                              key="edit-block"
+                              icon={<EditOutlinedIcon />}
+                              onClick={openEditBlock}
+                          >
+                              {t('ui.menu.editBlock')}
+                          </ContextMenuItem>,
+                      ]
+                    : []),
+                <Divider key="traced" />,
+                <ContextMenuItem
+                    key="trace-prec"
+                    icon={<NorthEastOutlinedIcon />}
+                    onClick={() => traceCell(ctx, 'precedents')}
+                >
+                    {t('ui.menu.tracePrecedents')}
+                </ContextMenuItem>,
+                <ContextMenuItem
+                    key="trace-dep"
+                    icon={<SouthWestOutlinedIcon />}
+                    onClick={() => traceCell(ctx, 'dependents')}
+                >
+                    {t('ui.menu.traceDependents')}
+                </ContextMenuItem>,
+                ...(globalStore.traceResult
+                    ? [
+                          <ContextMenuItem
+                              key="trace-clear"
+                              icon={<LayersClearOutlinedIcon />}
+                              onClick={() => {
+                                  close()
+                                  globalStore.clearTrace()
+                              }}
+                          >
+                              {t('ui.menu.clearTrace')}
+                          </ContextMenuItem>,
+                      ]
+                    : []),
+                <Divider key="imgd" />,
+                <ContextMenuItem
+                    key="insert-image"
+                    icon={<ImageOutlinedIcon />}
+                    onClick={() => insertImage(ctx)}
+                >
+                    {t('ui.menu.insertImage')}
+                </ContextMenuItem>,
+                <ContextMenuItem
+                    key="remove-image"
+                    icon={<HideImageOutlinedIcon />}
+                    onClick={() => removeImage(ctx)}
+                >
+                    {t('ui.menu.removeImage')}
+                </ContextMenuItem>,
+            ]
+          : ctx.target === 'row'
+            ? [
+                  <ContextMenuItem
+                      key="ia"
+                      icon={<AddOutlinedIcon />}
+                      onClick={() => insertLines(ctx, 'row', 'before')}
+                  >
+                      {t('ui.menu.insertRowsAbove')}
+                  </ContextMenuItem>,
+                  <ContextMenuItem
+                      key="ib"
+                      icon={<AddOutlinedIcon />}
+                      onClick={() => insertLines(ctx, 'row', 'after')}
+                  >
+                      {t('ui.menu.insertRowsBelow')}
+                  </ContextMenuItem>,
+                  <Box key="stepper">{stepper}</Box>,
+                  <Divider key="d1" />,
+                  <ContextMenuItem
+                      key="fmt"
+                      icon={<TuneOutlinedIcon />}
+                      onClick={() => openFormat(ctx)}
+                  >
+                      {t('ui.menu.formatCellsShort')}
+                  </ContextMenuItem>,
+                  <ContextMenuItem
+                      key="hide"
+                      icon={<VisibilityOffOutlinedIcon />}
+                      onClick={() => setLinesHidden(ctx, 'row', true)}
+                  >
+                      {t('ui.menu.hideRows')}
+                  </ContextMenuItem>,
+                  <ContextMenuItem
+                      key="unhide"
+                      icon={<VisibilityOutlinedIcon />}
+                      onClick={() => setLinesHidden(ctx, 'row', false)}
+                  >
+                      {t('ui.menu.unhideRows')}
+                  </ContextMenuItem>,
+                  <Divider key="d2" />,
+                  <ContextMenuItem
+                      key="del"
+                      icon={<DeleteOutlinedIcon />}
+                      danger
+                      onClick={() => deleteLines(ctx, 'row')}
+                  >
+                      {t('ui.menu.deleteRows')}
+                  </ContextMenuItem>,
+              ]
+            : [
+                  <ContextMenuItem
+                      key="il"
+                      icon={<AddOutlinedIcon />}
+                      onClick={() => insertLines(ctx, 'col', 'before')}
+                  >
+                      {t('ui.menu.insertColsLeft')}
+                  </ContextMenuItem>,
+                  <ContextMenuItem
+                      key="ir"
+                      icon={<AddOutlinedIcon />}
+                      onClick={() => insertLines(ctx, 'col', 'after')}
+                  >
+                      {t('ui.menu.insertColsRight')}
+                  </ContextMenuItem>,
+                  <Box key="stepper">{stepper}</Box>,
+                  <Divider key="d1" />,
+                  <ContextMenuItem
+                      key="fmt"
+                      icon={<TuneOutlinedIcon />}
+                      onClick={() => openFormat(ctx)}
+                  >
+                      {t('ui.menu.formatCellsShort')}
+                  </ContextMenuItem>,
+                  <ContextMenuItem
+                      key="hide"
+                      icon={<VisibilityOffOutlinedIcon />}
+                      onClick={() => setLinesHidden(ctx, 'col', true)}
+                  >
+                      {t('ui.menu.hideCols')}
+                  </ContextMenuItem>,
+                  <ContextMenuItem
+                      key="unhide"
+                      icon={<VisibilityOutlinedIcon />}
+                      onClick={() => setLinesHidden(ctx, 'col', false)}
+                  >
+                      {t('ui.menu.unhideCols')}
+                  </ContextMenuItem>,
+                  <Divider key="d2" />,
+                  <ContextMenuItem
+                      key="del"
+                      icon={<DeleteOutlinedIcon />}
+                      danger
+                      onClick={() => deleteLines(ctx, 'col')}
+                  >
+                      {t('ui.menu.deleteCols')}
+                  </ContextMenuItem>,
+              ]
 
     return (
         <>

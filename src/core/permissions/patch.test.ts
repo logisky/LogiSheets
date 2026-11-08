@@ -16,7 +16,7 @@ const info = (over: Partial<BlockModifyInfo> = {}): BlockModifyInfo =>
         permissions: {},
         description: '',
         ...over,
-    } as BlockModifyInfo)
+    }) as BlockModifyInfo
 
 /**
  * `blockOpForPayload` and "does this block state a policy" used to be

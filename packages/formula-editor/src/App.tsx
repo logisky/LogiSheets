@@ -368,9 +368,7 @@ export const App: React.FC = () => {
                             setConfig((c) => ({
                                 ...c,
                                 textAlign: e.target.value as
-                                    | 'left'
-                                    | 'center'
-                                    | 'right',
+                                    'left' | 'center' | 'right',
                             }))
                         }
                         style={{width: '100%', padding: 8}}

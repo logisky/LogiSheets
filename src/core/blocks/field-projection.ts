@@ -110,8 +110,8 @@ export function projectFieldInfo(
             f.writePolicy === 'ownerOnly'
                 ? false
                 : f.writePolicy === 'anyone'
-                ? true
-                : undefined,
+                  ? true
+                  : undefined,
     }
 }
 

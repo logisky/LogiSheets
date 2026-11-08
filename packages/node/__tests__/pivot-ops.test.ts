@@ -45,15 +45,13 @@ function clientFor(bookId: number): Client {
 
 function num(bookId: number, row: number, col: number): number | undefined {
     const v = rpc('getValue', {sheetIdx: 0, row, col}, bookId) as
-        | {type: string; value: number}
-        | string
+        {type: string; value: number} | string
     return typeof v === 'object' && v.type === 'number' ? v.value : undefined
 }
 
 function str(bookId: number, row: number, col: number): string | undefined {
     const v = rpc('getValue', {sheetIdx: 0, row, col}, bookId) as
-        | {type: string; value: string}
-        | string
+        {type: string; value: string} | string
     return typeof v === 'object' && v.type === 'str' ? v.value : undefined
 }
 

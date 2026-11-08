@@ -1,7 +1,7 @@
 import {HasEventTargetAddRemove} from 'rxjs/internal/observable/fromEvent'
 import {fromEvent} from 'rxjs'
 import {EventType} from './event'
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface TotalEventsHandlersEventMap extends ClipboardEventHandlersEventMap {}
 export function on<K extends keyof TotalEventsHandlersEventMap>(
     el: HasEventTargetAddRemove<TotalEventsHandlersEventMap[K]>,

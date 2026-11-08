@@ -845,8 +845,8 @@ export const Toolbar = observer(
                         ? 'insertRows'
                         : 'insertCols'
                     : axis === 'row'
-                    ? 'deleteRows'
-                    : 'deleteCols'
+                      ? 'deleteRows'
+                      : 'deleteCols'
             runTxn([{type, value: {sheetIdx, start: lo, count}} as Payload])
         }
 
@@ -1160,20 +1160,20 @@ export const Toolbar = observer(
 
             const [h, v] = pos.split('-') as [
                 'left' | 'center' | 'right',
-                'top' | 'center' | 'bottom'
+                'top' | 'center' | 'bottom',
             ]
             const x =
                 h === 'left'
                     ? pad + 2
                     : h === 'center'
-                    ? pad + size / 2 - indicator / 2
-                    : pad + size - indicator - 2
+                      ? pad + size / 2 - indicator / 2
+                      : pad + size - indicator - 2
             const y =
                 v === 'top'
                     ? pad + 2
                     : v === 'center'
-                    ? pad + size / 2 - indicator / 2
-                    : pad + size - indicator - 2
+                      ? pad + size / 2 - indicator / 2
+                      : pad + size - indicator - 2
 
             return (
                 <svg

@@ -440,8 +440,8 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
             input.scenarios !== undefined
                 ? [...input.scenarios]
                 : input.changes !== undefined
-                ? [{changes: input.changes}]
-                : []
+                  ? [{changes: input.changes}]
+                  : []
         if (scenarios.length === 0) {
             throw new Error('pass either `changes` or `scenarios`')
         }
@@ -653,11 +653,11 @@ export const previewChanges: Tool<PreviewChangesInput, PreviewChangesOutput> = {
                 single !== undefined
                     ? {scenarios: results, diff: single}
                     : watchCoords.length > 0
-                    ? {
-                          watching: watchCoords.map((w) => w.target),
-                          scenarios: results,
-                      }
-                    : {scenarios: results},
+                      ? {
+                            watching: watchCoords.map((w) => w.target),
+                            scenarios: results,
+                        }
+                      : {scenarios: results},
             display: describe(),
         }
     },

@@ -121,7 +121,6 @@ export const FindOverlay: FC<FindOverlayProps> = ({
         const handler = () => setOptions((o) => ({...o}))
         engine.on('cellChange', handler)
         return () => engine.off('cellChange', handler)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, engine])
 
     const go = useCallback(
@@ -159,14 +158,14 @@ export const FindOverlay: FC<FindOverlayProps> = ({
     const countLabel = regexError
         ? String(t('ui.find.invalidRegex'))
         : searching
-        ? String(t('ui.find.searching'))
-        : !hasQuery
-        ? ''
-        : matches.length === 0
-        ? String(t('ui.find.noResults'))
-        : currentIdx === -1
-        ? `${matches.length} found`
-        : `${currentIdx + 1} of ${matches.length}`
+          ? String(t('ui.find.searching'))
+          : !hasQuery
+            ? ''
+            : matches.length === 0
+              ? String(t('ui.find.noResults'))
+              : currentIdx === -1
+                ? `${matches.length} found`
+                : `${currentIdx + 1} of ${matches.length}`
 
     const navDisabled = matches.length === 0
 

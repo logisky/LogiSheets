@@ -61,7 +61,7 @@ test('File → Export as CSV downloads the sheet as RFC 4180 CSV', async ({
     expect(download.suggestedFilename()).toMatch(/\.csv$/)
     const path = await download.path()
     // Strip the UTF-8 BOM the exporter prepends for Excel.
-    const csv = readFileSync(path, 'utf8').replace(/^﻿/, '')
+    const csv = readFileSync(path, 'utf8').replace(/^\uFEFF/, '')
 
     expect(csv).toBe(['Name,Age', 'Alice,30', '"a,b",'].join('\r\n'))
 })

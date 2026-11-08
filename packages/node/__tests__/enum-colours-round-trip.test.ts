@@ -19,7 +19,6 @@ import {describe, it, expect} from 'vitest'
 import {handle} from '../wasm/logisheets_wasm_server'
 import {BlockManager} from '../../engine/src/lib/block/manager'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rpc(
     method: string,
     params?: Record<string, unknown>,

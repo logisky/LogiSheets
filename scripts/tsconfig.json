@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "noImplicitAny": false,
+        "types": ["node"],
     },
     "files": ["**/*.ts"]
 }

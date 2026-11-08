@@ -70,25 +70,25 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
         initialFields && initialFields.length > 0
             ? initialFields
             : convertRegion
-            ? Array.from({length: convertRegion.colCnt}, (_, i) => ({
-                  id: String(i + 1),
-                  name: t('block.composer.fieldN', {n: i + 1}),
-                  type: 'number',
-                  required: false,
-                  primary: i === 0,
-              }))
-            : editTarget
-            ? []
-            : [
-                  {
-                      id: '1',
-                      name: t('block.composer.sampleFieldName'),
-                      type: 'string',
-                      description: t('block.composer.sampleFieldDesc'),
-                      required: true,
-                      primary: false,
-                  },
-              ]
+              ? Array.from({length: convertRegion.colCnt}, (_, i) => ({
+                    id: String(i + 1),
+                    name: t('block.composer.fieldN', {n: i + 1}),
+                    type: 'number',
+                    required: false,
+                    primary: i === 0,
+                }))
+              : editTarget
+                ? []
+                : [
+                      {
+                          id: '1',
+                          name: t('block.composer.sampleFieldName'),
+                          type: 'string',
+                          description: t('block.composer.sampleFieldDesc'),
+                          required: true,
+                          primary: false,
+                      },
+                  ]
     )
     const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
         fields[0]?.id || null
@@ -191,8 +191,7 @@ export const BlockComposerComponent = (props: BlockComposerProps) => {
                 // every host reads the same answer. A field nobody declared a
                 // type for reads as free-form.
                 const declared = fe.fieldType?.kind as
-                    | FieldSetting['type']
-                    | undefined
+                    FieldSetting['type'] | undefined
                 const setting: FieldSetting = {
                     id: fe.renderId,
                     name: fe.field,

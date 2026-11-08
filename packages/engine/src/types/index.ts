@@ -181,11 +181,7 @@ export class Range {
 // ============================================================================
 
 export type CellType =
-    | 'Cell'
-    | 'LeftTop'
-    | 'FixedLeftHeader'
-    | 'FixedTopHeader'
-    | 'unknown'
+    'Cell' | 'LeftTop' | 'FixedLeftHeader' | 'FixedTopHeader' | 'unknown'
 
 export class Cell {
     constructor(public type: CellType) {}

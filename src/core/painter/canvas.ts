@@ -65,9 +65,7 @@ export class CanvasApi {
         }
 
         const ctx = c.getContext('2d') as
-            | OffscreenCanvasRenderingContext2D
-            | CanvasRenderingContext2D
-            | null
+            OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null
         if (!ctx) {
             return
         }
@@ -87,9 +85,7 @@ export class CanvasApi {
     setCanvas(canvas: OffscreenCanvas | HTMLCanvasElement) {
         this._canvas = canvas
         const ctx = canvas.getContext('2d') as
-            | OffscreenCanvasRenderingContext2D
-            | CanvasRenderingContext2D
-            | null
+            OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null
         if (!ctx) {
             return
         }

@@ -37,7 +37,7 @@ export function getAllFormulas() {
             i = -1
         ): [
             snippetMessage: string,
-            targetParam: {startIndex: number; endIndex: number}
+            targetParam: {startIndex: number; endIndex: number},
         ] => {
             let message = `${f.name}(`
             let targetParamIndex = i === -1 ? f.args.length : i

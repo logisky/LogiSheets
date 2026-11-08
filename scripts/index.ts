@@ -12,9 +12,6 @@ const plugins = [
                 },
             ],
         },
-        globOptions: {
-            nosort: true,
-        },
     }),
 ]
 plugins.forEach((plugin) => {

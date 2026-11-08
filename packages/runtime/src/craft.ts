@@ -146,7 +146,7 @@ export async function loadCrafts(
     for (const craftId of craftIds) {
         // Deliberately sequential: crafts may touch shared workbook state in
         // onLoad, so we don't race them. Revisit if that proves too slow.
-        // eslint-disable-next-line no-await-in-loop
+
         const craft = await loadOneCraft(wb, registry, craftId, states[craftId])
         if (craft) loaded.push(craft)
     }
@@ -196,7 +196,6 @@ export async function applyCraftRequest(
     const errors: string[] = []
     for (const craft of loaded) {
         try {
-            // eslint-disable-next-line no-await-in-loop
             const res = await craft.runtime.onRequest(req, craft.state, wb)
             if (isErrorMessage(res)) errors.push(res.msg)
         } catch (e) {
@@ -224,7 +223,7 @@ export async function validateLoadedCrafts(
     const violations: Violation[] = []
     for (const craft of loaded) {
         if (!craft.runtime.onValidate) continue
-        // eslint-disable-next-line no-await-in-loop
+
         const res = await craft.runtime.onValidate(craft.state, wb)
         if (isErrorMessage(res)) continue
         violations.push(...res)
@@ -245,7 +244,6 @@ export async function applyCraftResponse(
     const errors: string[] = []
     for (const craft of loaded) {
         try {
-            // eslint-disable-next-line no-await-in-loop
             const res = await craft.runtime.onResponse(resp, craft.state, wb)
             if (isErrorMessage(res)) errors.push(res.msg)
         } catch (e) {

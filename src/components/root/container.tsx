@@ -33,9 +33,8 @@ export const RootContainer = () => {
         if (suppressSelection) setSelectedData({source: 'none'})
     }, [suppressSelection])
     const [grid, setGrid] = useState<Grid | null>(null)
-    const [isCraftPanelVisible, setCraftPanelVisible] = useState(
-        !!craftDeepLink
-    )
+    const [isCraftPanelVisible, setCraftPanelVisible] =
+        useState(!!craftDeepLink)
 
     const [cellLayouts, setCellLayouts] = useState<CellLayout[]>([])
     const [activeSheet, setActiveSheet] = useState(0)

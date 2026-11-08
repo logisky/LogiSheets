@@ -61,7 +61,7 @@ export const FieldRuleEditor = ({
         const input = inputRef.current
         const at =
             input && document.activeElement === input
-                ? input.selectionStart ?? value.length
+                ? (input.selectionStart ?? value.length)
                 : value.length
         pendingCaret.current = at + snippet.length
         onChange(value.slice(0, at) + snippet + value.slice(at))

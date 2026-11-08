@@ -255,7 +255,6 @@ export class Workbook {
      * so it undoes exactly the changes made since.
      */
     public async discardChanges(): Promise<void> {
-        // eslint-disable-next-line no-await-in-loop
         while ((await this.client.undo()) === true) {
             /* keep undoing until the stack is empty */
         }
