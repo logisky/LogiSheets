@@ -13,7 +13,7 @@
  * re-renders; the imperative getters (`getActive`/`isFormulaEditing`) are read
  * outside React by the engine's focus guards and the sheet tabs.
  */
-import {makeObservable, observable, action} from 'mobx'
+import {makeObservable, observableRef, action} from 'mobx'
 import type {
     FormulaCoordinator,
     FormulaEditEntry,
@@ -34,25 +34,30 @@ class FormulaEditCoordinatorImpl implements FormulaCoordinator {
     private _active: FormulaEditEntry | null = null
 
     // Observable mirror for the reminder component.
-    @observable.ref snapshot: FormulaEditSnapshot | null = null
+    snapshot: FormulaEditSnapshot | null = null
 
     constructor() {
-        makeObservable(this)
+        makeObservable(this, {
+            snapshot: observableRef,
+            setActive: action,
+            clear: action,
+            notifyChange: action,
+        })
     }
 
-    @action setActive(entry: FormulaEditEntry) {
+    setActive(entry: FormulaEditEntry) {
         this._active = entry
         this._sync(entry)
     }
 
-    @action clear(entry: FormulaEditEntry) {
+    clear(entry: FormulaEditEntry) {
         if (this._active === entry) {
             this._active = null
             this.snapshot = null
         }
     }
 
-    @action notifyChange(entry: FormulaEditEntry) {
+    notifyChange(entry: FormulaEditEntry) {
         if (this._active === entry) this._sync(entry)
     }
 

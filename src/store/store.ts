@@ -1,4 +1,4 @@
-import {makeObservable, observable, action} from 'mobx'
+import {makeObservable, observable, observableRef, action} from 'mobx'
 import {createContext} from 'react'
 import {SelectedData} from 'logisheets-engine'
 
@@ -17,12 +17,43 @@ export interface ActiveViewContext {
 
 export class GlobalStore {
     constructor() {
-        makeObservable(this)
+        makeObservable(this, {
+            isTempMode: observable,
+            llmSetupRequests: observable,
+            alwaysShowBlockInfo: observable,
+            splitView: observable,
+            activeViewId: observable,
+            activeViewContext: observableRef,
+            diffLayerEnabled: observable,
+            showGridlines: observable,
+            showComments: observable,
+            pendingCommentCell: observableRef,
+            findRequest: observable,
+            traceRequest: observableRef,
+            traceResult: observableRef,
+            linkRevision: observable,
+            setTempMode: action,
+            requestLlmSetup: action,
+            setAlwaysShowBlockInfo: action,
+            setSplitView: action,
+            setActiveViewId: action,
+            setActiveViewContext: action,
+            setDiffLayerEnabled: action,
+            setShowGridlines: action,
+            setShowComments: action,
+            requestAddComment: action,
+            clearPendingCommentCell: action,
+            requestFind: action,
+            requestTrace: action,
+            setTraceResult: action,
+            clearTrace: action,
+            bumpLinkRevision: action,
+        })
     }
 
-    @observable isTempMode = false
+    isTempMode = false
 
-    @action setTempMode(v: boolean) {
+    setTempMode(v: boolean) {
         this.isTempMode = v
     }
 
@@ -33,26 +64,26 @@ export class GlobalStore {
     // panel twice, and a boolean that is already true is indistinguishable
     // from one nobody reset. Nothing here knows what a key IS; a craft must
     // never see one. It can only ask the host to show its own settings.
-    @observable llmSetupRequests = 0
+    llmSetupRequests = 0
 
-    @action requestLlmSetup() {
+    requestLlmSetup() {
         this.llmSetupRequests += 1
     }
 
     // When true, block overlays (border, settings button, field headers,
     // add-row button) are always shown. When false (default), they only
     // appear while the mouse is over the block.
-    @observable alwaysShowBlockInfo = false
+    alwaysShowBlockInfo = false
 
-    @action setAlwaysShowBlockInfo(v: boolean) {
+    setAlwaysShowBlockInfo(v: boolean) {
         this.alwaysShowBlockInfo = v
     }
 
     // When true, a second, independent view of the same workbook is shown
     // side-by-side with the main view (engine.createSession()).
-    @observable splitView = false
+    splitView = false
 
-    @action setSplitView(v: boolean) {
+    setSplitView(v: boolean) {
         this.splitView = v
         // Closing the split returns focus to the main view.
         if (!v) this.activeViewId = 'main'
@@ -61,56 +92,56 @@ export class GlobalStore {
     // Which view currently has focus. With a split view both views can hold
     // selections, so the active one is highlighted to make it obvious where
     // a typed value / formula will land. 'main' is the primary EngineCanvas.
-    @observable activeViewId = 'main'
+    activeViewId = 'main'
 
-    @action setActiveViewId(id: string) {
+    setActiveViewId(id: string) {
         this.activeViewId = id
     }
 
     // Published by whichever view is active; consumed by the edit bar so it
-    // targets that view. observable.ref: replaced wholesale, not mutated.
-    @observable.ref activeViewContext: ActiveViewContext | null = null
+    // targets that view. observableRef: replaced wholesale, not mutated.
+    activeViewContext: ActiveViewContext | null = null
 
-    @action setActiveViewContext(c: ActiveViewContext | null) {
+    setActiveViewContext(c: ActiveViewContext | null) {
         this.activeViewContext = c
     }
 
     // When true (default), the temp-mode diff overlay is rendered. Turning
     // it off hides the overlay without leaving temp mode.
-    @observable diffLayerEnabled = true
+    diffLayerEnabled = true
 
-    @action setDiffLayerEnabled(v: boolean) {
+    setDiffLayerEnabled(v: boolean) {
         this.diffLayerEnabled = v
     }
 
     // When true (default), the engine draws the default cell gridlines. The
     // View toolbar toggle mirrors this to engine.setShowGridLines.
-    @observable showGridlines = true
+    showGridlines = true
 
-    @action setShowGridlines(v: boolean) {
+    setShowGridlines(v: boolean) {
         this.showGridlines = v
     }
 
     // When true (default), cell comment indicators are drawn on the grid and
     // their threads can be opened. The View toolbar toggle mirrors this.
-    @observable showComments = true
+    showComments = true
 
-    @action setShowComments(v: boolean) {
+    setShowComments(v: boolean) {
         this.showComments = v
     }
 
     // A one-shot request to open the "new comment" editor on a specific cell,
     // raised by the right-click "Add comment" menu item and consumed by the
     // matching view's CommentLayer. Cleared once handled.
-    @observable.ref pendingCommentCell: PendingComment | null = null
+    pendingCommentCell: PendingComment | null = null
 
-    @action requestAddComment(c: PendingComment) {
+    requestAddComment(c: PendingComment) {
         // Replace with a fresh object each time so repeated requests on the
         // same cell still re-trigger the editor.
         this.pendingCommentCell = {...c, nonce: (c.nonce ?? 0) + 1}
     }
 
-    @action clearPendingCommentCell() {
+    clearPendingCommentCell() {
         this.pendingCommentCell = null
     }
 
@@ -119,9 +150,9 @@ export class GlobalStore {
     // dialog). The engine's own Ctrl+F path emits a `find` event instead; both
     // end at the same state. A counter rather than a boolean so a second click
     // re-opens it after the user closed it.
-    @observable findRequest = 0
+    findRequest = 0
 
-    @action requestFind() {
+    requestFind() {
         this.findRequest += 1
     }
 
@@ -131,21 +162,21 @@ export class GlobalStore {
     // fulfilled by TraceLayer (which has workbook access): it calls the engine's
     // get_precedents / get_dependents, then publishes `traceResult` for the
     // overlay to highlight. Mirrors the pendingCommentCell one-shot pattern.
-    @observable.ref traceRequest: TraceRequest | null = null
+    traceRequest: TraceRequest | null = null
 
-    @action requestTrace(r: Omit<TraceRequest, 'nonce'>) {
+    requestTrace(r: Omit<TraceRequest, 'nonce'>) {
         this.traceRequest = {...r, nonce: (this.traceRequest?.nonce ?? 0) + 1}
     }
 
     // The highlighted result: the origin cell + the cells/ranges it traces to.
-    @observable.ref traceResult: TraceResult | null = null
+    traceResult: TraceResult | null = null
 
-    @action setTraceResult(r: TraceResult | null) {
+    setTraceResult(r: TraceResult | null) {
         this.traceResult = r
         this.traceRequest = null
     }
 
-    @action clearTrace() {
+    clearTrace() {
         this.traceResult = null
         this.traceRequest = null
     }
@@ -155,9 +186,9 @@ export class GlobalStore {
     // the outer border immediately. Linking an empty range changes no cell
     // value, so the normal gridChange/cellUpdated signals don't fire — this is
     // the explicit nudge for that case.
-    @observable linkRevision = 0
+    linkRevision = 0
 
-    @action bumpLinkRevision() {
+    bumpLinkRevision() {
         this.linkRevision += 1
     }
 }

@@ -76,8 +76,8 @@ export const EnumCell = (props: BlockCellProps) => {
                 bgcolor: isEditing
                     ? 'background.paper'
                     : replacesCanvasText
-                    ? 'background.paper'
-                    : 'transparent',
+                      ? 'background.paper'
+                      : 'transparent',
                 boxSizing: 'border-box',
                 cursor: editable ? 'pointer' : 'not-allowed',
                 opacity: editable ? 1 : 0.6,

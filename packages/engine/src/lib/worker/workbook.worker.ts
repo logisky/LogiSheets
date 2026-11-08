@@ -64,7 +64,6 @@ export class WorkbookWorkerService implements IWorkbookWorker {
     // ========================================================================
 
     public async init(): Promise<void> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (initWasm as any)()
         this._workbookImpl = new Workbook()
         this._workbookImpl.registerCellUpdatedCallback(() => {

@@ -2345,8 +2345,7 @@ export function createEngine(L: Locale) {
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const fn = (window as any).notifyCraft as
-                | ((l: NotifyLevel, m: string) => void)
-                | undefined
+                ((l: NotifyLevel, m: string) => void) | undefined
             fn?.(level, message)
         } catch {
             // host channel missing or threw — swallow so the craft keeps
@@ -2663,8 +2662,8 @@ export function createEngine(L: Locale) {
                                 fieldIdx === 0
                                     ? false
                                     : typeof field.userEditable === 'string'
-                                    ? true
-                                    : field.userEditable
+                                      ? true
+                                      : field.userEditable
                             return {
                                 name: fieldNames[fieldIdx],
                                 renderId: renderIds[fieldIdx],
@@ -2680,8 +2679,8 @@ export function createEngine(L: Locale) {
                                     staticEditable === false
                                         ? 'ownerOnly'
                                         : staticEditable === true
-                                        ? 'anyone'
-                                        : 'inherit',
+                                          ? 'anyone'
+                                          : 'inherit',
                                 fieldType:
                                     kind === 'enum'
                                         ? {
@@ -2921,8 +2920,8 @@ export function createEngine(L: Locale) {
                 table === PRODUCTION_LINE_1_LEVELS_TABLE
                     ? PRODUCTION_LINE_1_LEVEL_SEEDS
                     : table === PRODUCTION_LINE_2_LEVELS_TABLE
-                    ? PRODUCTION_LINE_2_LEVEL_SEEDS
-                    : null
+                      ? PRODUCTION_LINE_2_LEVEL_SEEDS
+                      : null
             if (levelSeeds) {
                 const colOf = (name: string) =>
                     fields.findIndex((fi) => fi.name === name)
@@ -2980,8 +2979,8 @@ export function createEngine(L: Locale) {
                             keyName === GOODWILL
                                 ? '100'
                                 : keyName === FUND
-                                ? '5000'
-                                : undefined
+                                  ? '5000'
+                                  : undefined
                         if (seed === undefined) return
                         blockPayloads.push({
                             type: 'blockInput',
@@ -3331,8 +3330,7 @@ export function createEngine(L: Locale) {
               }) => void)
             | undefined
         const clear = w.clearPercentAllocators as
-            | ((groupId?: string) => void)
-            | undefined
+            ((groupId?: string) => void) | undefined
         if (!register) return // host predates the percent-allocator API
 
         // Wipe any leftovers from the previous game so a fresh registration
@@ -3432,8 +3430,8 @@ export function createEngine(L: Locale) {
             value !== 'empty' && value.type === 'number'
                 ? value.value
                 : value !== 'empty' && value.type === 'str'
-                ? Number(value.value)
-                : NaN
+                  ? Number(value.value)
+                  : NaN
         const next = (Number.isFinite(current) ? current : 0) + 1
 
         const sheetIdx = SHEET_IDX[ENGINE_SHEET]
@@ -3806,7 +3804,7 @@ export function createEngine(L: Locale) {
             // BlockInput arm fires; content is irrelevant and gets dropped.
             const content = field.valueFormula
                 ? ''
-                : valueByName[field.name] ?? ''
+                : (valueByName[field.name] ?? '')
             payloads.push({
                 type: 'blockInput',
                 value: new BlockInputBuilder()
@@ -4163,7 +4161,7 @@ export function createEngine(L: Locale) {
         ACCEPTED_ORDER_STATUS_TABLE.fields.forEach((field, colIdx) => {
             const content = field.valueFormula
                 ? ''
-                : valueByName[field.name] ?? ''
+                : (valueByName[field.name] ?? '')
             payloads.push({
                 type: 'blockInput',
                 value: new BlockInputBuilder()
@@ -4347,8 +4345,7 @@ export function createEngine(L: Locale) {
         if (_orderAcceptBridgeInstalled) return
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const onBlockCellEdit = (window as any).onBlockCellEdit as
-            | ((cb: (e: BlockCellEditEvent) => void) => () => void)
-            | undefined
+            ((cb: (e: BlockCellEditEvent) => void) => () => void) | undefined
         if (!onBlockCellEdit) return
         _orderAcceptBridgeInstalled = true
         onBlockCellEdit(async (e) => {
@@ -4367,8 +4364,8 @@ export function createEngine(L: Locale) {
                 v === 'empty'
                     ? ''
                     : v.type === 'str'
-                    ? v.value
-                    : String(v.value)
+                      ? v.value
+                      : String(v.value)
             const cb = orderAcceptListeners.get(orderId)
             if (cb) cb(e.newValue === '1')
         })
@@ -4406,8 +4403,7 @@ export function createEngine(L: Locale) {
         if (_productionLineUpgradeBridgeInstalled) return
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const onBlockCellEdit = (window as any).onBlockCellEdit as
-            | ((cb: (e: BlockCellEditEvent) => void) => () => void)
-            | undefined
+            ((cb: (e: BlockCellEditEvent) => void) => () => void) | undefined
         if (!onBlockCellEdit) return
         _productionLineUpgradeBridgeInstalled = true
 
@@ -4517,8 +4513,7 @@ export function createEngine(L: Locale) {
         if (_jointResearchBridgeInstalled) return
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const onBlockCellEdit = (window as any).onBlockCellEdit as
-            | ((cb: (e: BlockCellEditEvent) => void) => () => void)
-            | undefined
+            ((cb: (e: BlockCellEditEvent) => void) => () => void) | undefined
         if (!onBlockCellEdit) return
         _jointResearchBridgeInstalled = true
 
@@ -4596,10 +4591,10 @@ export function createEngine(L: Locale) {
                 roundValue.type === 'number'
                     ? roundValue.value
                     : roundValue &&
-                      roundValue !== 'empty' &&
-                      roundValue.type === 'str'
-                    ? Number(roundValue.value)
-                    : NaN
+                        roundValue !== 'empty' &&
+                        roundValue.type === 'str'
+                      ? Number(roundValue.value)
+                      : NaN
             if (!Number.isFinite(currentRound)) return
 
             const curCount = readCell(researchCountCol)
@@ -5116,8 +5111,8 @@ export function createEngine(L: Locale) {
                 ? roundCell.value.type === 'number'
                     ? roundCell.value.value
                     : roundCell.value.type === 'str'
-                    ? Number(roundCell.value.value)
-                    : NaN
+                      ? Number(roundCell.value.value)
+                      : NaN
                 : NaN
         const nextRound = (Number.isFinite(currentRound) ? currentRound : 0) + 1
 
@@ -5754,7 +5749,7 @@ export function createEngine(L: Locale) {
             NEW_ORDER_STATUS_TABLE.fields.forEach((field, colIdx) => {
                 const content = field.valueFormula
                     ? ''
-                    : valueByName[field.name] ?? ''
+                    : (valueByName[field.name] ?? '')
                 payloads.push({
                     type: 'blockInput',
                     value: new BlockInputBuilder()

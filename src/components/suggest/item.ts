@@ -15,5 +15,8 @@ export class Candidate {
     }
 }
 export class SpanItem {
-    constructor(public readonly text = '', public readonly highlight = false) {}
+    constructor(
+        public readonly text = '',
+        public readonly highlight = false
+    ) {}
 }

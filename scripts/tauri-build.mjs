@@ -27,7 +27,9 @@ const desktop = join(root, 'packages', 'desktop')
 
 const argv = process.argv.slice(2)
 const skipFrontend = argv.includes('--skip-frontend')
-const passThrough = argv.includes('--') ? argv.slice(argv.indexOf('--') + 1) : []
+const passThrough = argv.includes('--')
+    ? argv.slice(argv.indexOf('--') + 1)
+    : []
 
 /** Run a command, inheriting stdio, and stop the build if it fails. */
 function run(cmd, args, cwd) {

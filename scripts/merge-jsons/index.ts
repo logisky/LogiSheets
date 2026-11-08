@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+
 //references https://basarat.gitbooks.io/typescript/content/docs/quick/nodejs.html
 import * as path from 'path'
 import * as fs from 'fs'
-import * as glob from 'glob'
+import {globSync, type GlobOptions} from 'glob'
 
 const UTF8_ENCODING = 'utf8'
 const plugin = 'MergeJsonWebpackPlugin'
@@ -33,7 +33,7 @@ interface Options {
     overwrite?: boolean
     mergeToArray?: boolean
     output: OutputFile | OutputGroupBy
-    globOptions?: glob.IOptions
+    globOptions?: GlobOptions
     cwd?: string
 }
 export class MergeJsonWebpackPlugin {
@@ -80,7 +80,7 @@ export class MergeJsonWebpackPlugin {
             // extract files
             groupBy.map((g) => {
                 const {pattern, fileName} = g
-                const files = glob.sync(pattern, globOptions)
+                const files = globSync(pattern, globOptions) as string[]
                 filesToProcess.push({
                     files,
                     outputPath: fileName,
@@ -234,12 +234,10 @@ class Logger {
     }
     debug = (...logs) => {
         if (this.isDebug) {
-            // eslint-disable-next-line no-console
             console.log('\x1b[36m%s\x1b[0m', `${plugin} :: ${logs}`)
         }
     }
     error = (e: any) => {
-        // eslint-disable-next-line no-console
         console.error('\x1b[41m%s\x1b[0m', `${plugin} : ${e.message}`)
     }
 }

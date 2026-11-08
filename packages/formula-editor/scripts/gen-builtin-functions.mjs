@@ -46,4 +46,7 @@ writeFileSync(dest, JSON.stringify(out, null, 2) + '\n')
 
 console.log(`Wrote ${out.length} functions to ${dest}`)
 const stillKeys = out.filter((f) => /^functions\./.test(f.description)).length
-if (stillKeys) console.warn(`  ${stillKeys} description(s) had no English string and kept their key`)
+if (stillKeys)
+    console.warn(
+        `  ${stillKeys} description(s) had no English string and kept their key`
+    )

@@ -138,11 +138,7 @@ export interface JsonRpcResponse {
 
 /** Why a cell failed validation (returned from `onValidate`). */
 export type ViolationKind =
-    | 'failed'
-    | 'error'
-    | 'required'
-    | 'duplicate'
-    | 'membership'
+    'failed' | 'error' | 'required' | 'duplicate' | 'membership'
 
 /** One cell that failed its validation rule. */
 export interface Violation {
@@ -172,7 +168,7 @@ export interface Violation {
  */
 export interface CraftRuntime<
     S extends CraftState = CraftState,
-    W = SkillWorkbook
+    W = SkillWorkbook,
 > {
     onLoad: (s: S, wb: W) => MaybePromise<Result<void>>
     onRequest: (req: JsonRpcRequest, s: S, wb: W) => MaybePromise<Result<void>>

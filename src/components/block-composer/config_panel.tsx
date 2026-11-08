@@ -974,7 +974,7 @@ export const FieldConfigPanel = ({
                                 localEligible.length === 0
                             const sheetSelectValue = field.refSelf
                                 ? SELF_SENTINEL
-                                : field.refSheetId ?? ''
+                                : (field.refSheetId ?? '')
 
                             return (
                                 <Card variant="outlined" sx={cardSx}>
@@ -1018,8 +1018,7 @@ export const FieldConfigPanel = ({
                                                             ) {
                                                                 onUpdate({
                                                                     ...field,
-                                                                    refSelf:
-                                                                        true,
+                                                                    refSelf: true,
                                                                     refSheetId:
                                                                         undefined,
                                                                     refBlockId:

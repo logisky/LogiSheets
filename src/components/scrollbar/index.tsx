@@ -124,8 +124,8 @@ export const Scrollbar: FC<ScrollbarProps> = ({
             orientation === 'x' ? track.clientWidth : track.clientHeight
         const thumbPx =
             orientation === 'x'
-                ? thumb?.offsetWidth ?? 0
-                : thumb?.offsetHeight ?? 0
+                ? (thumb?.offsetWidth ?? 0)
+                : (thumb?.offsetHeight ?? 0)
         const oldRatio = totalPx === 0 ? 0 : startDocPos / totalLength
         const oldStartPx = totalPx * oldRatio
         let newStartPx = oldStartPx + deltaPx

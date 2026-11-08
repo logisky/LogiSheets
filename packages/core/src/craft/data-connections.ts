@@ -44,12 +44,7 @@ export interface DataConnectionInfo {
  * - `text`: anything else; binary values are `base64:…`.
  */
 export type DataColumnType =
-    | 'number'
-    | 'text'
-    | 'boolean'
-    | 'date'
-    | 'datetime'
-    | 'time'
+    'number' | 'text' | 'boolean' | 'date' | 'datetime' | 'time'
 
 /** `null` is an EMPTY cell, which is not the same as `''`. */
 export type DataCellValue = string | number | boolean | null

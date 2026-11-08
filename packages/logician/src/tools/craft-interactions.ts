@@ -434,11 +434,7 @@ const registerNumberSlider: Tool<RegisterSliderInput> = {
 // ===========================================================================
 
 type InteractionKind =
-    | 'radio'
-    | 'multi_select'
-    | 'point'
-    | 'percent'
-    | 'number_slider'
+    'radio' | 'multi_select' | 'point' | 'percent' | 'number_slider'
 
 interface ClearInput {
     kind: InteractionKind

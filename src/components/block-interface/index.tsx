@@ -416,7 +416,7 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                         pivotSource={
                             info.pivot
                                 ? undefined
-                                : info.schema?.fields ?? undefined
+                                : (info.schema?.fields ?? undefined)
                         }
                         pivotHealth={pivotHealth.get(info.blockId)}
                         isPivot={!!info.pivot}
@@ -431,8 +431,8 @@ export const BlockInterfaceComponent = (props: BlockInterfaceProps) => {
                                 hovered
                                     ? info.blockId
                                     : prev === info.blockId
-                                    ? null
-                                    : prev
+                                      ? null
+                                      : prev
                             )
                         }
                         onGoToBlock={
@@ -761,7 +761,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                     colValue:
                         f.pivotColValue === '*'
                             ? null
-                            : f.pivotColValue ?? null,
+                            : (f.pivotColValue ?? null),
                     func: f.pivotFunc as AggFunc | undefined,
                     measure: f.pivotMeasure,
                 })),
@@ -1633,8 +1633,7 @@ const BlockInterface = observer((props: BlockInterfaceInternalProps) => {
                                             // Suppress the click that follows a
                                             // drag; a plain click still sorts.
                                             if (fieldDragMovedRef.current) {
-                                                fieldDragMovedRef.current =
-                                                    false
+                                                fieldDragMovedRef.current = false
                                                 return
                                             }
                                             setSortMenu({

@@ -24,7 +24,7 @@ const ev = (init: KeyInit) =>
         shiftKey: false,
         altKey: false,
         ...init,
-    } as KeyboardEvent)
+    }) as KeyboardEvent
 
 /**
  * The primary modifier is ⌘ on Apple and Ctrl elsewhere, decided from

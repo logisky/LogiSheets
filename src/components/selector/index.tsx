@@ -1,4 +1,4 @@
-import {observer} from 'mobx-react'
+import {observer} from 'mobx-react-lite'
 export class SelectorProps {
     editing? = false
     x = 0

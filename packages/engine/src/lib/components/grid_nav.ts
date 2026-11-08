@@ -164,10 +164,22 @@ export function expandRangeToMerges(
                 m.startCol <= endCol &&
                 m.endCol >= startCol
             if (!touches) continue
-            if (m.startRow < startRow) (startRow = m.startRow), (changed = true)
-            if (m.endRow > endRow) (endRow = m.endRow), (changed = true)
-            if (m.startCol < startCol) (startCol = m.startCol), (changed = true)
-            if (m.endCol > endCol) (endCol = m.endCol), (changed = true)
+            if (m.startRow < startRow) {
+                startRow = m.startRow
+                changed = true
+            }
+            if (m.endRow > endRow) {
+                endRow = m.endRow
+                changed = true
+            }
+            if (m.startCol < startCol) {
+                startCol = m.startCol
+                changed = true
+            }
+            if (m.endCol > endCol) {
+                endCol = m.endCol
+                changed = true
+            }
         }
         if (!changed) break
     }

@@ -86,6 +86,7 @@ function createMockClient() {
 }
 
 function getWrittenId(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handleTransaction: {mock: {calls: any[]}},
     callIndex = 0
 ): number {

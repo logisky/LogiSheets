@@ -25,14 +25,12 @@ function labelText(
     i: number,
     percent?: number
 ): string {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const s = (option.series as any[])[0]
     return s.label.formatter({dataIndex: i, percent})
 }
 
 describe('mapChartToOption — data labels', () => {
     it('shows nothing when the chart has no labels', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s = (mapChartToOption(model()).series as any[])[0]
         expect(s.label.show).toBe(false)
     })
@@ -100,13 +98,12 @@ describe('mapChartToOption — data labels', () => {
 describe('mapChartToOption — axes', () => {
     it('formats value-axis ticks with the chart number format', () => {
         const option = mapChartToOption(model({valAxisNumFmt: '#,##0.0'}))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const fmt = (option.yAxis as any).axisLabel.formatter
         expect(fmt(1234.5)).toBe('1,234.5')
     })
 
     it('leaves ticks alone when the chart has no number format', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect(
             (mapChartToOption(model()).yAxis as any).axisLabel
         ).toBeUndefined()
@@ -116,9 +113,9 @@ describe('mapChartToOption — axes', () => {
         const option = mapChartToOption(
             model({chartType: 'bar', valAxisNumFmt: '0%'})
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.xAxis as any).axisLabel.formatter(0.25)).toBe('25%')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.yAxis as any).type).toBe('category')
     })
 })
@@ -135,7 +132,7 @@ describe('mapChartToOption — axis scale', () => {
                 },
             })
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const y = option.yAxis as any
         expect(y.min).toBe(0)
         expect(y.max).toBe(80)
@@ -147,7 +144,7 @@ describe('mapChartToOption — axis scale', () => {
         const option = mapChartToOption(
             model({valAxisScale: {reversed: false}})
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const y = option.yAxis as any
         expect(y.min).toBeUndefined()
         expect(y.max).toBeUndefined()
@@ -159,7 +156,7 @@ describe('mapChartToOption — axis scale', () => {
         const option = mapChartToOption(
             model({valAxisScale: {logBase: 10, reversed: true}})
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const y = option.yAxis as any
         expect(y.type).toBe('log')
         expect(y.logBase).toBe(10)
@@ -170,7 +167,7 @@ describe('mapChartToOption — axis scale', () => {
         const option = mapChartToOption(
             model({chartType: 'bar', valAxisScale: {max: 50, reversed: false}})
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.xAxis as any).max).toBe(50)
     })
 
@@ -178,7 +175,7 @@ describe('mapChartToOption — axis scale', () => {
         const option = mapChartToOption(
             model({catAxisScale: {reversed: true, min: 3}})
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const x = option.xAxis as any
         expect(x.inverse).toBe(true)
         expect(x.min).toBeUndefined()
@@ -197,7 +194,7 @@ describe('mapChartToOption — radar', () => {
                 ],
             })
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const radar = (option as any).radar
         expect(radar.indicator.map((i: {name: string}) => i.name)).toEqual([
             'Speed',
@@ -208,7 +205,7 @@ describe('mapChartToOption — radar', () => {
         expect(radar.indicator.every((i: {max: number}) => i.max === 9)).toBe(
             true
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const s = (option.series as any[])[0]
         expect(s.type).toBe('radar')
         expect(s.data).toHaveLength(2)
@@ -224,7 +221,7 @@ describe('mapChartToOption — radar', () => {
                 series: [{name: 'A', values: [5, null]}],
             })
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.series as any[])[0].data[0].value).toEqual([5, 0])
     })
 })
@@ -246,7 +243,6 @@ describe('mapChartToOption — bubble', () => {
         )
 
     it('packs [x, y, size] triples', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s = (bubble().series as any[])[0]
         expect(s.type).toBe('scatter')
         expect(s.data[0]).toEqual([1, 10, 25])
@@ -254,7 +250,6 @@ describe('mapChartToOption — bubble', () => {
     })
 
     it('sizes by area, normalized to the largest bubble', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s = (bubble().series as any[])[0]
         // 100 is the largest → full radius; 25 is a quarter of the area, so
         // half the radius.
@@ -263,22 +258,21 @@ describe('mapChartToOption — bubble', () => {
     })
 
     it('falls back to a default radius when a size is missing', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s = (bubble().series as any[])[0]
         expect(s.symbolSize([3, 30, null])).toBe(10)
         // A series with no sizes at all still plots.
         const none = mapChartToOption(
             model({chartType: 'bubble', series: [{name: 'P', values: [1, 2]}]})
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((none.series as any[])[0].symbolSize([0, 1, null])).toBe(10)
     })
 
     it('keeps two value axes, like scatter', () => {
         const option = bubble()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.xAxis as any).type).toBe('value')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.yAxis as any).type).toBe('value')
     })
 })
@@ -296,7 +290,7 @@ describe('mapChartToOption — stock', () => {
 
     it('reads four series as open/high/low/close', () => {
         const option = ohlc(['Open', 'High', 'Low', 'Close'])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const s = (mapChartToOption(option).series as any[])[0]
         expect(s.type).toBe('candlestick')
         // ECharts order is [open, close, low, high].
@@ -304,7 +298,6 @@ describe('mapChartToOption — stock', () => {
     })
 
     it('reads three series as high/low/close, with open = close', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s = (
             mapChartToOption(ohlc(['High', 'Low', 'Close'])).series as any[]
         )[0]
@@ -313,14 +306,13 @@ describe('mapChartToOption — stock', () => {
     })
 
     it('falls back to lines when the series count is not a stock shape', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s = (mapChartToOption(ohlc(['A', 'B'])).series as any[])[0]
         expect(s.type).toBe('bar')
     })
 
     it('lets the price axis frame the data instead of starting at zero', () => {
         const option = mapChartToOption(ohlc(['O', 'H', 'L', 'C']))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.yAxis as any).scale).toBe(true)
     })
 })
@@ -333,7 +325,7 @@ describe('mapChartToOption — of pie', () => {
             series: [{name: 'S', values: [50, 30, 10, 6, 4]}],
             ...over,
         })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const plots = (m: ChartModel) => mapChartToOption(m).series as any[]
 
     it('splits the last N points by position', () => {
@@ -408,7 +400,6 @@ describe('mapChartToOption — surface', () => {
         )
 
     it('lays the grid out as [col, row, value] heatmap cells', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const s = (surface().series as any[])[0]
         expect(s.type).toBe('heatmap')
         // The null is a hole in the grid, not a zero.
@@ -420,7 +411,6 @@ describe('mapChartToOption — surface', () => {
     })
 
     it('scales the colour map to the data', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const vm = (surface() as any).visualMap
         expect(vm.min).toBe(1)
         expect(vm.max).toBe(9)
@@ -428,14 +418,13 @@ describe('mapChartToOption — surface', () => {
 
     it('labels the axes with the categories and the series names', () => {
         const option = surface()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.xAxis as any).data).toEqual(['x1', 'x2'])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.yAxis as any).data).toEqual(['r1', 'r2'])
     })
 
     it('draws the 3-D form the same flat way', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((surface('surface3d').series as any[])[0].type).toBe('heatmap')
     })
 
@@ -443,7 +432,7 @@ describe('mapChartToOption — surface', () => {
         const option = mapChartToOption(
             model({chartType: 'surface', series: [{name: 'r', values: [null]}]})
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const vm = (option as any).visualMap
         expect(Number.isFinite(vm.min) && Number.isFinite(vm.max)).toBe(true)
     })
@@ -458,30 +447,25 @@ describe('mapChartToOption — 3-D kinds', () => {
             ['area3d', 'line'],
         ]
         for (const [type, expected] of cases) {
-            const option = mapChartToOption(
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                model({chartType: type as any})
-            )
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const option = mapChartToOption(model({chartType: type as any}))
+
             expect((option.series as any[])[0].type).toBe(expected)
         }
     })
 
     it('keeps the flat kind’s orientation and fill', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const bar3d = mapChartToOption(model({chartType: 'bar3d' as any}))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((bar3d.yAxis as any).type).toBe('category')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const area3d = mapChartToOption(model({chartType: 'area3d' as any}))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((area3d.series as any[])[0].areaStyle).toBeDefined()
     })
 
     it('draws a 3-D pie as a pie, with no grid', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const option = mapChartToOption(model({chartType: 'pie3d' as any}))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.series as any[])[0].type).toBe('pie')
         expect(option.grid).toBeUndefined()
     })
@@ -502,7 +486,6 @@ describe('mapChartToOption — combo', () => {
         )
 
     it('gives each series the kind it asks for', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const series = combo().series as any[]
         expect(series.map((s) => s.type)).toEqual(['bar', 'line', 'line'])
         // Area is a line with a fill.
@@ -511,7 +494,6 @@ describe('mapChartToOption — combo', () => {
     })
 
     it('stacks only the series that follow the chart’s own kind', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const series = combo({stacked: true}).series as any[]
         expect(series[0].stack).toBe('total')
         expect(series[1].stack).toBeUndefined()
@@ -519,7 +501,6 @@ describe('mapChartToOption — combo', () => {
     })
 
     it('leaves a chart with no overrides unchanged', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const series = mapChartToOption(model({stacked: true})).series as any[]
         expect(series.every((s) => s.type === 'bar')).toBe(true)
         expect(series.every((s) => s.stack === 'total')).toBe(true)
@@ -529,11 +510,11 @@ describe('mapChartToOption — combo', () => {
         const option = mapChartToOption(
             model({
                 chartType: 'col',
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 series: [{name: 'a', values: [1], seriesType: 'line3d' as any}],
             })
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expect((option.series as any[])[0].type).toBe('line')
     })
 })

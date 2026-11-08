@@ -1,5 +1,5 @@
 // tslint:disable-next-line: no-single-line-block-comment
-/* eslint-disable max-lines */
+
 export const MIMES = {
     '.323': 'text/h323',
     '.3g2': 'video/3gpp2',

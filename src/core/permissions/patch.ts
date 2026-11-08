@@ -670,8 +670,7 @@ function applyPatch() {
         'handleTransactionWithoutEvents',
     ] as const) {
         const original = proto[name] as
-            | ((params: ParamsWithCaller) => Promise<unknown>)
-            | undefined
+            ((params: ParamsWithCaller) => Promise<unknown>) | undefined
         if (typeof original !== 'function') continue
 
         proto[name] = async function (

@@ -27,8 +27,8 @@ function fakeClient(over: Partial<Record<string, unknown>> = {}) {
             idx === 0
                 ? 'Sheet1'
                 : idx === 1
-                ? "Bob's Data"
-                : {msg: 'no sheet', ty: 1},
+                  ? "Bob's Data"
+                  : {msg: 'no sheet', ty: 1},
         handleTransaction: async ({
             transaction,
         }: {
@@ -387,8 +387,8 @@ function gridClient(rows: CellLit[][]) {
                             lit === null || lit === ''
                                 ? 'empty'
                                 : typeof lit === 'number'
-                                ? {type: 'number', value: lit}
-                                : {type: 'str', value: lit},
+                                  ? {type: 'number', value: lit}
+                                  : {type: 'str', value: lit},
                         formula: '',
                         style: {formatter: fmt},
                     })

@@ -55,7 +55,7 @@ function resolveCraftTools(dev: boolean): {
     }))
     const defaultCraft = dist.defaultCraft
         ? `/${dist.defaultCraft}/index.html`
-        : tools[0]?.value ?? '/factory-simulator-en/index.html'
+        : (tools[0]?.value ?? '/factory-simulator-en/index.html')
     // Every bundled id, in any distribution: an installed craft may not take
     // one (see reservedCraftIds in src/core/craft-packages).
     const reservedIds = Object.keys(cfg.registry)
@@ -64,7 +64,7 @@ function resolveCraftTools(dev: boolean): {
     // dev-only ones, the way it adds devOnly bundled crafts above.
     const autoInstall: string[] = [
         ...(dist.install ?? []),
-        ...(dev ? cfg.devInstall ?? [] : []),
+        ...(dev ? (cfg.devInstall ?? []) : []),
     ]
     const registryUrl: string = cfg.craftRegistry ?? ''
     return {tools, defaultCraft, locale, reservedIds, autoInstall, registryUrl}

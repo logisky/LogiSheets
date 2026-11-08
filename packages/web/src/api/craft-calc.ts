@@ -75,7 +75,10 @@ export class CraftCalc {
     // first time calcOnce runs.
     private readonly _live = new Set<number>()
 
-    constructor(private readonly _workbook: Client, base: number) {
+    constructor(
+        private readonly _workbook: Client,
+        base: number
+    ) {
         this._base = base
     }
 

@@ -12,7 +12,7 @@ export function setDataToCopy(
 
 export function canUseTextData(e: ClipboardEvent): boolean {
     if (e.clipboardData) return true
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     if (navigator.clipboard) return true
     return false
 }

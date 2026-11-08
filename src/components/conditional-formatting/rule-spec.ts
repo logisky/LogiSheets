@@ -197,7 +197,12 @@ export function specToForm(spec: CfRuleSpec): RuleForm | null {
  * change. */
 export function describeRule(
     spec: CfRuleSpec,
-    t: (key: string, vars?: Record<string, unknown>) => string
+    // Two overloads rather than an optional `vars`: i18next 23+ types `t` as
+    // overloads too, and its TFunction is not assignable to a `vars?` signature.
+    t: {
+        (key: string): string
+        (key: string, vars: Record<string, unknown>): string
+    }
 ): string {
     const ops = spec.operands
     switch (spec.ty) {

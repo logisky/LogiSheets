@@ -157,7 +157,7 @@ export class WorkbookWatcher {
         for (const name of files) {
             if (!isDescriptorFile(name)) continue
             const file = resolve(this.dir, name)
-            // eslint-disable-next-line no-await-in-loop
+
             await this.reconcile(file)
         }
     }

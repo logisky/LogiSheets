@@ -21,11 +21,7 @@ export interface ValidationRule {
 }
 
 export type ViolationKind =
-    | 'failed'
-    | 'error'
-    | 'required'
-    | 'duplicate'
-    | 'membership'
+    'failed' | 'error' | 'required' | 'duplicate' | 'membership'
 
 export interface Violation {
     sheetIdx: number

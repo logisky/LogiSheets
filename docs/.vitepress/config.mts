@@ -12,68 +12,67 @@ const OG_IMAGE = `${HOSTNAME}/logo/logisheets.jpg`
 // The site's reading order. Hoisted out of `themeConfig` because buildEnd
 // reuses it below to order llms-full.txt and to check llms.txt for staleness.
 const SIDEBAR = [
-
+    {
+        // Concepts: what the thing is. No how-to here — that is Guide.
+        text: 'Introduction',
+        items: [
+            {text: 'What is LogiSheets?', link: '/introduction'},
+            {text: 'Blocks', link: '/blocks'},
+            {text: 'Crafts', link: '/craft/craft'},
+            {text: 'Putting it together', link: '/composition'},
+        ],
+    },
+    {
+        // How to actually do things. Numbered because the complaint
+        // about the old sidebar was that nothing showed these build on
+        // each other: 1 is the API, 2 puts a UI on that API, 3 and 4
+        // are what you do with it, 5 hands it to a model.
+        text: 'Guide',
+        items: [
+            {text: '1. Read & write Excel files', link: '/usage'},
             {
-                // Concepts: what the thing is. No how-to here — that is Guide.
-                text: 'Introduction',
-                items: [
-                    {text: 'What is LogiSheets?', link: '/introduction'},
-                    {text: 'Blocks', link: '/blocks'},
-                    {text: 'Crafts', link: '/craft/craft'},
-                    {text: 'Putting it together', link: '/composition'},
-                ],
+                text: '2. Add a spreadsheet UI to your app',
+                link: '/engine',
             },
             {
-                // How to actually do things. Numbered because the complaint
-                // about the old sidebar was that nothing showed these build on
-                // each other: 1 is the API, 2 puts a UI on that API, 3 and 4
-                // are what you do with it, 5 hands it to a model.
-                text: 'Guide',
-                items: [
-                    {text: '1. Read & write Excel files', link: '/usage'},
-                    {
-                        text: '2. Add a spreadsheet UI to your app',
-                        link: '/engine',
-                    },
-                    {
-                        text: '3. Structure data with blocks',
-                        link: '/using-blocks',
-                    },
-                    {
-                        text: '4. Write your own craft',
-                        link: '/craft/writing-a-craft',
-                    },
-                    {text: '5. AI assistant (logician)', link: '/logician'},
-                ],
+                text: '3. Structure data with blocks',
+                link: '/using-blocks',
             },
             {
-                // Off the main path: real docs, but not part of the ladder.
-                text: 'Reference',
-                items: [
-                    {text: 'Charts', link: '/chart'},
-                    {text: 'Run workbooks on a server', link: '/runtime'},
-                ],
+                text: '4. Write your own craft',
+                link: '/craft/writing-a-craft',
+            },
+            {text: '5. AI assistant (logician)', link: '/logician'},
+        ],
+    },
+    {
+        // Off the main path: real docs, but not part of the ladder.
+        text: 'Reference',
+        items: [
+            {text: 'Charts', link: '/chart'},
+            {text: 'Run workbooks on a server', link: '/runtime'},
+        ],
+    },
+    {
+        // The essays. Last, and deliberately the quietest entry.
+        text: 'Ideas',
+        items: [
+            {text: 'Overview', link: '/ideas/'},
+            {
+                text: 'What is real AI-native?',
+                link: '/ideas/what-is-real-AI-native',
             },
             {
-                // The essays. Last, and deliberately the quietest entry.
-                text: 'Ideas',
-                items: [
-                    {text: 'Overview', link: '/ideas/'},
-                    {
-                        text: 'What is real AI-native?',
-                        link: '/ideas/what-is-real-AI-native',
-                    },
-                    {
-                        text: "Your AI agent doesn't need more memory",
-                        link: '/ideas/your-ai-agent-does-not-need-more-memory',
-                    },
-                    {
-                        text: 'Spreadsheets become even more important in the AI era',
-                        link: '/ideas/spreadsheet-becomes-even-more-important-in-AI-era',
-                    },
-                ],
+                text: "Your AI agent doesn't need more memory",
+                link: '/ideas/your-ai-agent-does-not-need-more-memory',
             },
-        ]
+            {
+                text: 'Spreadsheets become even more important in the AI era',
+                link: '/ideas/spreadsheet-becomes-even-more-important-in-AI-era',
+            },
+        ],
+    },
+]
 
 export default defineConfig({
     title: 'LogiSheets',
@@ -144,10 +143,16 @@ export default defineConfig({
             for (const item of group.items) routes.push(item.link)
 
         const fileFor = (route: string) =>
-            path.join(srcDir, route.endsWith('/') ? route + 'index.md' : route + '.md')
+            path.join(
+                srcDir,
+                route.endsWith('/') ? route + 'index.md' : route + '.md'
+            )
 
         // Pages not in the sidebar (e.g. /chart) still belong in the dump.
-        const all = await fs.readdir(srcDir, {recursive: true, withFileTypes: true})
+        const all = await fs.readdir(srcDir, {
+            recursive: true,
+            withFileTypes: true,
+        })
         const extras = all
             .filter((d) => d.isFile() && d.name.endsWith('.md'))
             .map((d) => path.join(d.parentPath ?? d.path, d.name))
@@ -165,9 +170,16 @@ export default defineConfig({
         for (const f of files) {
             const raw = await fs.readFile(f, 'utf8')
             // Drop the YAML frontmatter; its `description` is already in llms.txt.
-            parts.push('\n\n---\n\n' + raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim())
+            parts.push(
+                '\n\n---\n\n' +
+                    raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim()
+            )
         }
-        await fs.writeFile(path.join(outDir, 'llms-full.txt'), parts.join('\n'), 'utf8')
+        await fs.writeFile(
+            path.join(outDir, 'llms-full.txt'),
+            parts.join('\n'),
+            'utf8'
+        )
 
         // VitePress checks dead LINKS but not #anchors, so a heading rename
         // silently leaves every link to it pointing at nothing. Found two real
@@ -175,7 +187,9 @@ export default defineConfig({
         // punctuation in slugs: "Config — EngineConfig" becomes
         // "config-—-engineconfig", em-dash and all.
         const pages = new Map<string, Set<string>>()
-        const htmlFiles = (await fs.readdir(outDir, {recursive: true})) as string[]
+        const htmlFiles = (await fs.readdir(outDir, {
+            recursive: true,
+        })) as string[]
         for (const rel of htmlFiles.filter((f) => f.endsWith('.html'))) {
             const html = await fs.readFile(path.join(outDir, rel), 'utf8')
             pages.set(
@@ -185,7 +199,10 @@ export default defineConfig({
         }
         const deadAnchors: string[] = []
         for (const [page, anchors] of pages) {
-            const html = await fs.readFile(path.join(outDir, page + '.html'), 'utf8')
+            const html = await fs.readFile(
+                path.join(outDir, page + '.html'),
+                'utf8'
+            )
             for (const [, frag] of html.matchAll(/href="#([^"]+)"/g)) {
                 const decoded = decodeURIComponent(frag)
                 if (!anchors.has(decoded) && !anchors.has(frag))
@@ -200,10 +217,14 @@ export default defineConfig({
 
         const index = await fs.readFile(path.join(outDir, 'llms.txt'), 'utf8')
         const missing = routes.filter(
-            (r) => !index.includes(r.replace(/\/$/, '/') ) && !index.includes(r + '.html')
+            (r) =>
+                !index.includes(r.replace(/\/$/, '/')) &&
+                !index.includes(r + '.html')
         )
         if (missing.length)
-            console.warn('[llms.txt] not linked from llms.txt: ' + missing.join(', '))
+            console.warn(
+                '[llms.txt] not linked from llms.txt: ' + missing.join(', ')
+            )
     },
     themeConfig: {
         logo: '/logo/logo.png',

@@ -60,7 +60,7 @@ function makeByteToCharIdx(text: string): (byteIdx: number) => number {
     const starts: number[] = []
     const utf16s: number[] = []
     let byte = 0
-    for (let i = 0; i < text.length; ) {
+    for (let i = 0; i < text.length;) {
         const code = text.codePointAt(i)!
         starts.push(byte)
         utf16s.push(i)
@@ -1001,8 +1001,8 @@ export function createFormulaEditor(
             cursor !== undefined
                 ? cursor
                 : initialCursorPosition === 'end'
-                ? initialValue.length
-                : 0
+                  ? initialValue.length
+                  : 0
 
         const state = EditorState.create({
             doc: initialValue,

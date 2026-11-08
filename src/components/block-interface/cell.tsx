@@ -34,12 +34,7 @@ export interface DisplayCellSpec extends BlockCellProps {
 // Interactive widgets: the user clicks to edit. At most one interactive
 // cell is rendered per data cell, picked from the field's type.
 export type InteractiveCellKind =
-    | 'enum'
-    | 'boolean'
-    | 'datetime'
-    | 'image'
-    | 'fieldRef'
-    | 'multiSelectRef'
+    'enum' | 'boolean' | 'datetime' | 'image' | 'fieldRef' | 'multiSelectRef'
 
 export interface InteractiveCellSpec extends BlockCellProps {
     kind: 'interactive'

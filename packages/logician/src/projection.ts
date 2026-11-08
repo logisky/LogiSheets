@@ -236,10 +236,7 @@ function stringifyOutput(
  * per tool invocation rather than two stacked rows.
  */
 export type ChatBubble =
-    | UserBubble
-    | AssistantTextBubble
-    | ToolBubble
-    | NoteBubble
+    UserBubble | AssistantTextBubble | ToolBubble | NoteBubble
 
 export interface UserBubble {
     kind: 'user'

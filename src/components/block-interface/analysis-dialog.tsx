@@ -91,10 +91,10 @@ export const AnalysisDialog = ({
             out[f.field] = was
                 ? was.func
                 : initial
-                ? ''
-                : f.fieldType?.kind === 'number'
-                ? 'SUM'
-                : ''
+                  ? ''
+                  : f.fieldType?.kind === 'number'
+                    ? 'SUM'
+                    : ''
         }
         return out
     })
@@ -141,8 +141,7 @@ export const AnalysisDialog = ({
                                         setChosen((c) => ({
                                             ...c,
                                             [f.field]: e.target.value as
-                                                | AggFunc
-                                                | '',
+                                                AggFunc | '',
                                         }))
                                     }
                                 >
