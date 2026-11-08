@@ -2499,7 +2499,7 @@ checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 
 [[package]]
 name = "logisheets-desktop"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -2519,7 +2519,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets-rs"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -2531,7 +2531,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_astchecker"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "logisheets_base",
  "logisheets_parser",
@@ -2539,7 +2539,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_base"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "chrono",
  "futures",
@@ -2553,7 +2553,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_controller"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "chrono",
  "colorsys",
@@ -2587,7 +2587,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_lexer"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "pest",
  "pest_derive",
@@ -2596,7 +2596,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_lexer4fmt"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -2608,7 +2608,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_parser"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "chrono",
  "lazy_static",
@@ -2622,7 +2622,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_workbook"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "gents",
  "gents_derives",
@@ -2638,7 +2638,7 @@ dependencies = [
 
 [[package]]
 name = "logisheets_workbook_derives"
-version = "1.16.1"
+version = "1.17.0"
 dependencies = [
  "paste",
  "proc-macro2",
