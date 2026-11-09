@@ -39,6 +39,7 @@
         simpleUuid,
         toA1notation,
         quoteSheetName,
+        hostWindow,
     } from './utils'
     import ColumnHeaders from './ColumnHeaders.svelte'
     import RowHeaders from './RowHeaders.svelte'
@@ -69,7 +70,7 @@ const AUTO_SCROLL_SPEED = 30; // pixels per scroll tick
 const AUTO_SCROLL_INTERVAL = 50; // ms between scroll ticks
 
 // Auto-scroll state
-let dragScrollInterval: ReturnType<typeof setInterval> | null = null;
+let dragScrollInterval: number | null = null;
 let lastDragMouseEvent: MouseEvent | null = null;
 let isScrolling = false;
 let isDragging = false; // True while user is drag-selecting
@@ -422,6 +423,7 @@ let isDragging = false; // True while user is drag-selecting
     }
 
     function onChartMouseDown(e: MouseEvent, id: string) {
+        const win = hostWindow(e.target)
         e.stopPropagation()
         e.preventDefault()
         if (selectedChartId !== id) chartSettingsOpen = false
@@ -432,8 +434,8 @@ let isDragging = false; // True while user is drag-selecting
             chartDrag = {...chartDrag, dx: ev.clientX - chartDrag.startX, dy: ev.clientY - chartDrag.startY}
         }
         const up = () => {
-            window.removeEventListener('mousemove', move)
-            window.removeEventListener('mouseup', up)
+            win.removeEventListener('mousemove', move)
+            win.removeEventListener('mouseup', up)
             const drag = chartDrag
             chartDrag = null
             const box = chartBoxes.find((b) => b.id === id)
@@ -441,11 +443,12 @@ let isDragging = false; // True while user is drag-selecting
                 commitChartRect(id, chartRectOf(box, drag, null))
             }
         }
-        window.addEventListener('mousemove', move)
-        window.addEventListener('mouseup', up)
+        win.addEventListener('mousemove', move)
+        win.addEventListener('mouseup', up)
     }
 
     function onChartResizeMouseDown(e: MouseEvent, id: string, corner: string) {
+        const win = hostWindow(e.target)
         e.stopPropagation()
         e.preventDefault()
         selectedChartId = id
@@ -459,8 +462,8 @@ let isDragging = false; // True while user is drag-selecting
             }
         }
         const up = () => {
-            window.removeEventListener('mousemove', move)
-            window.removeEventListener('mouseup', up)
+            win.removeEventListener('mousemove', move)
+            win.removeEventListener('mouseup', up)
             const rz = chartResize
             chartResize = null
             const box = chartBoxes.find((b) => b.id === id)
@@ -468,8 +471,8 @@ let isDragging = false; // True while user is drag-selecting
                 commitChartRect(id, chartRectOf(box, null, rz))
             }
         }
-        window.addEventListener('mousemove', move)
-        window.addEventListener('mouseup', up)
+        win.addEventListener('mousemove', move)
+        win.addEventListener('mouseup', up)
     }
 
     // Move and resize both reduce to "the chart now occupies this rect" → a
@@ -569,8 +572,9 @@ let isDragging = false; // True while user is drag-selecting
                 deleteSelectedChart()
             }
         }
-        window.addEventListener('keydown', onKey)
-        return () => window.removeEventListener('keydown', onKey)
+        const win = hostWindow(canvasEl)
+        win.addEventListener('keydown', onKey)
+        return () => win.removeEventListener('keydown', onKey)
     })
     let canvasEl: HTMLCanvasElement | null = $state(null)
     let offscreenCanvas: OffscreenCanvas | null = null
@@ -628,6 +632,9 @@ let isDragging = false; // True while user is drag-selecting
     let resizeObserver: ResizeObserver | null = null
     let worker: Worker | null = null
     let prevDpr = 1
+    // The window this view lives in (a pop-out, or the host page). Set once
+    // the canvas is bound; see hostWindow.
+    let dprWin: typeof window = window
     // Track if we created the worker internally (need to clean up) vs using external data service
     let ownsWorker = false
     // Disposers for callbacks registered on the (possibly shared) data
@@ -644,6 +651,7 @@ let isDragging = false; // True while user is drag-selecting
     })
 
     async function initializeAsync() {
+        dprWin = hostWindow(canvasEl) as typeof window
         // If external data service is provided, use it; otherwise create our own
         if (externalDataService) {
             // Using external data service from Engine - just initialize canvas
@@ -653,7 +661,7 @@ let isDragging = false; // True while user is drag-selecting
                 // Transfer control to offscreen
                 if ('transferControlToOffscreen' in canvasEl) {
                     offscreenCanvas = canvasEl.transferControlToOffscreen()
-                    await externalDataService.initOffscreen(offscreenCanvas, canvasId)
+                    await externalDataService.initOffscreen(offscreenCanvas, canvasId, dprWin.devicePixelRatio)
                     await render("init-external")
                 }
             }
@@ -718,7 +726,7 @@ let isDragging = false; // True while user is drag-selecting
                 // Transfer control to offscreen
                 if ('transferControlToOffscreen' in canvasEl) {
                     offscreenCanvas = canvasEl.transferControlToOffscreen()
-                    await internalDataService.initOffscreen(offscreenCanvas, canvasId)
+                    await internalDataService.initOffscreen(offscreenCanvas, canvasId, dprWin.devicePixelRatio)
                     await render("init-internal")
                 }
             }
@@ -759,14 +767,16 @@ let isDragging = false; // True while user is drag-selecting
         }
 
         // Observe canvas size changes
-        resizeObserver = new ResizeObserver(() => handleResize())
+        // A ResizeObserver from another realm never fires for this element,
+        // so take the constructor from the canvas's own window.
+        resizeObserver = new dprWin.ResizeObserver(() => handleResize())
         if (canvasEl) {
             resizeObserver.observe(canvasEl)
         }
 
         // Watch for DPR changes (zoom, moving to different display)
-        prevDpr = window.devicePixelRatio || 1
-        window.addEventListener('resize', handleDprChange)
+        prevDpr = dprWin.devicePixelRatio || 1
+        dprWin.addEventListener('resize', handleDprChange)
 
         // Safari / WKWebView (the desktop app's webview) report a trackpad
         // pinch as non-standard gesture events rather than the ctrlKey wheel
@@ -794,7 +804,7 @@ let isDragging = false; // True while user is drag-selecting
             // worker's canvas map doesn't leak across mount/unmount.
             externalDataService.disposeOffscreen(canvasId)
         }
-        window.removeEventListener('resize', handleDprChange)
+        dprWin.removeEventListener('resize', handleDprChange)
         if (canvasEl) {
             canvasEl.removeEventListener('gesturestart', onGestureStart)
             canvasEl.removeEventListener('gesturechange', onGestureChange)
@@ -807,7 +817,7 @@ let isDragging = false; // True while user is drag-selecting
     // ========================================================================
 
     function handleDprChange() {
-        const currentDpr = window.devicePixelRatio || 1
+        const currentDpr = dprWin.devicePixelRatio || 1
         if (Math.abs(currentDpr - prevDpr) > 1e-6) {
             prevDpr = currentDpr
             handleResize()
@@ -817,8 +827,8 @@ let isDragging = false; // True while user is drag-selecting
     function setCanvasSize() {
         if (!canvasEl) return null
         const size = canvasEl.getBoundingClientRect()
-        canvasEl.width = size.width * (window.devicePixelRatio || 1)
-        canvasEl.height = size.height * (window.devicePixelRatio || 1)
+        canvasEl.width = size.width * (dprWin.devicePixelRatio || 1)
+        canvasEl.height = size.height * (dprWin.devicePixelRatio || 1)
         visibleHeight = size.height
         visibleWidth = size.width
         return size
@@ -827,7 +837,7 @@ let isDragging = false; // True while user is drag-selecting
     function handleResize() {
         if (!canvasEl || !dataService) return
         const rect = canvasEl.getBoundingClientRect()
-        const dpr = window.devicePixelRatio || 1
+        const dpr = dprWin.devicePixelRatio || 1
         dataService.resize(rect.width, rect.height, dpr, canvasId)
         visibleHeight = rect.height
         visibleWidth = rect.width
@@ -1191,6 +1201,7 @@ let isDragging = false; // True while user is drag-selecting
     // ========================================================================
 
     async function onMouseDown(e: MouseEvent) {
+        const win = hostWindow(e.target)
         e.stopPropagation()
         e.preventDefault()
 
@@ -1282,7 +1293,7 @@ let isDragging = false; // True while user is drag-selecting
 
         const stopAutoScroll = () => {
             if (dragScrollInterval) {
-                clearInterval(dragScrollInterval);
+                win.clearInterval(dragScrollInterval);
                 dragScrollInterval = null;
             }
         };
@@ -1290,7 +1301,9 @@ let isDragging = false; // True while user is drag-selecting
         const startAutoScroll = (scrollX: number, scrollY: number) => {
             if (dragScrollInterval) return; // Already scrolling
 
-            dragScrollInterval = setInterval(async () => {
+            // On the host window: a pop-out's drag must not stall when the
+            // main window is hidden and its timers are throttled.
+            dragScrollInterval = win.setInterval(async () => {
                 if (!canvasEl || !grid || !startCell || isScrolling) return;
 
                 isScrolling = true;
@@ -1390,12 +1403,12 @@ let isDragging = false; // True while user is drag-selecting
             stopAutoScroll();
             isDragging = false;
             lastDragMouseEvent = null;
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
+            win.removeEventListener('mousemove', handleMouseMove);
+            win.removeEventListener('mouseup', handleMouseUp);
         };
 
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        win.addEventListener('mousemove', handleMouseMove);
+        win.addEventListener('mouseup', handleMouseUp);
     }
 
     // ------------------------------------------------------------------
@@ -1488,6 +1501,7 @@ let isDragging = false; // True while user is drag-selecting
     }
 
     function onFillHandleMouseDown(e: MouseEvent) {
+        const win = hostWindow(e.target)
         e.stopPropagation()
         e.preventDefault()
         if (e.button !== 0 || !grid || !canvasEl) return
@@ -1538,8 +1552,8 @@ let isDragging = false; // True while user is drag-selecting
         }
 
         const handleUp = async () => {
-            window.removeEventListener('mousemove', handleMove)
-            window.removeEventListener('mouseup', handleUp)
+            win.removeEventListener('mousemove', handleMove)
+            win.removeEventListener('mouseup', handleUp)
             isFilling = false
             fillPreview = null
             fillTooltip = null
@@ -1568,8 +1582,8 @@ let isDragging = false; // True while user is drag-selecting
             onSelectedDataChange?.(u)
         }
 
-        window.addEventListener('mousemove', handleMove)
-        window.addEventListener('mouseup', handleUp)
+        win.addEventListener('mousemove', handleMove)
+        win.addEventListener('mouseup', handleUp)
     }
 
     function handleCanvasContextMenu(e: MouseEvent) {

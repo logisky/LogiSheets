@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Grid } from '$types/index'
-    import { hiddenLineBoundaries, toA1notation } from './utils'
+    import { hiddenLineBoundaries, hostWindow, toA1notation } from './utils'
     import HeaderResizer from './HeaderResizer.svelte'
 
     interface Props {
@@ -43,6 +43,7 @@
     }
 
     function handleMouseDown(downIdx: number, e: MouseEvent) {
+        const win = hostWindow(e.target)
         if (e.button !== 0) return // left-click only
         e.preventDefault()
         e.stopPropagation()
@@ -61,8 +62,8 @@
         }
 
         const handleMouseUp = (ue: MouseEvent) => {
-            window.removeEventListener('mousemove', handleMouseMove)
-            window.removeEventListener('mouseup', handleMouseUp)
+            win.removeEventListener('mousemove', handleMouseMove)
+            win.removeEventListener('mouseup', handleMouseUp)
             const r = hostEl?.getBoundingClientRect()
             const x = ue.clientX - (r?.left ?? 0)
             const upIdx = findColIdxAt(x) ?? downIdx
@@ -71,8 +72,8 @@
             onSelectColumnRange?.(start, end)
         }
 
-        window.addEventListener('mousemove', handleMouseMove)
-        window.addEventListener('mouseup', handleMouseUp)
+        win.addEventListener('mousemove', handleMouseMove)
+        win.addEventListener('mouseup', handleMouseUp)
     }
 
     function handleContextMenu(colIdx: number, e: MouseEvent) {

@@ -714,3 +714,14 @@ export function simpleUuid(): string {
         return v.toString(16)
     })
 }
+
+/**
+ * The window that owns `node`: the host page, or a pop-out window the view
+ * was mounted into from the host's JS realm. Drag listeners, key listeners and
+ * `devicePixelRatio` must come from here — the global `window` is the host's,
+ * so a view in another window would miss its own events and paint at the
+ * wrong DPR when the two windows sit on screens of different density.
+ */
+export function hostWindow(node?: EventTarget | null): Window {
+    return (node as Node | null)?.ownerDocument?.defaultView ?? window
+}

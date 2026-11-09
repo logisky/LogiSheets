@@ -478,10 +478,12 @@ export interface FormulaEditorOptions {
     /** Fires when the editable content loses focus; typical commit point. */
     onBlur?: (value: string) => void
     /**
-     * Plain Enter while no autocomplete list is open (Enter accepts the
+     * Enter while no autocomplete list is open (Enter accepts the
      * completion instead). Enter never inserts a newline; Alt+Enter does.
+     * `shiftKey` is true for Shift+Enter, which a grid host reads as "move
+     * up" instead of down.
      */
-    onSubmit?: (value: string) => void
+    onSubmit?: (value: string, shiftKey: boolean) => void
     /** Escape. The editor does not revert the text itself. */
     onCancel?: () => void
     /**
@@ -800,9 +802,13 @@ export function createFormulaEditor(
                     if (completionStatus(v.state) === 'active') {
                         return acceptCompletion(v)
                     }
-                    live.onSubmit?.(v.state.doc.toString())
+                    live.onSubmit?.(v.state.doc.toString(), false)
                     // Consume even without onSubmit: a formula is one logical
                     // line; newlines go through Alt-Enter.
+                    return true
+                },
+                shift: (v) => {
+                    live.onSubmit?.(v.state.doc.toString(), true)
                     return true
                 },
             },

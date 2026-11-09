@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useState} from 'react'
 import {createPortal} from 'react-dom'
+import {useHostDocument} from '@/ui/popout-window'
 import {observer} from 'mobx-react-lite'
 import type {Grid} from 'logisheets-engine'
 import type {Author, Comment, CommentMention, EditPayload} from 'logisheets-web'
@@ -45,6 +46,7 @@ export const CommentLayer = observer(function CommentLayer({
     const dataSvc = useDataService()
     const [comments, setComments] = useState<readonly Comment[]>([])
     const [open, setOpen] = useState<OpenCell | null>(null)
+    const hostDoc = useHostDocument()
 
     const refresh = useCallback(async () => {
         try {
@@ -205,7 +207,7 @@ export const CommentLayer = observer(function CommentLayer({
                             />
                         </div>
                     </>,
-                    document.body
+                    hostDoc.body
                 )}
         </>
     )

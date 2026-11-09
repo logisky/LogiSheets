@@ -11,7 +11,9 @@ import {SpreadsheetView} from '@/components/spreadsheet-view'
 import {ActiveViewBadge} from '@/components/spreadsheet-view/active-view-badge'
 import {FormulaEditReminder} from '@/components/formula-edit-reminder'
 import {TempModeBar} from '@/components/temp-mode'
-import {globalStore} from '@/store'
+import {globalStore, POPOUT_VIEW_ID} from '@/store'
+import {PopoutWindow} from '@/ui/popout-window'
+import {useTranslation} from 'react-i18next'
 // import {DiffLayerTestPanel} from '@/components/diff-layer/DiffLayerTestPanel'
 
 export interface ContentProps {
@@ -36,6 +38,7 @@ export const ContentComponent = observer(function ContentComponent({
     const [selectedDataContentChanged, setSelectedDataContentChanged] =
         useState({})
     const diffLayer = useDiffLayer()
+    const {t} = useTranslation()
 
     // While the main view is active, publish its selection context so the top
     // edit bar targets it. (Secondary views publish their own.)
@@ -125,6 +128,24 @@ export const ContentComponent = observer(function ContentComponent({
                         selectedData={selectedData}
                     />
                 </>
+            )}
+            {globalStore.popoutWindow && (
+                <PopoutWindow
+                    win={globalStore.popoutWindow}
+                    title={t('toolbar.view.popoutTitle')}
+                    onClose={() => globalStore.setPopoutWindow(null)}
+                >
+                    <div
+                        style={{
+                            height: '100%',
+                            padding: 8,
+                            boxSizing: 'border-box',
+                            display: 'flex',
+                        }}
+                    >
+                        <SpreadsheetView viewId={POPOUT_VIEW_ID} />
+                    </div>
+                </PopoutWindow>
             )}
         </div>
     )

@@ -500,6 +500,8 @@
         },
         "view": {
             "splitView": "拆分视图（第二视图）",
+            "popoutView": "独立窗口",
+            "popoutTitle": "LogiSheets — 第二视图",
             "diffLayer": "差异图层",
             "blockOverlays": "始终显示块覆盖层",
             "showGridlines": "显示网格线",

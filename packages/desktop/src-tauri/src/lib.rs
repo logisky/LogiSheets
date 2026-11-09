@@ -16,6 +16,62 @@ use tauri::Manager;
 /// With `--features native-engine`: also registers the in-process native engine
 /// `handle` command (mirror of the browser WASM `handle`) for a future hybrid /
 /// full-native path. Off by default so the shell doesn't bundle a second engine.
+/// Build the main window (declared in tauri.conf.json with `create: false`).
+///
+/// Built here rather than by Tauri so it can carry an `on_new_window` handler:
+/// the app's pop-out views (`src/ui/popout-window.tsx`) `window.open` an empty
+/// window and render into it from the main page's JS realm, sharing its one
+/// engine. That only works if the new webview is the opener's real child —
+/// same WebView2 environment / WKWebViewConfiguration, which `window_features`
+/// carries over — rather than a URL handed to the system browser.
+fn main_window(app: &tauri::App) -> tauri::Result<()> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tauri::webview::{NewWindowResponse, WebviewWindowBuilder};
+
+    static NEXT_POPOUT: AtomicUsize = AtomicUsize::new(1);
+    let config = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|w| w.label == "main")
+        .expect("tauri.conf.json declares the main window")
+        .clone();
+    let handle = app.handle().clone();
+    WebviewWindowBuilder::from_config(app, &config)?
+        .on_new_window(move |url, features| {
+            let label = format!("popout-{}", NEXT_POPOUT.fetch_add(1, Ordering::Relaxed));
+            let built =
+                WebviewWindowBuilder::new(&handle, label, tauri::WebviewUrl::External(url.clone()))
+                    .window_features(features)
+                    // The pop-out sets `document.title` after it opens.
+                    .on_document_title_changed(|window, title| {
+                        let _ = window.set_title(&title);
+                    })
+                    .build();
+            match built {
+                Ok(window) => NewWindowResponse::Create { window },
+                Err(e) => {
+                    eprintln!("pop-out window {url}: {e}");
+                    NewWindowResponse::Deny
+                }
+            }
+        })
+        .build()?;
+    Ok(())
+}
+
+/// Close every pop-out window. The web app can't: JS `window.close()` on one
+/// is a no-op here, since wry's macOS delegate has no `webViewDidClose`.
+#[tauri::command]
+fn close_popouts(app: tauri::AppHandle) {
+    for (label, window) in app.webview_windows() {
+        if label.starts_with("popout-") {
+            let _ = window.close();
+        }
+    }
+}
+
 pub fn run() {
     let builder = tauri::Builder::default()
         // Device-scoped craft storage (backs the web app's window.craftStorage).
@@ -26,7 +82,15 @@ pub fn run() {
             app.manage(store);
             // Saved data connections (metadata only; passwords are in the keychain).
             app.manage(db::DbState::load(app.handle()));
+            main_window(app)?;
             Ok(())
+        })
+        // A pop-out renders from the main window's JS realm, so it is dead
+        // UI once that is gone.
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                close_popouts(window.app_handle().clone());
+            }
         });
 
     // `invoke_handler` can be set only once, so the full command list is chosen
@@ -51,6 +115,7 @@ pub fn run() {
             db::db_conn_delete,
             db::db_conn_test,
             db::db_query,
+            close_popouts,
             commands::handle,
         ]);
 
@@ -71,6 +136,7 @@ pub fn run() {
         db::db_conn_delete,
         db::db_conn_test,
         db::db_query,
+        close_popouts,
     ]);
 
     builder

@@ -4,6 +4,7 @@ import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
 import type {ReactNode} from 'react'
 import type {SxProps, Theme} from '@mui/material/styles'
+import {useHostDocument} from '@/ui/popout-window'
 
 /**
  * Shared look for the app's right-click / context menus so they're all
@@ -63,11 +64,19 @@ const dangerSx: SxProps<Theme> = {
 }
 
 /** MUI `<Menu>` pre-styled for context menus. Pass menu props as usual. */
-export function ContextMenu({slotProps, MenuListProps, ...props}: MenuProps) {
+export function ContextMenu({
+    slotProps,
+    MenuListProps,
+    container,
+    ...props
+}: MenuProps) {
+    // See Dialog: open in the caller's window, not the global document.
+    const hostDoc = useHostDocument()
     const paper = (slotProps?.paper ?? {}) as {sx?: SxProps<Theme>}
     return (
         <Menu
             disableScrollLock
+            container={container ?? hostDoc.body}
             transformOrigin={{vertical: 'top', horizontal: 'left'}}
             {...props}
             slotProps={{
