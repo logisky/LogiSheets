@@ -14,6 +14,8 @@
 //! Arity 0..=2 is exhaustive over the argument pool; arity 3..=4 is a seeded
 //! sample per function (`FUNC_SWEEP_SAMPLES`, default 150), so a run is
 //! deterministic. Raise it locally to dig deeper.
+//!
+//! `#[ignore]`d — run with `-- --ignored` (release mode is much faster).
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -149,7 +151,10 @@ fn formulas_for(name: &str, samples: usize) -> Vec<String> {
     out
 }
 
+// Too slow for every CI run (hundreds of thousands of evaluations). Run it on
+// demand: `cargo test -p logisheets --test func_sweep -- --ignored`.
 #[test]
+#[ignore]
 fn every_function_survives_awkward_arguments() {
     let samples = std::env::var("FUNC_SWEEP_SAMPLES")
         .ok()
