@@ -344,6 +344,7 @@ fn de_worksheet<R: Read + Seek>(
     let mut pivot_tables = Vec::<crate::workbook::PivotTablePart>::new();
     let mut tables = Vec::<crate::workbook::TablePart>::new();
     let mut unknown_parts = Vec::<crate::workbook::UnknownPart>::new();
+    let mut hyperlink_targets = Vec::<(Id, String)>::new();
     let ctypes = ContentTypeIndex::read(archive);
     let path_buf = get_rels(path)?;
     let rels = path_buf.to_str();
@@ -363,6 +364,7 @@ fn de_worksheet<R: Read + Seek>(
             pivot_tables,
             tables,
             unknown_parts,
+            hyperlink_targets,
         });
     }
     let relationships = result.unwrap();
@@ -434,6 +436,7 @@ fn de_worksheet<R: Read + Seek>(
                     }
                 }
             }
+            HYPERLINK => hyperlink_targets.push((r.id, r.target)),
             // Same as at the workbook level: an unmodeled relationship keeps
             // its part instead of losing it.
             _ => {
@@ -450,6 +453,7 @@ fn de_worksheet<R: Read + Seek>(
         pivot_tables,
         tables,
         unknown_parts,
+        hyperlink_targets,
     })
 }
 

@@ -781,6 +781,11 @@ export class WorkbookClient implements Client {
             Client['checkFieldValidation']
         >
 
+    getHyperlink: Client['getHyperlink'] = (params) =>
+        this._call(MethodName.GetHyperlink, params) as ReturnType<
+            Client['getHyperlink']
+        >
+
     getDiyCellIdWithBlockId: Client['getDiyCellIdWithBlockId'] = (params) =>
         this._call(MethodName.GetDiyCellIdWithBlockId, params) as ReturnType<
             Client['getDiyCellIdWithBlockId']

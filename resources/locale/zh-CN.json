@@ -233,6 +233,9 @@
         "hex2oct": {
             "description": "将十六进制数转换为八进制数。"
         },
+        "hyperlink": {
+            "description": "创建一个链接，可打开网页、文件或本工作簿中的位置。单元格显示 friendly_name；省略时显示链接本身。"
+        },
         "quotient": {
             "description": "返回除法运算结果的整数部分。"
         },
@@ -908,6 +911,10 @@
             "clearCells": "清除内容",
             "addComment": "添加批注",
             "linkToBlock": "链接到块…",
+            "insertLink": "插入链接…",
+            "editLink": "编辑链接…",
+            "openLink": "打开链接",
+            "removeLink": "移除链接",
             "convertToBlock": "转换为块…",
             "conditionalFormatting": "条件格式…",
             "editBlock": "编辑块…",
@@ -933,6 +940,25 @@
             "orLinkExisting": "或链接到已有的块",
             "selectRangeFirst": "请先选择一个单元格区域。",
             "selectionTooLarge": "所选区域太大，无法转换为块。"
+        },
+        "hyperlink": {
+            "insertTitle": "插入链接",
+            "editTitle": "编辑链接",
+            "web": "网址",
+            "place": "本工作簿中的位置",
+            "address": "地址",
+            "addressPlaceholder": "https://example.com",
+            "location": "单元格或名称",
+            "locationPlaceholder": "Sheet2!A1",
+            "display": "显示文字",
+            "displayFormula": "该单元格包含公式，其文字由公式计算，不会被修改。",
+            "tooltip": "提示文字",
+            "remove": "移除链接",
+            "fromFormula": "此链接来自 HYPERLINK 公式，请修改公式来更改它。",
+            "unsupportedScheme": "只能链接网址（http、https）和邮件地址（mailto）。",
+            "blocked": "未打开“{{url}}”：只会打开网址和邮件链接。",
+            "missing": "“{{location}}”不是本工作簿中的单元格、区域或已命名区域。",
+            "openFailed": "无法打开该链接。"
         },
         "find": {
             "title": "在工作表中查找",

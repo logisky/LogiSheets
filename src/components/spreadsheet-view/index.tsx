@@ -15,6 +15,12 @@ import {ActiveViewBadge} from './active-view-badge'
 import {formulaEditCoordinator} from '@/core/formula-edit-coordinator'
 import {useCraftInputInterception} from '@/core/craft-input/use-interception'
 import {useHostWindow} from '@/ui/popout-window'
+import {
+    HyperlinkDialog,
+    useFollowHyperlink,
+    useFollowHyperlinkEvent,
+    useInsertHyperlinkShortcut,
+} from '@/components/hyperlink'
 
 /**
  * A self-contained, independent view of the shared workbook.
@@ -81,6 +87,18 @@ export const SpreadsheetView = observer(function SpreadsheetView({
             setSelection(buildSelectedDataFromCell(row, col, 'none')),
         [setSelection]
     )
+    const setViewSheet = useCallback((idx: number) => {
+        setActiveSheet(idx)
+        sessionRef.current?.setCurrentSheetIndex(idx)
+    }, [])
+    // Ctrl/⌘+click on a link cell in this view.
+    const followLink = useFollowHyperlink({
+        dataSvc,
+        setActiveSheet: setViewSheet,
+        setSelection,
+    })
+    useFollowHyperlinkEvent(session, followLink)
+    const [linkTarget, setLinkTarget] = useInsertHyperlinkShortcut(session)
     // Subscribe to THIS session's contextMenu event (re-binds once the session
     // is created). The engine renders no menu; the host menu below does.
     const subscribeContextMenu = useCallback(
@@ -218,6 +236,12 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                 dataSvc={dataSvc}
                 getActiveSheet={getActiveSheet}
                 setSelection={setSelection}
+                setActiveSheet={setViewSheet}
+            />
+            <HyperlinkDialog
+                dataSvc={dataSvc}
+                target={linkTarget}
+                onClose={() => setLinkTarget(null)}
             />
             <SheetsTabComponent
                 activeSheet={activeSheet}

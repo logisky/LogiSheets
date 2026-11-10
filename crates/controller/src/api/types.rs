@@ -32,6 +32,10 @@ pub struct CellInfo {
     /// The conditional formatting currently in effect for this cell, or `None`
     /// when no rule matches it. See [`ConditionalFormat`].
     pub conditional_format: Option<ConditionalFormat>,
+    /// The cell is a link: it has a stored hyperlink or its formula is a
+    /// top-level `HYPERLINK(...)` call. Ask `getHyperlink` where it goes.
+    /// Its blue underline, when it has one, is ordinary style.
+    pub is_hyperlink: bool,
 }
 
 /// What conditional formatting does to one cell, already resolved: the caller

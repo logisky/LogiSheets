@@ -392,6 +392,13 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.col,
             params.proposed,
         )),
+        Message::GetHyperlink(params) => res_to_js(controller::get_hyperlink(
+            &mut mgr,
+            id,
+            params.sheet_idx,
+            params.row,
+            params.col,
+        )),
         Message::GetBlockModifyInfo(params) => res_to_js(controller::get_block_modify_info(
             &mgr,
             id,

@@ -28,6 +28,7 @@ mod formulatext;
 mod fvpv;
 mod gcdlcm;
 mod gestep;
+mod hyperlink;
 mod if_plugin;
 mod iferror;
 mod ifs;
@@ -261,6 +262,7 @@ where
         "HEX2OCT" => bits::hob2hob::calc_hex2oct(args, fetcher),
         "HLOOKUP" => lookup::calc_hlookup(args, fetcher),
         "HOUR" => datetime::hms::calc_hour(args, fetcher),
+        "HYPERLINK" => hyperlink::calc(args, fetcher),
         "IF" => if_plugin::calc(args, fetcher),
         "IFERROR" => iferror::calc_iferror(args, fetcher),
         "IFNA" => iferror::calc_ifna(args, fetcher),

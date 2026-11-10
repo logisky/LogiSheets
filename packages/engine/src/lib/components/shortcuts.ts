@@ -68,6 +68,7 @@ export type ShortcutId =
     | 'fillDown'
     | 'fillRight'
     | 'find'
+    | 'insertHyperlink'
     | 'formatCells'
     | 'insertDate'
     | 'insertTime'
@@ -213,6 +214,12 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     {id: 'fillDown', description: 'Fill down', key: 'd', primary: true},
     {id: 'fillRight', description: 'Fill right', key: 'r', primary: true},
     {id: 'find', description: 'Find', key: 'f', primary: true},
+    {
+        id: 'insertHyperlink',
+        description: 'Insert link',
+        key: 'k',
+        primary: true,
+    },
     {id: 'formatCells', description: 'Format cells', key: '1', primary: true},
     {id: 'insertDate', description: 'Insert date', key: ';', primary: true},
     {

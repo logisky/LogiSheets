@@ -44,6 +44,8 @@ export class RenderCell {
         // Data bars and icons are drawn on top of the cell, so they stay separate.
         c.dataBar = info.conditionalFormat?.dataBar
         c.icon = info.conditionalFormat?.icon
+        // Always assigned: StandardCells are pooled and reused.
+        c.isHyperlink = info.isHyperlink === true
         if (info.value) {
             const value = getStandardValue()
             value.from(info.value)

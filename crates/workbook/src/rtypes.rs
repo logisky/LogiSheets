@@ -70,6 +70,12 @@ pub const PIVOT_TABLE: RType =
 pub const TABLE: RType =
     RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/table");
 
+// A cell hyperlink's target. External (`TargetMode="External"`): the target is
+// the URL itself, not a part in the package. The worksheet's
+// `<hyperlink r:id>` names the relationship.
+pub const HYPERLINK: RType =
+    RType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink");
+
 impl<'a> PartialEq<str> for RType<'a> {
     fn eq(&self, other: &str) -> bool {
         self.0 == other

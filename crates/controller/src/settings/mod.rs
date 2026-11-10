@@ -5,10 +5,10 @@ use logisheets_workbook::prelude::{
     CtAutoFilter, CtBookViews, CtCellWatches, CtConditionalFormatting, CtControls,
     CtCustomProperties, CtCustomSheetViews, CtCustomWorkbookViews, CtDataConsolidate,
     CtDefinedNames, CtFileRecoveryPr, CtFileSharing, CtFileVersion, CtFunctionGroups,
-    CtHeaderFooter, CtHyperlinks, CtIgnoredErrors, CtOleSize, CtPageBreak, CtPageMargins,
-    CtPageSetup, CtPhoneticPr, CtPivotCaches, CtPrintOptions, CtProtectedRanges, CtScenarios,
-    CtSheetCalcPr, CtSheetFormatPr, CtSheetProtection, CtSheetViews, CtSmartTagPr, CtSmartTagTypes,
-    CtSmartTags, CtSortState, CtTableParts, CtWebPublishItems, CtWebPublishing, CtWorkbookPr,
+    CtHeaderFooter, CtIgnoredErrors, CtOleSize, CtPageBreak, CtPageMargins, CtPageSetup,
+    CtPhoneticPr, CtPivotCaches, CtPrintOptions, CtProtectedRanges, CtScenarios, CtSheetCalcPr,
+    CtSheetFormatPr, CtSheetProtection, CtSheetViews, CtSmartTagPr, CtSmartTagTypes, CtSmartTags,
+    CtSortState, CtTableParts, CtWebPublishItems, CtWebPublishing, CtWorkbookPr,
     CtWorkbookProtection,
 };
 use logisheets_workbook::workbook::{DocProps, PivotCache, PivotTablePart, TablePart, UnknownPart};
@@ -32,7 +32,6 @@ pub struct PreservedWorksheetParts {
     pub custom_sheet_views: Option<CtCustomSheetViews>,
     pub phonetic_pr: Option<CtPhoneticPr>,
     pub conditional_formatting: Vec<CtConditionalFormatting>,
-    pub hyperlinks: Option<CtHyperlinks>,
     pub print_options: Option<CtPrintOptions>,
     pub page_margins: Option<CtPageMargins>,
     pub page_setup: Option<CtPageSetup>,

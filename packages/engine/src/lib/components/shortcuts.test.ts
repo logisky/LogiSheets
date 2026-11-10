@@ -78,6 +78,14 @@ describe('matchShortcut (non-Apple: Ctrl is primary)', () => {
         )
     })
 
+    it('binds Ctrl+K to insert link, and bare K to nothing', () => {
+        setup()
+        expect(matchShortcut(ev({key: 'k', ctrlKey: true}))).toBe(
+            'insertHyperlink'
+        )
+        expect(matchShortcut(ev({key: 'k'}))).toBeNull()
+    })
+
     it('separates Home, Ctrl+Home and Ctrl+End', () => {
         setup()
         expect(matchShortcut(ev({key: 'Home'}))).toBe('rowStart')

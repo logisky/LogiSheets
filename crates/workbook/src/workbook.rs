@@ -106,6 +106,11 @@ pub struct Worksheet {
     pub tables: Vec<TablePart>,
     /// Sheet-level parts reached by a relationship this crate does not model.
     pub unknown_parts: Vec<UnknownPart>,
+    /// External hyperlink targets, `(relationship id, URL)`. A worksheet
+    /// `<hyperlink r:id>` that points outside the workbook carries only the id;
+    /// the URL lives in the sheet's `.rels`. The writer emits one external
+    /// relationship per entry, keeping its id.
+    pub hyperlink_targets: Vec<(Id, String)>,
 }
 
 /// A structured table on a worksheet: the `CT_Table` plus the relationship id

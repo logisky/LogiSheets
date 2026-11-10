@@ -254,15 +254,18 @@ workbook_name = {book_name_character+}
 operator_with_comma = {operator | comma}
 
 book_name_character = _{
-    !(operator_with_comma | apostrophe | "[" | "]" | "?" | "!") ~ ANY
+    !(operator_with_comma | apostrophe | double_quote | "[" | "]" | "?" | "!") ~ ANY
 }
 
 apostrophe = {"'"}
 
 sheet_name = {sheet_name_character+}
 
+// No `"` either: an unquoted name never contains one (a sheet whose name
+// does is written `'a"b'!A1`), and allowing it lexed the string literal
+// `"Sheet1!C5"` as the sheet `"Sheet1` — the whole formula then failed to lex.
 sheet_name_character = _{
-    !(operator_with_comma | apostrophe | "[" | "]" | "\\" | "?" | "!" | ":") ~ ANY
+    !(operator_with_comma | apostrophe | double_quote | "[" | "]" | "\\" | "?" | "!" | ":") ~ ANY
 }
 
 workbook_name_special = {

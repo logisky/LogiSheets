@@ -47,6 +47,8 @@ import type {
     MayModifyBlockParams,
     CheckFieldValidationParams,
     FieldValidationVerdict,
+    GetCellParams,
+    HyperlinkInfo,
     GetBlockModifyInfoParams,
     BlockModifyInfo,
 } from 'logisheets-web'
@@ -447,6 +449,11 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         params: CheckFieldValidationParams
     ): Result<FieldValidationVerdict> {
         return this.workbook.checkFieldValidation(params)
+    }
+
+    /** Where a cell's link goes, or null. Read-only. */
+    public getHyperlink(params: GetCellParams): Result<HyperlinkInfo | null> {
+        return this.workbook.getHyperlink(params)
     }
 
     /** A block's governance metadata, without its cells. */
@@ -886,6 +893,9 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.CheckFieldValidation:
                     result = this.checkFieldValidation(args)
+                    break
+                case MethodName.GetHyperlink:
+                    result = this.getHyperlink(args)
                     break
                 case MethodName.GetAvailableBlockId:
                     result = this.getAvailableBlockId(args)

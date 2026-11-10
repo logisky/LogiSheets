@@ -233,6 +233,9 @@
         "hex2oct": {
             "description": "Converts a hexadecimal number to octal."
         },
+        "hyperlink": {
+            "description": "Creates a link that opens a web page, a file, or a place in this workbook. The cell shows friendly_name, or the link itself when it is omitted."
+        },
         "quotient": {
             "description": "Returns the integer portion of a division."
         },
@@ -908,6 +911,10 @@
             "clearCells": "Clear Cells",
             "addComment": "Add comment",
             "linkToBlock": "Link to block…",
+            "insertLink": "Insert link…",
+            "editLink": "Edit link…",
+            "openLink": "Open link",
+            "removeLink": "Remove link",
             "convertToBlock": "Convert to block…",
             "conditionalFormatting": "Conditional formatting…",
             "editBlock": "Edit block…",
@@ -933,6 +940,25 @@
             "orLinkExisting": "or link to an existing block",
             "selectRangeFirst": "Select a range of cells first.",
             "selectionTooLarge": "Selection is too large to convert to a block."
+        },
+        "hyperlink": {
+            "insertTitle": "Insert link",
+            "editTitle": "Edit link",
+            "web": "Web address",
+            "place": "Place in this workbook",
+            "address": "Address",
+            "addressPlaceholder": "https://example.com",
+            "location": "Cell or name",
+            "locationPlaceholder": "Sheet2!A1",
+            "display": "Text to display",
+            "displayFormula": "This cell holds a formula, so its text stays as the formula computes it.",
+            "tooltip": "Tooltip",
+            "remove": "Remove link",
+            "fromFormula": "This link comes from a HYPERLINK formula. Edit the formula to change it.",
+            "unsupportedScheme": "Only web (http, https) and email (mailto) addresses can be linked.",
+            "blocked": "Not opening “{{url}}”: only web and email links are opened.",
+            "missing": "“{{location}}” is not a cell, range or named range in this workbook.",
+            "openFailed": "The link could not be opened."
         },
         "find": {
             "title": "Find in sheet",

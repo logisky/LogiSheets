@@ -219,6 +219,13 @@ export class OffscreenWorkerService {
             endCol: m.coordinate.endCol,
         }))
 
+        const hyperlinks = viewResponse.data.cells
+            .filter((c) => c.info?.isHyperlink)
+            .map((c) => ({
+                row: c.coordinate.startRow,
+                col: c.coordinate.startCol,
+            }))
+
         const getRowHeight = (rowIdx: number): number | undefined => {
             const r = this._workbook
                 .getWorkbook()
@@ -264,6 +271,7 @@ export class OffscreenWorkerService {
             rows,
             columns,
             mergeCells,
+            hyperlinks,
             blockInfos: viewResponse.data.blocks,
             preRowHeight,
             preColWidth,

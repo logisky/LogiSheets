@@ -356,6 +356,20 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             Ok(Some((Diff::Unavailable, sheet_id)))
         }
+        // A link changes how its cell renders but not its value; same
+        // conservative sheet-wide diff as a comment.
+        EditPayload::SetHyperlink(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
+        EditPayload::RemoveHyperlink(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
         EditPayload::CellFormatBrush(p) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(p.dst_sheet_idx)

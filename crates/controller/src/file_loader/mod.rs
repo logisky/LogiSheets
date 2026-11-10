@@ -29,7 +29,7 @@ use crate::{
 use logisheets_base::SheetId;
 use std::sync::Arc;
 
-use self::sheet::{load_preserved_parts, load_sheet_views};
+use self::sheet::{load_hyperlinks, load_preserved_parts, load_sheet_views};
 pub struct SheetIdFetcher<'a> {
     pub sheet_id_manager: &'a mut SheetIdManager,
 }
@@ -404,6 +404,15 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                     load_merge_cells(
                         sheet_id,
                         merge_cells,
+                        &mut navigator,
+                        &mut cell_attachment_manager,
+                    )
+                }
+                if let Some(hyperlinks) = &ws.worksheet_part.hyperlinks {
+                    load_hyperlinks(
+                        sheet_id,
+                        hyperlinks,
+                        &ws.hyperlink_targets,
                         &mut navigator,
                         &mut cell_attachment_manager,
                     )

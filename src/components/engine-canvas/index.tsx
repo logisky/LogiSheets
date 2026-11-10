@@ -22,6 +22,12 @@ import type {DiffState} from '@/components/diff-layer'
 import {CanvasContextMenu, type ContextMenuTrigger} from './canvas-context-menu'
 import {useCraftInputInterception} from '@/core/craft-input/use-interception'
 import {globalStore} from '@/store'
+import {
+    HyperlinkDialog,
+    useFollowHyperlink,
+    useFollowHyperlinkEvent,
+    useInsertHyperlinkShortcut,
+} from '@/components/hyperlink'
 import styles from './engine-canvas.module.scss'
 
 export interface EngineCanvasProps {
@@ -98,6 +104,21 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             ),
         []
     )
+    // Ctrl/⌘+click on a link cell: the engine emits `followHyperlink`.
+    const activeSheetSetterRef = useRef(activeSheet$)
+    activeSheetSetterRef.current = activeSheet$
+    const setActiveSheet = useCallback(
+        (idx: number) => activeSheetSetterRef.current(idx),
+        []
+    )
+    const followLink = useFollowHyperlink({
+        dataSvc,
+        setActiveSheet,
+        setSelection,
+    })
+    useFollowHyperlinkEvent(engine, followLink)
+    // Ctrl/⌘+K: insert or edit the link on the active cell.
+    const [linkTarget, setLinkTarget] = useInsertHyperlinkShortcut(engine)
     // The engine renders no menu — it emits `contextMenu`; the host menu below
     // subscribes here.
     const subscribeContextMenu = useCallback(
@@ -218,6 +239,12 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                 dataSvc={dataSvc}
                 getActiveSheet={getActiveSheet}
                 setSelection={setSelection}
+                setActiveSheet={setActiveSheet}
+            />
+            <HyperlinkDialog
+                dataSvc={dataSvc}
+                target={linkTarget}
+                onClose={() => setLinkTarget(null)}
             />
             <FindOverlay
                 open={findOpen}

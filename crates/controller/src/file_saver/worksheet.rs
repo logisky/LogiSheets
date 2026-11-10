@@ -7,9 +7,9 @@ use logisheets_workbook::{
     logisheets::{BlockLineInfo, BlockRange, PivotFilterXml, PivotOrderValueXml},
     prelude::{
         Comments, CtAuthors, CtCell, CtCol, CtColor, CtCols, CtComment, CtCommentList, CtFormula,
-        CtMention, CtMentions, CtMergeCell, CtMergeCells, CtRow, CtRst, CtSheet, CtSheetData,
-        CtSheetPr, CtThreadedComment, PlainTextString, StCellFormulaType, StSheetState,
-        ThreadedComments, WorksheetPart,
+        CtHyperlink, CtHyperlinks, CtMention, CtMentions, CtMergeCell, CtMergeCells, CtRow, CtRst,
+        CtSheet, CtSheetData, CtSheetPr, CtThreadedComment, PlainTextString, StCellFormulaType,
+        StSheetState, ThreadedComments, WorksheetPart,
     },
     workbook::Worksheet,
 };
@@ -206,7 +206,7 @@ fn save_worksheet<S: SaverTrait>(
     sheet_info_manager: &SheetInfoManager,
     saver: &mut S,
 ) -> Worksheet {
-    let worksheet_part = save_worksheet_part(
+    let mut worksheet_part = save_worksheet_part(
         sheet_id,
         sheet_data_container,
         formula_manager,
@@ -217,8 +217,11 @@ fn save_worksheet<S: SaverTrait>(
     );
     let comments = save_comments(sheet_id, attachment_manager, saver);
     let threaded_comments = save_threaded_comments(sheet_id, attachment_manager, saver);
+    let (hyperlinks, hyperlink_targets) = save_hyperlinks(sheet_id, attachment_manager, saver);
+    worksheet_part.hyperlinks = hyperlinks;
     Worksheet {
         worksheet_part,
+        hyperlink_targets,
         comments,
         threaded_comments,
         // Cell images are attached later in `save_workbook`, which has the
@@ -291,7 +294,8 @@ fn save_worksheet_part<S: SaverTrait>(
             .unwrap_or_default(),
         // Set later from the DataValidationManager (see file_saver/workbook.rs).
         data_validations: None,
-        hyperlinks: preserved.and_then(|p| p.hyperlinks.clone()),
+        // Set by `save_worksheet` from the hyperlink model.
+        hyperlinks: None,
         print_options: preserved.and_then(|p| p.print_options.clone()),
         page_margins: preserved.and_then(|p| p.page_margins.clone()),
         page_setup: preserved.and_then(|p| p.page_setup.clone()),
@@ -338,6 +342,50 @@ fn save_sheet_pr<S: SaverTrait>(
         filter_mode: false,
         enable_format_conditions_calculation: true,
     })
+}
+
+/// The sheet's `<hyperlinks>` plus the external relationships their `r:id`s
+/// name, `(id, URL)`. The ids are ours to choose and only need to be unique
+/// within the sheet's `.rels`; the `rIdHl` prefix keeps them clear of the
+/// writer's own `rIdN`. Sorted by position so a save is deterministic.
+fn save_hyperlinks<S: SaverTrait>(
+    sheet_id: SheetId,
+    attachment_manager: &CellAttachmentsManager,
+    saver: &mut S,
+) -> (Option<CtHyperlinks>, Vec<(String, String)>) {
+    let Some(links) = attachment_manager.hyperlinks.data.get(&sheet_id) else {
+        return (None, vec![]);
+    };
+    let mut placed = links
+        .iter()
+        .filter_map(|(cell_id, link)| {
+            let pos = saver.fetch_cell_idx(&sheet_id, cell_id).ok()?;
+            Some((pos, link))
+        })
+        .collect::<Vec<_>>();
+    placed.sort_by_key(|(pos, _)| *pos);
+    let mut targets = vec![];
+    let links = placed
+        .into_iter()
+        .map(|((row, col), link)| {
+            let id = link.url.as_ref().map(|url| {
+                let id = format!("rIdHl{}", targets.len() + 1);
+                targets.push((id.clone(), url.clone()));
+                id
+            });
+            CtHyperlink {
+                reference: unparse_cell(row, col),
+                id,
+                location: link.location.clone(),
+                tooltip: link.tooltip.clone(),
+                display: None,
+            }
+        })
+        .collect::<Vec<_>>();
+    if links.is_empty() {
+        return (None, vec![]);
+    }
+    (Some(CtHyperlinks { links }), targets)
 }
 
 /// Legacy `commentsN.xml` mirror. Threaded comments are the source of truth,

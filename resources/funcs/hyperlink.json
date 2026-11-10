@@ -1,0 +1,16 @@
+{
+    "name": "HYPERLINK",
+    "description": "functions.hyperlink.description",
+    "argCount": {
+        "ge": 1,
+        "le": 2
+    },
+    "args": [
+        {
+            "argName": "link_location"
+        },
+        {
+            "argName": "friendly_name"
+        }
+    ]
+}

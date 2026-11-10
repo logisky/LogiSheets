@@ -1,0 +1,16 @@
+# The cell shows the friendly name, or the link when there is none.
+INPUT A1    https://example.com
+INPUT A2    =HYPERLINK(A1, "Example")
+CHECKSTR A2 Example
+INPUT A3    =HYPERLINK(A1)
+CHECKSTR A3 https://example.com
+INPUT A4    =HYPERLINK("#Sheet1!C5", "Jump")
+CHECKSTR A4 Jump
+# A string that spells a reference is still a string.
+INPUT A5    =HYPERLINK("#Sheet1!C5")
+CHECKSTR A5 #Sheet1!C5
+INPUT A6    =HYPERLINK("x", 42)
+CHECKNUM A6 42
+# An error in the link wins over the friendly name.
+INPUT A7    =HYPERLINK(1/0, "Broken")
+CHECKERR A7 #DIV/0!

@@ -359,6 +359,20 @@ pub fn check_field_validation(
         .map_err(ErrorMessage::from)
 }
 
+/// Where the link in a cell goes — a stored hyperlink, or the evaluated
+/// target of a `HYPERLINK` formula. `None` when the cell is not a link.
+pub fn get_hyperlink(
+    mgr: &mut Manager,
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+) -> Result<Option<logisheets_controller::HyperlinkInfo>, ErrorMessage> {
+    let wb = mgr.workbook_mut(id)?;
+    wb.get_hyperlink(sheet_idx, row, col)
+        .map_err(ErrorMessage::from)
+}
+
 /// A block's governance metadata, without its cells. See
 /// [`GetBlockModifyInfoParams`].
 ///

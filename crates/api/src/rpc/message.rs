@@ -27,9 +27,9 @@ use crate::{
     CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
     CfRuleInfo, ChartInfo, ColId, Comment, DefinedNameInfo, DependentCell, DisplayWindow,
     DisplayWindowWithStartPoint, DuplicateBlockKey, EditPayload, EnumSetInfo, ErrorMessage,
-    FieldValidationVerdict, FormulaDisplayInfo, LinkInfo, MergeCell, PivotExcelNote, PivotPlan,
-    PivotSpecParts, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId,
-    SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
+    FieldValidationVerdict, FormulaDisplayInfo, HyperlinkInfo, LinkInfo, MergeCell, PivotExcelNote,
+    PivotPlan, PivotSpecParts, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo,
+    SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
 };
 
 // ============================================================================
@@ -96,6 +96,7 @@ pub enum Message {
     PivotPlanFor(PivotPlanForParams),
     MayModifyBlock(MayModifyBlockParams),
     CheckFieldValidation(CheckFieldValidationParams),
+    GetHyperlink(GetCellParams),
     GetBlockModifyInfo(GetBlockModifyInfoParams),
     GetShadowCellId(GetShadowCellIdParams),
     GetShadowCellIds(GetShadowCellIdsParams),
@@ -1105,6 +1106,12 @@ pub struct WorkbookMethods {
         params: CheckFieldValidationParams,
         book_id: Option<usize>,
     ) -> Result<FieldValidationVerdict, ErrorMessage>,
+    /// Where the link in a cell goes, or null when the cell is not one. A
+    /// `HYPERLINK` formula's target is evaluated now; nothing is written.
+    pub get_hyperlink: fn(
+        params: GetCellParams,
+        book_id: Option<usize>,
+    ) -> Result<Option<HyperlinkInfo>, ErrorMessage>,
     pub get_block_modify_info: fn(
         params: GetBlockModifyInfoParams,
         book_id: Option<usize>,

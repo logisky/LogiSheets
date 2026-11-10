@@ -48,6 +48,28 @@ mod tests {
     }
 
     #[test]
+    fn a_string_that_spells_a_reference_is_still_a_string() {
+        for f in [
+            r#""Sheet1!C5""#,
+            r##""#Sheet1!C5""##,
+            r#""Sheet1!C5"&1"#,
+            r#"HYPERLINK("Sheet2!A1:B2", "go")"#,
+            r#""[Book1]Sheet1!A1""#,
+        ] {
+            assert_ne!(lex(f), None, "{f}");
+        }
+        // Real references keep lexing.
+        for f in [
+            "Sheet1!C5",
+            "'My Sheet'!A1",
+            "[Book1]Sheet1!A1",
+            "Sheet1:Sheet3!A1",
+        ] {
+            assert_ne!(lex(f), None, "{f}");
+        }
+    }
+
+    #[test]
     fn reference() {
         let r1 = lex("B2").unwrap();
         println!("{:?}", r1);
