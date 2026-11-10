@@ -1,2 +1,7 @@
 INPUT   O2  =OCT2DEC(44)
 CHECKNUM    O2  36
+# Invalid digits are #NUM!, not a crash.
+INPUT H4    =OCT2DEC("9")
+CHECKERR H4 #NUM!
+INPUT H5    =OCT2HEX("8")
+CHECKERR H5 #NUM!

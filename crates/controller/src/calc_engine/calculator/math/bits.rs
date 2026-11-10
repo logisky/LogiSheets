@@ -109,6 +109,11 @@ pub fn bin2dec(bin_num: &str) -> Option<f64> {
     if l > 10 || bin_num.len() == 0 {
         return None;
     }
+    // Digits only: `from_str_radix` also takes a leading `+`/`-`, which
+    // Excel rejects with #NUM!.
+    if !bin_num.chars().all(|c| c.is_digit(2)) {
+        return None;
+    }
     let n = i16::from_str_radix(bin_num, 2);
     match n {
         Ok(r) => {
@@ -128,6 +133,11 @@ pub fn oct2dec(oct_num: &str) -> Option<f64> {
     if l > 10 || l == 0 {
         return None;
     }
+    // Digits only: `from_str_radix` also takes a leading `+`/`-`, which
+    // Excel rejects with #NUM!.
+    if !oct_num.chars().all(|c| c.is_digit(8)) {
+        return None;
+    }
     let n = i32::from_str_radix(oct_num, 8);
     match n {
         Ok(r) => {
@@ -138,13 +148,18 @@ pub fn oct2dec(oct_num: &str) -> Option<f64> {
                 Some(r as f64)
             }
         }
-        Err(_) => todo!(),
+        Err(_) => None,
     }
 }
 
 pub fn hex2dec(hex_num: &str) -> Option<f64> {
     let l = hex_num.len();
     if l > 10 || l == 0 {
+        return None;
+    }
+    // Digits only: `from_str_radix` also takes a leading `+`/`-`, which
+    // Excel rejects with #NUM!.
+    if !hex_num.chars().all(|c| c.is_digit(16)) {
         return None;
     }
     let n = i64::from_str_radix(hex_num, 16);
@@ -157,7 +172,7 @@ pub fn hex2dec(hex_num: &str) -> Option<f64> {
                 Some(r as f64)
             }
         }
-        Err(_) => todo!(),
+        Err(_) => None,
     }
 }
 
@@ -325,6 +340,22 @@ mod tests {
         let n = "111111111";
         let r = bin2dec(n);
         assert!((r.unwrap() - 511.).abs() < 1e-10);
+    }
+
+    #[test]
+    fn invalid_digits_are_none_not_panic() {
+        // These used to hit a `todo!()`, poisoning the wasm instance.
+        for n in ["XYZ", "1G", "-1", "+1", " 1"] {
+            assert_eq!(hex2dec(n), None, "{n}");
+        }
+        for n in ["8", "9", "-7", "1.5"] {
+            assert_eq!(oct2dec(n), None, "{n}");
+        }
+        for n in ["2", "-1", "+1"] {
+            assert_eq!(bin2dec(n), None, "{n}");
+        }
+        assert_eq!(oct2bin("9", None), None);
+        assert!((hex2dec("ff").unwrap() - 255.).abs() < 1e-10);
     }
 
     #[test]
