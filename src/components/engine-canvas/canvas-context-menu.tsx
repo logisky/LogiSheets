@@ -20,6 +20,9 @@ import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined'
 import BackspaceOutlinedIcon from '@mui/icons-material/BackspaceOutlined'
 import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined'
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined'
+import AddLinkOutlinedIcon from '@mui/icons-material/AddLinkOutlined'
+import LinkOffOutlinedIcon from '@mui/icons-material/LinkOffOutlined'
+import OpenInNewOutlinedIcon from '@mui/icons-material/OpenInNewOutlined'
 import GridOnOutlinedIcon from '@mui/icons-material/GridOnOutlined'
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -58,6 +61,13 @@ import {useToast} from '@/ui/notification/useToast'
 import {globalStore} from '@/store'
 import {useOps} from '@/core/engine/provider'
 import {Dialog} from '@/ui/dialog'
+import type {HyperlinkInfo} from 'logisheets-web'
+import {getHyperlink} from '@/core/hyperlinks'
+import {
+    HyperlinkDialog,
+    useFollowHyperlink,
+    type HyperlinkTarget,
+} from '@/components/hyperlink'
 
 /** Payload of the engine/session `contextMenu` event. */
 export interface ContextMenuTrigger {
@@ -102,6 +112,8 @@ export interface CanvasContextMenuProps {
     getActiveSheet: () => number
     /** Apply a new selection (state + engine/session). */
     setSelection: (data: SelectedData) => void
+    /** Switch this view's sheet — "Open link" can lead to another sheet. */
+    setActiveSheet: (idx: number) => void
 }
 
 export function CanvasContextMenu({
@@ -109,6 +121,7 @@ export function CanvasContextMenu({
     dataSvc,
     getActiveSheet,
     setSelection,
+    setActiveSheet,
 }: CanvasContextMenuProps): ReactNode {
     const {t} = useTranslation()
     const {toast} = useToast()
@@ -170,6 +183,18 @@ export function CanvasContextMenu({
         sheetId: number
         blockId: number
     } | null>(null)
+    // The link on the right-clicked cell, resolved on menu-open. Gates the
+    // Open / Edit / Remove link items.
+    const [menuLink, setMenuLink] = useState<{
+        target: HyperlinkTarget
+        link: HyperlinkInfo | null
+    } | null>(null)
+    const [linkDialog, setLinkDialog] = useState<HyperlinkTarget | null>(null)
+    const followLink = useFollowHyperlink({
+        dataSvc,
+        setActiveSheet,
+        setSelection,
+    })
 
     // Keep the latest service + active-sheet accessor reachable from the
     // one-time `subscribe` effect without re-subscribing on every render.
@@ -186,6 +211,7 @@ export function CanvasContextMenu({
             // the "Edit block…" item can appear. Enumerate the sheet's blocks
             // and find the one whose rect contains the anchor cell.
             setEditCandidate(null)
+            setMenuLink(null)
             const ctx = e.context
             if (ctx.target !== 'cell') return
             // Hit-test the CLICKED cell, not the selection's top-left — a
@@ -196,6 +222,14 @@ export function CanvasContextMenu({
             const col = ctx.col ?? range?.startCol
             if (row === undefined || col === undefined) return
             const sheetIdx = getActiveSheetRef.current()
+            const target = {sheetIdx, row, col}
+            setMenuLink({target, link: null})
+            void getHyperlink(dataSvcRef.current, sheetIdx, row, col).then(
+                (link) =>
+                    setMenuLink((m) =>
+                        m?.target === target ? {target, link} : m
+                    )
+            )
             void (async () => {
                 const wb = dataSvcRef.current.getWorkbook()
                 const res = await wb.getAllBlocks({sheetIdx})
@@ -590,6 +624,68 @@ export function CanvasContextMenu({
                 >
                     {t('ui.menu.addComment')}
                 </ContextMenuItem>,
+                ...(menuLink?.link
+                    ? [
+                          <ContextMenuItem
+                              key="open-hyperlink"
+                              icon={<OpenInNewOutlinedIcon />}
+                              onClick={() => {
+                                  close()
+                                  void followLink(menuLink.target)
+                              }}
+                          >
+                              {t('ui.menu.openLink')}
+                          </ContextMenuItem>,
+                      ]
+                    : []),
+                ...(menuLink
+                    ? [
+                          <ContextMenuItem
+                              key="edit-hyperlink"
+                              icon={<AddLinkOutlinedIcon />}
+                              onClick={() => {
+                                  close()
+                                  setLinkDialog(menuLink.target)
+                              }}
+                          >
+                              {menuLink.link
+                                  ? t('ui.menu.editLink')
+                                  : t('ui.menu.insertLink')}
+                          </ContextMenuItem>,
+                      ]
+                    : []),
+                ...(menuLink?.link && !menuLink.link.fromFormula
+                    ? [
+                          <ContextMenuItem
+                              key="remove-hyperlink"
+                              icon={<LinkOffOutlinedIcon />}
+                              onClick={() => {
+                                  close()
+                                  const {sheetIdx, row, col} = menuLink.target
+                                  void doTxn([
+                                      {
+                                          type: 'removeHyperlink',
+                                          value: {sheetIdx, row, col},
+                                      },
+                                      {
+                                          type: 'cellStyleUpdate',
+                                          value: {
+                                              sheetIdx,
+                                              row,
+                                              col,
+                                              ty: {
+                                                  setFontColor: 'FF000000',
+                                                  setFontUnderline: 'none',
+                                              },
+                                          },
+                                      },
+                                  ])
+                              }}
+                          >
+                              {t('ui.menu.removeLink')}
+                          </ContextMenuItem>,
+                      ]
+                    : []),
                 <ContextMenuItem
                     key="link"
                     icon={<LinkOutlinedIcon />}
@@ -876,6 +972,12 @@ export function CanvasContextMenu({
                     close={() => setEditComposer(null)}
                 />
             )}
+
+            <HyperlinkDialog
+                dataSvc={dataSvc}
+                target={linkDialog}
+                onClose={() => setLinkDialog(null)}
+            />
         </>
     )
 }

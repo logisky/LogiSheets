@@ -7,6 +7,7 @@ use crate::{
     cell_attachments::{
         CellAttachmentsManager,
         comment::{CommentNote, Mention, PersonInput},
+        hyperlink::Hyperlink,
     },
     connectors::FormulaConnector,
     container::{DataContainer, col_info_manager::ColInfo, row_info_manager::RowInfo},
@@ -85,6 +86,57 @@ pub fn load_merge_cells(
             }
         }
     })
+}
+
+/// Cells a single `<hyperlink ref>` may cover. Excel writes one per cell; a
+/// range is rare, and a huge one would only mint ids for empty cells.
+const MAX_HYPERLINK_CELLS: usize = 10_000;
+
+/// Put each `<hyperlink>` on its cell(s). `targets` maps the sheet's external
+/// relationship ids to their URLs; a link whose id is missing from it keeps
+/// only its `location`, and one with neither is dropped.
+pub fn load_hyperlinks(
+    sheet_id: SheetId,
+    hyperlinks: &CtHyperlinks,
+    targets: &[(String, String)],
+    navigator: &mut Navigator,
+    cell_attachment_manager: &mut CellAttachmentsManager,
+) {
+    for h in hyperlinks.links.iter() {
+        let url =
+            h.id.as_ref()
+                .and_then(|id| targets.iter().find(|(rid, _)| rid == id))
+                .map(|(_, url)| url.clone());
+        let location = h.location.clone().filter(|l| !l.is_empty());
+        if url.is_none() && location.is_none() {
+            continue;
+        }
+        let link = Hyperlink {
+            url,
+            location,
+            tooltip: h.tooltip.clone(),
+        };
+        let r = &h.reference;
+        let ((r0, c0), (r1, c1)) = match parse_range(r) {
+            Some(range) => range,
+            None => match parse_cell(r) {
+                Some(cell) => (cell, cell),
+                None => continue,
+            },
+        };
+        if r1 < r0 || c1 < c0 || (r1 - r0 + 1).saturating_mul(c1 - c0 + 1) > MAX_HYPERLINK_CELLS {
+            continue;
+        }
+        for row in r0..=r1 {
+            for col in c0..=c1 {
+                if let Ok(cell_id) = navigator.fetch_cell_id(&sheet_id, row, col) {
+                    cell_attachment_manager
+                        .hyperlinks
+                        .set(sheet_id, cell_id, link.clone());
+                }
+            }
+        }
+    }
 }
 
 /// Register the workbook-level person list, preserving each person's on-disk
@@ -414,7 +466,6 @@ pub fn load_preserved_parts(
         custom_sheet_views: wp.custom_sheet_views.clone(),
         phonetic_pr: wp.phonetic_pr.clone(),
         conditional_formatting: wp.conditional_formatting.clone(),
-        hyperlinks: wp.hyperlinks.clone(),
         print_options: wp.print_options.clone(),
         page_margins: wp.page_margins.clone(),
         page_setup: wp.page_setup.clone(),

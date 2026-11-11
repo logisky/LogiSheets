@@ -13,6 +13,8 @@ import {
     MayModifyBlockParams,
     CheckFieldValidationParams,
     FieldValidationVerdict,
+    GetCellParams,
+    HyperlinkInfo,
     DuplicateBlockKey,
     EnumSetInfo,
     DefinedNameInfo,
@@ -856,6 +858,23 @@ export class Workbook {
             'checkFieldValidation',
             params as unknown as Record<string, unknown>,
             this._id
+        )
+    }
+
+    /**
+     * Where the link in a cell goes, or `null` when the cell is not a link.
+     * `CellInfo.isHyperlink` says which cells are; this is the click-time
+     * half. A `HYPERLINK` formula's target is evaluated now, so it reflects
+     * the cells it reads — and nothing is written.
+     */
+    public getHyperlink(params: GetCellParams): Result<HyperlinkInfo | null> {
+        // `None` crosses the wasm boundary as `undefined`.
+        return (
+            rpc(
+                'getHyperlink',
+                params as unknown as Record<string, unknown>,
+                this._id
+            ) ?? null
         )
     }
 

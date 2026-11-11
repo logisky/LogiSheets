@@ -51,6 +51,8 @@ export interface Grid {
     rows: readonly Row[]
     columns: readonly Column[]
     mergeCells?: readonly MergeCell[]
+    /** Visible cells that are links (`CellInfo.isHyperlink`). */
+    hyperlinks?: readonly {row: number; col: number}[]
     blockInfos?: readonly BlockDisplayInfo[]
     preRowHeight?: number
     preColWidth?: number

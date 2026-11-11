@@ -36,6 +36,8 @@ export type SessionEventType =
     | 'invalidFormula'
     | 'find'
     | 'contextMenu'
+    | 'followHyperlink'
+    | 'insertHyperlink'
     | 'error'
 
 export interface SessionEventMap {
@@ -52,6 +54,17 @@ export interface SessionEventMap {
      * coordinates), using `context` to decide the items.
      */
     contextMenu: {context: ContextMenuContext; x: number; y: number}
+    /**
+     * The user Ctrl/⌘+clicked a cell that is a link (`CellInfo.isHyperlink`).
+     * The engine follows nothing itself — the host asks `getHyperlink` for
+     * the target and decides how to open it.
+     */
+    followHyperlink: {sheetIdx: number; row: number; col: number}
+    /**
+     * Ctrl/⌘+K: the user wants to insert or edit the link on the active cell.
+     * The engine has no dialog; the host opens one.
+     */
+    insertHyperlink: {sheetIdx: number; row: number; col: number}
     error: Error
 }
 
@@ -140,6 +153,8 @@ export class Session {
                 'invalidFormula',
                 'find',
                 'contextMenu',
+                'followHyperlink',
+                'insertHyperlink',
                 'error',
             ] as SessionEventType[]
         ).forEach((type) => {
@@ -213,6 +228,20 @@ export class Session {
                 },
                 onFind: () => {
                     this._emit('find', undefined)
+                },
+                onFollowHyperlink: (row: number, col: number) => {
+                    this._emit('followHyperlink', {
+                        sheetIdx: this._currentSheetIdx,
+                        row,
+                        col,
+                    })
+                },
+                onInsertHyperlink: (row: number, col: number) => {
+                    this._emit('insertHyperlink', {
+                        sheetIdx: this._currentSheetIdx,
+                        row,
+                        col,
+                    })
                 },
                 // Zoom is engine-global; hand the gesture up rather than applying it
                 // to this view alone.

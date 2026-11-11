@@ -325,6 +325,7 @@ impl<'a> Worksheet<'a> {
                 diy_cell_id,
                 validation_shadow: None,
                 conditional_format: None,
+                is_hyperlink: false,
             });
         }
         let formula = self.get_formula_by_id(cell_id)?;
@@ -338,6 +339,7 @@ impl<'a> Worksheet<'a> {
             diy_cell_id,
             validation_shadow: self.get_validation_shadow(cell_id),
             conditional_format: self.get_conditional_format(cell_id),
+            is_hyperlink: super::hyperlink::is_hyperlink(self.controller, self.sheet_id, cell_id),
         })
     }
 

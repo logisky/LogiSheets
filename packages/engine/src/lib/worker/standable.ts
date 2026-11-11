@@ -367,6 +367,8 @@ export class StandardCell {
     dataBar?: CfDataBar
     /** Conditional-formatting icon to draw at the cell's leading edge. */
     icon?: CfIcon
+    /** The cell is a link (a stored hyperlink or a `HYPERLINK` formula). */
+    isHyperlink = false
 
     setStyle(style?: StandardStyle): void {
         this.style = style

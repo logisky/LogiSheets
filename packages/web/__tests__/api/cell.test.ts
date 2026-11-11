@@ -24,7 +24,7 @@ function makeCellInfo(
     formula = '',
     style = emptyStyle
 ): CellInfo {
-    return {value, formula, style, blockId: 7}
+    return {value, formula, style, blockId: 7, isHyperlink: false}
 }
 
 describe('CellValue', () => {
@@ -86,7 +86,12 @@ describe('Cell', () => {
     })
 
     it('returns undefined block id when not set', () => {
-        const cell = new Cell({value: 'empty', formula: '', style: emptyStyle})
+        const cell = new Cell({
+            value: 'empty',
+            formula: '',
+            style: emptyStyle,
+            isHyperlink: false,
+        })
         expect(cell.getBlockId()).toBeUndefined()
     })
 

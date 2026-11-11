@@ -103,6 +103,7 @@ export enum MethodName {
     PivotPlanFor = 'pivotPlanFor',
     MayModifyBlock = 'mayModifyBlock',
     CheckFieldValidation = 'checkFieldValidation',
+    GetHyperlink = 'getHyperlink',
     GetBlockModifyInfo = 'getBlockModifyInfo',
     GetAvailableBlockId = 'getAvailableBlockId',
 

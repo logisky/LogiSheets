@@ -171,6 +171,10 @@ pub enum EditPayload {
     MergeCells(MergeCells),
     SplitMergedCells(SplitMergedCells),
 
+    // Hyperlinks stored on cells. See `cell_attachments::hyperlink`.
+    SetHyperlink(SetHyperlink),
+    RemoveHyperlink(RemoveHyperlink),
+
     // Comments (threaded + @mentions). See `cell_attachments::comment`.
     AddComment(AddComment),
     EditComment(EditComment),
@@ -2068,6 +2072,36 @@ pub struct SplitMergedCells {
     pub col: usize,
 }
 
+/// Put a hyperlink on a cell, replacing any link already there. Only the link
+/// changes: the cell's value and style are the caller's to set (Excel shows the
+/// address as the text and paints it blue and underlined).
+///
+/// Set `url` for an external target (a web address, `mailto:`, a file path)
+/// or `location` for a place in this workbook (`Sheet2!A1`, a defined name).
+/// Neither set is rejected; use `RemoveHyperlink` to take a link off. A
+/// `=HYPERLINK(...)` formula needs none of this — its target is computed.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "set_hyperlink.ts", builder, rename_all = "camelCase")]
+pub struct SetHyperlink {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
+    pub url: Option<String>,
+    pub location: Option<String>,
+    /// Shown on hover.
+    pub tooltip: Option<String>,
+}
+
+/// Take the stored hyperlink off a cell. A no-op when there is none — and it
+/// does not touch a `=HYPERLINK(...)` formula, which is the cell's content.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "remove_hyperlink.ts", builder, rename_all = "camelCase")]
+pub struct RemoveHyperlink {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
+}
+
 /// A person's identity as supplied by the host. In the open-source `src` app
 /// only `display_name` is set (the author types their own name); enterprise
 /// deployments fill in `user_id` + `provider_id` from their corporate
@@ -2154,6 +2188,18 @@ impl From<MergeCells> for EditPayload {
 impl From<SplitMergedCells> for EditPayload {
     fn from(value: SplitMergedCells) -> Self {
         EditPayload::SplitMergedCells(value)
+    }
+}
+
+impl From<SetHyperlink> for EditPayload {
+    fn from(value: SetHyperlink) -> Self {
+        EditPayload::SetHyperlink(value)
+    }
+}
+
+impl From<RemoveHyperlink> for EditPayload {
+    fn from(value: RemoveHyperlink) -> Self {
+        EditPayload::RemoveHyperlink(value)
     }
 }
 
@@ -2437,6 +2483,8 @@ impl Payload for BindRandomSchema {}
 impl Payload for RestoreCheckpoint {}
 impl Payload for MergeCells {}
 impl Payload for SplitMergedCells {}
+impl Payload for SetHyperlink {}
+impl Payload for RemoveHyperlink {}
 impl Payload for AddComment {}
 impl Payload for EditComment {}
 impl Payload for DeleteComment {}

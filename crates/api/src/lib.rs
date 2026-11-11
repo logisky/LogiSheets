@@ -60,8 +60,8 @@
 pub use logisheets_controller::api::{
     BlockOpForPayload, BlockOpPolicy, BlockSortOrder, CellInfo, CellRefRange, CfRuleInfo,
     DefinedNameInfo, DependentCell, DuplicateBlockKey, EnumSetInfo, EnumVariantInfo,
-    FieldValidationVerdict, FillRange, PivotExcelNote, PivotPlan, PivotSpecParts, ReproducibleCell,
-    SaveFileResult, SheetCoordinate, SheetDimension, Workbook, Worksheet,
+    FieldValidationVerdict, FillRange, HyperlinkInfo, PivotExcelNote, PivotPlan, PivotSpecParts,
+    ReproducibleCell, SaveFileResult, SheetCoordinate, SheetDimension, Workbook, Worksheet,
 };
 
 // Re-export display types
@@ -83,10 +83,11 @@ pub use logisheets_controller::edit_action::{
     DeleteCols, DeleteColsInBlock, DeleteRows, DeleteRowsInBlock, DeleteSheet, EditAction,
     EditPayload, EphemeralCellInput, HorizontalAlignment, InsertCols, InsertColsInBlock,
     InsertRows, InsertRowsInBlock, LineFormatBrush, LineStyleUpdate, MergeCells, ModifyPolicy,
-    MoveBlock, OfPieSplitUpdate, PayloadsAction, RemoveBlock, RemoveName, RenameName,
-    ReproduceCells, ResizeBlock, SetBlockDescription, SetBlockPermissions, SetCellImage,
-    SetColWidth, SetRowHeight, SetSheetColor, SetSheetVisible, SheetCellId, SheetRename,
-    SplitMergedCells, StatusCode, StyleUpdateType, UpsertFieldRenderInfo, VerticalAlignment,
+    MoveBlock, OfPieSplitUpdate, PayloadsAction, RemoveBlock, RemoveHyperlink, RemoveName,
+    RenameName, ReproduceCells, ResizeBlock, SetBlockDescription, SetBlockPermissions,
+    SetCellImage, SetColWidth, SetHyperlink, SetRowHeight, SetSheetColor, SetSheetVisible,
+    SheetCellId, SheetRename, SplitMergedCells, StatusCode, StyleUpdateType, UpsertFieldRenderInfo,
+    VerticalAlignment,
 };
 
 // Re-export style types

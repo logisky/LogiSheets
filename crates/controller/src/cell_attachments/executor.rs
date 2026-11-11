@@ -10,6 +10,7 @@ use super::{
     CellAttachmentsManager,
     comment::{CommentNote, Mention, PersonInput},
     ctx::CellAttachmentsExecCtx,
+    hyperlink::Hyperlink,
 };
 
 fn to_person_input(a: AuthorInput) -> PersonInput {
@@ -95,6 +96,36 @@ impl CellAttachmentsExecutor {
                 } else {
                     Ok((self, false))
                 }
+            }
+            EditPayload::SetHyperlink(p) => {
+                if p.url.is_none() && p.location.is_none() {
+                    return Err(Error::PayloadError(
+                        "SetHyperlink needs a url or a location; use RemoveHyperlink to take a link off"
+                            .to_string(),
+                    ));
+                }
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
+                self.manager.hyperlinks.set(
+                    sheet_id,
+                    cell_id,
+                    Hyperlink {
+                        url: p.url,
+                        location: p.location,
+                        tooltip: p.tooltip,
+                    },
+                );
+                Ok((self, true))
+            }
+            EditPayload::RemoveHyperlink(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(|l| BasicError::SheetIdxExceed(l))?;
+                let cell_id = ctx.fetch_cell_id(&sheet_id, p.row, p.col)?;
+                let changed = self.manager.hyperlinks.remove(&sheet_id, &cell_id);
+                Ok((self, changed))
             }
             EditPayload::AddComment(p) => {
                 let sheet_id = ctx

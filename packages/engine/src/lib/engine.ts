@@ -73,6 +73,8 @@ const SESSION_EVENT_TYPES: readonly SessionEventType[] = [
     'invalidFormula',
     'find',
     'contextMenu',
+    'followHyperlink',
+    'insertHyperlink',
     'error',
 ]
 

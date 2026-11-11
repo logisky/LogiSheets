@@ -72,6 +72,49 @@ fn close_popouts(app: tauri::AppHandle) {
     }
 }
 
+/// Open a cell's hyperlink with the system's default handler (the browser, the
+/// mail client). The webview can't: `window.open` lands in `on_new_window`
+/// above and would open the site inside the app.
+///
+/// Only `http(s):` and `mailto:` — a link comes from a workbook, which may come
+/// from anyone, and handing `file:` or a custom scheme to the OS can launch
+/// programs. The web app checks the same list; this is the gate that counts.
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    let lower = url.trim_start().to_ascii_lowercase();
+    if !["http://", "https://", "mailto:"]
+        .iter()
+        .any(|p| lower.starts_with(p))
+    {
+        return Err(format!(
+            "not opening {url:?}: only http(s) and mailto links are allowed"
+        ));
+    }
+    #[cfg(target_os = "macos")]
+    let mut cmd = {
+        let mut c = std::process::Command::new("open");
+        c.arg(&url);
+        c
+    };
+    // Not `cmd /C start`, which would parse `&` in the URL as a command
+    // separator.
+    #[cfg(target_os = "windows")]
+    let mut cmd = {
+        let mut c = std::process::Command::new("rundll32");
+        c.args(["url.dll,FileProtocolHandler", &url]);
+        c
+    };
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let mut cmd = {
+        let mut c = std::process::Command::new("xdg-open");
+        c.arg(&url);
+        c
+    };
+    cmd.spawn()
+        .map(|_| ())
+        .map_err(|e| format!("could not open {url:?}: {e}"))
+}
+
 pub fn run() {
     let builder = tauri::Builder::default()
         // Device-scoped craft storage (backs the web app's window.craftStorage).
@@ -106,6 +149,7 @@ pub fn run() {
             storage::craft_storage_keys,
             storage::craft_storage_clear,
             net::llm_fetch,
+            open_url,
             crafts::craft_pkg_list,
             crafts::craft_pkg_install,
             crafts::craft_pkg_remove,
@@ -127,6 +171,7 @@ pub fn run() {
         storage::craft_storage_keys,
         storage::craft_storage_clear,
         net::llm_fetch,
+        open_url,
         crafts::craft_pkg_list,
         crafts::craft_pkg_install,
         crafts::craft_pkg_remove,

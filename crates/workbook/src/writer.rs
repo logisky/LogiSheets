@@ -11,8 +11,9 @@ use crate::prelude::{
 };
 use crate::rtypes::{
     CHART, CHART_COLOR_STYLE, CHART_STYLE, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM,
-    DRAWING, EXT_LINK, LOGISHEETS_APP_DATA, PERSON, PIVOT_CACHE_DEFINITION, PIVOT_CACHE_RECORDS,
-    PIVOT_TABLE, RType, SST, STYLE, TABLE, THEME, THREADED_COMMENT, WORKBOOK, WORKSHEET,
+    DRAWING, EXT_LINK, HYPERLINK, LOGISHEETS_APP_DATA, PERSON, PIVOT_CACHE_DEFINITION,
+    PIVOT_CACHE_RECORDS, PIVOT_TABLE, RType, SST, STYLE, TABLE, THEME, THREADED_COMMENT, WORKBOOK,
+    WORKSHEET,
 };
 use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Write};
@@ -539,6 +540,18 @@ fn write_worksheet<'a>(
     let mut result = Vec::<WriteProof>::new();
     let mut relationships = Vec::<CtRelationship>::new();
     let mut rid = 1_usize;
+
+    // External hyperlink targets keep their ids: the worksheet's
+    // `<hyperlink r:id>` already names them. Pushed first so the ids
+    // `next_rid` hands out below step around them.
+    for (id, url) in std::mem::take(&mut wb.hyperlink_targets) {
+        relationships.push(CtRelationship {
+            id,
+            ty: HYPERLINK.0.to_string(),
+            target: url,
+            target_mode: StTargetMode::External,
+        });
+    }
 
     // Sheet-level parts nothing here models, kept whole.
     write_unknown_parts(

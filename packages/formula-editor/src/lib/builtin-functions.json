@@ -735,6 +735,22 @@
     ]
   },
   {
+    "name": "HYPERLINK",
+    "description": "Creates a link that opens a web page, a file, or a place in this workbook. The cell shows friendly_name, or the link itself when it is omitted.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "link_location"
+      },
+      {
+        "argName": "friendly_name"
+      }
+    ]
+  },
+  {
     "name": "IFERROR",
     "description": "Returns a value you specify if a formula evaluates to an error; otherwise returns the result of the formula.",
     "argCount": {

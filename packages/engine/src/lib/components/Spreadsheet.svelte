@@ -119,6 +119,10 @@ let isDragging = false; // True while user is drag-selecting
         onSave?: () => void
         /** Callback for the Find shortcut (Ctrl/⌘+F) — host opens its find UI. */
         onFind?: () => void
+        /** Ctrl/⌘+click on a link cell (`Grid.hyperlinks`) — host follows it. */
+        onFollowHyperlink?: (row: number, col: number) => void
+        /** Ctrl/⌘+K on the active cell — host opens its insert/edit link UI. */
+        onInsertHyperlink?: (row: number, col: number) => void
         /**
          * The user asked to zoom (Ctrl/⌘ + wheel, trackpad pinch, or a zoom
          * shortcut). Zoom is engine-global, so the view only reports the
@@ -151,6 +155,8 @@ let isDragging = false; // True while user is drag-selecting
         onInvalidFormula,
         onSave,
         onFind,
+        onFollowHyperlink,
+        onInsertHyperlink,
         onZoomRequest,
         onNoDataBoundary,
         dataService: externalDataService = null,
@@ -1200,6 +1206,33 @@ let isDragging = false; // True while user is drag-selecting
     // Event Handlers
     // ========================================================================
 
+    // Whether the cell under a canvas-relative point is a link. The grid lists
+    // the visible links, so this needs no worker round-trip.
+    function linkCellAt(
+        x: number,
+        y: number,
+    ): {row: number; col: number} | null {
+        if (!grid?.hyperlinks?.length) return null
+        const matched = match(x, y, anchorX, anchorY, grid)
+        if (!matched) return null
+        const {startRow: row, startCol: col} = matched.coordinate
+        return grid.hyperlinks.some((h) => h.row === row && h.col === col)
+            ? {row, col}
+            : null
+    }
+
+    // A pointer over a link says it can be followed (Ctrl/⌘+click); a plain
+    // click still selects the cell, so editing a linked cell stays easy.
+    let overLink = $state(false)
+    function onCanvasMouseMove(e: MouseEvent) {
+        if (!canvasEl || isDragging) {
+            overLink = false
+            return
+        }
+        const rect = canvasEl.getBoundingClientRect()
+        overLink = !!linkCellAt(e.clientX - rect.left, e.clientY - rect.top)
+    }
+
     async function onMouseDown(e: MouseEvent) {
         const win = hostWindow(e.target)
         e.stopPropagation()
@@ -1230,6 +1263,14 @@ let isDragging = false; // True while user is drag-selecting
         if (!matchedCell) return
 
         const { startRow: row, startCol: col } = matchedCell.coordinate
+
+        if ((e.ctrlKey || e.metaKey) && onFollowHyperlink) {
+            const link = linkCellAt(e.clientX - rect.left, e.clientY - rect.top)
+            if (link) {
+                onFollowHyperlink(link.row, link.col)
+                return
+            }
+        }
 
         // Double-click detection
         const now = Date.now()
@@ -1834,6 +1875,11 @@ let isDragging = false; // True while user is drag-selecting
         // forwards the intent; returning a handler makes dispatchShortcut
         // preventDefault, so the browser's native Ctrl+F is suppressed.
         find: () => onFind?.(),
+        // Like Find: the dialog is the host's, the grid names the cell.
+        insertHyperlink: () => {
+            const range = getSelectedCellRange(selectedData)
+            if (range) onInsertHyperlink?.(range.startRow, range.startCol)
+        },
         // Zoom. Registering these also suppresses the browser's own page
         // zoom on Ctrl/⌘ +/-/0 while the grid has focus.
         zoomIn: () => requestZoomStep(cfg.zoomStep),
@@ -2634,8 +2680,11 @@ let isDragging = false; // True while user is drag-selecting
                 id={CANVAS_ID}
                 tabindex="0"
                 class="main-canvas"
+                class:over-link={overLink}
                 style="left: {LeftTop.width}px; top: {LeftTop.height}px; width: calc(100% - {LeftTop.width}px - {showScrollbars ? cfg.scrollbarSize : 0}px); height: calc(100% - {LeftTop.height}px - {showScrollbars ? cfg.scrollbarSize : 0}px);"
                 onmousedown={onMouseDown}
+                onmousemove={onCanvasMouseMove}
+                onmouseleave={() => (overLink = false)}
                 oncontextmenu={handleCanvasContextMenu}
                 onwheel={onWheel}
                 onkeydown={onKeyDown}
@@ -2965,6 +3014,10 @@ let isDragging = false; // True while user is drag-selecting
         display: block;
         z-index: 0;
         outline: none;
+    }
+
+    .main-canvas.over-link {
+        cursor: pointer;
     }
 
     .fill-handle {
