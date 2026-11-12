@@ -140,8 +140,8 @@ small subset renderer (separators, decimals, percent, currency affixes).
 **Coverage gaps**
 - **All 16 classic `c:*Chart` groups** are read, written and editable. The
   `cx:` family (treemap, sunburst, histogram, pareto, box &amp; whisker,
-  waterfall, funnel, filled map) lives in a different part and is preserved
-  but not drawn — see below.
+  waterfall, funnel, filled map) lives in a different part; it is drawn
+  read-only and saved verbatim — see below.
 - A **combo chart** is modeled as one whose series disagree: `ChartSeries`
   carries an optional `series_type`, and the writer emits one plot group per
   distinct kind, the chart's own kind first. Only the flat category/value kinds
@@ -163,18 +163,35 @@ small subset renderer (separators, decimals, percent, currency affixes).
 - Of-pie honours `splitType` `pos`/`val`/`percent`; `cust` (a hand-assigned
   split) falls back to the automatic one, though the `c:custSplit` element is
   preserved.
-- **The modern "chartEx" family is kept but not drawn**: treemap, sunburst,
-  histogram, Pareto, box & whisker, waterfall, funnel and filled map live in a
-  separate part (`xl/charts/chartEx1.xml`, `cx:` namespace, its own
-  relationship type), anchored inside `mc:AlternateContent`. Such a chart
-  loads as a *preserved* chart (`PreservedChart` on the controller's `Chart`,
-  `preservedKind` on `ChartInfo`): it is placed, moved, resized and deleted
-  like any other and its part is written back byte for byte, but the grid
-  shows a placeholder naming its kind, and `UpdateChart` is refused. Until
-  this, the reader skipped both the anchor and the part, so a save deleted
-  the chart. Verified against a hand-built fixture
-  (`tests/chart_ex.xlsx`, from `tests/gen/chart_ex.py`) in
-  `tests/chart_ex_preserved.rs`, not yet against an Excel-authored file.
+- **The modern "chartEx" family is drawn read-only and saved verbatim.**
+  Treemap, sunburst, histogram, Pareto, box & whisker, waterfall, funnel and
+  filled map live in a separate part (`xl/charts/chartEx1.xml`, `cx:`
+  namespace, its own relationship type), anchored inside
+  `mc:AlternateContent`. Such a chart loads as a *preserved* chart
+  (`PreservedChart` on the controller's `Chart`, `preservedKind` on
+  `ChartInfo`): placed, moved, resized and deleted like any other, its part
+  written back byte for byte, and `UpdateChart` refused. Until this the
+  reader skipped the anchor and the part, so a save deleted the chart.
+  - **Drawn** (all but the filled map): `ooxml/chart_ex.rs` reads the part,
+    and `get_charts` reduces it to `ChartInfo.ex` from the cells *as they are
+    now* — the statistics live in `chart_manager/chart_ex.rs`, with Excel's
+    rules: `QUARTILE.EXC` by default (`.INC` when the file says so), whiskers
+    at the furthest point within 1.5 × IQR, right-closed bins with Scott's
+    rule for the automatic width, a Pareto sorted descending with a running
+    share. `ex-option.ts` lays that out in ECharts; a waterfall is stacked
+    bars over an invisible base.
+  - The data ranges are held by cell id, so the drawing follows inserted rows
+    — but the **file** still names the old range after such an edit, because
+    the part is saved as it came. Rewriting it means generating chartEx XML.
+  - Not reproduced: chartEx styling (colours come from ECharts' defaults
+    except the waterfall's), data labels, axis settings, and a treemap's
+    label layout. A filled map stays a placeholder.
+  - Automatic histogram bin edges are rounded to two decimals in their
+    labels; Excel's exact label rounding is not known.
+  - Verified against hand-built fixtures (`tests/chart_ex.xlsx`,
+    `tests/chart_ex_kinds.xlsx`, from `tests/gen/`) in
+    `tests/chart_ex_preserved.rs` and `tests/chart_ex_drawn.rs` — not yet
+    against Excel-authored files.
 - **A classic chart whose part does not parse is kept the same way** (kind
   `chart`), where it used to be dropped on save.
 - A chart part's satellites other than its style and colors parts (user

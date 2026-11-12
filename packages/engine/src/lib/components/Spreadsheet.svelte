@@ -9,7 +9,12 @@
     import ChartSettings from '$lib/chart/ChartSettings.svelte'
     import {chartDataRefsFromSelection} from '$lib/chart/from-selection'
     import {chartSourceRanges, isRangeVisible} from '$lib/chart/source-ranges'
-    import { mapChartToOption, chartInfoToModel, preservedChartLabel } from '$lib/chart'
+    import {
+        mapChartToOption,
+        chartInfoToModel,
+        chartExToOption,
+        preservedChartLabel,
+    } from '$lib/chart'
     // Inlined (base64 blob) so the published bundle is self-contained — see
     // the matching import in engine.ts for why a separate worker asset breaks
     // external consumers.
@@ -245,11 +250,14 @@ let isDragging = false; // True while user is drag-selecting
                 width: Math.max(0, x1 - x0),
                 height: Math.max(0, y1 - y0),
                 chartType: c.chartType,
-                // A chart the core keeps but cannot draw (a chartEx kind,
-                // say) gets a placeholder instead of an ECharts option.
+                // A chart the core keeps verbatim (a chartEx kind, say) is
+                // drawn from what the core reduced it to, or — when the core
+                // cannot draw it either — shown as a placeholder.
                 preservedKind: c.preservedKind ?? null,
                 option: c.preservedKind
-                    ? null
+                    ? c.ex
+                        ? chartExToOption(c.ex)
+                        : null
                     : mapChartToOption(chartInfoToModel(c)),
             }
         })
@@ -2779,7 +2787,7 @@ let isDragging = false; // True while user is drag-selecting
                             {#if selectedChartId === box.id}
                                 <!-- A preserved chart can be moved, resized
                                      and deleted, but not reconfigured. -->
-                                {#if box.option}
+                                {#if !box.preservedKind}
                                 <div
                                     class="chart-toolbar"
                                     role="presentation"

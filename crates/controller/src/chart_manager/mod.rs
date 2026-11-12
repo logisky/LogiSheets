@@ -13,6 +13,7 @@
 //! lossy, while `raw` is authoritative for persistence.
 
 pub mod block_source;
+pub mod chart_ex;
 pub mod executor;
 pub mod refs;
 
@@ -24,7 +25,7 @@ use std::sync::Arc;
 
 use imbl::{HashMap, Vector};
 use logisheets_base::{BlockId, CellId, SheetId};
-use logisheets_workbook::prelude::{ChartData, ChartExFrame, PassthroughPart};
+use logisheets_workbook::prelude::{ChartData, ChartExData, ChartExFrame, PassthroughPart};
 
 /// A chart anchor corner: a stable cell plus an EMU offset into that cell.
 #[derive(Debug, Clone)]
@@ -116,6 +117,15 @@ pub struct PreservedChart {
     /// Set for a chartEx chart: how its anchor goes back out — inside
     /// `mc:AlternateContent`, with the fallback older readers show.
     pub ex: Option<ChartExFrame>,
+    /// The chartEx part, read enough to draw. `None` for a part that does not
+    /// parse — the chart is then a placeholder only.
+    pub data: Option<ChartExData>,
+    /// Where each series' dimensions read from, by cell id, so the drawing
+    /// follows inserted rows the way a classic chart's does. Indexed
+    /// `[series][dim]` in step with `data`. The part itself is saved as it
+    /// came, so the FILE still names the old range after such an edit —
+    /// rewriting it means generating chartEx XML, which nothing does yet.
+    pub ranges: Vec<Vec<Option<ChartRange>>>,
 }
 
 #[derive(Debug, Clone, Default)]

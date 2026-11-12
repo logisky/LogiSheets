@@ -13,12 +13,16 @@
 import * as echarts from 'echarts/core'
 import {
     BarChart,
+    BoxplotChart,
     CandlestickChart,
+    FunnelChart,
     HeatmapChart,
     LineChart,
     PieChart,
     RadarChart,
     ScatterChart,
+    SunburstChart,
+    TreemapChart,
 } from 'echarts/charts'
 import {
     TitleComponent,
@@ -47,6 +51,12 @@ echarts.use([
     // heatmap of the same grid — which is what Excel's contour variants are.
     CandlestickChart,
     HeatmapChart,
+    // The chartEx kinds that have a native ECharts form (see ex-option.ts);
+    // waterfall, histogram and Pareto are bars and lines.
+    TreemapChart,
+    SunburstChart,
+    FunnelChart,
+    BoxplotChart,
     // Components.
     TitleComponent,
     LegendComponent,

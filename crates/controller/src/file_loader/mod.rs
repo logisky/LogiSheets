@@ -1031,13 +1031,36 @@ fn load_charts(
         };
         let preserved = match (&parsed, ex) {
             (Some(_), _) => None,
-            (None, Some(ex)) => Some(Box::new(PreservedChart {
-                kind: chart_ex_layout_id(&part.data).unwrap_or_else(|| "chartEx".to_string()),
-                ex: Some(ex),
-            })),
+            (None, Some(ex)) => {
+                let data = parse_chart_ex(&part.data);
+                let ranges = data
+                    .iter()
+                    .flat_map(|d| d.series.iter())
+                    .map(|s| {
+                        s.dims
+                            .iter()
+                            .map(|d| {
+                                d.formula.as_deref().and_then(|f| {
+                                    crate::chart_manager::ChartRange::parse(
+                                        navigator, sheets, sheet_id, f,
+                                    )
+                                })
+                            })
+                            .collect()
+                    })
+                    .collect();
+                Some(Box::new(PreservedChart {
+                    kind: chart_ex_layout_id(&part.data).unwrap_or_else(|| "chartEx".to_string()),
+                    ex: Some(ex),
+                    data,
+                    ranges,
+                }))
+            }
             (None, None) => Some(Box::new(PreservedChart {
                 kind: "chart".to_string(),
                 ex: None,
+                data: None,
+                ranges: Vec::new(),
             })),
         };
         let data = parsed.unwrap_or_else(ChartData::empty);

@@ -35,6 +35,9 @@ pub mod prelude {
         AxisScale, ChartData, ChartSeries, ChartType, DataLabels, LegendPos, OfPieSplit,
         SeriesColor, build_chart_xml, chart_ex_layout_id, parse_chart,
     };
+    pub use super::ooxml::chart_ex::{
+        ChartExBinning, ChartExData, ChartExDim, ChartExSeries, parse_chart_ex,
+    };
     pub use super::ooxml::comments::*;
     pub use super::ooxml::complex_types::*;
     pub use super::ooxml::drawing_part::*;
