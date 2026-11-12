@@ -501,6 +501,12 @@ pub struct ChartInfo {
     /// showing a chart's source should say which block it follows rather than
     /// present the range as something the user typed.
     pub block_source: Option<ChartBlockSourceInfo>,
+    /// Set for a chart kept on save but not drawn or editable here — a
+    /// chartEx kind such as `waterfall` or `treemap`, or `chart` for a
+    /// classic chart whose part did not parse. Everything about plotting is
+    /// then empty; the anchor fields are real, and moving, resizing and
+    /// deleting it work as for any chart. `UpdateChart` on it is refused.
+    pub preserved_kind: Option<String>,
 }
 
 /// The block a chart follows: its id, the field labelling the categories, and

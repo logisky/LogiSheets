@@ -35,6 +35,13 @@ pub const CHART_STYLE: RType =
     RType("http://schemas.microsoft.com/office/2011/relationships/chartStyle");
 pub const CHART_COLOR_STYLE: RType =
     RType("http://schemas.microsoft.com/office/2011/relationships/chartColorStyle");
+// The Excel 2016 chart family — treemap, sunburst, histogram, Pareto, box &
+// whisker, waterfall, funnel, filled map. A separate part
+// (`xl/charts/chartExN.xml`, root `cx:chartSpace`) reached through this
+// relationship, from a `graphicFrame` that Excel wraps in
+// `mc:AlternateContent` so older readers fall back to a text box. Shares the
+// classic chart's style/color satellite relationship types.
+pub const CHART_EX: RType = RType("http://schemas.microsoft.com/office/2014/relationships/chartEx");
 pub const DOC_PROP_APP: RType = RType(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties",
 );

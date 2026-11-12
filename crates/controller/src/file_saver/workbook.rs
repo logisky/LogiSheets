@@ -409,6 +409,7 @@ pub fn save_workbook<S: SaverTrait>(
                     extent,
                     chart_path: chart.part_path.clone(),
                     name: format!("Chart {}", chart.id),
+                    ex: chart.preserved.as_ref().and_then(|p| p.ex.clone()),
                 });
                 // A block-bound chart is written out with the ranges the block
                 // covers right now. Excel has no idea what a block is, so the
@@ -484,6 +485,9 @@ pub fn save_workbook<S: SaverTrait>(
                 // A block-bound chart's ranges come from the block, so that
                 // resolution wins over the cell-id one.
                 let regenerated = regenerated.or(moved);
+                // A preserved chart's `data` is a placeholder: its part is the
+                // truth and goes back out untouched, whatever the above found.
+                let regenerated = regenerated.filter(|_| chart.preserved.is_none());
                 if let Some(src) = &chart.source {
                     chart_sources.push(ChartSourceXml {
                         chart_id: chart.id.clone(),

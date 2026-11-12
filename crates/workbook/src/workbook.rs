@@ -2,7 +2,7 @@ use crate::logisheets::LogiSheetsData;
 use crate::ooxml::comments::Comments;
 use crate::ooxml::doc_props::{DocPropApp, DocPropCore, DocPropCustom};
 use crate::ooxml::drawing_part::{
-    CtMarker, CtOneCellAnchor, CtPositiveSize2D, CtTwoCellAnchor, CtWsDr,
+    ChartExFrame, CtMarker, CtOneCellAnchor, CtPositiveSize2D, CtTwoCellAnchor, CtWsDr,
 };
 use crate::ooxml::external_links::*;
 use crate::ooxml::persons::Persons;
@@ -14,7 +14,7 @@ use crate::ooxml::theme::ThemePart;
 use crate::ooxml::threaded_comments::ThreadedComments;
 use crate::ooxml::workbook::WorkbookPart;
 use crate::ooxml::worksheet::WorksheetPart;
-use crate::rtypes::{CHART, IMAGE};
+use crate::rtypes::{CHART, CHART_EX, IMAGE};
 use std::collections::HashMap;
 
 use crate::SerdeErr;
@@ -180,6 +180,34 @@ pub struct WorksheetDrawing {
 }
 
 impl WorksheetDrawing {
+    /// One chart's own part tree: the chart part at `part_path` and the
+    /// satellites its relationships name, in that order.
+    ///
+    /// `chart_parts` holds every chart of the drawing together. A chart that
+    /// carried all of them would re-emit another chart's parts on save — and
+    /// keep emitting them after that chart was deleted.
+    pub fn chart_tree(&self, part_path: &str) -> Vec<PassthroughPart> {
+        let Some(part) = self.chart_parts.iter().find(|p| p.path == part_path) else {
+            return Vec::new();
+        };
+        let mut out = vec![part.clone()];
+        let rels_path = crate::reader::get_rels(part_path)
+            .ok()
+            .and_then(|p| p.to_str().map(|s| s.to_string()));
+        if let Some(rels_path) = rels_path {
+            for r in part.rels.iter() {
+                let abs = crate::reader::get_target_abs_path(&rels_path, &r.target);
+                if let Some(sat) = abs
+                    .to_str()
+                    .and_then(|a| self.chart_parts.iter().find(|p| p.path == a))
+                {
+                    out.push(sat.clone());
+                }
+            }
+        }
+        out
+    }
+
     /// Resolve an `r:embed` id to the media file name (e.g. `image1.png`).
     pub fn media_name_of(&self, embed_rid: &str) -> Option<String> {
         let rel = self.rels.iter().find(|r| r.id == embed_rid)?;
@@ -267,33 +295,61 @@ impl WorksheetDrawing {
             };
             let from =
                 CtMarker::with_offset(ca.from_col, ca.from_row, ca.from_col_off, ca.from_row_off);
-            match ca.extent {
-                ChartAnchorExtent::ToCell {
-                    col,
-                    row,
-                    col_off,
-                    row_off,
-                } => anchors.push(CtTwoCellAnchor::new_chart_anchor(
-                    from,
-                    CtMarker::with_offset(col, row, col_off, row_off),
-                    nv_id,
-                    ca.name,
-                    embed.clone(),
-                )),
-                ChartAnchorExtent::Size { cx, cy } => {
-                    one_cell_anchors.push(CtOneCellAnchor::new_chart_anchor(
-                        from,
-                        CtPositiveSize2D { cx, cy },
-                        nv_id,
-                        ca.name,
-                        embed.clone(),
-                    ))
+            let rel_ty = if ca.ex.is_some() { CHART_EX } else { CHART };
+            match (ca.extent, ca.ex) {
+                (
+                    ChartAnchorExtent::ToCell {
+                        col,
+                        row,
+                        col_off,
+                        row_off,
+                    },
+                    ex,
+                ) => {
+                    let to = CtMarker::with_offset(col, row, col_off, row_off);
+                    anchors.push(match ex {
+                        Some(ex) => CtTwoCellAnchor::new_chart_ex_anchor(
+                            from,
+                            to,
+                            nv_id,
+                            ca.name,
+                            embed.clone(),
+                            ex,
+                        ),
+                        None => CtTwoCellAnchor::new_chart_anchor(
+                            from,
+                            to,
+                            nv_id,
+                            ca.name,
+                            embed.clone(),
+                        ),
+                    })
+                }
+                (ChartAnchorExtent::Size { cx, cy }, ex) => {
+                    let ext = CtPositiveSize2D { cx, cy };
+                    one_cell_anchors.push(match ex {
+                        Some(ex) => CtOneCellAnchor::new_chart_ex_anchor(
+                            from,
+                            ext,
+                            nv_id,
+                            ca.name,
+                            embed.clone(),
+                            ex,
+                        ),
+                        None => CtOneCellAnchor::new_chart_anchor(
+                            from,
+                            ext,
+                            nv_id,
+                            ca.name,
+                            embed.clone(),
+                        ),
+                    })
                 }
             }
             nv_id += 1;
             rels.push(CtRelationship {
                 id: embed,
-                ty: CHART.0.to_string(),
+                ty: rel_ty.0.to_string(),
                 target,
                 target_mode: StTargetMode::Internal,
             });
@@ -326,6 +382,10 @@ pub struct ChartAnchor {
     pub chart_path: String,
     /// Human-readable frame name (e.g. `Chart 1`).
     pub name: String,
+    /// Set when `chart_path` is a chartEx part: the anchor is then written
+    /// inside `mc:AlternateContent` and reached through a `chartEx`
+    /// relationship.
+    pub ex: Option<ChartExFrame>,
 }
 
 /// The two ways a drawing anchor states an object's extent.

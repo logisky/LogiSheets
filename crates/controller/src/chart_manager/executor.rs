@@ -128,6 +128,7 @@ impl ChartExecutor {
                         // the navigator and the sheet names, which this
                         // executor's context does not carry.
                         refs: Default::default(),
+                        preserved: None,
                     },
                 );
                 Ok((self, true))
@@ -148,6 +149,14 @@ impl ChartExecutor {
                 let Some(existing) = existing else {
                     return Ok((self, false));
                 };
+                // Its `data` is a placeholder, so regenerating the part from it
+                // would replace the chart with an empty one.
+                if let Some(kept) = &existing.preserved {
+                    return Err(Error::PayloadError(format!(
+                        "chart {} is a {} chart, which this version keeps on save but cannot edit",
+                        existing.id, kept.kind
+                    )));
+                }
                 let mut spec = existing.data.clone();
                 if let Some(t) = &p.chart_type {
                     spec.chart_type = chart_type_from_str(t);

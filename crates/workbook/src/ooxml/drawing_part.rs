@@ -75,6 +75,11 @@ pub struct CtOneCellAnchor {
     #[xmlserde(name = b"xdr:contentPart", ty = "child")]
     #[xmlserde(alias(b"contentPart"))]
     pub content_part: Option<Unparsed>,
+    /// How Excel anchors an object older readers may not know — a chartEx
+    /// chart, chiefly. See [`CtAlternateContent`].
+    #[xmlserde(name = b"mc:AlternateContent", ty = "child")]
+    #[xmlserde(alias(b"AlternateContent"))]
+    pub alternate_content: Option<CtAlternateContent>,
     #[xmlserde(name = b"xdr:clientData", ty = "child")]
     #[xmlserde(alias(b"clientData"))]
     pub client_data: Option<CtAnchorClientData>,
@@ -123,6 +128,11 @@ pub struct CtTwoCellAnchor {
     #[xmlserde(name = b"xdr:contentPart", ty = "child")]
     #[xmlserde(alias(b"contentPart"))]
     pub content_part: Option<Unparsed>,
+    /// How Excel anchors an object older readers may not know — a chartEx
+    /// chart, chiefly. See [`CtAlternateContent`].
+    #[xmlserde(name = b"mc:AlternateContent", ty = "child")]
+    #[xmlserde(alias(b"AlternateContent"))]
+    pub alternate_content: Option<CtAlternateContent>,
     #[xmlserde(name = b"xdr:clientData", ty = "child")]
     #[xmlserde(alias(b"clientData"))]
     pub client_data: Option<CtAnchorClientData>,
@@ -290,8 +300,9 @@ pub struct CtGeomGuideList {}
 //
 // Modeled enough to (a) read a chart reference on load and (b) regenerate the
 // anchor on save. `nvGraphicFramePr`, `xfrm` and `graphic/graphicData/c:chart`
-// are typed. Non-chart graphicData (e.g. SmartArt) is not modeled and would not
-// round-trip — charts are the supported case.
+// (or `cx:chart`, for a chartEx) are typed. Non-chart graphicData (e.g.
+// SmartArt) is not modeled and would not round-trip — charts are the supported
+// case.
 #[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
 pub struct CtGraphicFrame {
     #[xmlserde(name = b"xdr:nvGraphicFramePr", ty = "child")]
@@ -369,6 +380,9 @@ pub struct CtGraphicalObjectData {
     pub uri: String,
     #[xmlserde(name = b"c:chart", ty = "child")]
     pub chart: Option<CChart>,
+    /// The chartEx counterpart of `chart`, under `uri` [`CHART_EX_URI`].
+    #[xmlserde(name = b"cx:chart", ty = "child")]
+    pub chart_ex: Option<CChartEx>,
 }
 
 impl Default for CtGraphicalObjectData {
@@ -376,6 +390,125 @@ impl Default for CtGraphicalObjectData {
         CtGraphicalObjectData {
             uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),
             chart: None,
+            chart_ex: None,
+        }
+    }
+}
+
+/// `graphicData@uri` for a chartEx chart.
+pub const CHART_EX_URI: &str = "http://schemas.microsoft.com/office/drawing/2014/chartex";
+const CHART_EX_NS: &str = "http://schemas.microsoft.com/office/drawing/2014/chartex";
+const R_NS: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const MC_NS: &str = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+
+/// `<cx:chart r:id="...">` — a drawing's reference to a chartEx part.
+///
+/// Carries its own namespace declarations, as Excel writes it, rather than
+/// adding `cx` to the drawing root: a drawing with no chartEx then serializes
+/// exactly as it did before this existed.
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CChartEx {
+    #[xmlserde(name = b"xmlns:cx", ty = "attr")]
+    pub xmlns_cx: Option<String>,
+    #[xmlserde(name = b"xmlns:r", ty = "attr")]
+    pub xmlns_r: Option<String>,
+    #[xmlserde(name = b"r:id", ty = "attr")]
+    pub r_id: Option<String>,
+}
+
+/// `<mc:AlternateContent>` inside a drawing anchor: one `Choice` for readers
+/// that understand what it `Requires`, and a `Fallback` for the rest.
+///
+/// Excel anchors every chartEx chart this way, with `Requires="cx1"` (or
+/// `cx2`/`cx4` for the later kinds) and a text box saying the chart is not
+/// available as the fallback. Before this was modeled the whole element was
+/// skipped on read, so a chartEx chart did not survive a save.
+///
+/// Only a Choice holding a `graphicFrame` is typed. The Fallback is kept
+/// verbatim: nothing here reads it, but an older Excel shows it.
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CtAlternateContent {
+    #[xmlserde(name = b"xmlns:mc", ty = "attr")]
+    pub xmlns_mc: Option<String>,
+    #[xmlserde(name = b"mc:Choice", ty = "child")]
+    #[xmlserde(alias(b"Choice"))]
+    pub choice: Option<CtMcChoice>,
+    #[xmlserde(name = b"mc:Fallback", ty = "child")]
+    #[xmlserde(alias(b"Fallback"))]
+    pub fallback: Option<Unparsed>,
+}
+
+/// `<mc:Choice Requires="cx1">`. `Requires` names namespace PREFIXES, so each
+/// one it names has to be declared in scope — hence the explicit `xmlns:cxN`
+/// attributes, one per chartEx revision Excel writes.
+#[derive(Debug, Default, XmlSerialize, XmlDeserialize)]
+pub struct CtMcChoice {
+    #[xmlserde(name = b"xmlns:cx1", ty = "attr")]
+    pub xmlns_cx1: Option<String>,
+    #[xmlserde(name = b"xmlns:cx2", ty = "attr")]
+    pub xmlns_cx2: Option<String>,
+    #[xmlserde(name = b"xmlns:cx4", ty = "attr")]
+    pub xmlns_cx4: Option<String>,
+    #[xmlserde(name = b"Requires", ty = "attr")]
+    pub requires: String,
+    #[xmlserde(name = b"xdr:graphicFrame", ty = "child")]
+    #[xmlserde(alias(b"graphicFrame"))]
+    pub graphic_frame: Option<CtGraphicFrame>,
+}
+
+/// The namespace a chartEx `Requires` prefix stands for.
+fn chart_ex_requires_ns(prefix: &str) -> Option<&'static str> {
+    match prefix {
+        "cx1" => Some("http://schemas.microsoft.com/office/drawing/2015/9/8/chartex"),
+        "cx2" => Some("http://schemas.microsoft.com/office/drawing/2015/10/21/chartex"),
+        "cx4" => Some("http://schemas.microsoft.com/office/drawing/2016/5/10/chartex"),
+        _ => None,
+    }
+}
+
+impl CtAlternateContent {
+    /// The chartEx-part relationship id this element's Choice references.
+    pub fn chart_ex_rid(&self) -> Option<&str> {
+        self.choice
+            .as_ref()?
+            .graphic_frame
+            .as_ref()?
+            .graphic
+            .as_ref()?
+            .graphic_data
+            .as_ref()?
+            .chart_ex
+            .as_ref()?
+            .r_id
+            .as_deref()
+    }
+
+    /// The `Requires` of the Choice, e.g. `cx1`.
+    pub fn requires(&self) -> Option<&str> {
+        self.choice.as_ref().map(|c| c.requires.as_str())
+    }
+
+    /// Wrap a chartEx frame the way Excel does.
+    ///
+    /// A `requires` this crate has no namespace for is written as `cx1`: an
+    /// undeclared prefix makes a reader skip the Choice, which would hide the
+    /// chart even from an Excel that can draw it.
+    fn chart_ex(frame: CtGraphicFrame, requires: &str, fallback: Option<Unparsed>) -> Self {
+        let (requires, ns) = match chart_ex_requires_ns(requires) {
+            Some(ns) => (requires, ns),
+            None => ("cx1", chart_ex_requires_ns("cx1").unwrap_or_default()),
+        };
+        let ns = Some(ns.to_string());
+        CtAlternateContent {
+            xmlns_mc: Some(MC_NS.to_string()),
+            choice: Some(CtMcChoice {
+                xmlns_cx1: if requires == "cx1" { ns.clone() } else { None },
+                xmlns_cx2: if requires == "cx2" { ns.clone() } else { None },
+                xmlns_cx4: if requires == "cx4" { ns } else { None },
+                requires: requires.to_string(),
+                graphic_frame: Some(frame),
+            }),
+            fallback,
         }
     }
 }
@@ -450,6 +583,7 @@ impl CtTwoCellAnchor {
             graphic_frame: None,
             cxn_sp: None,
             content_part: None,
+            alternate_content: None,
             pic: Some(CtPic {
                 nv_pic_pr: Some(CtPictureNonVisual {
                     c_nv_pr: Some(CtNvDrawingProps {
@@ -494,29 +628,10 @@ impl CtTwoCellAnchor {
             pic: None,
             sp: None,
             grp_sp: None,
-            graphic_frame: Some(CtGraphicFrame {
-                nv_graphic_frame_pr: Some(CtGraphicFrameNonVisual {
-                    c_nv_pr: Some(CtNvDrawingProps {
-                        id: frame_id,
-                        name,
-                        descr: String::new(),
-                    }),
-                    c_nv_graphic_frame_pr: Some(CtNvGraphicFrameProps::default()),
-                }),
-                // Empty, but present: Excel recomputes the geometry from
-                // the anchor and repairs the part if the element is absent.
-                xfrm: Some(CtGraphicFrameXfrm::default()),
-                graphic: Some(CtGraphicalObject {
-                    graphic_data: Some(CtGraphicalObjectData {
-                        uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),
-                        chart: Some(CChart {
-                            r_id: Some(chart_rid),
-                        }),
-                    }),
-                }),
-            }),
+            graphic_frame: Some(chart_frame(frame_id, name, chart_rid, false)),
             cxn_sp: None,
             content_part: None,
+            alternate_content: None,
             client_data: Some(CtAnchorClientData::default()),
         }
     }
@@ -553,30 +668,106 @@ impl CtOneCellAnchor {
             pic: None,
             sp: None,
             grp_sp: None,
-            graphic_frame: Some(CtGraphicFrame {
-                nv_graphic_frame_pr: Some(CtGraphicFrameNonVisual {
-                    c_nv_pr: Some(CtNvDrawingProps {
-                        id: frame_id,
-                        name,
-                        descr: String::new(),
-                    }),
-                    c_nv_graphic_frame_pr: Some(CtNvGraphicFrameProps::default()),
-                }),
-                // Empty, but present: Excel recomputes the geometry from
-                // the anchor and repairs the part if the element is absent.
-                xfrm: Some(CtGraphicFrameXfrm::default()),
-                graphic: Some(CtGraphicalObject {
-                    graphic_data: Some(CtGraphicalObjectData {
-                        uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),
-                        chart: Some(CChart {
-                            r_id: Some(chart_rid),
-                        }),
-                    }),
-                }),
-            }),
+            graphic_frame: Some(chart_frame(frame_id, name, chart_rid, false)),
             cxn_sp: None,
             content_part: None,
+            alternate_content: None,
             client_data: Some(CtAnchorClientData::default()),
         }
+    }
+}
+
+/// A chart `graphicFrame` referencing the part at `chart_rid`. `ex` selects
+/// a chartEx reference (`cx:chart`) over a classic one (`c:chart`).
+fn chart_frame(frame_id: u32, name: String, chart_rid: String, ex: bool) -> CtGraphicFrame {
+    let graphic_data = if ex {
+        CtGraphicalObjectData {
+            uri: CHART_EX_URI.to_string(),
+            chart: None,
+            chart_ex: Some(CChartEx {
+                xmlns_cx: Some(CHART_EX_NS.to_string()),
+                xmlns_r: Some(R_NS.to_string()),
+                r_id: Some(chart_rid),
+            }),
+        }
+    } else {
+        CtGraphicalObjectData {
+            uri: String::from("http://schemas.openxmlformats.org/drawingml/2006/chart"),
+            chart: Some(CChart {
+                r_id: Some(chart_rid),
+            }),
+            chart_ex: None,
+        }
+    };
+    CtGraphicFrame {
+        nv_graphic_frame_pr: Some(CtGraphicFrameNonVisual {
+            c_nv_pr: Some(CtNvDrawingProps {
+                id: frame_id,
+                name,
+                descr: String::new(),
+            }),
+            c_nv_graphic_frame_pr: Some(CtNvGraphicFrameProps::default()),
+        }),
+        // Empty, but present: Excel recomputes the geometry from the anchor
+        // and repairs the part if the element is absent.
+        xfrm: Some(CtGraphicFrameXfrm::default()),
+        graphic: Some(CtGraphicalObject {
+            graphic_data: Some(graphic_data),
+        }),
+    }
+}
+
+/// The parts of a chartEx anchor beyond its position: what the
+/// `mc:Choice` requires and the fallback older readers show.
+#[derive(Debug, Clone)]
+pub struct ChartExFrame {
+    pub requires: String,
+    pub fallback: Option<Unparsed>,
+}
+
+impl CtTwoCellAnchor {
+    /// {@link CtTwoCellAnchor::new_chart_anchor} for a chartEx chart: the
+    /// same frame, referencing the part through `cx:chart` and wrapped in
+    /// `mc:AlternateContent`.
+    pub fn new_chart_ex_anchor(
+        from: CtMarker,
+        to: CtMarker,
+        frame_id: u32,
+        name: String,
+        chart_rid: String,
+        ex: ChartExFrame,
+    ) -> Self {
+        let mut anchor =
+            Self::new_chart_anchor(from, to, frame_id, name.clone(), chart_rid.clone());
+        anchor.graphic_frame = None;
+        anchor.alternate_content = Some(CtAlternateContent::chart_ex(
+            chart_frame(frame_id, name, chart_rid, true),
+            &ex.requires,
+            ex.fallback,
+        ));
+        anchor
+    }
+}
+
+impl CtOneCellAnchor {
+    /// The `oneCellAnchor` counterpart of
+    /// {@link CtTwoCellAnchor::new_chart_ex_anchor}.
+    pub fn new_chart_ex_anchor(
+        from: CtMarker,
+        ext: CtPositiveSize2D,
+        frame_id: u32,
+        name: String,
+        chart_rid: String,
+        ex: ChartExFrame,
+    ) -> Self {
+        let mut anchor =
+            Self::new_chart_anchor(from, ext, frame_id, name.clone(), chart_rid.clone());
+        anchor.graphic_frame = None;
+        anchor.alternate_content = Some(CtAlternateContent::chart_ex(
+            chart_frame(frame_id, name, chart_rid, true),
+            &ex.requires,
+            ex.fallback,
+        ));
+        anchor
     }
 }

@@ -10,10 +10,10 @@ use crate::prelude::{
     WorksheetPart,
 };
 use crate::rtypes::{
-    CHART, CHART_COLOR_STYLE, CHART_STYLE, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE, DOC_PROP_CUSTOM,
-    DRAWING, EXT_LINK, HYPERLINK, LOGISHEETS_APP_DATA, PERSON, PIVOT_CACHE_DEFINITION,
-    PIVOT_CACHE_RECORDS, PIVOT_TABLE, RType, SST, STYLE, TABLE, THEME, THREADED_COMMENT, WORKBOOK,
-    WORKSHEET,
+    CHART, CHART_COLOR_STYLE, CHART_EX, CHART_STYLE, COMMENTS, DOC_PROP_APP, DOC_PROP_CORE,
+    DOC_PROP_CUSTOM, DRAWING, EXT_LINK, HYPERLINK, LOGISHEETS_APP_DATA, PERSON,
+    PIVOT_CACHE_DEFINITION, PIVOT_CACHE_RECORDS, PIVOT_TABLE, RType, SST, STYLE, TABLE, THEME,
+    THREADED_COMMENT, WORKBOOK, WORKSHEET,
 };
 use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Write};
@@ -895,6 +895,7 @@ fn get_content_type(rtype: RType) -> &'static str {
         CHART => "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
         CHART_STYLE => "application/vnd.ms-office.chartstyle+xml",
         CHART_COLOR_STYLE => "application/vnd.ms-office.chartcolorstyle+xml",
+        CHART_EX => "application/vnd.ms-office.chartex+xml",
         PIVOT_CACHE_DEFINITION => {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheDefinition+xml"
         }

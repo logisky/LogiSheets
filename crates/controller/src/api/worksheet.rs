@@ -991,6 +991,7 @@ impl<'a> Worksheet<'a> {
                             value_fields: src.value_fields.clone(),
                         }
                     }),
+                    preserved_kind: chart.preserved.as_ref().map(|p| p.kind.clone()),
                 })
             })
             .collect()

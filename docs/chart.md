@@ -140,7 +140,8 @@ small subset renderer (separators, decimals, percent, currency affixes).
 **Coverage gaps**
 - **All 16 classic `c:*Chart` groups** are read, written and editable. The
   `cx:` family (treemap, sunburst, histogram, pareto, box &amp; whisker,
-  waterfall, funnel, filled map) lives in a different part and is not.
+  waterfall, funnel, filled map) lives in a different part and is preserved
+  but not drawn — see below.
 - A **combo chart** is modeled as one whose series disagree: `ChartSeries`
   carries an optional `series_type`, and the writer emits one plot group per
   distinct kind, the chart's own kind first. Only the flat category/value kinds
@@ -162,16 +163,22 @@ small subset renderer (separators, decimals, percent, currency affixes).
 - Of-pie honours `splitType` `pos`/`val`/`percent`; `cust` (a hand-assigned
   split) falls back to the automatic one, though the `c:custSplit` element is
   preserved.
-- **The modern "chartEx" family is not read at all**: treemap, sunburst,
+- **The modern "chartEx" family is kept but not drawn**: treemap, sunburst,
   histogram, Pareto, box & whisker, waterfall, funnel and filled map live in a
   separate part (`xl/charts/chartEx1.xml`, `cx:` namespace, its own
-  relationship type) that the reader does not pick up.
-- **Chart sheets** (a whole sheet that is one chart) are not supported.
-- **An unsupported chart is dropped on save.** `parse_chart` returns `None`, the
-  chart never enters `ChartManager`, and the save path only emits anchors for
-  charts it holds — so the drawing goes out without it. Verified by hand on a
-  fixture whose `c:barChart` was swapped for `c:bubbleChart` before bubble was
-  supported.
+  relationship type), anchored inside `mc:AlternateContent`. Such a chart
+  loads as a *preserved* chart (`PreservedChart` on the controller's `Chart`,
+  `preservedKind` on `ChartInfo`): it is placed, moved, resized and deleted
+  like any other and its part is written back byte for byte, but the grid
+  shows a placeholder naming its kind, and `UpdateChart` is refused. Until
+  this, the reader skipped both the anchor and the part, so a save deleted
+  the chart. Verified against a hand-built fixture
+  (`tests/chart_ex.xlsx`, from `tests/gen/chart_ex.py`) in
+  `tests/chart_ex_preserved.rs`, not yet against an Excel-authored file.
+- **A classic chart whose part does not parse is kept the same way** (kind
+  `chart`), where it used to be dropped on save.
+- A chart part's satellites other than its style and colors parts (user
+  shapes, an embedded workbook) are not read, for classic and chartEx alike.
 - 100% stacked (`percentStacked`) is read as plain `stacked`, so editing such a
   chart degrades it to a normal stacked one.
 - **Non-chart `graphicData` (SmartArt, OLE embeds) does NOT round-trip** — the

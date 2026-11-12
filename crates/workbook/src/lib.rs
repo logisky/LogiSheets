@@ -33,7 +33,7 @@ pub mod prelude {
     pub use super::SerdeErr;
     pub use super::ooxml::chart::{
         AxisScale, ChartData, ChartSeries, ChartType, DataLabels, LegendPos, OfPieSplit,
-        SeriesColor, build_chart_xml, parse_chart,
+        SeriesColor, build_chart_xml, chart_ex_layout_id, parse_chart,
     };
     pub use super::ooxml::comments::*;
     pub use super::ooxml::complex_types::*;

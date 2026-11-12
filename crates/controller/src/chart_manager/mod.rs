@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use imbl::{HashMap, Vector};
 use logisheets_base::{BlockId, CellId, SheetId};
-use logisheets_workbook::prelude::{ChartData, PassthroughPart};
+use logisheets_workbook::prelude::{ChartData, ChartExFrame, PassthroughPart};
 
 /// A chart anchor corner: a stable cell plus an EMU offset into that cell.
 #[derive(Debug, Clone)]
@@ -92,6 +92,30 @@ pub struct Chart {
     /// edits the way the anchor does. The A1 text in `data` is the fallback for
     /// a range whose corner has been deleted. See [`refs`].
     pub refs: ChartRefs,
+    /// Set for a chart this build keeps but cannot draw or edit. `data` is
+    /// then empty and `raw` is the whole truth.
+    ///
+    /// Boxed for the reason `ChartData::preserved` is: `Chart` lives by value
+    /// in an `imbl::Vector`, and the fallback XML a chartEx carries would
+    /// fatten every chart, preserved or not.
+    pub preserved: Option<Box<PreservedChart>>,
+}
+
+/// A chart kept whole rather than understood: moved, resized, deleted and
+/// saved like any other, its part written back byte for byte, but neither
+/// drawn nor editable.
+///
+/// Before this, such a chart was skipped on load — so a save deleted it. The
+/// chartEx family (waterfall, treemap, histogram, …) is the main case; a
+/// classic chart whose part does not parse is the other.
+#[derive(Debug, Clone)]
+pub struct PreservedChart {
+    /// What the chart is, for a placeholder to say: a chartEx `layoutId` such
+    /// as `waterfall`, or `chart` when the part says nothing usable.
+    pub kind: String,
+    /// Set for a chartEx chart: how its anchor goes back out — inside
+    /// `mc:AlternateContent`, with the fallback older readers show.
+    pub ex: Option<ChartExFrame>,
 }
 
 #[derive(Debug, Clone, Default)]

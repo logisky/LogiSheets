@@ -499,7 +499,14 @@ fn de_ws_drawing<R: Read + Seek>(
             CHART => {
                 let chart_abs = get_target_abs_path(&rels_path, &r.target);
                 if let Some(cs) = chart_abs.to_str() {
-                    read_chart_tree(cs, archive, &mut chart_parts);
+                    read_chart_tree(cs, CHART, archive, &mut chart_parts);
+                }
+            }
+            // Kept whole, not understood: see `CHART_EX`.
+            CHART_EX => {
+                let chart_abs = get_target_abs_path(&rels_path, &r.target);
+                if let Some(cs) = chart_abs.to_str() {
+                    read_chart_tree(cs, CHART_EX, archive, &mut chart_parts);
                 }
             }
             _ => {}
@@ -517,10 +524,11 @@ fn de_ws_drawing<R: Read + Seek>(
 /// whole tree can be re-emitted verbatim.
 fn read_chart_tree<R: Read + Seek>(
     chart_path: &str,
+    rtype: RType<'static>,
     archive: &mut ZipArchive<R>,
     out: &mut Vec<PassthroughPart>,
 ) {
-    let chart = match read_passthrough_part(chart_path, CHART, archive) {
+    let chart = match read_passthrough_part(chart_path, rtype, archive) {
         Some(p) => p,
         None => return,
     };
@@ -830,7 +838,7 @@ pub(crate) fn get_rels(path: &str) -> Result<PathBuf, SerdeErr> {
 /// Given the current path of the relationship and target, get the abs path of the target.
 /// In rust std library, there is no function like 'join' in javascript that can join 2 paths and remove '..' or '.' in
 /// the path. Therefore, we make an easy implmentation here.
-fn get_target_abs_path(rels: &str, target: &str) -> PathBuf {
+pub(crate) fn get_target_abs_path(rels: &str, target: &str) -> PathBuf {
     let p = PathBuf::from_str(rels);
     let mut path_buf = p.unwrap();
     path_buf.pop();
