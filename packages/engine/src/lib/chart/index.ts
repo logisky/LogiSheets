@@ -23,6 +23,7 @@ export type {
     ChartModel,
     ChartSeries,
     ChartType,
+    ChartExUpdate,
     ChartUpdate,
     DataLabels,
     LegendPosition,

@@ -126,6 +126,33 @@ pub struct PreservedChart {
     /// came, so the FILE still names the old range after such an edit —
     /// rewriting it means generating chartEx XML, which nothing does yet.
     pub ranges: Vec<Vec<Option<ChartRange>>>,
+    /// Set once `UpdateChartEx` has changed `data`, so a save patches the
+    /// part. An untouched chart whose cells have not moved goes back out byte
+    /// for byte.
+    pub edited: bool,
+}
+
+/// `ranges` for `data`, read from its A1 text. Called when a chart is loaded
+/// and for a dimension an edit re-pointed; from then on the ids move.
+pub fn chart_ex_ranges(
+    data: &ChartExData,
+    nav: &crate::navigator::Navigator,
+    sheets: &crate::id_manager::SheetIdManager,
+    sheet_id: SheetId,
+) -> Vec<Vec<Option<ChartRange>>> {
+    data.series
+        .iter()
+        .map(|s| {
+            s.dims
+                .iter()
+                .map(|d| {
+                    d.formula
+                        .as_deref()
+                        .and_then(|f| ChartRange::parse(nav, sheets, sheet_id, f))
+                })
+                .collect()
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Default)]
@@ -210,6 +237,26 @@ impl ChartManager {
     }
 
     /// Replace a chart's id-based ranges.
+    pub fn set_preserved(
+        &mut self,
+        sheet_id: SheetId,
+        chart_id: &str,
+        preserved: Box<PreservedChart>,
+    ) -> bool {
+        let mut v = match self.charts.get(&sheet_id) {
+            Some(v) => v.clone(),
+            None => return false,
+        };
+        let Some(idx) = v.iter().position(|c| c.id == chart_id) else {
+            return false;
+        };
+        let mut chart = v[idx].clone();
+        chart.preserved = Some(preserved);
+        v.set(idx, chart);
+        self.charts.insert(sheet_id, v);
+        true
+    }
+
     pub fn set_refs(&mut self, sheet_id: SheetId, chart_id: &str, refs: ChartRefs) -> bool {
         let mut v = match self.charts.get(&sheet_id) {
             Some(v) => v.clone(),

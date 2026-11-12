@@ -474,7 +474,11 @@ export const listCharts: Tool<{sheetIdx: number}, unknown> = {
     handler: async (input, ctx) => {
         const res = await asClient(ctx).getCharts({sheetIdx: input.sheetIdx})
         if (isErrorMessage(res)) throw new Error(`chart list: ${res.msg}`)
-        const charts = (res as readonly ChartInfo[]).map((c) => ({
+        const charts = (res as readonly ChartInfo[]).map((c) =>
+            // A chartEx chart (treemap, waterfall, …) carries no classic
+            // series; reporting its placeholder `chartType` would describe a
+            // waterfall as an empty column chart.
+            c.preservedKind ? chartExEntry(c) : {
             chart_id: c.chartId,
             type: c.chartType,
             title: c.title ?? null,
@@ -488,12 +492,39 @@ export const listCharts: Tool<{sheetIdx: number}, unknown> = {
                 size_ref: s.sizeRef ?? null,
                 point_count: s.values.length,
             })),
-        }))
+        })
         return {
             data: {charts},
             display: `${charts.length} chart(s)`,
         }
     },
+}
+
+/** chart__list's entry for a chart the core keeps verbatim. */
+function chartExEntry(c: ChartInfo) {
+    const ex = c.ex
+    return {
+        chart_id: c.chartId,
+        // The drawn kind (`histogram`, `pareto`, …) when there is one, else
+        // what the file calls it.
+        type: ex?.kind ?? c.preservedKind,
+        title: ex?.title ?? null,
+        anchor: `${colToA1(c.fromCol)}${c.fromRow + 1}`,
+        categories_ref: ex?.catRef ?? null,
+        series: ex
+            ? [
+                  {
+                      name: ex.seriesName ?? null,
+                      value_ref: ex.valRef ?? null,
+                      size_ref: null,
+                      point_count: ex.values.length || ex.nodes.length,
+                  },
+              ]
+            : [],
+        // Which tool edits it — `null` for one that is kept on save but can
+        // be neither drawn nor edited (a filled map, an unreadable part).
+        edit_with: ex ? 'chart__update_ex' : null,
+    }
 }
 
 // ── insert ───────────────────────────────────────────────────────────────
@@ -1013,6 +1044,108 @@ export const updateChart: Tool<UpdateInput, {ok: true}> = {
     },
 }
 
+// ── update a chartEx ─────────────────────────────────────────────────────
+
+interface UpdateExInput {
+    sheetIdx: number
+    chartId: string
+    title?: string
+    categoriesRef?: string
+    valuesRef?: string
+    binMode?: 'auto' | 'count' | 'size'
+    binValue?: number
+    quartileMethod?: 'exclusive' | 'inclusive'
+    showMean?: boolean
+    showOutliers?: boolean
+    subtotals?: number[]
+}
+
+export const updateChartEx: Tool<UpdateExInput, {ok: true}> = {
+    namespace: 'chart',
+    name: 'update_ex',
+    description: [
+        'Edit a treemap, sunburst, funnel, box & whisker, histogram, Pareto or waterfall chart in place — the charts chart__list reports with edit_with "chart__update_ex". chart__update edits the other kinds; each refuses the other\'s charts, and these kinds cannot be switched to another kind.',
+        'Anything left out keeps its current value. A setting that does not fit the chart\'s kind (binMode on a waterfall) is refused.',
+    ].join('\n'),
+    mutates: true,
+    confirmation: 'always',
+    inputSchema: {
+        properties: {
+            sheetIdx: {type: 'integer'},
+            chartId: {type: 'string', description: 'From chart__list.'},
+            title: {type: 'string', description: 'Empty string clears it.'},
+            categoriesRef: {
+                type: 'string',
+                description:
+                    'Category range (A1). For a treemap or sunburst, several columns make levels, outermost on the left. Empty string removes the categories (a histogram does without).',
+            },
+            valuesRef: {
+                type: 'string',
+                description:
+                    'Value range (A1) — the sizes, for a treemap or sunburst.',
+            },
+            binMode: {
+                type: 'string',
+                enum: ['auto', 'count', 'size'],
+                description:
+                    'Histogram (or Pareto over numbers): automatic bins, a number of bins, or a bin width given in binValue.',
+            },
+            binValue: {
+                type: 'number',
+                description:
+                    'The bin count (whole, ≥ 1) or width (> 0) for binMode count / size.',
+            },
+            quartileMethod: {
+                type: 'string',
+                enum: ['exclusive', 'inclusive'],
+                description:
+                    "Box & whisker: QUARTILE.EXC (Excel's default) or QUARTILE.INC.",
+            },
+            showMean: {type: 'boolean', description: 'Box & whisker mean markers.'},
+            showOutliers: {
+                type: 'boolean',
+                description: 'Box & whisker outlier points.',
+            },
+            subtotals: {
+                type: 'array',
+                items: {type: 'integer'},
+                description:
+                    'Waterfall: zero-based point indices drawn as totals from zero. Replaces the current set.',
+            },
+        },
+        required: ['sheetIdx', 'chartId'],
+    },
+    handler: async (input, ctx) => {
+        const client = asClient(ctx)
+        const sheet = await sheetName(client, input.sheetIdx)
+        // An empty range is meaningful (remove the categories), so only a
+        // non-empty one is normalised.
+        const ref = (r: string | undefined, field: string) =>
+            r ? normalise(r, sheet, field).ref : r
+        await commit(
+            client,
+            {
+                type: 'updateChartEx',
+                value: {
+                    sheetIdx: input.sheetIdx,
+                    chartId: input.chartId,
+                    title: input.title,
+                    catRef: ref(input.categoriesRef, 'categoriesRef'),
+                    valRef: ref(input.valuesRef, 'valuesRef'),
+                    binMode: input.binMode,
+                    binValue: input.binValue,
+                    quartileMethod: input.quartileMethod,
+                    showMean: input.showMean,
+                    showOutliers: input.showOutliers,
+                    subtotals: input.subtotals,
+                },
+            },
+            'chart update'
+        )
+        return {data: {ok: true}, display: 'Chart updated'}
+    },
+}
+
 // ── delete ───────────────────────────────────────────────────────────────
 
 export const deleteChart: Tool<
@@ -1048,5 +1181,6 @@ export const CHART_TOOLS: Tool[] = [
     insertChart as Tool,
     chartFromBlock as Tool,
     updateChart as Tool,
+    updateChartEx as Tool,
     deleteChart as Tool,
 ]

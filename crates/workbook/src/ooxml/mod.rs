@@ -25,3 +25,4 @@ pub mod theme;
 pub mod threaded_comments;
 pub mod workbook;
 pub mod worksheet;
+pub mod xml_tree;

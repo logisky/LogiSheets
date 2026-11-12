@@ -13,6 +13,7 @@
 
 use xmlserde_derives::XmlDeserialize;
 
+use super::xml_tree::{XDoc, XElement};
 use crate::xml_deserialize_from_str;
 
 /// A chartEx chart, resolved enough to draw.
@@ -34,6 +35,9 @@ pub struct ChartExSeries {
     /// `ownerIdx`: a Pareto line names the bar series it accumulates.
     pub owner: Option<u32>,
     pub hidden: bool,
+    /// The `cx:data` block this series plots. Series may share one — a
+    /// Pareto line plots its bars' block.
+    pub data_id: Option<u32>,
     /// The dimensions of the data block this series plots.
     pub dims: Vec<ChartExDim>,
     /// Waterfall: indices of the points drawn as totals from zero.
@@ -131,6 +135,7 @@ pub fn parse_chart_ex(bytes: &[u8]) -> Option<ChartExData> {
                     .and_then(|d| d.f.as_ref())
                     .map(|f| f.val.clone()),
                 owner: s.owner_idx,
+                data_id,
                 hidden: s.hidden.unwrap_or(false),
                 dims,
                 subtotals: pr
@@ -153,6 +158,276 @@ pub fn parse_chart_ex(bytes: &[u8]) -> Option<ChartExData> {
         })
         .collect();
     Some(ChartExData { title, series })
+}
+
+/// Rewrite a chartEx part so it says what `data` says, touching only what
+/// differs from the part as it is.
+///
+/// The part is edited in place, not regenerated: everything the model does
+/// not cover — styling, data labels, axes, extensions — is written back as it
+/// came. What can change is the title, each data dimension's range, and the
+/// layout properties an editor exposes (waterfall totals, histogram binning,
+/// box & whisker statistics and markers).
+///
+/// A dimension whose range changes loses its cached values (`cx:lvl`): they
+/// describe the old range, the schema makes them optional, and Excel fills
+/// them from the formula on open. A title becomes plain text, which drops
+/// the formatting of a rich title.
+///
+/// `None` when the part does not parse.
+pub fn write_chart_ex(original: &[u8], data: &ChartExData) -> Option<Vec<u8>> {
+    let old = parse_chart_ex(original)?;
+    let mut doc = XDoc::parse(original)?;
+    let chart = doc.root.child_mut("cx:chart")?;
+
+    if old.title != data.title {
+        match &data.title {
+            None => chart.remove_children("cx:title"),
+            Some(t) => {
+                let tx = text_tx(t);
+                match chart.child_mut("cx:title") {
+                    Some(title) => {
+                        title.remove_children("cx:tx");
+                        title.insert_ordered(tx, &["cx:tx", "cx:spPr", "cx:txPr", "cx:extLst"]);
+                    }
+                    None => {
+                        let mut title = XElement::with(
+                            "cx:title",
+                            &[("pos", "t"), ("align", "ctr"), ("overlay", "0")],
+                            None,
+                        );
+                        title.children.push(super::xml_tree::XNode::El(tx));
+                        chart.insert_ordered(
+                            title,
+                            &["cx:title", "cx:plotArea", "cx:legend", "cx:extLst"],
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    let series_els: Vec<usize> = chart
+        .child("cx:plotArea")
+        .and_then(|p| p.child("cx:plotAreaRegion"))
+        .map(|r| (0..r.children_named("cx:series").count()).collect())
+        .unwrap_or_default();
+    for (i, (was, now)) in old.series.iter().zip(data.series.iter()).enumerate() {
+        if !series_els.contains(&i) || !layout_differs(was, now) {
+            continue;
+        }
+        let Some(el) = chart
+            .child_mut("cx:plotArea")
+            .and_then(|p| p.child_mut("cx:plotAreaRegion"))
+            .and_then(|r| r.children_named_mut("cx:series").nth(i))
+        else {
+            continue;
+        };
+        patch_layout(el, was, now);
+    }
+
+    // Dimensions live in the data blocks, which series share; each block is
+    // patched once, from the first series that plots it.
+    let mut done: Vec<u32> = Vec::new();
+    for now in data.series.iter() {
+        let Some(id) = now.data_id else { continue };
+        if done.contains(&id) {
+            continue;
+        }
+        done.push(id);
+        let was = old
+            .series
+            .iter()
+            .find(|s| s.data_id == Some(id))
+            .map(|s| s.dims.as_slice())
+            .unwrap_or(&[]);
+        let Some(block) = doc.root.child_mut("cx:chartData").and_then(|d| {
+            d.children_named_mut("cx:data")
+                .find(|b| b.attr("id") == Some(id.to_string()))
+        }) else {
+            continue;
+        };
+        patch_dims(block, was, &now.dims);
+    }
+    Some(doc.to_bytes())
+}
+
+fn text_tx(t: &str) -> XElement {
+    let mut tx = XElement::new("cx:tx");
+    let mut td = XElement::new("cx:txData");
+    td.children.push(super::xml_tree::XNode::El(XElement::with(
+        "cx:v",
+        &[],
+        Some(t),
+    )));
+    tx.children.push(super::xml_tree::XNode::El(td));
+    tx
+}
+
+fn dim_tag(is_num: bool) -> &'static str {
+    if is_num { "cx:numDim" } else { "cx:strDim" }
+}
+
+fn patch_dims(block: &mut XElement, was: &[ChartExDim], now: &[ChartExDim]) {
+    let same = |a: &ChartExDim, b: &ChartExDim| a.is_num == b.is_num && a.ty == b.ty;
+    // Gone from the model: remove the element.
+    for d in was.iter().filter(|d| !now.iter().any(|n| same(n, d))) {
+        let tag = dim_tag(d.is_num);
+        let ty = d.ty.clone();
+        block.children.retain(|c| {
+            !matches!(c, super::xml_tree::XNode::El(e) if e.name() == tag && e.attr("type").as_deref() == Some(ty.as_str()))
+        });
+    }
+    for d in now.iter() {
+        let tag = dim_tag(d.is_num);
+        match was.iter().find(|w| same(w, d)) {
+            Some(w) if w.formula == d.formula => {}
+            Some(_) => {
+                let Some(el) = block
+                    .children_named_mut(tag)
+                    .find(|e| e.attr("type").as_deref() == Some(d.ty.as_str()))
+                else {
+                    continue;
+                };
+                el.remove_children("cx:lvl");
+                el.remove_children("cx:f");
+                if let Some(f) = &d.formula {
+                    el.insert_ordered(
+                        XElement::with("cx:f", &[], Some(f)),
+                        &["cx:f", "cx:nf", "cx:lvl", "cx:extLst"],
+                    );
+                }
+            }
+            None => {
+                let mut el = XElement::with(tag, &[("type", d.ty.as_str())], None);
+                if let Some(f) = &d.formula {
+                    el.children.push(super::xml_tree::XNode::El(XElement::with(
+                        "cx:f",
+                        &[],
+                        Some(f),
+                    )));
+                }
+                // Categories first, values after, as Excel writes a block.
+                if d.is_num {
+                    block.children.push(super::xml_tree::XNode::El(el));
+                } else {
+                    block.children.insert(0, super::xml_tree::XNode::El(el));
+                }
+            }
+        }
+    }
+}
+
+fn layout_differs(a: &ChartExSeries, b: &ChartExSeries) -> bool {
+    a.subtotals != b.subtotals
+        || a.binning != b.binning
+        || a.quartile_inclusive != b.quartile_inclusive
+        || a.show_mean != b.show_mean
+        || a.show_outliers != b.show_outliers
+}
+
+/// `CT_SeriesLayoutProperties`' child order.
+const LAYOUT_PR_ORDER: &[&str] = &[
+    "cx:parentLabelLayout",
+    "cx:regionLabelLayout",
+    "cx:visibility",
+    "cx:aggregation",
+    "cx:binning",
+    "cx:geography",
+    "cx:statistics",
+    "cx:subtotals",
+    "cx:extLst",
+];
+
+fn patch_layout(series: &mut XElement, was: &ChartExSeries, now: &ChartExSeries) {
+    if series.child("cx:layoutPr").is_none() {
+        series.insert_ordered(
+            XElement::new("cx:layoutPr"),
+            &[
+                "cx:tx",
+                "cx:spPr",
+                "cx:valueColors",
+                "cx:valueColorPositions",
+                "cx:dataPt",
+                "cx:dataLabels",
+                "cx:dataId",
+                "cx:layoutPr",
+                "cx:axisId",
+                "cx:extLst",
+            ],
+        );
+    }
+    let Some(pr) = series.child_mut("cx:layoutPr") else {
+        return;
+    };
+    let bit = |b: bool| if b { "1" } else { "0" };
+    if was.show_mean != now.show_mean || was.show_outliers != now.show_outliers {
+        if pr.child("cx:visibility").is_none() {
+            pr.insert_ordered(XElement::new("cx:visibility"), LAYOUT_PR_ORDER);
+        }
+        if let Some(v) = pr.child_mut("cx:visibility") {
+            v.set_attr("meanMarker", bit(now.show_mean));
+            v.set_attr("outliers", bit(now.show_outliers));
+        }
+    }
+    if was.binning != now.binning {
+        pr.remove_children("cx:binning");
+        if let Some(b) = &now.binning {
+            let under = b.underflow.map(|v| v.to_string());
+            let over = b.overflow.map(|v| v.to_string());
+            let mut attrs = vec![("intervalClosed", if b.closed_left { "l" } else { "r" })];
+            if let Some(u) = &under {
+                attrs.push(("underflow", u.as_str()));
+            }
+            if let Some(o) = &over {
+                attrs.push(("overflow", o.as_str()));
+            }
+            let mut el = XElement::with("cx:binning", &attrs, None);
+            if let Some(size) = b.bin_size {
+                el.children.push(super::xml_tree::XNode::El(XElement::with(
+                    "cx:binSize",
+                    &[("val", &size.to_string())],
+                    None,
+                )));
+            } else if let Some(count) = b.bin_count {
+                el.children.push(super::xml_tree::XNode::El(XElement::with(
+                    "cx:binCount",
+                    &[("val", &count.to_string())],
+                    None,
+                )));
+            }
+            pr.insert_ordered(el, LAYOUT_PR_ORDER);
+        }
+    }
+    if was.quartile_inclusive != now.quartile_inclusive {
+        if pr.child("cx:statistics").is_none() {
+            pr.insert_ordered(XElement::new("cx:statistics"), LAYOUT_PR_ORDER);
+        }
+        if let Some(st) = pr.child_mut("cx:statistics") {
+            st.set_attr(
+                "quartileMethod",
+                if now.quartile_inclusive {
+                    "inclusive"
+                } else {
+                    "exclusive"
+                },
+            );
+        }
+    }
+    if was.subtotals != now.subtotals {
+        pr.remove_children("cx:subtotals");
+        if !now.subtotals.is_empty() {
+            let mut el = XElement::new("cx:subtotals");
+            for i in now.subtotals.iter() {
+                el.children.push(super::xml_tree::XNode::El(XElement::with(
+                    "cx:idx",
+                    &[("val", &i.to_string())],
+                    None,
+                )));
+            }
+            pr.insert_ordered(el, LAYOUT_PR_ORDER);
+        }
+    }
 }
 
 // --- XML shape -------------------------------------------------------------
@@ -454,5 +729,96 @@ mod tests {
 
         let wf = parse_chart_ex(&part("xl/charts/chartEx7.xml")).unwrap();
         assert_eq!(wf.series[0].subtotals, vec![4]);
+    }
+
+    #[test]
+    fn writing_an_unchanged_model_changes_nothing_it_models() {
+        let src = part("xl/charts/chartEx1.xml");
+        let data = parse_chart_ex(&src).unwrap();
+        let out = write_chart_ex(&src, &data).unwrap();
+        let again = parse_chart_ex(&out).unwrap();
+        assert_eq!(format!("{again:?}"), format!("{data:?}"));
+    }
+
+    #[test]
+    fn a_new_range_replaces_the_formula_and_drops_the_stale_cache() {
+        let src = part("xl/charts/chartEx3.xml");
+        let mut data = parse_chart_ex(&src).unwrap();
+        let val = data.series[0]
+            .dims
+            .iter_mut()
+            .find(|d| d.ty == "val")
+            .unwrap();
+        val.formula = Some("Sheet1!$G$2:$G$4".to_string());
+        let out = String::from_utf8(write_chart_ex(&src, &data).unwrap()).unwrap();
+        assert!(out.contains("<cx:f>Sheet1!$G$2:$G$4</cx:f>"), "{out}");
+        let again = parse_chart_ex(out.as_bytes()).unwrap();
+        let val = again.series[0].dims.iter().find(|d| d.ty == "val").unwrap();
+        assert!(val.levels.is_empty(), "the old range's values are gone");
+        let cat = again.series[0].dims.iter().find(|d| d.ty == "cat").unwrap();
+        assert_eq!(
+            cat.levels[0].len(),
+            5,
+            "an untouched dimension keeps its cache"
+        );
+        // Everything outside the edit is as it was.
+        assert!(out.contains(r#"<cx:legend pos="t" align="ctr" overlay="0"/>"#));
+    }
+
+    #[test]
+    fn title_and_layout_edits_land_in_schema_order() {
+        let src = part("xl/charts/chartEx4.xml");
+        let mut data = parse_chart_ex(&src).unwrap();
+        data.title = Some("A & B".to_string());
+        data.series[0].quartile_inclusive = true;
+        data.series[0].show_outliers = false;
+        let out = String::from_utf8(write_chart_ex(&src, &data).unwrap()).unwrap();
+        assert!(out.contains("<cx:v>A &amp; B</cx:v>"), "{out}");
+        assert!(out.contains(r#"quartileMethod="inclusive""#), "{out}");
+        assert!(out.contains(r#"outliers="0""#), "{out}");
+        let again = parse_chart_ex(out.as_bytes()).unwrap();
+        assert_eq!(again.title.as_deref(), Some("A & B"));
+        assert!(again.series[0].quartile_inclusive);
+        assert!(!again.series[0].show_outliers);
+
+        // Totals and bins are rewritten whole.
+        let wf_src = part("xl/charts/chartEx7.xml");
+        let mut wf = parse_chart_ex(&wf_src).unwrap();
+        wf.series[0].subtotals = vec![0, 4];
+        let wf_out = write_chart_ex(&wf_src, &wf).unwrap();
+        assert_eq!(
+            parse_chart_ex(&wf_out).unwrap().series[0].subtotals,
+            vec![0, 4]
+        );
+
+        let h_src = part("xl/charts/chartEx5.xml");
+        let mut h = parse_chart_ex(&h_src).unwrap();
+        h.series[0].binning = Some(ChartExBinning {
+            bin_size: Some(10.0),
+            ..Default::default()
+        });
+        let h_out = String::from_utf8(write_chart_ex(&h_src, &h).unwrap()).unwrap();
+        assert!(h_out.contains(r#"<cx:binSize val="10"/>"#), "{h_out}");
+        assert!(!h_out.contains("binCount"), "{h_out}");
+    }
+
+    #[test]
+    fn a_category_range_can_be_added_and_removed() {
+        let src = part("xl/charts/chartEx5.xml");
+        let mut data = parse_chart_ex(&src).unwrap();
+        data.series[0].dims.push(ChartExDim {
+            ty: "cat".to_string(),
+            formula: Some("Sheet1!$A$2:$A$9".to_string()),
+            ..Default::default()
+        });
+        let out = write_chart_ex(&src, &data).unwrap();
+        let again = parse_chart_ex(&out).unwrap();
+        let cat = again.series[0].dims.iter().find(|d| d.ty == "cat").unwrap();
+        assert_eq!(cat.formula.as_deref(), Some("Sheet1!$A$2:$A$9"));
+
+        let mut back = again.clone();
+        back.series[0].dims.retain(|d| d.ty != "cat");
+        let out2 = write_chart_ex(&out, &back).unwrap();
+        assert!(!String::from_utf8(out2).unwrap().contains("cx:strDim"));
     }
 }

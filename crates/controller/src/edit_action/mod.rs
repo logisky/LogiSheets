@@ -164,6 +164,7 @@ pub enum EditPayload {
     DeleteChart(DeleteChart),
     CreateChart(CreateChart),
     UpdateChart(UpdateChart),
+    UpdateChartEx(UpdateChartEx),
     SetColWidth(SetColWidth),
     SetRowHeight(SetRowHeight),
     SetVisible(SetVisible),
@@ -486,6 +487,42 @@ pub struct AxisScaleUpdate {
     /// Spacing between major ticks / gridlines. `None` is automatic.
     pub major_unit: Option<f64>,
     pub minor_unit: Option<f64>,
+}
+
+/// Edit a chartEx chart — treemap, sunburst, funnel, box & whisker,
+/// histogram, Pareto, waterfall — in place. Classic charts take
+/// [`UpdateChart`]; each payload refuses the other's charts.
+///
+/// The chart's part is patched, not regenerated, so its styling survives.
+/// `None` keeps a field as it is. Every field applies to the chart's first
+/// visible series (a Pareto's bars); the box & whisker fields apply to every
+/// box series. A field that does not fit the chart's kind — `bin_mode` on a
+/// waterfall, say — is refused rather than ignored.
+#[derive(Debug, Clone, Default, TS)]
+#[ts(file_name = "update_chart_ex.ts", builder, rename_all = "camelCase")]
+pub struct UpdateChartEx {
+    pub sheet_idx: usize,
+    pub chart_id: String,
+    /// `""` removes the title.
+    pub title: Option<String>,
+    /// The category range, A1 (`Sheet1!$A$2:$B$9`; several columns make a
+    /// treemap / sunburst hierarchy, outermost on the left). `""` removes the
+    /// categories, which a histogram does without.
+    pub cat_ref: Option<String>,
+    /// The value range — the sizes, for a treemap or sunburst.
+    pub val_ref: Option<String>,
+    /// Histogram / Pareto over numbers: `auto` | `count` | `size`.
+    pub bin_mode: Option<String>,
+    /// The bin count or width `bin_mode` names. Required for `count` (a whole
+    /// number of at least 1) and `size` (above 0).
+    pub bin_value: Option<f64>,
+    /// Box & whisker: `exclusive` (Excel's default) | `inclusive`.
+    pub quartile_method: Option<String>,
+    pub show_mean: Option<bool>,
+    pub show_outliers: Option<bool>,
+    /// Waterfall: the point indices drawn as totals from zero, replacing the
+    /// current set.
+    pub subtotals: Option<Vec<u32>>,
 }
 
 /// One series for [`CreateChart`] / [`UpdateChart`]: an optional name, the
@@ -2303,6 +2340,12 @@ impl From<UpdateChart> for EditPayload {
     }
 }
 impl Payload for UpdateChart {}
+impl From<UpdateChartEx> for EditPayload {
+    fn from(value: UpdateChartEx) -> Self {
+        EditPayload::UpdateChartEx(value)
+    }
+}
+impl Payload for UpdateChartEx {}
 impl From<CreateBlock> for EditPayload {
     fn from(value: CreateBlock) -> Self {
         EditPayload::CreateBlock(value)

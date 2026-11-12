@@ -725,6 +725,11 @@ impl<'a> Worksheet<'a> {
             show_mean: first.show_mean,
             show_outliers: first.show_outliers,
             num_fmt: None,
+            cat_ref: dim_ref(si, &["cat"]).and_then(|(_, r)| r),
+            val_ref: dim_ref(si, &["val", "size"]).and_then(|(_, r)| r),
+            bin_mode: None,
+            bin_value: None,
+            quartile_method: None,
         };
         match first.layout.as_str() {
             "treemap" | "sunburst" => {
@@ -756,6 +761,14 @@ impl<'a> Worksheet<'a> {
             }
             "boxWhisker" => {
                 info.kind = "boxWhisker".to_string();
+                info.quartile_method = Some(
+                    if first.quartile_inclusive {
+                        "inclusive"
+                    } else {
+                        "exclusive"
+                    }
+                    .to_string(),
+                );
                 for (si, s) in visible.iter().filter(|(_, s)| s.layout == "boxWhisker") {
                     let (values, fmt) = numbers(*si);
                     info.num_fmt = info.num_fmt.take().or(fmt);
@@ -795,6 +808,14 @@ impl<'a> Worksheet<'a> {
             }
             "clusteredColumn" => {
                 let (values, fmt) = numbers(si);
+                if !first.aggregation {
+                    let b = first.binning.clone().unwrap_or_default();
+                    (info.bin_mode, info.bin_value) = match (b.bin_count, b.bin_size) {
+                        (Some(c), _) => (Some("count".to_string()), Some(c as f64)),
+                        (None, Some(w)) => (Some("size".to_string()), Some(w)),
+                        (None, None) => (Some("auto".to_string()), None),
+                    };
+                }
                 let (cats, vals) = if first.aggregation {
                     let names = labels(si);
                     let pairs: Vec<(String, f64)> = values

@@ -546,6 +546,15 @@ pub struct ChartExInfo {
     pub show_outliers: bool,
     /// Number format of the source values, for axis ticks and labels.
     pub num_fmt: Option<String>,
+    /// The editable settings, as `UpdateChartEx` takes them: where the
+    /// categories and values are read from now, how a histogram bins
+    /// (`auto` | `count` | `size`, with `bin_value`), and a box & whisker's
+    /// `quartile_method` (`exclusive` | `inclusive`).
+    pub cat_ref: Option<String>,
+    pub val_ref: Option<String>,
+    pub bin_mode: Option<String>,
+    pub bin_value: Option<f64>,
+    pub quartile_method: Option<String>,
 }
 
 /// One node of a treemap / sunburst. `parent` indexes the same list; a node's

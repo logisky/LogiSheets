@@ -1034,26 +1034,15 @@ fn load_charts(
             (None, Some(ex)) => {
                 let data = parse_chart_ex(&part.data);
                 let ranges = data
-                    .iter()
-                    .flat_map(|d| d.series.iter())
-                    .map(|s| {
-                        s.dims
-                            .iter()
-                            .map(|d| {
-                                d.formula.as_deref().and_then(|f| {
-                                    crate::chart_manager::ChartRange::parse(
-                                        navigator, sheets, sheet_id, f,
-                                    )
-                                })
-                            })
-                            .collect()
-                    })
-                    .collect();
+                    .as_ref()
+                    .map(|d| crate::chart_manager::chart_ex_ranges(d, navigator, sheets, sheet_id))
+                    .unwrap_or_default();
                 Some(Box::new(PreservedChart {
                     kind: chart_ex_layout_id(&part.data).unwrap_or_else(|| "chartEx".to_string()),
                     ex: Some(ex),
                     data,
                     ranges,
+                    edited: false,
                 }))
             }
             (None, None) => Some(Box::new(PreservedChart {
@@ -1061,6 +1050,7 @@ fn load_charts(
                 ex: None,
                 data: None,
                 ranges: Vec::new(),
+                edited: false,
             })),
         };
         let data = parsed.unwrap_or_else(ChartData::empty);

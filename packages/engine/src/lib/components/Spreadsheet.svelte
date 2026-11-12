@@ -2,11 +2,12 @@
     import { onMount } from 'svelte'
     import type { Grid, CellLayout, EngineConfig, ZoomOrigin } from '$types/index'
     import { DEFAULT_ENGINE_CONFIG } from '$types/index'
-    import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType, ChartInfo, UpdateChart } from 'logisheets-web'
+    import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType, ChartInfo, UpdateChart, UpdateChartEx } from 'logisheets-web'
     import { isErrorMessage } from 'logisheets-web'
     import { DataService } from '$lib/clients/service'
     import ChartView from '$lib/chart/ChartView.svelte'
     import ChartSettings from '$lib/chart/ChartSettings.svelte'
+    import ChartExSettings from '$lib/chart/ChartExSettings.svelte'
     import {chartDataRefsFromSelection} from '$lib/chart/from-selection'
     import {chartSourceRanges, isRangeVisible} from '$lib/chart/source-ranges'
     import {
@@ -573,6 +574,26 @@ let isDragging = false; // True while user is drag-selecting
             payloads: [
                 {
                     type: 'updateChart',
+                    value: {...opts, sheetIdx: activeSheet, chartId: id},
+                },
+            ],
+            undoable: true,
+            temp: false,
+        })
+        chartRefreshTick++
+    }
+
+    // The chartEx counterpart of updateChart: a different payload, because
+    // the core patches a chartEx part rather than regenerating it.
+    export async function updateChartEx(
+        id: string,
+        opts: Omit<UpdateChartEx, 'sheetIdx' | 'chartId'>
+    ) {
+        if (!dataService) return
+        await dataService.handleTransaction({
+            payloads: [
+                {
+                    type: 'updateChartEx',
                     value: {...opts, sheetIdx: activeSheet, chartId: id},
                 },
             ],
@@ -2785,14 +2806,17 @@ let isDragging = false; // True while user is drag-selecting
                                 onmousedown={(e) => onChartMouseDown(e, box.id)}
                             ></div>
                             {#if selectedChartId === box.id}
-                                <!-- A preserved chart can be moved, resized
-                                     and deleted, but not reconfigured. -->
-                                {#if !box.preservedKind}
+                                <!-- A chartEx chart has its own editor and
+                                     cannot change kind; a preserved chart the
+                                     core cannot draw is moved, resized and
+                                     deleted only. -->
+                                {#if !box.preservedKind || selectedChart?.ex}
                                 <div
                                     class="chart-toolbar"
                                     role="presentation"
                                     onmousedown={(e) => e.stopPropagation()}
                                 >
+                                    {#if !box.preservedKind}
                                     <select
                                         class="chart-type-select"
                                         value={box.chartType}
@@ -2805,6 +2829,7 @@ let isDragging = false; // True while user is drag-selecting
                                             <option value={t}>{t}</option>
                                         {/each}
                                     </select>
+                                    {/if}
                                     <button
                                         class="chart-settings-btn"
                                         class:active={chartSettingsOpen}
@@ -2816,7 +2841,15 @@ let isDragging = false; // True while user is drag-selecting
                                         ⚙
                                     </button>
                                 </div>
-                                {#if chartSettingsOpen && selectedChart}
+                                {#if chartSettingsOpen && selectedChart?.ex}
+                                    <ChartExSettings
+                                        ex={selectedChart.ex}
+                                        kind={selectedChart.preservedKind ?? ''}
+                                        onUpdate={(patch) =>
+                                            updateChartEx(box.id, patch)}
+                                        onClose={() => (chartSettingsOpen = false)}
+                                    />
+                                {:else if chartSettingsOpen && selectedChart}
                                     <ChartSettings
                                         chart={selectedChart}
                                         onUpdate={(patch) =>

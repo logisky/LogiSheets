@@ -11,6 +11,7 @@ import {
     listCharts,
     suggestChart,
     updateChart,
+    updateChartEx,
 } from './charts.js'
 import {LINK_TOOLS} from './links.js'
 
@@ -303,7 +304,83 @@ describe('chart__update', () => {
     })
 })
 
+describe('chart__update_ex', () => {
+    it('sends only what was asked for and normalises ranges', async () => {
+        const {client, committed} = fakeClient()
+        await updateChartEx.handler(
+            {
+                sheetIdx: 0,
+                chartId: 'chartEx1',
+                valuesRef: 'G2:G4',
+                binMode: 'count',
+                binValue: 4,
+            },
+            ctxFor(client)
+        )
+        expect(committed[0].type).toBe('updateChartEx')
+        const v: Payload = committed[0].value
+        expect(v.valRef).toBe('Sheet1!$G$2:$G$4')
+        expect(v.binMode).toBe('count')
+        expect(v.binValue).toBe(4)
+        expect(v.title).toBeUndefined()
+        expect(v.catRef).toBeUndefined()
+        expect(v.subtotals).toBeUndefined()
+    })
+
+    it('passes an empty category range through, which removes them', async () => {
+        const {client, committed} = fakeClient()
+        await updateChartEx.handler(
+            {sheetIdx: 0, chartId: 'chartEx1', categoriesRef: ''},
+            ctxFor(client)
+        )
+        expect((committed[0].value as Payload).catRef).toBe('')
+    })
+})
+
 describe('chart__list', () => {
+    it('reports a chartEx chart by its own kind, not as an empty column chart', async () => {
+        const {client} = fakeClient({
+            getCharts: async () => [
+                {
+                    chartId: 'chartEx7',
+                    chartType: 'col',
+                    stacked: false,
+                    fromRow: 0,
+                    fromCol: 11,
+                    series: [],
+                    preservedKind: 'waterfall',
+                    ex: {
+                        kind: 'waterfall',
+                        title: 'Cash flow',
+                        seriesName: 'Amount',
+                        catRef: 'Sheet1!$I$2:$I$6',
+                        valRef: 'Sheet1!$J$2:$J$6',
+                        values: [100, 40, -15, -30, 95],
+                        nodes: [],
+                    },
+                },
+                {
+                    chartId: 'chartEx9',
+                    chartType: 'col',
+                    stacked: false,
+                    fromRow: 0,
+                    fromCol: 0,
+                    series: [],
+                    preservedKind: 'regionMap',
+                },
+            ],
+        })
+        const {charts}: Payload = (await listCharts.handler({sheetIdx: 0}, ctxFor(client))).data
+        expect(charts[0]).toMatchObject({
+            type: 'waterfall',
+            title: 'Cash flow',
+            categories_ref: 'Sheet1!$I$2:$I$6',
+            edit_with: 'chart__update_ex',
+        })
+        expect(charts[0].series[0]).toMatchObject({value_ref: 'Sheet1!$J$2:$J$6', point_count: 5})
+        expect(charts[1]).toMatchObject({type: 'regionMap', series: [], edit_with: null})
+    })
+
     it('reports each chart with the ranges it reads', async () => {
         const {client} = fakeClient({
             getCharts: async () => [
@@ -862,6 +939,7 @@ describe('chart tools in a registry', () => {
             'chart__insert',
             'chart__from_block',
             'chart__update',
+            'chart__update_ex',
             'chart__delete',
         ])
         for (const t of CHART_TOOLS) {

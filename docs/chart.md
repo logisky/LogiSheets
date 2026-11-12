@@ -140,8 +140,8 @@ small subset renderer (separators, decimals, percent, currency affixes).
 **Coverage gaps**
 - **All 16 classic `c:*Chart` groups** are read, written and editable. The
   `cx:` family (treemap, sunburst, histogram, pareto, box &amp; whisker,
-  waterfall, funnel, filled map) lives in a different part; it is drawn
-  read-only and saved verbatim — see below.
+  waterfall, funnel, filled map) lives in a different part; it is drawn and
+  edited separately — see below.
 - A **combo chart** is modeled as one whose series disagree: `ChartSeries`
   carries an optional `series_type`, and the writer emits one plot group per
   distinct kind, the chart's own kind first. Only the flat category/value kinds
@@ -163,15 +163,14 @@ small subset renderer (separators, decimals, percent, currency affixes).
 - Of-pie honours `splitType` `pos`/`val`/`percent`; `cust` (a hand-assigned
   split) falls back to the automatic one, though the `c:custSplit` element is
   preserved.
-- **The modern "chartEx" family is drawn read-only and saved verbatim.**
-  Treemap, sunburst, histogram, Pareto, box & whisker, waterfall, funnel and
-  filled map live in a separate part (`xl/charts/chartEx1.xml`, `cx:`
-  namespace, its own relationship type), anchored inside
-  `mc:AlternateContent`. Such a chart loads as a *preserved* chart
-  (`PreservedChart` on the controller's `Chart`, `preservedKind` on
-  `ChartInfo`): placed, moved, resized and deleted like any other, its part
-  written back byte for byte, and `UpdateChart` refused. Until this the
-  reader skipped the anchor and the part, so a save deleted the chart.
+- **The modern "chartEx" family is drawn and editable.** Treemap,
+  sunburst, histogram, Pareto, box & whisker, waterfall, funnel and filled
+  map live in a separate part (`xl/charts/chartEx1.xml`, `cx:` namespace,
+  its own relationship type), anchored inside `mc:AlternateContent`. Such a
+  chart loads as a *preserved* chart (`PreservedChart` on the controller's
+  `Chart`, `preservedKind` on `ChartInfo`): placed, moved, resized and
+  deleted like any other. Until this the reader skipped the anchor and the
+  part, so a save deleted the chart.
   - **Drawn** (all but the filled map): `ooxml/chart_ex.rs` reads the part,
     and `get_charts` reduces it to `ChartInfo.ex` from the cells *as they are
     now* — the statistics live in `chart_manager/chart_ex.rs`, with Excel's
@@ -180,18 +179,32 @@ small subset renderer (separators, decimals, percent, currency affixes).
     rule for the automatic width, a Pareto sorted descending with a running
     share. `ex-option.ts` lays that out in ECharts; a waterfall is stacked
     bars over an invisible base.
-  - The data ranges are held by cell id, so the drawing follows inserted rows
-    — but the **file** still names the old range after such an edit, because
-    the part is saved as it came. Rewriting it means generating chartEx XML.
-  - Not reproduced: chartEx styling (colours come from ECharts' defaults
-    except the waterfall's), data labels, axis settings, and a treemap's
-    label layout. A filled map stays a placeholder.
+  - **Edited** with `UpdateChartEx` (not `UpdateChart` — each refuses the
+    other family): title, category and value ranges, histogram binning, box
+    & whisker quartile method / mean markers / outliers, waterfall totals. A
+    field that does not fit the kind is refused, and a chartEx cannot switch
+    kind. The panel is `ChartExSettings.svelte`; the AI tool is
+    `chart__update_ex`, and `chart__list` reports these charts by their own
+    kind with `edit_with` naming the tool.
+  - **Saved by patching, not regenerating** (`write_chart_ex`, on the small
+    `ooxml/xml_tree.rs`): the part is re-read, only the elements an edit
+    changed are rewritten, and everything else — styling, data labels,
+    axes, extensions — goes back out as it came. A chart nobody edited and
+    whose cells did not move is byte-identical. The data ranges are held by
+    cell id, so after a row insert the **file** names the moved range too.
+    A dimension whose range changes loses its cached values (`cx:lvl`, which
+    the schema makes optional; Excel refills them from the formula), and an
+    edited title becomes plain text, dropping a rich title's formatting.
+  - Not reproduced when drawing: chartEx styling (colours come from ECharts'
+    defaults except the waterfall's), data labels, axis settings, and a
+    treemap's label layout. A filled map stays a placeholder.
   - Automatic histogram bin edges are rounded to two decimals in their
     labels; Excel's exact label rounding is not known.
   - Verified against hand-built fixtures (`tests/chart_ex.xlsx`,
     `tests/chart_ex_kinds.xlsx`, from `tests/gen/`) in
-    `tests/chart_ex_preserved.rs` and `tests/chart_ex_drawn.rs` — not yet
-    against Excel-authored files.
+    `tests/chart_ex_preserved.rs`, `chart_ex_drawn.rs` and
+    `chart_ex_edit.rs` — not yet against Excel-authored files, and no saved
+    file has been opened in Excel.
 - **A classic chart whose part does not parse is kept the same way** (kind
   `chart`), where it used to be dropped on save.
 - A chart part's satellites other than its style and colors parts (user

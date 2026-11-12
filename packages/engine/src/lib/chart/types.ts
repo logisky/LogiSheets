@@ -24,6 +24,16 @@ export type ChartUpdate = Omit<
 >
 
 /**
+ * The patch for a chartEx chart (treemap, waterfall, …): `UpdateChartEx`
+ * without its addressing fields. A chartEx is edited in place and cannot
+ * change kind, so it takes its own payload rather than {@link ChartUpdate}.
+ */
+export type ChartExUpdate = Omit<
+    import('logisheets-web').UpdateChartEx,
+    'sheetIdx' | 'chartId'
+>
+
+/**
  * The chart kinds we render. `col`/`bar` differ only in orientation; `area` is
  * a filled line; `doughnut` is a pie with a hole. Scatter uses (x, y) pairs and
  * `bubble` adds a third value sizing each point. `radar` plots one spoke per
