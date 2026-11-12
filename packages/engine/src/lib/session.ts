@@ -17,7 +17,7 @@
  */
 
 import type {SheetInfo, SelectedData, CellLayout} from 'logisheets-web'
-import type {ChartUpdate} from './chart/types'
+import type {ChartExUpdate, ChartUpdate} from './chart/types'
 import {isErrorMessage} from 'logisheets-web'
 import type {DataService} from './clients/service'
 import {isLoadCancelled} from './clients/service'
@@ -388,6 +388,18 @@ export class Session {
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.updateChart === 'function') {
             mounted.updateChart(id, opts)
+        }
+    }
+
+    /**
+     * Edit a chartEx chart (treemap, sunburst, funnel, box & whisker,
+     * histogram, Pareto, waterfall): title, data ranges, and its kind's own
+     * settings. Requires a mounted UI.
+     */
+    updateChartEx(id: string, opts: ChartExUpdate): void {
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.updateChartEx === 'function') {
+            mounted.updateChartEx(id, opts)
         }
     }
 

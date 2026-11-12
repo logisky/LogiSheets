@@ -2,14 +2,20 @@
     import { onMount } from 'svelte'
     import type { Grid, CellLayout, EngineConfig, ZoomOrigin } from '$types/index'
     import { DEFAULT_ENGINE_CONFIG } from '$types/index'
-    import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType, ChartInfo, UpdateChart } from 'logisheets-web'
+    import type { SelectedData, SheetInfo, Transaction, EditPayload, StyleUpdateType, ChartInfo, UpdateChart, UpdateChartEx } from 'logisheets-web'
     import { isErrorMessage } from 'logisheets-web'
     import { DataService } from '$lib/clients/service'
     import ChartView from '$lib/chart/ChartView.svelte'
     import ChartSettings from '$lib/chart/ChartSettings.svelte'
+    import ChartExSettings from '$lib/chart/ChartExSettings.svelte'
     import {chartDataRefsFromSelection} from '$lib/chart/from-selection'
     import {chartSourceRanges, isRangeVisible} from '$lib/chart/source-ranges'
-    import { mapChartToOption, chartInfoToModel } from '$lib/chart'
+    import {
+        mapChartToOption,
+        chartInfoToModel,
+        chartExToOption,
+        preservedChartLabel,
+    } from '$lib/chart'
     // Inlined (base64 blob) so the published bundle is self-contained — see
     // the matching import in engine.ts for why a separate worker asset breaks
     // external consumers.
@@ -245,7 +251,15 @@ let isDragging = false; // True while user is drag-selecting
                 width: Math.max(0, x1 - x0),
                 height: Math.max(0, y1 - y0),
                 chartType: c.chartType,
-                option: mapChartToOption(chartInfoToModel(c)),
+                // A chart the core keeps verbatim (a chartEx kind, say) is
+                // drawn from what the core reduced it to, or — when the core
+                // cannot draw it either — shown as a placeholder.
+                preservedKind: c.preservedKind ?? null,
+                option: c.preservedKind
+                    ? c.ex
+                        ? chartExToOption(c.ex)
+                        : null
+                    : mapChartToOption(chartInfoToModel(c)),
             }
         })
     })
@@ -560,6 +574,26 @@ let isDragging = false; // True while user is drag-selecting
             payloads: [
                 {
                     type: 'updateChart',
+                    value: {...opts, sheetIdx: activeSheet, chartId: id},
+                },
+            ],
+            undoable: true,
+            temp: false,
+        })
+        chartRefreshTick++
+    }
+
+    // The chartEx counterpart of updateChart: a different payload, because
+    // the core patches a chartEx part rather than regenerating it.
+    export async function updateChartEx(
+        id: string,
+        opts: Omit<UpdateChartEx, 'sheetIdx' | 'chartId'>
+    ) {
+        if (!dataService) return
+        await dataService.handleTransaction({
+            payloads: [
+                {
+                    type: 'updateChartEx',
                     value: {...opts, sheetIdx: activeSheet, chartId: id},
                 },
             ],
@@ -2744,11 +2778,25 @@ let isDragging = false; // True while user is drag-selecting
                             class:selected={selectedChartId === box.id}
                             style="left: {r.left}px; top: {r.top}px;"
                         >
-                            <ChartView
-                                option={box.option}
-                                width={r.width}
-                                height={r.height}
-                            />
+                            {#if box.option}
+                                <ChartView
+                                    option={box.option}
+                                    width={r.width}
+                                    height={r.height}
+                                />
+                            {:else}
+                                <div
+                                    class="chart-preserved"
+                                    style="width: {r.width}px; height: {r.height}px;"
+                                >
+                                    <div class="chart-preserved-kind">
+                                        {preservedChartLabel(box.preservedKind ?? '')}
+                                    </div>
+                                    <div class="chart-preserved-note">
+                                        Not displayed here. Kept unchanged when saved.
+                                    </div>
+                                </div>
+                            {/if}
                             <!-- Transparent capture surface above the ECharts
                                  canvas so select/drag works (the canvas would
                                  otherwise swallow the mousedown). -->
@@ -2758,11 +2806,17 @@ let isDragging = false; // True while user is drag-selecting
                                 onmousedown={(e) => onChartMouseDown(e, box.id)}
                             ></div>
                             {#if selectedChartId === box.id}
+                                <!-- A chartEx chart has its own editor and
+                                     cannot change kind; a preserved chart the
+                                     core cannot draw is moved, resized and
+                                     deleted only. -->
+                                {#if !box.preservedKind || selectedChart?.ex}
                                 <div
                                     class="chart-toolbar"
                                     role="presentation"
                                     onmousedown={(e) => e.stopPropagation()}
                                 >
+                                    {#if !box.preservedKind}
                                     <select
                                         class="chart-type-select"
                                         value={box.chartType}
@@ -2775,6 +2829,7 @@ let isDragging = false; // True while user is drag-selecting
                                             <option value={t}>{t}</option>
                                         {/each}
                                     </select>
+                                    {/if}
                                     <button
                                         class="chart-settings-btn"
                                         class:active={chartSettingsOpen}
@@ -2786,13 +2841,22 @@ let isDragging = false; // True while user is drag-selecting
                                         ⚙
                                     </button>
                                 </div>
-                                {#if chartSettingsOpen && selectedChart}
+                                {#if chartSettingsOpen && selectedChart?.ex}
+                                    <ChartExSettings
+                                        ex={selectedChart.ex}
+                                        kind={selectedChart.preservedKind ?? ''}
+                                        onUpdate={(patch) =>
+                                            updateChartEx(box.id, patch)}
+                                        onClose={() => (chartSettingsOpen = false)}
+                                    />
+                                {:else if chartSettingsOpen && selectedChart}
                                     <ChartSettings
                                         chart={selectedChart}
                                         onUpdate={(patch) =>
                                             updateChart(box.id, patch)}
                                         onClose={() => (chartSettingsOpen = false)}
                                     />
+                                {/if}
                                 {/if}
                                 {#each ['nw', 'ne', 'sw', 'se'] as corner (corner)}
                                     <div
@@ -2906,6 +2970,30 @@ let isDragging = false; // True while user is drag-selecting
 
     .chart-box {
         position: absolute;
+    }
+
+    /* Stand-in for a chart kept on save but not drawn here. */
+    .chart-preserved {
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px;
+        background: #fafafa;
+        border: 1px dashed #b0b0b0;
+        color: #5f6368;
+        text-align: center;
+        overflow: hidden;
+    }
+    .chart-preserved-kind {
+        font-size: 14px;
+        font-weight: 600;
+        color: #3c4043;
+    }
+    .chart-preserved-note {
+        font-size: 12px;
     }
 
     /* Outline of a range the selected chart plots. Categories are dashed and

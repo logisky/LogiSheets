@@ -420,6 +420,43 @@ pub struct ChartData {
     pub preserved: Box<PreservedXml>,
 }
 
+impl ChartData {
+    /// A chart with nothing to plot. What a chart this crate cannot read is
+    /// given, so it can still be anchored, moved, deleted and saved — its
+    /// part goes back out verbatim and this value is never written.
+    pub fn empty() -> Self {
+        ChartData {
+            chart_type: ChartType::Col,
+            stacked: false,
+            title: None,
+            legend_pos: None,
+            cat_ref: None,
+            categories: Vec::new(),
+            series: Vec::new(),
+            cat_axis_title: None,
+            val_axis_title: None,
+            data_labels: DataLabels::default(),
+            val_axis_num_fmt: None,
+            cat_axis_scale: AxisScale::default(),
+            val_axis_scale: AxisScale::default(),
+            of_pie_split: OfPieSplit::default(),
+            preserved: Box::default(),
+        }
+    }
+}
+
+/// What a chartEx part draws, as its first series' `layoutId` names it —
+/// `waterfall`, `treemap`, `sunburst`, `funnel`, `boxWhisker`, `clusteredColumn`
+/// (a histogram), `paretoLine`, `regionMap`. Read by a scan rather than a
+/// parse: it is only a label for a chart this crate keeps but does not draw.
+pub fn chart_ex_layout_id(bytes: &[u8]) -> Option<String> {
+    let text = std::str::from_utf8(bytes).ok()?;
+    let at = text.find("layoutId=\"")? + "layoutId=\"".len();
+    let rest = &text[at..];
+    let end = rest.find('"')?;
+    Some(rest[..end].to_string()).filter(|s| !s.is_empty())
+}
+
 /// Parse a chart part's raw bytes into render-ready [`ChartData`]. Returns
 /// `None` if the XML is not valid UTF-8, does not parse, or has no plottable
 /// chart-type element.

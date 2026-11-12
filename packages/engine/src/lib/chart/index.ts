@@ -1,6 +1,8 @@
 export {default as ChartView} from './ChartView.svelte'
 export {mapChartToOption} from './to-option'
 export {chartInfoToModel} from './from-info'
+export {preservedChartLabel} from './preserved'
+export {chartExToOption} from './ex-option'
 export {formatAxisNumber} from './num-format'
 export {chartDataRefsFromSelection} from './from-selection'
 export {chartSourceRanges, isRangeVisible, parseA1Range} from './source-ranges'
@@ -21,6 +23,7 @@ export type {
     ChartModel,
     ChartSeries,
     ChartType,
+    ChartExUpdate,
     ChartUpdate,
     DataLabels,
     LegendPosition,

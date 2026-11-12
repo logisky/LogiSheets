@@ -19,7 +19,7 @@
  */
 
 import type {SheetInfo, SelectedData, CellLayout} from 'logisheets-web'
-import type {ChartUpdate} from './chart/types'
+import type {ChartExUpdate, ChartUpdate} from './chart/types'
 import {isErrorMessage} from 'logisheets-web'
 import {DataService, type BeforeLoadWorkbook} from './clients/service'
 import {WorkbookClient} from './clients/workbook'
@@ -265,6 +265,12 @@ export class Engine {
     updateChart(id: string, opts: ChartUpdate): void {
         this._ensureReady()
         this.getDefaultSession().updateChart(id, opts)
+    }
+
+    /** Edit a chartEx chart (treemap, waterfall, …); see `Session.updateChartEx`. */
+    updateChartEx(id: string, opts: ChartExUpdate): void {
+        this._ensureReady()
+        this.getDefaultSession().updateChartEx(id, opts)
     }
 
     /**

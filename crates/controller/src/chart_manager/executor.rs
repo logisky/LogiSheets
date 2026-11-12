@@ -128,6 +128,7 @@ impl ChartExecutor {
                         // the navigator and the sheet names, which this
                         // executor's context does not carry.
                         refs: Default::default(),
+                        preserved: None,
                     },
                 );
                 Ok((self, true))
@@ -148,6 +149,14 @@ impl ChartExecutor {
                 let Some(existing) = existing else {
                     return Ok((self, false));
                 };
+                // Its `data` is a placeholder, so regenerating the part from it
+                // would replace the chart with an empty one.
+                if let Some(kept) = &existing.preserved {
+                    return Err(Error::PayloadError(format!(
+                        "chart {} is a {} chart, which this version keeps on save but cannot edit",
+                        existing.id, kept.kind
+                    )));
+                }
                 let mut spec = existing.data.clone();
                 if let Some(t) = &p.chart_type {
                     spec.chart_type = chart_type_from_str(t);
@@ -309,9 +318,212 @@ impl ChartExecutor {
                 }
                 Ok((self, changed))
             }
+            EditPayload::UpdateChartEx(p) => {
+                let sheet_id = ctx
+                    .fetch_sheet_id_by_index(p.sheet_idx)
+                    .map_err(BasicError::SheetIdxExceed)?;
+                let Some(existing) = self
+                    .manager
+                    .charts_of_sheet(sheet_id)
+                    .find(|c| c.id == p.chart_id)
+                    .cloned()
+                else {
+                    return Ok((self, false));
+                };
+                let mut kept = match existing.preserved {
+                    Some(k) => *k,
+                    None => {
+                        return Err(Error::PayloadError(format!(
+                            "chart {} is a classic chart; edit it with UpdateChart",
+                            existing.id
+                        )));
+                    }
+                };
+                edit_chart_ex(&mut kept, &existing.id, &p)?;
+                kept.edited = true;
+                let changed = self
+                    .manager
+                    .set_preserved(sheet_id, &p.chart_id, Box::new(kept));
+                Ok((self, changed))
+            }
             _ => Ok((self, false)),
         }
     }
+}
+
+/// Apply an `UpdateChartEx` to a preserved chart's model. A dimension it
+/// re-points gets a `None` range, which the caller resolves to cell ids — the
+/// executor's context cannot.
+fn edit_chart_ex(
+    kept: &mut super::PreservedChart,
+    id: &str,
+    p: &crate::edit_action::UpdateChartEx,
+) -> Result<(), Error> {
+    let kind = kept.kind.clone();
+    let Some(data) = kept.data.as_mut() else {
+        return Err(Error::PayloadError(format!(
+            "chart {id} is a {kind} chart, which this version keeps on save but cannot edit"
+        )));
+    };
+    let Some(si) = data
+        .series
+        .iter()
+        .position(|s| !s.hidden && s.layout != "paretoLine")
+    else {
+        return Err(Error::PayloadError(format!(
+            "chart {id} has no series to edit"
+        )));
+    };
+    let layout = data.series[si].layout.clone();
+    let refuse = |field: &str, wants: &str| {
+        Error::PayloadError(format!(
+            "{field} applies to a {wants} chart; chart {id} is a {layout} chart"
+        ))
+    };
+
+    if let Some(t) = &p.title {
+        data.title = non_empty(t);
+    }
+
+    // Series that plot the same data block see the same dimensions.
+    let block = data.series[si].data_id;
+    let sharing: Vec<usize> = (0..data.series.len())
+        .filter(|i| *i == si || (block.is_some() && data.series[*i].data_id == block))
+        .collect();
+    let mut repoint = |ty_any: &[&str], new_ty: &str, is_num: bool, r: &str| -> Result<(), Error> {
+        let formula = non_empty(r);
+        if let Some(f) = &formula {
+            if super::refs::parse_a1_range(f).is_none() {
+                return Err(Error::PayloadError(format!("not a range: {f}")));
+            }
+        }
+        for &i in sharing.iter() {
+            let s = &mut data.series[i];
+            let ranges = kept.ranges.get_mut(i);
+            match (
+                s.dims.iter().position(|d| ty_any.contains(&d.ty.as_str())),
+                &formula,
+            ) {
+                (Some(di), Some(f)) => {
+                    s.dims[di].formula = Some(f.clone());
+                    if let Some(r) = ranges.and_then(|r| r.get_mut(di)) {
+                        *r = None;
+                    }
+                }
+                (Some(di), None) => {
+                    s.dims.remove(di);
+                    if let Some(r) = ranges.filter(|r| di < r.len()) {
+                        r.remove(di);
+                    }
+                }
+                (None, Some(f)) => {
+                    s.dims.push(logisheets_workbook::prelude::ChartExDim {
+                        ty: new_ty.to_string(),
+                        is_num,
+                        formula: Some(f.clone()),
+                        ..Default::default()
+                    });
+                    if let Some(r) = ranges {
+                        r.push(None);
+                    }
+                }
+                (None, None) => {}
+            }
+        }
+        Ok(())
+    };
+    if let Some(r) = &p.cat_ref {
+        repoint(&["cat"], "cat", false, r)?;
+    }
+    if let Some(r) = &p.val_ref {
+        if r.is_empty() {
+            return Err(Error::PayloadError(format!(
+                "chart {id} needs a value range"
+            )));
+        }
+        let ty = if matches!(layout.as_str(), "treemap" | "sunburst") {
+            "size"
+        } else {
+            "val"
+        };
+        repoint(&["val", "size"], ty, true, r)?;
+    }
+
+    let s = &mut data.series[si];
+    if let Some(mode) = &p.bin_mode {
+        if layout != "clusteredColumn" || s.aggregation {
+            return Err(refuse("bin_mode", "histogram"));
+        }
+        let mut b = s.binning.clone().unwrap_or_default();
+        b.bin_count = None;
+        b.bin_size = None;
+        match mode.as_str() {
+            "auto" => {}
+            "count" => match p.bin_value {
+                Some(v) if v >= 1.0 && v.fract() == 0.0 => b.bin_count = Some(v as u32),
+                _ => {
+                    return Err(Error::PayloadError(
+                        "bin_mode count needs bin_value, a whole number of at least 1".into(),
+                    ));
+                }
+            },
+            "size" => match p.bin_value {
+                Some(v) if v > 0.0 => b.bin_size = Some(v),
+                _ => {
+                    return Err(Error::PayloadError(
+                        "bin_mode size needs bin_value above 0".into(),
+                    ));
+                }
+            },
+            other => {
+                return Err(Error::PayloadError(format!(
+                    "unknown bin_mode {other}; expected auto, count or size"
+                )));
+            }
+        }
+        s.binning = Some(b);
+    }
+    if let Some(subtotals) = &p.subtotals {
+        if layout != "waterfall" {
+            return Err(refuse("subtotals", "waterfall"));
+        }
+        let mut v = subtotals.clone();
+        v.sort_unstable();
+        v.dedup();
+        s.subtotals = v;
+    }
+    let box_fields =
+        p.quartile_method.is_some() || p.show_mean.is_some() || p.show_outliers.is_some();
+    if box_fields {
+        if layout != "boxWhisker" {
+            return Err(refuse(
+                "quartile_method / show_mean / show_outliers",
+                "box & whisker",
+            ));
+        }
+        let inclusive = match p.quartile_method.as_deref() {
+            None => None,
+            Some("inclusive") => Some(true),
+            Some("exclusive") => Some(false),
+            Some(other) => {
+                return Err(Error::PayloadError(format!(
+                    "unknown quartile_method {other}; expected exclusive or inclusive"
+                )));
+            }
+        };
+        for s in data.series.iter_mut().filter(|s| s.layout == "boxWhisker") {
+            if let Some(v) = inclusive {
+                s.quartile_inclusive = v;
+            }
+            if let Some(v) = p.show_mean {
+                s.show_mean = v;
+            }
+            if let Some(v) = p.show_outliers {
+                s.show_outliers = v;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// A payload's block binding → the stored one. Only the field *names* are

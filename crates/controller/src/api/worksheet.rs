@@ -621,6 +621,265 @@ impl<'a> Worksheet<'a> {
         Some(out)
     }
 
+    /// A chartEx chart reduced to what is plotted, from its cells as they are
+    /// now. `None` for a kind this build does not draw (a filled map), which
+    /// the host shows as a placeholder.
+    fn chart_ex_info(
+        &self,
+        data: &logisheets_workbook::prelude::ChartExData,
+        ranges: &[Vec<Option<crate::chart_manager::ChartRange>>],
+    ) -> Option<crate::controller::display::ChartExInfo> {
+        use crate::chart_manager::chart_ex as stats;
+        use crate::controller::display::{ChartExBox, ChartExBoxSeries, ChartExInfo, ChartExNode};
+        use logisheets_workbook::prelude::ChartExSeries;
+
+        let nav = &self.controller.status.navigator;
+        let sheets = &self.controller.status.sheet_id_manager;
+        // Where dimension `ty` of series `si` reads from now: the cells it
+        // was bound to, or the file's text for a corner that is gone.
+        let dim_ref = |si: usize, ty: &[&str]| -> Option<(usize, Option<String>)> {
+            let s = data.series.get(si)?;
+            let di = s.dims.iter().position(|d| ty.contains(&d.ty.as_str()))?;
+            let live = ranges
+                .get(si)
+                .and_then(|r| r.get(di))
+                .and_then(|r| r.as_ref())
+                .and_then(|r| r.to_a1(nav, sheets));
+            Some((di, live.or_else(|| s.dims[di].formula.clone())))
+        };
+        let numbers = |si: usize| -> (Vec<Option<f64>>, Option<String>) {
+            let Some((di, r)) = dim_ref(si, &["val", "size"]) else {
+                return (Vec::new(), None);
+            };
+            let dim = &data.series[si].dims[di];
+            let values = r
+                .as_deref()
+                .and_then(|r| self.resolve_series_values(r))
+                .unwrap_or_else(|| dim.cached_numbers());
+            let fmt = r
+                .as_deref()
+                .and_then(|r| self.resolve_ref_num_fmt(r))
+                .or_else(|| dim.format_code.clone())
+                .filter(|f| !f.eq_ignore_ascii_case("general"));
+            (values, fmt)
+        };
+        // One label path per point, outermost level first. A range several
+        // columns wide is a hierarchy with its outermost level on the left;
+        // the cache lists levels innermost first.
+        let paths = |si: usize| -> Vec<Vec<String>> {
+            let Some((di, r)) = dim_ref(si, &["cat"]) else {
+                return Vec::new();
+            };
+            if let Some(cols) = r.as_deref().and_then(|r| self.resolve_label_columns(r)) {
+                let n = cols.first().map(|c| c.len()).unwrap_or(0);
+                return (0..n)
+                    .map(|i| cols.iter().map(|c| c[i].clone()).collect())
+                    .collect();
+            }
+            let levels = &data.series[si].dims[di].levels;
+            let n = levels.iter().map(|l| l.len()).max().unwrap_or(0);
+            (0..n)
+                .map(|i| {
+                    levels
+                        .iter()
+                        .rev()
+                        .map(|l| l.get(i).cloned().flatten().unwrap_or_default())
+                        .collect()
+                })
+                .collect()
+        };
+        let labels = |si: usize| -> Vec<String> {
+            paths(si)
+                .into_iter()
+                .map(|p| {
+                    p.into_iter()
+                        .filter(|s| !s.is_empty())
+                        .collect::<Vec<_>>()
+                        .join(" / ")
+                })
+                .collect()
+        };
+        let present = |v: &[Option<f64>]| -> Vec<f64> { v.iter().flatten().copied().collect() };
+        let fmt_values = |fmt: &Option<String>, v: &[f64]| -> Vec<String> {
+            v.iter().map(|n| format_with(fmt.as_deref(), *n)).collect()
+        };
+
+        let visible: Vec<(usize, &ChartExSeries)> = data
+            .series
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| !s.hidden && s.layout != "paretoLine")
+            .collect();
+        let (si, first) = *visible.first()?;
+        let mut info = ChartExInfo {
+            kind: String::new(),
+            title: data.title.clone(),
+            series_name: first.name.clone(),
+            categories: Vec::new(),
+            values: Vec::new(),
+            formatted_values: Vec::new(),
+            subtotals: Vec::new(),
+            cumulative_percent: Vec::new(),
+            nodes: Vec::new(),
+            box_series: Vec::new(),
+            show_mean: first.show_mean,
+            show_outliers: first.show_outliers,
+            num_fmt: None,
+            cat_ref: dim_ref(si, &["cat"]).and_then(|(_, r)| r),
+            val_ref: dim_ref(si, &["val", "size"]).and_then(|(_, r)| r),
+            bin_mode: None,
+            bin_value: None,
+            quartile_method: None,
+        };
+        match first.layout.as_str() {
+            "treemap" | "sunburst" => {
+                let (sizes, fmt) = numbers(si);
+                info.kind = first.layout.clone();
+                info.num_fmt = fmt;
+                info.nodes = stats::tree(&paths(si), &sizes)
+                    .into_iter()
+                    .map(|n| ChartExNode {
+                        name: n.name,
+                        value: n.value,
+                        parent: n.parent.map(|p| p as u32),
+                    })
+                    .collect();
+            }
+            "funnel" | "waterfall" => {
+                let (values, fmt) = numbers(si);
+                let values: Vec<f64> = values.iter().map(|v| v.unwrap_or(0.0)).collect();
+                let mut cats = labels(si);
+                cats.resize(values.len(), String::new());
+                info.kind = first.layout.clone();
+                info.formatted_values = fmt_values(&fmt, &values);
+                info.categories = cats;
+                info.values = values;
+                info.num_fmt = fmt;
+                if first.layout == "waterfall" {
+                    info.subtotals = first.subtotals.clone();
+                }
+            }
+            "boxWhisker" => {
+                info.kind = "boxWhisker".to_string();
+                info.quartile_method = Some(
+                    if first.quartile_inclusive {
+                        "inclusive"
+                    } else {
+                        "exclusive"
+                    }
+                    .to_string(),
+                );
+                for (si, s) in visible.iter().filter(|(_, s)| s.layout == "boxWhisker") {
+                    let (values, fmt) = numbers(*si);
+                    info.num_fmt = info.num_fmt.take().or(fmt);
+                    let cats = labels(*si);
+                    // Group by category in first-seen order; without a
+                    // category range every value is one box.
+                    let mut groups: Vec<(String, Vec<f64>)> = Vec::new();
+                    for (i, v) in values.iter().enumerate() {
+                        let Some(v) = v else { continue };
+                        let c = cats.get(i).cloned().unwrap_or_default();
+                        match groups.iter_mut().find(|g| g.0 == c) {
+                            Some(g) => g.1.push(*v),
+                            None => groups.push((c, vec![*v])),
+                        }
+                    }
+                    let boxes = groups
+                        .into_iter()
+                        .filter_map(|(category, vs)| {
+                            let b = stats::box_stats(&vs, s.quartile_inclusive)?;
+                            Some(ChartExBox {
+                                category,
+                                min: b.min,
+                                q1: b.q1,
+                                median: b.median,
+                                q3: b.q3,
+                                max: b.max,
+                                mean: b.mean,
+                                outliers: b.outliers,
+                            })
+                        })
+                        .collect();
+                    info.box_series.push(ChartExBoxSeries {
+                        name: s.name.clone(),
+                        boxes,
+                    });
+                }
+            }
+            "clusteredColumn" => {
+                let (values, fmt) = numbers(si);
+                if !first.aggregation {
+                    let b = first.binning.clone().unwrap_or_default();
+                    (info.bin_mode, info.bin_value) = match (b.bin_count, b.bin_size) {
+                        (Some(c), _) => (Some("count".to_string()), Some(c as f64)),
+                        (None, Some(w)) => (Some("size".to_string()), Some(w)),
+                        (None, None) => (Some("auto".to_string()), None),
+                    };
+                }
+                let (cats, vals) = if first.aggregation {
+                    let names = labels(si);
+                    let pairs: Vec<(String, f64)> = values
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, v)| {
+                            Some((names.get(i).cloned().unwrap_or_default(), (*v)?))
+                        })
+                        .collect();
+                    let (n, v): (Vec<String>, Vec<f64>) = pairs.into_iter().unzip();
+                    stats::aggregate(&n, &v)
+                } else {
+                    // Bin edges read like the data, but an automatic width is
+                    // an arbitrary real: two decimals, not seventeen.
+                    let edge = |n: f64| match &fmt {
+                        Some(f) => format_with(Some(f), n),
+                        None => ssf_rs::jsnum::to_string_js((n * 100.0).round() / 100.0),
+                    };
+                    let bins = stats::histogram(&present(&values), first.binning.as_ref(), edge);
+                    (bins.labels, bins.counts)
+                };
+                let is_pareto = data
+                    .series
+                    .iter()
+                    .any(|s| s.layout == "paretoLine" && s.owner == Some(si as u32));
+                // A histogram's values are counts; an aggregation's are the
+                // source's own unit.
+                let value_fmt = if first.aggregation { fmt.clone() } else { None };
+                if is_pareto {
+                    let (c, v, cum) = stats::pareto(cats, vals);
+                    info.kind = "pareto".to_string();
+                    info.categories = c;
+                    info.values = v;
+                    info.cumulative_percent = cum;
+                } else {
+                    info.kind = "histogram".to_string();
+                    info.categories = cats;
+                    info.values = vals;
+                }
+                info.formatted_values = fmt_values(&value_fmt, &info.values);
+                info.num_fmt = value_fmt;
+            }
+            _ => return None,
+        }
+        Some(info)
+    }
+
+    /// A range's cells as labels, one list per column, left to right.
+    fn resolve_label_columns(&self, r: &str) -> Option<Vec<Vec<String>>> {
+        let (sheet_name, sr, sc, er, ec) = Self::parse_a1_range(r)?;
+        let sheet_id = self.ref_sheet_id(sheet_name.as_deref())?;
+        let cols: Vec<Vec<String>> = (sc..=ec)
+            .map(|col| {
+                (sr..=er)
+                    .map(|row| self.cell_label(sheet_id, row, col))
+                    .collect()
+            })
+            .collect();
+        if cols.iter().flatten().all(|l| l.is_empty()) {
+            return None;
+        }
+        Some(cols)
+    }
+
     /// Resolve a category reference to the labels the sheet displays — numbers
     /// go through their cell's number format, so a date axis reads as dates.
     /// Returns `None` when the reference is unusable or resolves to nothing but
@@ -991,6 +1250,11 @@ impl<'a> Worksheet<'a> {
                             value_fields: src.value_fields.clone(),
                         }
                     }),
+                    preserved_kind: chart.preserved.as_ref().map(|p| p.kind.clone()),
+                    ex: chart
+                        .preserved
+                        .as_ref()
+                        .and_then(|p| self.chart_ex_info(p.data.as_ref()?, &p.ranges)),
                 })
             })
             .collect()

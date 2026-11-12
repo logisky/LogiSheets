@@ -9,6 +9,7 @@ repository = "https://github.com/logisky/LogiSheets"
 keywords = ["excel", "xlsx", "ooxml", "spreadsheet", "parser"]
 
 [dependencies]
+quick-xml = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

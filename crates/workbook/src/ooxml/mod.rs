@@ -1,4 +1,5 @@
 pub mod chart;
+pub mod chart_ex;
 pub mod comments;
 pub mod complex_types;
 pub mod content_types;
@@ -24,3 +25,4 @@ pub mod theme;
 pub mod threaded_comments;
 pub mod workbook;
 pub mod worksheet;
+pub mod xml_tree;

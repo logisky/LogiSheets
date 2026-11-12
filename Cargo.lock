@@ -1262,6 +1262,7 @@ dependencies = [
  "gents",
  "gents_derives",
  "logisheets_workbook_derives",
+ "quick-xml",
  "regex",
  "serde",
  "serde_json",

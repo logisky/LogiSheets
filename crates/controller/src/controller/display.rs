@@ -501,6 +501,94 @@ pub struct ChartInfo {
     /// showing a chart's source should say which block it follows rather than
     /// present the range as something the user typed.
     pub block_source: Option<ChartBlockSourceInfo>,
+    /// Set for a chart kept on save but not drawn or editable here — a
+    /// chartEx kind such as `waterfall` or `treemap`, or `chart` for a
+    /// classic chart whose part did not parse. Everything about plotting is
+    /// then empty; the anchor fields are real, and moving, resizing and
+    /// deleting it work as for any chart. `UpdateChart` on it is refused.
+    pub preserved_kind: Option<String>,
+    /// What to draw for a chartEx chart, computed from its live cells. Set
+    /// alongside `preserved_kind` when the kind is one this build can draw;
+    /// absent for a placeholder-only chart (a filled map, or a part that did
+    /// not parse).
+    pub ex: Option<ChartExInfo>,
+}
+
+/// A chartEx chart, already reduced to what is plotted. The statistics —
+/// quartiles, bins, running shares — are computed by the engine with Excel's
+/// rules, so every host draws the same numbers. Only the fields `kind` uses
+/// are filled; the rest are empty.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_ex_info.ts", rename_all = "camelCase")]
+pub struct ChartExInfo {
+    /// `treemap` | `sunburst` | `funnel` | `waterfall` | `boxWhisker` |
+    /// `histogram` | `pareto`.
+    pub kind: String,
+    pub title: Option<String>,
+    pub series_name: Option<String>,
+    /// Funnel stages, waterfall steps, histogram bin labels, Pareto bars (in
+    /// plotted order: descending).
+    pub categories: Vec<String>,
+    /// One per category. For a histogram, the count in each bin.
+    pub values: Vec<f64>,
+    /// `values` formatted like their source cells.
+    pub formatted_values: Vec<String>,
+    /// Waterfall: indices into `categories` drawn as totals from zero.
+    pub subtotals: Vec<u32>,
+    /// Pareto: the running share of the total after each bar, in percent.
+    pub cumulative_percent: Vec<f64>,
+    /// Treemap / sunburst: the hierarchy, flattened.
+    pub nodes: Vec<ChartExNode>,
+    /// Box & whisker: one entry per series.
+    pub box_series: Vec<ChartExBoxSeries>,
+    /// Box & whisker: whether to draw the mean marker and outlier points.
+    pub show_mean: bool,
+    pub show_outliers: bool,
+    /// Number format of the source values, for axis ticks and labels.
+    pub num_fmt: Option<String>,
+    /// The editable settings, as `UpdateChartEx` takes them: where the
+    /// categories and values are read from now, how a histogram bins
+    /// (`auto` | `count` | `size`, with `bin_value`), and a box & whisker's
+    /// `quartile_method` (`exclusive` | `inclusive`).
+    pub cat_ref: Option<String>,
+    pub val_ref: Option<String>,
+    pub bin_mode: Option<String>,
+    pub bin_value: Option<f64>,
+    pub quartile_method: Option<String>,
+}
+
+/// One node of a treemap / sunburst. `parent` indexes the same list; a node's
+/// value is the total of everything beneath it.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_ex_node.ts", rename_all = "camelCase")]
+pub struct ChartExNode {
+    pub name: String,
+    pub value: f64,
+    pub parent: Option<u32>,
+}
+
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_ex_box_series.ts", rename_all = "camelCase")]
+pub struct ChartExBoxSeries {
+    pub name: Option<String>,
+    /// One box per category, in first-seen order.
+    pub boxes: Vec<ChartExBox>,
+}
+
+/// One box. `min` / `max` are the whisker ends — the most extreme values
+/// within 1.5 × IQR of the box — not the data's extremes; anything beyond is
+/// in `outliers`.
+#[derive(Debug, Clone, TS)]
+#[ts(file_name = "chart_ex_box.ts", rename_all = "camelCase")]
+pub struct ChartExBox {
+    pub category: String,
+    pub min: f64,
+    pub q1: f64,
+    pub median: f64,
+    pub q3: f64,
+    pub max: f64,
+    pub mean: f64,
+    pub outliers: Vec<f64>,
 }
 
 /// The block a chart follows: its id, the field labelling the categories, and

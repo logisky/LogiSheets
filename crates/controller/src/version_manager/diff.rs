@@ -253,6 +253,12 @@ fn convert_diff<C: VersionExecCtx>(
                 .map_err(|l| BasicError::SheetIdxExceed(l))?;
             Ok(Some((Diff::Unavailable, sheet_id)))
         }
+        EditPayload::UpdateChartEx(p) => {
+            let sheet_id = ctx
+                .fetch_sheet_id_by_index(p.sheet_idx)
+                .map_err(|l| BasicError::SheetIdxExceed(l))?;
+            Ok(Some((Diff::Unavailable, sheet_id)))
+        }
         EditPayload::SetColWidth(col) => {
             let sheet_id = ctx
                 .fetch_sheet_id_by_index(col.sheet_idx)

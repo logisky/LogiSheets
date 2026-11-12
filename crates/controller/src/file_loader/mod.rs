@@ -10,7 +10,7 @@ use logisheets_workbook::prelude::*;
 use sheet::{load_comments, load_persons, load_threaded_comments};
 
 use crate::{
-    chart_manager::{Chart, ChartExtent, ChartManager, ChartMarker},
+    chart_manager::{Chart, ChartExtent, ChartManager, ChartMarker, PreservedChart},
     connectors::FormulaConnector,
     controller::{Controller, status::Status},
     file_loader::{
@@ -907,11 +907,15 @@ fn load_cell_images(
     }
 }
 
-/// Pull charts out of a worksheet drawing into the `ChartManager`. Chart
-/// `graphicFrame` anchors are paired with CHART parts by document order (exact
-/// for the common single-chart case; multiple charts rely on Excel emitting
-/// anchors and parts in matching order). Each chart is anchored by the CellIds
-/// of its from/to markers so it shifts with row/column edits.
+/// Pull charts out of a worksheet drawing into the `ChartManager`. Each
+/// `graphicFrame` anchor is paired with its part through the drawing's
+/// relationships, and anchored by the CellIds of its from/to markers so it
+/// shifts with row/column edits.
+///
+/// A chart is never skipped for being unreadable. A chartEx chart, or a
+/// classic one whose part does not parse, is loaded as a [`PreservedChart`]:
+/// placed and saved like the rest, drawn as a placeholder. Skipping it is
+/// what a save used to turn into a deletion.
 fn load_charts(
     sheet_id: SheetId,
     drawing: &WorksheetDrawing,
@@ -919,18 +923,16 @@ fn load_charts(
     sheets: &crate::id_manager::SheetIdManager,
     chart_manager: &mut ChartManager,
 ) {
+    use logisheets_workbook::rtypes::{CHART, CHART_EX};
+
     let chart_parts: Vec<&PassthroughPart> = drawing
         .chart_parts
         .iter()
-        .filter(|p| p.rtype == logisheets_workbook::rtypes::CHART)
+        .filter(|p| p.rtype == CHART || p.rtype == CHART_EX)
         .collect();
     if chart_parts.is_empty() {
         return;
     }
-
-    // The whole chart part tree (chart XML + style/color satellites) is kept
-    // together for lossless save; shared across the sheet's charts for now.
-    let raw = Arc::new(drawing.chart_parts.clone());
 
     // An anchor names its chart through the drawing's relationships, so pair
     // them that way rather than by position. Position happened to work while
@@ -943,29 +945,35 @@ fn load_charts(
             .iter()
             .find(|p| p.path.rsplit('/').next() == Some(file))
     };
-    let chart_rid = |frame: &Option<CtGraphicFrame>| -> Option<String> {
-        frame
-            .as_ref()?
-            .graphic
-            .as_ref()?
-            .graphic_data
-            .as_ref()?
-            .chart
-            .as_ref()?
-            .r_id
-            .clone()
+    // The part an anchor holds, and — for a chartEx, which Excel wraps in
+    // `mc:AlternateContent` — how that wrapper goes back out.
+    let anchored = |frame: &Option<CtGraphicFrame>,
+                    alt: &Option<CtAlternateContent>|
+     -> Option<(&PassthroughPart, Option<ChartExFrame>)> {
+        if let Some(rid) = frame.as_ref().and_then(|f| f.chart_rid()) {
+            return part_by_rid(rid).map(|p| (*p, None));
+        }
+        let alt = alt.as_ref()?;
+        let part = part_by_rid(alt.chart_ex_rid()?)?;
+        let ex = ChartExFrame {
+            requires: alt.requires().unwrap_or("cx1").to_string(),
+            fallback: alt.fallback.clone(),
+        };
+        Some((*part, Some(ex)))
     };
 
     // Both anchor kinds, each contributing its own extent. Access marker fields
     // directly rather than naming the marker type: `CtMarker` is ambiguous
     // through the workbook prelude glob (both `complex_types` and `drawing_part`
     // export one), but the concrete field access off the anchor is unambiguous.
-    let mut found: Vec<(&PassthroughPart, ChartMarker, ChartExtent)> = vec![];
+    let mut found: Vec<(
+        &PassthroughPart,
+        Option<ChartExFrame>,
+        ChartMarker,
+        ChartExtent,
+    )> = vec![];
     for a in drawing.content.two_cell_anchors.iter() {
-        let Some(rid) = chart_rid(&a.graphic_frame) else {
-            continue;
-        };
-        let Some(part) = part_by_rid(&rid) else {
+        let Some((part, ex)) = anchored(&a.graphic_frame, &a.alternate_content) else {
             continue;
         };
         let Some(from) = chart_marker(
@@ -988,13 +996,10 @@ fn load_charts(
         ) else {
             continue;
         };
-        found.push((part, from, ChartExtent::ToCell(to)));
+        found.push((part, ex, from, ChartExtent::ToCell(to)));
     }
     for a in drawing.content.one_cell_anchors.iter() {
-        let Some(rid) = chart_rid(&a.graphic_frame) else {
-            continue;
-        };
-        let Some(part) = part_by_rid(&rid) else {
+        let Some((part, ex)) = anchored(&a.graphic_frame, &a.alternate_content) else {
             continue;
         };
         let Some(from) = chart_marker(
@@ -1009,6 +1014,7 @@ fn load_charts(
         };
         found.push((
             part,
+            ex,
             from,
             ChartExtent::Size {
                 cx: a.ext.cx,
@@ -1017,10 +1023,37 @@ fn load_charts(
         ));
     }
 
-    for (part, from, extent) in found {
-        let Some(data) = parse_chart(&part.data) else {
-            continue;
+    for (part, ex, from, extent) in found {
+        let parsed = if ex.is_some() {
+            None
+        } else {
+            parse_chart(&part.data)
         };
+        let preserved = match (&parsed, ex) {
+            (Some(_), _) => None,
+            (None, Some(ex)) => {
+                let data = parse_chart_ex(&part.data);
+                let ranges = data
+                    .as_ref()
+                    .map(|d| crate::chart_manager::chart_ex_ranges(d, navigator, sheets, sheet_id))
+                    .unwrap_or_default();
+                Some(Box::new(PreservedChart {
+                    kind: chart_ex_layout_id(&part.data).unwrap_or_else(|| "chartEx".to_string()),
+                    ex: Some(ex),
+                    data,
+                    ranges,
+                    edited: false,
+                }))
+            }
+            (None, None) => Some(Box::new(PreservedChart {
+                kind: "chart".to_string(),
+                ex: None,
+                data: None,
+                ranges: Vec::new(),
+                edited: false,
+            })),
+        };
+        let data = parsed.unwrap_or_else(ChartData::empty);
         let id = part
             .path
             .rsplit('/')
@@ -1037,13 +1070,16 @@ fn load_charts(
                 extent,
                 part_path: part.path.clone(),
                 data,
-                raw: raw.clone(),
+                // Its own part and satellites only, so deleting it deletes
+                // them and no other chart re-emits them.
+                raw: Arc::new(drawing.chart_tree(&part.path)),
                 // Restored from logisheets.xml further down; an xlsx written by
                 // Excel has no block bindings at all.
                 source: None,
                 // The file states its ranges in A1; from here on the cells
                 // themselves are what the chart follows.
                 refs,
+                preserved,
             },
         );
     }

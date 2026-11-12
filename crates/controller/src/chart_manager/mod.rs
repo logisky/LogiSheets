@@ -13,6 +13,7 @@
 //! lossy, while `raw` is authoritative for persistence.
 
 pub mod block_source;
+pub mod chart_ex;
 pub mod executor;
 pub mod refs;
 
@@ -24,7 +25,7 @@ use std::sync::Arc;
 
 use imbl::{HashMap, Vector};
 use logisheets_base::{BlockId, CellId, SheetId};
-use logisheets_workbook::prelude::{ChartData, PassthroughPart};
+use logisheets_workbook::prelude::{ChartData, ChartExData, ChartExFrame, PassthroughPart};
 
 /// A chart anchor corner: a stable cell plus an EMU offset into that cell.
 #[derive(Debug, Clone)]
@@ -92,6 +93,66 @@ pub struct Chart {
     /// edits the way the anchor does. The A1 text in `data` is the fallback for
     /// a range whose corner has been deleted. See [`refs`].
     pub refs: ChartRefs,
+    /// Set for a chart this build keeps but cannot draw or edit. `data` is
+    /// then empty and `raw` is the whole truth.
+    ///
+    /// Boxed for the reason `ChartData::preserved` is: `Chart` lives by value
+    /// in an `imbl::Vector`, and the fallback XML a chartEx carries would
+    /// fatten every chart, preserved or not.
+    pub preserved: Option<Box<PreservedChart>>,
+}
+
+/// A chart kept whole rather than understood: moved, resized, deleted and
+/// saved like any other, its part written back byte for byte, but neither
+/// drawn nor editable.
+///
+/// Before this, such a chart was skipped on load — so a save deleted it. The
+/// chartEx family (waterfall, treemap, histogram, …) is the main case; a
+/// classic chart whose part does not parse is the other.
+#[derive(Debug, Clone)]
+pub struct PreservedChart {
+    /// What the chart is, for a placeholder to say: a chartEx `layoutId` such
+    /// as `waterfall`, or `chart` when the part says nothing usable.
+    pub kind: String,
+    /// Set for a chartEx chart: how its anchor goes back out — inside
+    /// `mc:AlternateContent`, with the fallback older readers show.
+    pub ex: Option<ChartExFrame>,
+    /// The chartEx part, read enough to draw. `None` for a part that does not
+    /// parse — the chart is then a placeholder only.
+    pub data: Option<ChartExData>,
+    /// Where each series' dimensions read from, by cell id, so the drawing
+    /// follows inserted rows the way a classic chart's does. Indexed
+    /// `[series][dim]` in step with `data`. The part itself is saved as it
+    /// came, so the FILE still names the old range after such an edit —
+    /// rewriting it means generating chartEx XML, which nothing does yet.
+    pub ranges: Vec<Vec<Option<ChartRange>>>,
+    /// Set once `UpdateChartEx` has changed `data`, so a save patches the
+    /// part. An untouched chart whose cells have not moved goes back out byte
+    /// for byte.
+    pub edited: bool,
+}
+
+/// `ranges` for `data`, read from its A1 text. Called when a chart is loaded
+/// and for a dimension an edit re-pointed; from then on the ids move.
+pub fn chart_ex_ranges(
+    data: &ChartExData,
+    nav: &crate::navigator::Navigator,
+    sheets: &crate::id_manager::SheetIdManager,
+    sheet_id: SheetId,
+) -> Vec<Vec<Option<ChartRange>>> {
+    data.series
+        .iter()
+        .map(|s| {
+            s.dims
+                .iter()
+                .map(|d| {
+                    d.formula
+                        .as_deref()
+                        .and_then(|f| ChartRange::parse(nav, sheets, sheet_id, f))
+                })
+                .collect()
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Default)]
@@ -176,6 +237,26 @@ impl ChartManager {
     }
 
     /// Replace a chart's id-based ranges.
+    pub fn set_preserved(
+        &mut self,
+        sheet_id: SheetId,
+        chart_id: &str,
+        preserved: Box<PreservedChart>,
+    ) -> bool {
+        let mut v = match self.charts.get(&sheet_id) {
+            Some(v) => v.clone(),
+            None => return false,
+        };
+        let Some(idx) = v.iter().position(|c| c.id == chart_id) else {
+            return false;
+        };
+        let mut chart = v[idx].clone();
+        chart.preserved = Some(preserved);
+        v.set(idx, chart);
+        self.charts.insert(sheet_id, v);
+        true
+    }
+
     pub fn set_refs(&mut self, sheet_id: SheetId, chart_id: &str, refs: ChartRefs) -> bool {
         let mut v = match self.charts.get(&sheet_id) {
             Some(v) => v.clone(),

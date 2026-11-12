@@ -705,6 +705,10 @@ impl<'a> Executor<'a> {
     /// The executor states them as A1, because that is what the payload and
     /// the file speak; from here on the ids are what follow the cells.
     fn attach_chart_refs(&self, executor: &mut ChartExecutor, payload: &EditPayload) {
+        if let EditPayload::UpdateChartEx(p) = payload {
+            self.attach_chart_ex_ranges(executor, p.sheet_idx, &p.chart_id);
+            return;
+        }
         let (sheet_idx, chart_id) = match payload {
             EditPayload::CreateChart(p) => (p.sheet_idx, &p.chart_id),
             EditPayload::UpdateChart(p) => (p.sheet_idx, &p.chart_id),
@@ -728,6 +732,47 @@ impl<'a> Executor<'a> {
             &data,
         );
         executor.manager.set_refs(sheet_id, chart_id, refs);
+    }
+
+    /// Resolve the dimensions an `UpdateChartEx` re-pointed (their range is
+    /// `None`) to cell ids. The rest keep theirs: their A1 text may be stale,
+    /// since the ids are what follow the cells.
+    fn attach_chart_ex_ranges(
+        &self,
+        executor: &mut ChartExecutor,
+        sheet_idx: usize,
+        chart_id: &str,
+    ) {
+        let Some(sheet_id) = self.status.sheet_info_manager.get_sheet_id(sheet_idx) else {
+            return;
+        };
+        let Some(mut kept) = executor
+            .manager
+            .charts_of_sheet(sheet_id)
+            .find(|c| c.id == chart_id)
+            .and_then(|c| c.preserved.clone())
+        else {
+            return;
+        };
+        let Some(data) = kept.data.as_ref() else {
+            return;
+        };
+        let fresh = crate::chart_manager::chart_ex_ranges(
+            data,
+            &self.status.navigator,
+            &self.status.sheet_id_manager,
+            sheet_id,
+        );
+        for (si, series) in fresh.into_iter().enumerate() {
+            for (di, range) in series.into_iter().enumerate() {
+                if let Some(slot) = kept.ranges.get_mut(si).and_then(|r| r.get_mut(di)) {
+                    if slot.is_none() {
+                        *slot = range;
+                    }
+                }
+            }
+        }
+        executor.manager.set_preserved(sheet_id, chart_id, kept);
     }
 
     /// The ranges a chart payload's `block_source` currently covers, or `None`

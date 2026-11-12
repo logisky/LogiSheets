@@ -409,6 +409,7 @@ pub fn save_workbook<S: SaverTrait>(
                     extent,
                     chart_path: chart.part_path.clone(),
                     name: format!("Chart {}", chart.id),
+                    ex: chart.preserved.as_ref().and_then(|p| p.ex.clone()),
                 });
                 // A block-bound chart is written out with the ranges the block
                 // covers right now. Excel has no idea what a block is, so the
@@ -484,6 +485,12 @@ pub fn save_workbook<S: SaverTrait>(
                 // A block-bound chart's ranges come from the block, so that
                 // resolution wins over the cell-id one.
                 let regenerated = regenerated.or(moved);
+                // A preserved chart's `data` is a placeholder: its part is the
+                // truth, patched below when there is anything to patch.
+                let regenerated = match &chart.preserved {
+                    None => regenerated,
+                    Some(kept) => chart_ex_part(chart, kept, navigator, sheet_id_manager),
+                };
                 if let Some(src) = &chart.source {
                     chart_sources.push(ChartSourceXml {
                         chart_id: chart.id.clone(),
@@ -953,4 +960,40 @@ fn block_to_table(
         totals_row_cell_style: None,
         connection_id: None,
     }
+}
+
+/// A chartEx part to write instead of the one the chart came with, or `None`
+/// to write that one as it is.
+///
+/// Patched when an edit changed the chart, or when a range it reads has moved
+/// with its cells — the file then names where the cells are now, as a classic
+/// chart's does. Otherwise the part goes back out byte for byte.
+fn chart_ex_part(
+    chart: &crate::chart_manager::Chart,
+    kept: &crate::chart_manager::PreservedChart,
+    navigator: &crate::navigator::Navigator,
+    sheets: &crate::id_manager::SheetIdManager,
+) -> Option<Vec<u8>> {
+    let data = kept.data.as_ref()?;
+    let mut live = data.clone();
+    let mut moved = false;
+    for (si, series) in live.series.iter_mut().enumerate() {
+        for (di, dim) in series.dims.iter_mut().enumerate() {
+            let now = kept
+                .ranges
+                .get(si)
+                .and_then(|r| r.get(di))
+                .and_then(|r| r.as_ref())
+                .and_then(|r| r.to_a1(navigator, sheets));
+            if now.is_some() && now != dim.formula {
+                dim.formula = now;
+                moved = true;
+            }
+        }
+    }
+    if !kept.edited && !moved {
+        return None;
+    }
+    let original = chart.raw.iter().find(|p| p.path == chart.part_path)?;
+    logisheets_workbook::prelude::write_chart_ex(&original.data, &live)
 }
