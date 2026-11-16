@@ -19,10 +19,6 @@
             "types": "./dist/type-guard/index.d.ts",
             "default": "./dist/type-guard/index.js"
         },
-        "./selection": {
-            "types": "./dist/selection/index.d.ts",
-            "default": "./dist/selection/index.js"
-        },
         "./utils": {
             "types": "./dist/utils/index.d.ts",
             "default": "./dist/utils/index.js"

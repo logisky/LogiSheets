@@ -52,7 +52,6 @@ Focused utilities are available without pulling in the whole surface:
 | `logisheets-core` | Full surface: ops, format, crafts, validation, fields, values, transactions, permissions |
 | `logisheets-core/strings` | String helpers |
 | `logisheets-core/type-guard` | Runtime type guards for engine types |
-| `logisheets-core/selection` | Selection helpers |
 | `logisheets-core/utils` | General utilities |
 | `logisheets-core/value` | Cell-value helpers |
 
