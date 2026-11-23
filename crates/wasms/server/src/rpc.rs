@@ -392,6 +392,21 @@ pub fn handle(msg: JsValue, book_id: Option<usize>) -> JsValue {
             params.col,
             params.proposed,
         )),
+        Message::GetDataValidation(params) => res_to_js(controller::get_data_validation(
+            &mut mgr,
+            id,
+            params.sheet_idx,
+            params.row,
+            params.col,
+        )),
+        Message::CheckDataValidation(params) => res_to_js(controller::check_data_validation(
+            &mut mgr,
+            id,
+            params.sheet_idx,
+            params.row,
+            params.col,
+            params.proposed,
+        )),
         Message::GetHyperlink(params) => res_to_js(controller::get_hyperlink(
             &mut mgr,
             id,

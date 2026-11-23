@@ -22,6 +22,8 @@ import {Cell, ErrorMessage} from 'logisheets-engine'
 import {useEngine, useOps} from '@/core/engine/provider'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {ConditionalFormattingDialog} from '@/components/conditional-formatting'
+import {DataValidationDialog} from '@/components/data-validation'
+import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined'
 import {NameManagerDialog} from '@/components/name-manager'
 import {goToNameRange, rangeRefersTo} from '@/core/defined-names'
 import {BorderSettingComponent} from './border-setting'
@@ -461,6 +463,7 @@ export const Toolbar = observer(
             endRow: number
             endCol: number
         } | null>(null)
+        const [dvRange, setDvRange] = useState<typeof cfRange>(null)
 
         // The name manager, opened from the Formulas tab. `refersTo` seeds a
         // new name with the current selection.
@@ -1004,6 +1007,19 @@ export const Toolbar = observer(
             })
         }
 
+        const openDataValidation = () => {
+            if (!selectedData) return
+            const r = getSelectedCellRange(selectedData)
+            if (!r) return
+            setDvRange({
+                sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
+                startRow: r.startRow,
+                startCol: r.startCol,
+                endRow: r.endRow,
+                endCol: r.endCol,
+            })
+        }
+
         const openConditionalFormatting = () => {
             if (!selectedData) return
             const r = getSelectedCellRange(selectedData)
@@ -1274,6 +1290,13 @@ export const Toolbar = observer(
         useEffect(() => {
             if (saveRequest > 0) void saveRef.current()
         }, [saveRequest])
+        // The View toggle and Ctrl+` both flip the store; this is the one
+        // place it reaches the engine.
+        const showFormulas = globalStore.showFormulas
+        useEffect(() => {
+            if (engine.getShowFormulas() !== showFormulas)
+                void engine.setShowFormulas(showFormulas)
+        }, [engine, showFormulas])
 
         async function onSave(): Promise<void> {
             const persistentData = BLOCK_MANAGER.getPersistentData([])
@@ -1547,6 +1570,12 @@ export const Toolbar = observer(
                                             globalStore.setShowGridlines(v)
                                             engine.setShowGridLines(v)
                                         },
+                                    },
+                                    {
+                                        label: t('toolbar.view.showFormulas'),
+                                        checked: globalStore.showFormulas,
+                                        onChange: (v: boolean) =>
+                                            globalStore.setShowFormulas(v),
                                     },
                                     {
                                         label: t('toolbar.view.showComments'),
@@ -1913,14 +1942,26 @@ export const Toolbar = observer(
                         <>
                             {/* Rules */}
                             <div className={styles.section}>
-                                <Button
-                                    size="small"
-                                    startIcon={<PaletteOutlinedIcon />}
+                                <ToolButton
+                                    label={t(
+                                        'toolbar.data.conditionalFormatting'
+                                    )}
+                                    tip={t(
+                                        'toolbar.data.conditionalFormattingTip'
+                                    )}
+                                    icon={
+                                        <PaletteOutlinedIcon fontSize="small" />
+                                    }
                                     disabled={!hasSelectedData}
                                     onClick={openConditionalFormatting}
-                                >
-                                    {t('toolbar.data.conditionalFormatting')}
-                                </Button>
+                                />
+                                <ToolButton
+                                    label={t('toolbar.data.dataValidation')}
+                                    tip={t('toolbar.data.dataValidationTip')}
+                                    icon={<RuleOutlinedIcon fontSize="small" />}
+                                    disabled={!hasSelectedData}
+                                    onClick={openDataValidation}
+                                />
                             </div>
                             <Divider
                                 orientation="vertical"
@@ -1929,13 +1970,14 @@ export const Toolbar = observer(
                             />
                             {/* Find */}
                             <div className={styles.section}>
-                                <Button
-                                    size="small"
-                                    startIcon={<SearchIcon />}
-                                    onClick={() => globalStore.requestFind()}
-                                >
-                                    {t('toolbar.data.findReplace')}
-                                </Button>
+                                <ToolButton
+                                    label={t('toolbar.data.findReplace')}
+                                    tip={t('toolbar.data.findReplaceTip')}
+                                    icon={<SearchIcon fontSize="small" />}
+                                    onClick={() =>
+                                        globalStore.requestFind(true)
+                                    }
+                                />
                             </div>
                         </>
                     ) : null}
@@ -2546,6 +2588,24 @@ export const Toolbar = observer(
                             sheetIdx={cfRange.sheetIdx}
                             range={cfRange}
                             onClose={() => setCfRange(null)}
+                        />
+                    )}
+                </Dialog>
+
+                <Dialog
+                    open={!!dvRange}
+                    onClose={() => setDvRange(null)}
+                    disableScrollLock
+                    disableRestoreFocus
+                    container={document.body}
+                    PaperProps={{sx: {zIndex: 2000, p: 0}}}
+                >
+                    {dvRange && (
+                        <DataValidationDialog
+                            dataSvc={DATA_SERVICE}
+                            sheetIdx={dvRange.sheetIdx}
+                            range={dvRange}
+                            onClose={() => setDvRange(null)}
                         />
                     )}
                 </Dialog>

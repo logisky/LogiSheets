@@ -2,7 +2,7 @@
  * Offscreen Client - communicates with the worker for rendering operations.
  */
 
-import type {Grid, RowFitHeight} from '$types/index'
+import type {ColFitWidth, Grid, RowFitHeight} from '$types/index'
 import type {ErrorMessage} from 'logisheets-web'
 import {OffscreenRenderName} from '../worker/types'
 
@@ -56,14 +56,30 @@ export class OffscreenClient {
     getRowFitHeights(
         sheetIdx: number,
         fromRow: number,
-        toRow: number
+        toRow: number,
+        force = false
     ): Resp<readonly RowFitHeight[]> {
         return this._call(OffscreenRenderName.GetRowFitHeights, {
             canvasId: 0,
             sheetIdx,
             fromRow,
             toRow,
+            force,
         }) as Resp<readonly RowFitHeight[]>
+    }
+
+    /** See OffscreenWorkerService.getColFitWidths. */
+    getColFitWidths(
+        sheetIdx: number,
+        fromCol: number,
+        toCol: number
+    ): Resp<readonly ColFitWidth[]> {
+        return this._call(OffscreenRenderName.GetColFitWidths, {
+            canvasId: 0,
+            sheetIdx,
+            fromCol,
+            toCol,
+        }) as Resp<readonly ColFitWidth[]>
     }
 
     resize(
@@ -88,6 +104,10 @@ export class OffscreenClient {
     // (the caller re-renders); text visibility doesn't affect layout.
     setShowCellValues(show: boolean): void {
         this._call(OffscreenRenderName.SetShowCellValues, {show})
+    }
+
+    setShowFormulas(show: boolean): void {
+        this._call(OffscreenRenderName.SetShowFormulas, {show})
     }
 
     // Worker-global zoom. Returns a promise so the caller can await the worker

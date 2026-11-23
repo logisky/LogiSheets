@@ -1,6 +1,7 @@
 import type {Value} from 'logisheets-web'
 import {
     buildMatcher,
+    buildReplacer,
     findAdjacentIndex,
     valueToSearchString,
     type FindMatch,
@@ -106,5 +107,41 @@ describe('findAdjacentIndex', () => {
         expect(
             findAdjacentIndex(matches, {row: 0, col: -1} as FindMatch, 'prev')
         ).toBe(2)
+    })
+})
+
+describe('buildReplacer', () => {
+    it('replaces every occurrence, case-insensitively by default', () => {
+        const r = buildReplacer('ab', 'X', OPTS())
+        expect(r('Ab-ab-AB')).toBe('X-X-X')
+    })
+
+    it('respects matchCase', () => {
+        const r = buildReplacer('ab', 'X', OPTS({matchCase: true}))
+        expect(r('Ab-ab-AB')).toBe('Ab-X-AB')
+    })
+
+    it('swaps the whole text for a whole-cell match', () => {
+        expect(
+            buildReplacer('old', 'new', OPTS({wholeCell: true}))('OLD')
+        ).toBe('new')
+    })
+
+    it('treats a literal query and replacement as plain text', () => {
+        const r = buildReplacer('a.b', '$1 & $&', OPTS())
+        expect(r('a.b axb')).toBe('$1 & $& axb')
+    })
+
+    it('expands regex groups', () => {
+        const r = buildReplacer(
+            '(\\d+)-(\\d+)',
+            '$2-$1',
+            OPTS({useRegex: true})
+        )
+        expect(r('12-34 and 5-6')).toBe('34-12 and 6-5')
+    })
+
+    it('throws on an invalid regex, like buildMatcher', () => {
+        expect(() => buildReplacer('(', '', OPTS({useRegex: true}))).toThrow()
     })
 })

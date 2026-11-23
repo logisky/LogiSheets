@@ -68,6 +68,7 @@ export type ShortcutId =
     | 'fillDown'
     | 'fillRight'
     | 'find'
+    | 'replace'
     | 'insertHyperlink'
     | 'formatCells'
     | 'insertDate'
@@ -126,6 +127,8 @@ export const HOST_SHORTCUTS = [
     'unhideColumns',
     'newSheet',
     'addComment',
+    'toggleFormulas',
+    'replace',
     'numFmtGeneral',
     'numFmtNumber',
     'numFmtTime',
@@ -153,6 +156,12 @@ interface ShortcutSpec {
     key: string | readonly string[]
     /** Requires the primary modifier (⌘ / Ctrl). Default false. */
     primary?: boolean
+    /**
+     * Requires the Control key itself on every platform, in place of
+     * `primary`. For the few chords macOS keeps for itself under ⌘ — ⌘H hides
+     * the app before the page sees it — where Mac Excel uses ⌃ instead.
+     */
+    ctrl?: boolean
     /** Shift requirement. Default false (Shift must be up); `'any'` ignores. */
     shift?: ModReq
     /** Alt / Option requirement. Default false; `'any'` ignores. */
@@ -275,6 +284,7 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     {id: 'fillDown', description: 'Fill down', key: 'd', primary: true},
     {id: 'fillRight', description: 'Fill right', key: 'r', primary: true},
     {id: 'find', description: 'Find', key: 'f', primary: true},
+    {id: 'replace', description: 'Replace', key: 'h', ctrl: true},
     {
         id: 'insertHyperlink',
         description: 'Insert link',
@@ -524,7 +534,9 @@ function matches(
     if (spec.keymap && spec.keymap !== keymap) return false
     const keys = Array.isArray(spec.key) ? spec.key : [spec.key]
     if (!keys.some((k) => k.toLowerCase() === e.key.toLowerCase())) return false
-    if (primaryPressed(e) !== !!spec.primary) return false
+    if (spec.ctrl) {
+        if (!e.ctrlKey || e.metaKey) return false
+    } else if (primaryPressed(e) !== !!spec.primary) return false
     if (!modOk(e.shiftKey, spec.shift)) return false
     if (!modOk(e.altKey, spec.alt)) return false
     return true
@@ -573,6 +585,7 @@ export function shortcutLabel(id: ShortcutId, keymap: Keymap = 'web'): string {
     const apple = isApplePlatform()
     const parts: string[] = []
     if (spec.primary) parts.push(apple ? '⌘' : 'Ctrl')
+    if (spec.ctrl) parts.push(apple ? '⌃' : 'Ctrl')
     if (spec.shift === true) parts.push(apple ? '⇧' : 'Shift')
     if (spec.alt === true) parts.push(apple ? '⌥' : 'Alt')
     const key = Array.isArray(spec.key) ? spec.key[0] : spec.key

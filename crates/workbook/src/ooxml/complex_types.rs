@@ -2225,14 +2225,21 @@ pub struct CtDataValidation {
         default = "st_data_validation_operator_between"
     )]
     pub operator: StDataValidationOperator,
-    #[xmlserde(name = b"blank", ty = "attr", default = "default_false")]
-    pub blank: bool,
+    /// ECMA-376 names this `allowBlank`; it was once mapped to `blank`, which
+    /// Excel never writes, so the flag was silently lost on every round trip.
+    #[xmlserde(name = b"allowBlank", ty = "attr", default = "default_false")]
+    pub allow_blank: bool,
+    /// NB: inverted in OOXML — `true` HIDES the in-cell dropdown arrow.
     #[xmlserde(name = b"showDropDown", ty = "attr", default = "default_false")]
     pub show_drop_down: bool,
     #[xmlserde(name = b"showInputMessage", ty = "attr", default = "default_false")]
     pub show_input_message: bool,
     #[xmlserde(name = b"showErrorMessage", ty = "attr", default = "default_false")]
     pub show_error_message: bool,
+    #[xmlserde(name = b"errorTitle", ty = "attr")]
+    pub error_title: Option<String>,
+    #[xmlserde(name = b"error", ty = "attr")]
+    pub error: Option<String>,
     #[xmlserde(name = b"promptTitle", ty = "attr")]
     pub prompt_title: Option<String>,
     #[xmlserde(name = b"prompt", ty = "attr")]

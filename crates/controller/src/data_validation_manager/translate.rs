@@ -2,9 +2,10 @@
 //! cell can evaluate. The formula uses `#PLACEHOLDER` for the validated cell
 //! and returns TRUE when the value is valid, FALSE when invalid.
 //!
-//! Because shadows are only installed on non-empty cells, `allowBlank` is a
-//! no-op here (empty cells never get a shadow). `custom` is not yet supported
-//! (its formula1 references shift relative to the sqref anchor — deferred).
+//! Operands are written against the top-left cell of the rule's range, the way
+//! Excel stores them; [`shadow_formula`] shifts their relative references onto
+//! each covered cell. A blank cell always passes (LogiSheets never flags an
+//! empty cell), so `allowBlank` only round-trips.
 
 use logisheets_workbook::prelude::{
     CtDataValidation, StDataValidationOperator as Op, StDataValidationType as Ty,
@@ -12,8 +13,23 @@ use logisheets_workbook::prelude::{
 
 const P: &str = "#PLACEHOLDER";
 
+/// The formula a covered cell's shadow holds (WITHOUT a leading `=`): the rule
+/// with its relative references moved from `anchor` to `cell`, passing blanks.
+/// `None` when the rule has no translation.
+pub fn shadow_formula(
+    dv: &CtDataValidation,
+    cell: (usize, usize),
+    anchor: (usize, usize),
+) -> Option<String> {
+    let body = rule_to_formula(dv)?;
+    let dr = cell.0 as i32 - anchor.0 as i32;
+    let dc = cell.1 as i32 - anchor.1 as i32;
+    let body = crate::conditional_formatting_manager::a1_shift::shift_formula(&body, dr, dc);
+    Some(format!("OR(LEN({P})=0,{body})"))
+}
+
 /// Returns the formula body (WITHOUT a leading `=`), or `None` for rule types
-/// we don't translate (`none`, `custom`, or missing operands).
+/// we don't translate (`none`, or missing operands).
 pub fn rule_to_formula(dv: &CtDataValidation) -> Option<String> {
     let f1 = dv.formula1.as_ref().map(|s| s.value.trim().to_string());
     let f2 = dv.formula2.as_ref().map(|s| s.value.trim().to_string());
@@ -50,8 +66,9 @@ pub fn rule_to_formula(dv: &CtDataValidation) -> Option<String> {
             let len_expr = format!("LEN({P})");
             numeric_cmp(&len_expr, dv.operator, &f1?, f2.as_deref())
         }
-        // `none` and `custom` are not translated (yet).
-        Ty::None | Ty::Custom => None,
+        // The condition itself, written against the range's top-left cell.
+        Ty::Custom => f1.filter(|f| !f.is_empty()),
+        Ty::None => None,
     }
 }
 
@@ -92,10 +109,12 @@ mod tests {
             error_style: StDataValidationErrorStyle::Stop,
             ime_mode: StDataValidationImeMode::NoControl,
             operator: op,
-            blank: true,
+            allow_blank: true,
             show_drop_down: false,
             show_input_message: false,
             show_error_message: false,
+            error_title: None,
+            error: None,
             prompt_title: None,
             prompt: None,
             sqref: "A1".to_string(),
@@ -140,11 +159,26 @@ mod tests {
     }
 
     #[test]
-    fn custom_and_none_unsupported() {
-        assert!(
-            rule_to_formula(&dv(Ty::Custom, Op::Between, Some("ISNUMBER(A1)"), None)).is_none()
+    fn custom_is_its_condition_and_none_is_nothing() {
+        assert_eq!(
+            rule_to_formula(&dv(Ty::Custom, Op::Between, Some("ISNUMBER(A1)"), None)).as_deref(),
+            Some("ISNUMBER(A1)")
         );
         assert!(rule_to_formula(&dv(Ty::None, Op::Between, None, None)).is_none());
+    }
+
+    #[test]
+    fn shadow_shifts_relative_operands_onto_the_cell() {
+        let rule = dv(Ty::Custom, Op::Between, Some("COUNTIF($A:$A,A1)=1"), None);
+        assert_eq!(
+            shadow_formula(&rule, (4, 0), (0, 0)).unwrap(),
+            "OR(LEN(#PLACEHOLDER)=0,COUNTIF($A:$A,A5)=1)"
+        );
+        let rule = dv(Ty::Decimal, Op::LessThanOrEqual, Some("$B$1"), None);
+        assert_eq!(
+            shadow_formula(&rule, (9, 3), (0, 0)).unwrap(),
+            "OR(LEN(#PLACEHOLDER)=0,AND(ISNUMBER(#PLACEHOLDER),#PLACEHOLDER<=$B$1))"
+        );
     }
 
     #[test]

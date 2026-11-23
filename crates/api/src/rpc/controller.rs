@@ -359,6 +359,36 @@ pub fn check_field_validation(
         .map_err(ErrorMessage::from)
 }
 
+/// The data-validation rule covering a cell, if any.
+pub fn get_data_validation(
+    mgr: &mut Manager,
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+) -> Result<Option<logisheets_controller::DataValidationInfo>, ErrorMessage> {
+    let wb = mgr.workbook(id)?;
+    wb.get_data_validation(sheet_idx, row, col)
+        .map_err(ErrorMessage::from)
+}
+
+/// Whether writing `proposed` would break the cell's data-validation rule —
+/// see [`CheckDataValidationParams`].
+///
+/// [`CheckDataValidationParams`]: crate::rpc::message::CheckDataValidationParams
+pub fn check_data_validation(
+    mgr: &mut Manager,
+    id: usize,
+    sheet_idx: usize,
+    row: usize,
+    col: usize,
+    proposed: String,
+) -> Result<logisheets_controller::DataValidationVerdict, ErrorMessage> {
+    let wb = mgr.workbook_mut(id)?;
+    wb.check_data_validation(sheet_idx, row, col, proposed)
+        .map_err(ErrorMessage::from)
+}
+
 /// Where the link in a cell goes — a stored hyperlink, or the evaluated
 /// target of a `HYPERLINK` formula. `None` when the cell is not a link.
 pub fn get_hyperlink(

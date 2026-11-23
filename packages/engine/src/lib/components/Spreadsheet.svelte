@@ -1782,6 +1782,24 @@ let isDragging = false; // True while user is drag-selecting
         })
     }
 
+    // Double-clicking a header border fits that line to its content — or, as
+    // in Excel, every selected whole line when the border belongs to one.
+    function onAutoFitCol(colIdx: number) {
+        if (!dataService) return
+        const [from, to] = fitSpan(colIdx, selectedColumnRange)
+        void dataService.autoFitCols(activeSheet, from, to)
+    }
+
+    function onAutoFitRow(rowIdx: number) {
+        if (!dataService) return
+        const [from, to] = fitSpan(rowIdx, selectedRowRange)
+        void dataService.autoFitRows(activeSheet, from, to)
+    }
+
+    function fitSpan(idx: number, sel: [number, number] | undefined): [number, number] {
+        return sel && sel[0] <= idx && idx <= sel[1] ? sel : [idx, idx]
+    }
+
     function onResizeRow(rowIdx: number, deltaPx: number) {
         if (!grid || !dataService) return
         const row = grid.rows.find((r) => r.idx === rowIdx)
@@ -1875,9 +1893,9 @@ let isDragging = false; // True while user is drag-selecting
     // fallback at the bottom of onKeyDown.
     //
     // Copy/cut/paste are intentionally omitted: the host handles the native
-    // clipboard events, which an absent entry leaves alone. toggleFormulas has
-    // no handler because there is no show-formulas view yet. The host-owned
-    // shortcuts (HOST_SHORTCUTS) are added in `shortcutHandlers` below.
+    // clipboard events, which an absent entry leaves alone. The host-owned
+    // shortcuts (HOST_SHORTCUTS, toggleFormulas among them: the host keeps
+    // the View toggle in step) are added in `shortcutHandlers` below.
     const baseShortcutHandlers: ShortcutHandlers = {
         // Shift extends the selection from its anchor instead of moving it.
         moveUp: (e) => (e.shiftKey ? extendSelection('up') : moveSelection('up')),
@@ -2759,6 +2777,7 @@ let isDragging = false; // True while user is drag-selecting
                 }}
                 onContextMenu={onColumnContextMenu}
                 {onResizeCol}
+                {onAutoFitCol}
             />
 
             <!-- Row headers -->
@@ -2779,6 +2798,7 @@ let isDragging = false; // True while user is drag-selecting
                 }}
                 onContextMenu={onRowContextMenu}
                 {onResizeRow}
+                {onAutoFitRow}
             />
 
             <!-- Main canvas -->

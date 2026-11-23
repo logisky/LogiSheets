@@ -13,6 +13,7 @@ import {toast} from 'react-toastify'
 import {getEngine} from '@/core/engine'
 import {fieldAt} from './field-editable'
 import {callerRegistry} from 'logisheets-core'
+import i18n from '@/core/i18n/i18n'
 
 const CALLER_UUID_KEY = '__callerUuid'
 const PATCHED_FLAG = '__logisheetsPermPatched'
@@ -349,6 +350,56 @@ async function mayWriteAViolatingValue(
     return true
 }
 
+/**
+ * Excel's data-validation alert, for a value a person types into a cell.
+ *
+ * Only a lone typed value is judged: Excel does not validate paste, fill or
+ * replace either, and those still land and are flagged by the cell's marker.
+ * A craft is a program, like a VBA macro, and is not stopped. "Stop" refuses
+ * the value; "Warning" and "Information" keep it and say so.
+ */
+async function passesDataValidation(
+    client: WorkbookClient,
+    payload: Payload,
+    callerUuid: string
+): Promise<boolean> {
+    if (callerRegistry.resolveActor(callerUuid)?.type === 'craft') return true
+    const v = payload.value as {
+        sheetIdx: number
+        row: number
+        col: number
+        content: string
+    }
+    const verdict = await client.checkDataValidation({
+        sheetIdx: v.sheetIdx,
+        row: v.row,
+        col: v.col,
+        proposed: v.content ?? '',
+    })
+    if (isErrorMessage(verdict) || !verdict.hasRule || !verdict.violates)
+        return true
+    const message =
+        verdict.error ||
+        i18n.t(
+            verdict.errorStyle === 'stop' ? 'ui.dv.refused' : 'ui.dv.warned',
+            {value: v.content}
+        )
+    const text = verdict.errorTitle
+        ? `${verdict.errorTitle}: ${message}`
+        : message
+    switch (verdict.errorStyle) {
+        case 'warning':
+            toast.warning(text)
+            return true
+        case 'information':
+            toast.info(text)
+            return true
+        default:
+            toast.error(text)
+            return false
+    }
+}
+
 async function mayWriteHere(
     client: WorkbookClient,
     payload: Payload,
@@ -573,6 +624,13 @@ function applyPatch() {
                 string,
                 BlockModifyInfo | undefined
             >()
+            const typed = tx.payloads.length === 1 ? tx.payloads[0] : null
+            if (
+                typed?.type === 'cellInput' &&
+                !(await passesDataValidation(this, typed, callerUuid))
+            ) {
+                return false
+            }
             for (const payload of tx.payloads) {
                 if (payload.type === 'cellInput') {
                     const ok = await validateCellInput(

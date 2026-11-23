@@ -20,6 +20,8 @@
         onResize?: (deltaPx: number) => void
         /** Commit resize delta callback (in px) */
         onResizeEnd?: (deltaPx: number) => void
+        /** Double-click: fit the line to its content */
+        onAutoFit?: () => void
     }
 
     let {
@@ -30,6 +32,7 @@
         thickness = 6,
         onResize,
         onResizeEnd,
+        onAutoFit,
     }: Props = $props()
 
     // State
@@ -61,7 +64,9 @@
             const dx = ue.clientX - startPos.x
             const dy = ue.clientY - startPos.y
             const d = orientation === 'col' ? dx : dy
-            onResizeEnd?.(d)
+            // A click that did not move is not a resize — and each half of a
+            // double-click would otherwise commit an empty undo step.
+            if (d !== 0) onResizeEnd?.(d)
             startPos = null
             dragging = false
             delta = 0
@@ -119,6 +124,11 @@
     class="handle"
     style={handleStyle}
     onmousedown={onMouseDown}
+    ondblclick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onAutoFit?.()
+    }}
     role="slider"
     aria-valuenow={delta}
     tabindex="-1"

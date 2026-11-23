@@ -138,6 +138,7 @@ export class Engine {
         )
         // Likewise push the initial cell-value visibility to the worker.
         this._dataService.setShowCellValues(this._config.showCellValues)
+        this._dataService.setShowFormulas(this._config.showFormulas)
 
         // A `bindFormSchema` observer used to stamp the schema's ref name onto
         // every host FieldInfo of the block, because the host store carried its own
@@ -582,6 +583,26 @@ export class Engine {
     /** Whether cell values (text) are currently rendered. */
     getShowCellValues(): boolean {
         return this._config.showCellValues
+    }
+
+    /**
+     * Excel's "Show formulas" view across every view of this workbook: formula
+     * cells draw their formula, other values draw unformatted. Changes no
+     * cell, so it is not undoable and does not dirty the workbook.
+     */
+    async setShowFormulas(show: boolean): Promise<void> {
+        this._config.showFormulas = show
+        this._dataService.setShowFormulas(show)
+        await Promise.all(
+            [...this._sessions].map((s) =>
+                s.getGrid() ? s.render() : Promise.resolve(null)
+            )
+        )
+    }
+
+    /** Whether the show-formulas view is on. */
+    getShowFormulas(): boolean {
+        return this._config.showFormulas
     }
 
     // ========================================================================

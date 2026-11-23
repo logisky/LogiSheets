@@ -67,6 +67,12 @@ export interface RowFitHeight {
     height: number
 }
 
+/** A column's fitted width, in column-width units (see `SetColWidth`). */
+export interface ColFitWidth {
+    col: number
+    width: number
+}
+
 // ============================================================================
 // Selection Types - Used for cell selection
 // ============================================================================
@@ -248,7 +254,7 @@ export interface EngineEvents {
 /**
  * Engine/view options. Pass a partial to `new Engine(config)`; missing keys
  * come from {@link DEFAULT_ENGINE_CONFIG}. The Engine keeps one copy shared by
- * all its sessions, and its setters (setShowGridLines, setShowCellValues)
+ * all its sessions, and its setters (setShowGridLines, setShowCellValues, setShowFormulas)
  * mutate it in place.
  */
 export interface EngineConfig {
@@ -263,6 +269,8 @@ export interface EngineConfig {
     /** Render cell values (text). When false, fills/borders/gridlines still
      * render but cell text is skipped. */
     showCellValues: boolean
+    /** Draw formulas instead of their results (Excel's "Show formulas"). */
+    showFormulas: boolean
     /** Default cell width in pt. Not read by the engine today. */
     defaultCellWidth: number
     /** Default cell height in pt. Not read by the engine today. */
@@ -307,6 +315,7 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
     showHorizontalGridLines: true,
     showVerticalGridLines: true,
     showCellValues: true,
+    showFormulas: false,
     defaultCellWidth: 6,
     defaultCellHeight: 25,
     scrollbarSize: 16,

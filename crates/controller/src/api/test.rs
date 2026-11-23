@@ -326,10 +326,12 @@ fn data_validation_round_trip() {
             error_style: StDataValidationErrorStyle::Stop,
             ime_mode: StDataValidationImeMode::NoControl,
             operator: StDataValidationOperator::Between,
-            blank: true,
+            allow_blank: true,
             show_drop_down: false,
             show_input_message: false,
             show_error_message: true,
+            error_title: None,
+            error: None,
             prompt_title: None,
             prompt: None,
             sqref: "A1:A10".to_string(),
@@ -384,8 +386,8 @@ fn data_validation_flags_invalid_cell() {
     };
 
     // Author an xlsx that already contains A1="Apple" (valid) and A2="Zebra"
-    // (invalid) so the values are present at load time — shadows are only
-    // materialized on load (from_file), not on later edits.
+    // (invalid), so this exercises the load-time materialization. Later edits
+    // are covered by `authored_data_validation`.
     let mut authored = Workbook::default();
     authored.handle_action(EditAction::Payloads(PayloadsAction {
         payloads: vec![
@@ -420,10 +422,12 @@ fn data_validation_flags_invalid_cell() {
             error_style: StDataValidationErrorStyle::Stop,
             ime_mode: StDataValidationImeMode::NoControl,
             operator: StDataValidationOperator::Between,
-            blank: true,
+            allow_blank: true,
             show_drop_down: false,
             show_input_message: false,
             show_error_message: true,
+            error_title: None,
+            error: None,
             prompt_title: None,
             prompt: None,
             sqref: "A1:A10".to_string(),
@@ -483,10 +487,12 @@ fn get_cell_list_validation_reads_list_type() {
         error_style: StDataValidationErrorStyle::Stop,
         ime_mode: StDataValidationImeMode::NoControl,
         operator: StDataValidationOperator::Between,
-        blank: true,
+        allow_blank: true,
         show_drop_down: true,
         show_input_message: false,
         show_error_message: false,
+        error_title: None,
+        error: None,
         prompt_title: None,
         prompt: None,
         sqref: sqref.to_string(),
@@ -12126,4 +12132,200 @@ fn amend_joins_the_previous_undo_step() {
     // A fitted height leaves the row auto-sized, unlike one the user set.
     let info = wb.get_sheet_by_idx(0).unwrap().get_row_info(0).unwrap();
     assert!(!info.custom_height);
+}
+
+#[cfg(test)]
+mod authored_data_validation {
+    use super::*;
+    use crate::controller::display::Value;
+    use crate::data_validation_manager::spec::DataValidationSpec;
+    use crate::edit_action::{CellInput, InsertRows, SetDataValidation};
+    use crate::sid_assigner::ShadowKind;
+
+    fn whole_1_to_100() -> DataValidationSpec {
+        DataValidationSpec {
+            ty: "whole".into(),
+            operator: "between".into(),
+            formula1: "1".into(),
+            formula2: "100".into(),
+            error_style: "stop".into(),
+            error: "1 to 100".into(),
+            ..Default::default()
+        }
+    }
+
+    fn apply(wb: &mut Workbook, payloads: Vec<EditPayload>) {
+        wb.handle_action(EditAction::Payloads(PayloadsAction {
+            payloads,
+            undoable: true,
+            init: false,
+        }));
+    }
+
+    fn input(row: usize, col: usize, content: &str) -> EditPayload {
+        EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row,
+            col,
+            content: content.to_string(),
+        })
+    }
+
+    fn set(r0: usize, r1: usize, rule: Option<DataValidationSpec>) -> EditPayload {
+        EditPayload::SetDataValidation(SetDataValidation {
+            sheet_idx: 0,
+            start_row: r0,
+            start_col: 0,
+            end_row: r1,
+            end_col: 0,
+            rule,
+        })
+    }
+
+    /// The cell's shadow verdict: Some(true) valid, Some(false) flagged, None
+    /// when it has no shadow.
+    fn verdict(wb: &mut Workbook, row: usize) -> Option<bool> {
+        let id = wb.controller.sid_assigner.find_shadow_id(
+            wb.controller.get_sheet_id_by_idx(0).unwrap(),
+            wb.controller
+                .status
+                .navigator
+                .fetch_cell_id(&wb.controller.get_sheet_id_by_idx(0).unwrap(), row, 0)
+                .unwrap(),
+            ShadowKind::Validation,
+        )?;
+        match wb.get_shadow_info_by_id(id).unwrap().value {
+            Value::Bool(b) => Some(b),
+            other => panic!("unexpected shadow value {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_new_rule_flags_existing_and_later_values() {
+        let mut wb = Workbook::default();
+        apply(&mut wb, vec![input(0, 0, "5"), input(1, 0, "500")]);
+        apply(&mut wb, vec![set(0, 9, Some(whole_1_to_100()))]);
+        assert_eq!(verdict(&mut wb, 0), Some(true));
+        assert_eq!(verdict(&mut wb, 1), Some(false));
+        // A value typed after the rule exists is judged too (it used to be
+        // materialized only at load).
+        apply(&mut wb, vec![input(2, 0, "0")]);
+        assert_eq!(verdict(&mut wb, 2), Some(false));
+        // Fixing it clears the flag through ordinary recalculation.
+        apply(&mut wb, vec![input(2, 0, "50")]);
+        assert_eq!(verdict(&mut wb, 2), Some(true));
+    }
+
+    #[test]
+    fn clearing_and_undo_move_the_flags_with_the_rule() {
+        let mut wb = Workbook::default();
+        apply(&mut wb, vec![input(1, 0, "500")]);
+        apply(&mut wb, vec![set(0, 9, Some(whole_1_to_100()))]);
+        assert_eq!(verdict(&mut wb, 1), Some(false));
+        // Clearing the middle of the range splits the rule around it.
+        apply(&mut wb, vec![set(1, 1, None)]);
+        assert_eq!(verdict(&mut wb, 1), Some(true), "no longer covered");
+        assert!(wb.get_data_validation(0, 0, 0).unwrap().is_some());
+        assert!(wb.get_data_validation(0, 1, 0).unwrap().is_none());
+        assert_eq!(
+            wb.get_data_validation(0, 5, 0).unwrap().unwrap().sqref,
+            "A1 A3:A10"
+        );
+        wb.handle_action(EditAction::Undo);
+        assert_eq!(verdict(&mut wb, 1), Some(false), "undo restores the rule");
+        wb.handle_action(EditAction::Redo);
+        assert_eq!(verdict(&mut wb, 1), Some(true));
+    }
+
+    #[test]
+    fn the_rule_follows_rows_inserted_above_it() {
+        let mut wb = Workbook::default();
+        apply(&mut wb, vec![set(2, 4, Some(whole_1_to_100()))]);
+        apply(
+            &mut wb,
+            vec![EditPayload::InsertRows(InsertRows {
+                sheet_idx: 0,
+                start: 0,
+                count: 2,
+            })],
+        );
+        assert!(wb.get_data_validation(0, 2, 0).unwrap().is_none());
+        assert_eq!(
+            wb.get_data_validation(0, 4, 0).unwrap().unwrap().sqref,
+            "A5:A7"
+        );
+    }
+
+    #[test]
+    fn check_judges_a_value_before_it_is_written() {
+        let mut wb = Workbook::default();
+        apply(&mut wb, vec![set(0, 9, Some(whole_1_to_100()))]);
+        let v = wb.check_data_validation(0, 3, 0, "7".into()).unwrap();
+        assert!(v.has_rule && !v.violates);
+        let v = wb.check_data_validation(0, 3, 0, "7.5".into()).unwrap();
+        assert!(v.violates, "not a whole number");
+        assert_eq!(v.error_style, "stop");
+        assert_eq!(v.error, "1 to 100");
+        // The probe leaves the cell empty.
+        let cell = wb.get_sheet_by_idx(0).unwrap().get_cell_info(3, 0).unwrap();
+        assert!(matches!(cell.value, Value::Empty));
+        // Outside the rule there is nothing to check.
+        assert!(
+            !wb.check_data_validation(0, 20, 0, "x".into())
+                .unwrap()
+                .has_rule
+        );
+    }
+
+    #[test]
+    fn custom_rules_shift_onto_each_cell() {
+        let mut wb = Workbook::default();
+        apply(&mut wb, vec![input(0, 0, "a"), input(1, 0, "b")]);
+        let unique = DataValidationSpec {
+            ty: "custom".into(),
+            formula1: "COUNTIF($A$1:$A$10,A1)=1".into(),
+            ..Default::default()
+        };
+        apply(&mut wb, vec![set(0, 9, Some(unique))]);
+        assert_eq!(verdict(&mut wb, 1), Some(true));
+        apply(&mut wb, vec![input(2, 0, "a")]);
+        assert_eq!(verdict(&mut wb, 2), Some(false), "a duplicate of A1");
+        assert_eq!(verdict(&mut wb, 0), Some(false), "and A1 is now one too");
+    }
+
+    #[test]
+    fn an_authored_rule_round_trips_through_xlsx() {
+        let mut wb = Workbook::default();
+        apply(&mut wb, vec![set(0, 9, Some(whole_1_to_100()))]);
+        let bytes = wb.save().unwrap();
+        let wb2 = Workbook::from_file(&bytes, "dv".into()).unwrap();
+        let info = wb2.get_data_validation(0, 0, 0).unwrap().unwrap();
+        assert_eq!(info.sqref, "A1:A10");
+        assert_eq!(info.spec.ty, "whole");
+        assert_eq!(info.spec.formula2, "100");
+        assert_eq!(info.spec.error, "1 to 100", "errorTitle/error survive now");
+    }
+
+    #[test]
+    fn a_whole_column_rule_stays_a_column() {
+        let mut wb = Workbook::default();
+        apply(
+            &mut wb,
+            vec![EditPayload::SetDataValidation(SetDataValidation {
+                sheet_idx: 0,
+                start_row: 0,
+                start_col: 1,
+                end_row: usize::MAX,
+                end_col: 1,
+                rule: Some(whole_1_to_100()),
+            })],
+        );
+        assert_eq!(
+            wb.get_data_validation(0, 500_000, 1)
+                .unwrap()
+                .unwrap()
+                .sqref,
+            "B:B"
+        );
+    }
 }

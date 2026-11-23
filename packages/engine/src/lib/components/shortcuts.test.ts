@@ -360,6 +360,15 @@ describe('matchShortcut (Excel chords shared by both keymaps)', () => {
         ])
     })
 
+    it('binds Replace to the Control key itself, even on macOS', () => {
+        setup()
+        expect(both({key: 'h', ctrlKey: true})).toEqual(['replace', 'replace'])
+        // ⌘H hides the app on macOS, so Mac Excel's ⌃H is the binding there.
+        setPlatform('MacIntel')
+        expect(both({key: 'h', ctrlKey: true})).toEqual(['replace', 'replace'])
+        expect(both({key: 'h', metaKey: true})).toEqual([null, null])
+    })
+
     it('binds Shift+F2 to add a comment, and leaves bare F2 editing', () => {
         setup()
         expect(both({key: 'F2', shiftKey: true})).toEqual([

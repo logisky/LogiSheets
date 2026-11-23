@@ -57,6 +57,8 @@ import FormatDialogContent, {
 } from '@/components/format-dialog'
 import {BlockComposerComponent} from '@/components/block-composer'
 import {ConditionalFormattingDialog} from '@/components/conditional-formatting'
+import {DataValidationDialog} from '@/components/data-validation'
+import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined'
 import {inferBlockFromSelection} from '@/components/block-composer/infer-selection'
 import type {FieldSetting} from 'logisheets-core'
 import {useToast} from '@/ui/notification/useToast'
@@ -188,6 +190,8 @@ export function CanvasContextMenu({
         endRow: number
         endCol: number
     } | null>(null)
+    // Data validation, opened over the selection the same way.
+    const [dvRange, setDvRange] = useState<typeof cfRange>(null)
     // "Link range → block": the picker lists blocks with a matching column count
     // that aren't already linked; picking one sends a CreateLink payload.
     const [linkOpen, setLinkOpen] = useState(false)
@@ -304,20 +308,29 @@ export function CanvasContextMenu({
         [dataSvc]
     )
 
-    const openConditionalFormatting = (ctx: ContextMenuContext) => {
-        close()
+    // The selection a range dialog applies to — falling back to the clicked
+    // cell when nothing is selected, so the item works on a bare right-click.
+    const rangeOf = (ctx: ContextMenuContext) => {
         const range = getSelectedCellRange(ctx.selectedData)
-        // Fall back to the clicked cell when nothing is selected, so the item
-        // works on a bare right-click.
         const startRow = range?.startRow ?? ctx.row ?? 0
         const startCol = range?.startCol ?? ctx.col ?? 0
-        setCfRange({
+        return {
             sheetIdx: getActiveSheet(),
             startRow,
             startCol,
             endRow: range?.endRow ?? startRow,
             endCol: range?.endCol ?? startCol,
-        })
+        }
+    }
+
+    const openConditionalFormatting = (ctx: ContextMenuContext) => {
+        close()
+        setCfRange(rangeOf(ctx))
+    }
+
+    const openDataValidation = (ctx: ContextMenuContext) => {
+        close()
+        setDvRange(rangeOf(ctx))
     }
 
     const openFormatFor = (selectedData: SelectedData) => {
@@ -676,6 +689,12 @@ export function CanvasContextMenu({
             case 'save':
                 globalStore.requestSave()
                 return
+            case 'replace':
+                globalStore.requestFind(true)
+                return
+            case 'toggleFormulas':
+                globalStore.setShowFormulas(!globalStore.showFormulas)
+                return
             case 'addComment': {
                 const r = getSelectedCellRange(selectedData)
                 if (!r) return
@@ -831,6 +850,13 @@ export function CanvasContextMenu({
                     onClick={() => openConditionalFormatting(ctx)}
                 >
                     {t('ui.menu.conditionalFormatting')}
+                </ContextMenuItem>,
+                <ContextMenuItem
+                    key="data-validation"
+                    icon={<RuleOutlinedIcon />}
+                    onClick={() => openDataValidation(ctx)}
+                >
+                    {t('ui.menu.dataValidation')}
                 </ContextMenuItem>,
                 ...(editCandidate
                     ? [
@@ -1013,6 +1039,23 @@ export function CanvasContextMenu({
                         sheetIdx={cfRange.sheetIdx}
                         range={cfRange}
                         onClose={() => setCfRange(null)}
+                    />
+                )}
+            </Dialog>
+
+            <Dialog
+                open={!!dvRange}
+                onClose={() => setDvRange(null)}
+                disableScrollLock
+                disableRestoreFocus
+                PaperProps={{sx: {zIndex: 2000, p: 0}}}
+            >
+                {dvRange && (
+                    <DataValidationDialog
+                        dataSvc={dataSvc}
+                        sheetIdx={dvRange.sheetIdx}
+                        range={dvRange}
+                        onClose={() => setDvRange(null)}
                     />
                 )}
             </Dialog>
