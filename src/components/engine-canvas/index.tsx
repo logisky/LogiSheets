@@ -8,7 +8,12 @@
 
 import {FC, useRef, useEffect, useState, useCallback} from 'react'
 import {useEngine} from '@/core/engine/provider'
-import type {Grid, SelectedData, CellLayout} from 'logisheets-engine'
+import type {
+    Grid,
+    SelectedData,
+    CellLayout,
+    SessionEventMap,
+} from 'logisheets-engine'
 import {
     buildSelectedDataFromCell,
     getSelectedCellRange,
@@ -128,6 +133,13 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
         },
         [engine]
     )
+    const subscribeShortcut = useCallback(
+        (cb: (e: SessionEventMap['shortcutIntent']) => void) => {
+            engine.on('shortcutIntent', cb)
+            return () => engine.off('shortcutIntent', cb)
+        },
+        [engine]
+    )
 
     // Mount the engine UI (default session)
     useEffect(() => {
@@ -240,6 +252,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                 getActiveSheet={getActiveSheet}
                 setSelection={setSelection}
                 setActiveSheet={setActiveSheet}
+                subscribeShortcut={subscribeShortcut}
             />
             <HyperlinkDialog
                 dataSvc={dataSvc}

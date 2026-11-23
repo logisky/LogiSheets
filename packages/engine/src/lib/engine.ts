@@ -75,6 +75,7 @@ const SESSION_EVENT_TYPES: readonly SessionEventType[] = [
     'contextMenu',
     'followHyperlink',
     'insertHyperlink',
+    'shortcutIntent',
     'error',
 ]
 

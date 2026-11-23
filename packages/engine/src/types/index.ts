@@ -60,10 +60,11 @@ export interface Grid {
     nextColWidth?: number
 }
 
-export interface AppropriateHeight {
-    height: number
+/** The height, in points, a row needs to show its content (see
+ *  DataService.fitRowHeights). */
+export interface RowFitHeight {
     row: number
-    col: number
+    height: number
 }
 
 // ============================================================================
@@ -282,6 +283,12 @@ export interface EngineConfig {
     zoomShortcuts: boolean
     /** Multiplier applied per zoom-shortcut press (and per zoom-button click). */
     zoomStep: number
+    /**
+     * Keyboard bindings. `'web'` steers clear of the chords a browser keeps
+     * for itself; `'excel'` matches Excel and suits a host with no browser
+     * around it, such as a desktop shell. See `Keymap` in the shortcuts table.
+     */
+    keymap: 'web' | 'excel'
 }
 
 /**
@@ -308,6 +315,7 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
     wheelZoom: true,
     zoomShortcuts: true,
     zoomStep: 1.1,
+    keymap: 'web',
 }
 
 // ============================================================================

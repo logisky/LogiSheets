@@ -7,6 +7,7 @@ import '@/core/permissions/patch'
 import App from './App'
 import {EngineProvider} from '@/core/engine/provider'
 import {initEngine} from '@/core/engine'
+import {isTauri} from '@/core/tauri'
 import {installCraftStorageBackend} from '@/core/craft-storage'
 import {initCraftRegistry} from '@/core/craft-packages'
 import {autoInstallCrafts} from '@/core/craft-packages/auto-install'
@@ -21,16 +22,21 @@ installCraftStorageBackend()
 // installing or uninstalling a craft takes effect on the next reload. On the
 // first online start, the distribution's registry crafts are installed first
 // so they are already in that list.
-Promise.all([initEngine(), autoInstallCrafts().then(initCraftRegistry)]).then(
-    async ([engine]) => {
-        const root = createRoot(document.getElementById('root') as HTMLElement)
+//
+// The desktop app has no browser around the grid to claim Ctrl+T, Ctrl+9 or
+// Ctrl+=/-, so it takes Excel's bindings for them; the web build keeps the
+// browser-safe set.
+Promise.all([
+    initEngine({keymap: isTauri() ? 'excel' : 'web'}),
+    autoInstallCrafts().then(initCraftRegistry),
+]).then(async ([engine]) => {
+    const root = createRoot(document.getElementById('root') as HTMLElement)
 
-        root.render(
-            <React.StrictMode>
-                <EngineProvider engine={engine}>
-                    <App />
-                </EngineProvider>
-            </React.StrictMode>
-        )
-    }
-)
+    root.render(
+        <React.StrictMode>
+            <EngineProvider engine={engine}>
+                <App />
+            </EngineProvider>
+        </React.StrictMode>
+    )
+})

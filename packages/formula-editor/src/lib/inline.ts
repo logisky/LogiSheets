@@ -50,6 +50,14 @@ import type {
     FormulaCellRef,
 } from 'logisheets-engine'
 
+/** A rectangle of cells, 0-based and inclusive. */
+export interface CellSpan {
+    startRow: number
+    startCol: number
+    endRow: number
+    endCol: number
+}
+
 /**
  * A single in-progress formula edit, registered with a {@link FormulaCoordinator}
  * so OTHER views can feed it references (Excel "point mode" across sheets/views).
@@ -123,6 +131,13 @@ export interface InlineCellEditorOptions {
     ) => unknown
     /** Move the view's selection (e.g. after committing). */
     setSelection: (data: SelectedData) => void
+    /**
+     * Fill `dst` from `src` the way the fill handle does: formula references
+     * shift per cell, a single value is copied. Ctrl/⌘+Enter uses it to put
+     * the entry into every selected cell; without it Ctrl/⌘+Enter commits
+     * only the edited cell.
+     */
+    fill?: (sheetIdx: number, src: CellSpan, dst: CellSpan) => unknown
     /** Switch the view to a sheet — used to return to the edited cell's sheet
      *  after committing a formula built from another sheet. */
     setViewSheet?: (sheetIdx: number) => void
@@ -230,6 +245,7 @@ export function createInlineCellEditor(
         getSheetName,
         inputCell,
         setSelection,
+        fill,
         setViewSheet,
         coordinator,
         origin = {x: 32, y: 24},
@@ -245,6 +261,9 @@ export function createInlineCellEditor(
     } = options
 
     let grid: Grid | null = options.grid ?? null
+    // The view's own selection (not point-mode references), so Ctrl/⌘+Enter
+    // knows which cells the entry goes into.
+    let viewSelection: SelectedData | null = null
     let editing = false
     let ctx: EditCtx | null = null
     let editorHandle: FormulaEditorHandle | null = null
@@ -556,6 +575,7 @@ export function createInlineCellEditor(
             },
             // Enter commits and steps down, Shift+Enter up (Excel behavior).
             onSubmit: (v, shift) => commitEdit(v, true, shift ? -1 : 1),
+            onSubmitAll: (v) => commitIntoSelection(v),
             onCancel: cancelEdit,
             // Point mode: default to moving the grid selection (host may override).
             onArrowKey: onArrowKey ?? movePoint,
@@ -569,20 +589,21 @@ export function createInlineCellEditor(
     /**
      * `step` moves the selection that many rows from the edited cell after a
      * restoring commit (Enter: 1, Shift+Enter: -1); 0 re-selects the cell.
+     * Resolves whether the value was committed (an invalid formula is not).
      */
     async function commitEdit(
         value: string,
         restoreSelection = true,
         step = 0
-    ) {
-        if (!ctx) return
+    ): Promise<boolean> {
+        if (!ctx) return false
         const {row, col, sheetIdx: editSheetIdx} = ctx
         const newText = value.trim()
         if (newText.startsWith('=')) {
             const valid = await source.checkFormula(newText)
             if (!valid) {
                 onInvalidFormula?.()
-                return
+                return false
             }
         }
         await inputCell(editSheetIdx, row, col, newText)
@@ -597,6 +618,49 @@ export function createInlineCellEditor(
         finishEditing()
         onContentChanged?.()
         focusCanvas()
+        return true
+    }
+
+    /**
+     * Ctrl/⌘+Enter (Excel): commit, then fill the rest of the view's
+     * selection from the edited cell — down its column, then that column out
+     * to the right — so a formula's relative references shift per cell. The
+     * selection stays put. Falls back to an in-place commit when the
+     * selection is one cell, the edited cell is not its top-left corner, the
+     * view has moved to another sheet, or the host gave no `fill`.
+     */
+    async function commitIntoSelection(value: string) {
+        if (!ctx) return
+        const {row, col, sheetIdx} = ctx
+        const d = viewSelection?.data
+        const r = d?.ty === 'cellRange' ? d.d : null
+        const spans =
+            !!fill &&
+            !!r &&
+            getViewSheetIdx() === sheetIdx &&
+            Math.min(r.startRow, r.endRow) === row &&
+            Math.min(r.startCol, r.endCol) === col &&
+            (r.startRow !== r.endRow || r.startCol !== r.endCol)
+        if (!spans || !r || !fill) {
+            await commitEdit(value, true, 0)
+            return
+        }
+        const endRow = Math.max(r.startRow, r.endRow)
+        const endCol = Math.max(r.startCol, r.endCol)
+        if (!(await commitEdit(value, false))) return
+        if (endRow > row)
+            await fill(
+                sheetIdx,
+                {startRow: row, startCol: col, endRow: row, endCol: col},
+                {startRow: row + 1, startCol: col, endRow, endCol: col}
+            )
+        if (endCol > col)
+            await fill(
+                sheetIdx,
+                {startRow: row, startCol: col, endRow, endCol: col},
+                {startRow: row, startCol: col + 1, endRow, endCol}
+            )
+        onContentChanged?.()
     }
 
     function cancelEdit() {
@@ -642,6 +706,7 @@ export function createInlineCellEditor(
                 commitEdit(editorText, false)
             }
         }
+        viewSelection = data
         setSelection(data)
         onContentChanged?.()
     }

@@ -20,8 +20,8 @@ import type {
     BlockSortOrder,
 } from 'logisheets-web'
 
-import type {Grid, AppropriateHeight} from '$types/index'
-export type {AppropriateHeight} from '$types/index'
+import type {Grid, RowFitHeight} from '$types/index'
+export type {RowFitHeight} from '$types/index'
 
 // ============================================================================
 // Worker Update Events - Posted from worker to main thread
@@ -148,7 +148,7 @@ export enum OffscreenRenderName {
     Resize = 'resize',
     Init = 'init',
     Dispose = 'dispose',
-    GetAppropriateHeights = 'getAppropriateHeights',
+    GetRowFitHeights = 'getRowFitHeights',
     SetGridLines = 'setGridLines',
     SetZoom = 'setZoom',
     SetShowCellValues = 'setShowCellValues',
@@ -208,12 +208,11 @@ export interface IOffscreenWorker {
         dpr: number
     ): Result<Grid>
     init(canvasId: number, canvas: OffscreenCanvas, dpr: number): void
-    getAppropriateHeights(
-        canvasId: number,
-        sheetId: number,
-        anchorX: number,
-        anchorY: number
-    ): Result<AppropriateHeight[]>
+    getRowFitHeights(
+        sheetIdx: number,
+        fromRow: number,
+        toRow: number
+    ): Result<RowFitHeight[]>
 }
 
 // ============================================================================

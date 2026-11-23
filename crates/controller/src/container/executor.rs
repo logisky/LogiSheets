@@ -322,7 +322,7 @@ impl ContainerExecutor {
                     .map_err(|l| BasicError::SheetIdxExceed(l))?;
                 let row_id = ctx.fetch_row_id(&sheet_id, p.row)?;
                 let info = self.container.get_row_info_mut(sheet_id, row_id);
-                info.custom_height = true;
+                info.custom_height = p.auto_fit != Some(true);
                 info.ht = Some(p.height);
                 Ok((self, true))
             }

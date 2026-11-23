@@ -4,7 +4,6 @@
 
 import type {PatternFill, BorderPr, CfDataBar, CfIcon} from 'logisheets-web'
 import type {CellView} from './view_manager'
-import type {AppropriateHeight} from './types'
 import {RenderCell} from './render'
 import {
     Range,
@@ -125,26 +124,34 @@ export class Painter {
         this._ctx.restore()
     }
 
-    public getAppropriateHeights(
+    /**
+     * The height (CSS px, padding included) each row's text needs, by row
+     * index, measured exactly as `renderCell` lays it out. Rows with no text
+     * are absent. A merged cell that spans rows is skipped, as Excel's
+     * auto-fit skips it: it has no single row to size.
+     */
+    public measureRowContent(
         resp: CellView,
         anchorX: number,
         anchorY: number
-    ): AppropriateHeight[] {
-        const heights = Array.from({length: resp.rows.length}, () => ({
-            height: 0,
-            row: 0,
-            col: 0,
-        }))
+    ): Map<number, number> {
+        const spanning = new Set(
+            resp.mergeCells
+                .filter((m) => m.coordinate.endRow > m.coordinate.startRow)
+                .map((m) => `${m.coordinate.startRow}-${m.coordinate.startCol}`)
+        )
+        const heights = new Map<number, number>()
         resp.cells.forEach((cell) => {
             if (cell.skipRender) return
-            const height = this.renderCell(cell, anchorX, anchorY, false)
-            const {startRow} = cell.coordinate
-            const row = startRow - resp.rows[0].coordinate.startRow
-            if (heights[row].height < height) {
-                heights[row].height = height
-                heights[row].col = cell.coordinate.startCol
-                heights[row].row = cell.coordinate.startRow
-            }
+            const {startRow, startCol} = cell.coordinate
+            if (spanning.has(`${startRow}-${startCol}`)) return
+            const text = this.renderCell(cell, anchorX, anchorY, false)
+            if (text <= 0) return
+            // renderCell reports the text block alone; the box keeps 2px
+            // of padding above and below it.
+            const needed = text + 4
+            if ((heights.get(startRow) ?? 0) < needed)
+                heights.set(startRow, needed)
         })
         return heights
     }
@@ -482,7 +489,7 @@ export class Painter {
 
         // Draw the text only when actually rendering AND cell values are enabled.
         // When hidden we still fall through to return the measured height, so the
-        // getAppropriateHeights (render=false) path and row-height math are
+        // measureRowContent (render=false) path and row-height math are
         // unaffected — only the fillText calls are skipped.
         const draw = render && VALUE_SETTINGS.showCellValues
 

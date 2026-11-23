@@ -965,6 +965,12 @@ pub struct Transaction {
     /// `commitTempStatus` (one undo step for all of them) or `cleanupTempStatus`
     /// (discarded). A non-temp transaction discards an open branch first.
     pub temp: bool,
+    /// Join the most recent undo step instead of recording one (of the temp
+    /// branch's history when `temp`); `undoable` is then ignored. Undo reverts
+    /// both together and redo restores both. For layout measured after an
+    /// edit landed — row heights, column widths — so a fit is not a separate
+    /// step that undo leaves behind or redo forgets.
+    pub amend: Option<bool>,
 }
 
 #[derive(Debug)]

@@ -6,6 +6,7 @@ export class StandardRowInfo implements RowInfo {
     constructor(public readonly idx: number) {}
     height = SETTINGS.defaultCellSize.height
     hidden = false
+    customHeight = false
     get pt() {
         return this.height
     }

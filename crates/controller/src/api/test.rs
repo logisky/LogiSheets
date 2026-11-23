@@ -11778,6 +11778,7 @@ fn row_height_change_invalidates_cached_positions() {
                 sheet_idx: 0,
                 row: 0,
                 height: 100.,
+                auto_fit: None,
             },
         )],
         undoable: true,
@@ -12070,4 +12071,59 @@ fn a_formula_naming_the_block_survives_a_refresh_under_the_same_id_and_name() {
     refresh.extend(load("7"));
     assert_ok(&apply(&mut wb, refresh), "refresh");
     assert_eq!(cell_num(&wb, 0, 5), Some(70.0));
+}
+
+#[test]
+fn amend_joins_the_previous_undo_step() {
+    use crate::controller::display::Value;
+    use crate::edit_action::SetRowHeight;
+
+    let mut wb = Workbook::default();
+    let default_height = wb.get_sheet_by_idx(0).unwrap().get_row_height(0).unwrap();
+    let input = |content: &str| PayloadsAction {
+        payloads: vec![EditPayload::CellInput(CellInput {
+            sheet_idx: 0,
+            row: 0,
+            col: 0,
+            content: content.to_string(),
+        })],
+        undoable: true,
+        init: false,
+    };
+    let fit = PayloadsAction {
+        payloads: vec![EditPayload::SetRowHeight(SetRowHeight {
+            sheet_idx: 0,
+            row: 0,
+            height: 40.0,
+            auto_fit: Some(true),
+        })],
+        undoable: true,
+        init: false,
+    };
+    // `Value` has no PartialEq; its Debug text is enough to tell them apart.
+    let state = |wb: &Workbook| {
+        let ws = wb.get_sheet_by_idx(0).unwrap();
+        (
+            format!("{:?}", ws.get_value(0, 0).unwrap()),
+            ws.get_row_height(0).unwrap(),
+        )
+    };
+    let text = |s: &str| format!("{:?}", Value::Str(s.into()));
+
+    wb.handle_action(EditAction::Payloads(input("first")));
+    let edit = wb.handle_action(EditAction::Payloads(input("second")));
+    let amended = wb.handle_action_amend(fit, false);
+    // The fit lands, but as no step of its own.
+    assert_eq!(amended.version, edit.version);
+    assert_eq!(state(&wb), (text("second"), 40.0));
+
+    // One undo reverts the edit and the fit together...
+    wb.handle_action(EditAction::Undo);
+    assert_eq!(state(&wb), (text("first"), default_height));
+    // ...and redo brings both back, which a separate non-undoable fit lost.
+    wb.handle_action(EditAction::Redo);
+    assert_eq!(state(&wb), (text("second"), 40.0));
+    // A fitted height leaves the row auto-sized, unlike one the user set.
+    let info = wb.get_sheet_by_idx(0).unwrap().get_row_info(0).unwrap();
+    assert!(!info.custom_height);
 }

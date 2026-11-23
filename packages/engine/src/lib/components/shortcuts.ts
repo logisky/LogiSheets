@@ -76,16 +76,77 @@ export type ShortcutId =
     | 'toggleFormulas'
     | 'insertLines'
     | 'deleteLines'
+    // Whole-line selection
+    | 'selectRows'
+    | 'selectColumns'
+    // Hide / unhide the selected lines
+    | 'hideRows'
+    | 'hideColumns'
+    | 'unhideRows'
+    | 'unhideColumns'
+    | 'convertToBlock'
+    | 'newSheet'
+    | 'addComment'
+    // Number formats (Ctrl+Shift+~ ! @ # $ % ^)
+    | 'numFmtGeneral'
+    | 'numFmtNumber'
+    | 'numFmtTime'
+    | 'numFmtDate'
+    | 'numFmtCurrency'
+    | 'numFmtPercent'
+    | 'numFmtScientific'
     // Canvas zoom
     | 'zoomIn'
     | 'zoomOut'
     | 'zoomReset'
+
+/**
+ * Which set of bindings is active. `'web'` stays off the chords a browser
+ * keeps for itself (Ctrl+T, Ctrl+9, Ctrl+=/- page zoom) and borrows Google
+ * Sheets' spellings instead. `'excel'` is for a host with no browser chrome
+ * around it (the desktop app), where every chord is ours to take, so it
+ * spells them the way Excel does.
+ */
+export type Keymap = 'web' | 'excel'
+
+/**
+ * Shortcuts whose action belongs to the host: the grid has no dialog, block
+ * composer, sheet tabs, comment UI or file handling of its own, so for these
+ * it only reports the intent (with the selection it applies to) and the host
+ * acts on it.
+ */
+export const HOST_SHORTCUTS = [
+    'save',
+    'formatCells',
+    'autoSum',
+    'convertToBlock',
+    'hideRows',
+    'hideColumns',
+    'unhideRows',
+    'unhideColumns',
+    'newSheet',
+    'addComment',
+    'numFmtGeneral',
+    'numFmtNumber',
+    'numFmtTime',
+    'numFmtDate',
+    'numFmtCurrency',
+    'numFmtPercent',
+    'numFmtScientific',
+] as const satisfies readonly ShortcutId[]
+
+export type HostShortcutId = (typeof HOST_SHORTCUTS)[number]
 
 /** `true`/`false` require the modifier up/down; `'any'` ignores it. */
 type ModReq = boolean | 'any'
 
 interface ShortcutSpec {
     id: ShortcutId
+    /**
+     * Only active under this keymap. Omitted means both. An id may appear
+     * once per keymap, so the two can bind the same action to different keys.
+     */
+    keymap?: Keymap
     /** Human-readable label, e.g. shown in menus / tooltips. */
     description: string
     /** `KeyboardEvent.key` value(s) to match, compared case-insensitively. */
@@ -230,23 +291,95 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
         shift: true,
     },
     // AutoSum is Alt+`=` in Excel — no Ctrl. Spelling it that way also keeps
-    // Ctrl/⌘+Alt+`=` free for the insert binding below.
-    {id: 'autoSum', description: 'AutoSum', key: '=', alt: true},
+    // Ctrl/⌘+Alt+`=` free for the insert binding below. macOS types Option+`=`
+    // as `≠`.
+    {id: 'autoSum', description: 'AutoSum', key: ['=', '≠'], alt: true},
     {
         id: 'toggleFormulas',
         description: 'Show formulas',
         key: '`',
         primary: true,
     },
-    // ---- Insert / delete rows and columns ----
-    // Ctrl/⌘+Alt+`=` / `-`, as in Google Sheets. Excel puts these on
-    // Ctrl+Shift+`+` / Ctrl+`-`, but those are the same physical keys the
-    // browser zooms with, and adding Alt keeps zoom on its usual chords below.
+    // ---- Whole-line selection ----
+    // Ctrl/⌘+Space selects the columns of the selection, Shift+Space its
+    // rows — Excel and Google Sheets agree on these.
+    {
+        id: 'selectColumns',
+        description: 'Select columns',
+        key: ' ',
+        primary: true,
+    },
+    {id: 'selectRows', description: 'Select rows', key: ' ', shift: true},
+    // Shift+F11 is Excel's "insert worksheet"; no browser claims it.
+    {id: 'newSheet', description: 'New sheet', key: 'F11', shift: true},
+    {id: 'addComment', description: 'Add comment', key: 'F2', shift: true},
+
+    // ---- Number formats: Ctrl/⌘+Shift+~ ! @ # $ % ^ ----
+    // A US layout reports the shifted symbol; other layouts put those
+    // symbols elsewhere, so the digit (or backtick) each sits on is accepted
+    // too. On macOS ⌘⇧3 / ⌘⇧4 are the system's screenshot keys and never
+    // reach the page.
+    {
+        id: 'numFmtGeneral',
+        description: 'General format',
+        key: ['~', '`'],
+        primary: true,
+        shift: true,
+    },
+    {
+        id: 'numFmtNumber',
+        description: 'Number format',
+        key: ['!', '1'],
+        primary: true,
+        shift: true,
+    },
+    {
+        id: 'numFmtTime',
+        description: 'Time format',
+        key: ['@', '2'],
+        primary: true,
+        shift: true,
+    },
+    {
+        id: 'numFmtDate',
+        description: 'Date format',
+        key: ['#', '3'],
+        primary: true,
+        shift: true,
+    },
+    {
+        id: 'numFmtCurrency',
+        description: 'Currency format',
+        key: ['$', '4'],
+        primary: true,
+        shift: true,
+    },
+    {
+        id: 'numFmtPercent',
+        description: 'Percent format',
+        key: ['%', '5'],
+        primary: true,
+        shift: true,
+    },
+    {
+        id: 'numFmtScientific',
+        description: 'Scientific format',
+        key: ['^', '6'],
+        primary: true,
+        shift: true,
+    },
+
+    // ---- Insert / delete rows and columns, and zoom ----
+    // The two keymaps trade these chords. A browser zooms the page on
+    // Ctrl/⌘+`=`/`-`/`0`, so the web keymap leaves zoom there and moves insert
+    // / delete onto the Alt chords, as Google Sheets does. Excel is the other
+    // way round: Ctrl+`+` / Ctrl+`-` insert and delete, and zoom takes Alt.
     // `+` is Shift+`=` on most layouts and its own key on the numpad; macOS
-    // turns Option+`=` / Option+`-` into `≠` / `–`, so those spellings are
-    // listed too.
+    // turns Option+`=` / `-` / `0` into `≠` / `–` / `º`, so those spellings
+    // are listed too.
     {
         id: 'insertLines',
+        keymap: 'web',
         description: 'Insert rows / columns',
         key: ['=', '+', '≠'],
         primary: true,
@@ -255,19 +388,19 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     },
     {
         id: 'deleteLines',
+        keymap: 'web',
         description: 'Delete rows / columns',
         key: ['-', '_', '–', '—'],
         primary: true,
         alt: true,
         shift: 'any',
     },
-    // ---- Canvas zoom ----
-    // Ctrl/⌘ + `+` / `-` / `0`, matching every browser and Excel. Shift is
-    // ignored because `+` is Shift+`=` on most layouts, and the numpad keys
-    // report '+' / '-' directly. Alt defaults to false here, so the insert /
-    // delete specs above (which require it) can never also match.
+    // Shift is ignored because `+` is Shift+`=` on most layouts, and the numpad
+    // keys report '+' / '-' directly. Alt defaults to false here, so the
+    // insert / delete specs above (which require it) can never also match.
     {
         id: 'zoomIn',
+        keymap: 'web',
         description: 'Zoom in',
         key: ['=', '+'],
         primary: true,
@@ -275,19 +408,120 @@ export const SHORTCUTS: readonly ShortcutSpec[] = [
     },
     {
         id: 'zoomOut',
+        keymap: 'web',
         description: 'Zoom out',
         key: ['-', '_'],
         primary: true,
         shift: 'any',
     },
-    {id: 'zoomReset', description: 'Reset zoom', key: '0', primary: true},
+    {
+        id: 'zoomReset',
+        keymap: 'web',
+        description: 'Reset zoom',
+        key: '0',
+        primary: true,
+    },
+    // Excel: Ctrl+`+` (Shift+`=`, or the numpad `+`) inserts and Ctrl+`-`
+    // deletes. Bare Ctrl+`=` is left unbound, as it is in Excel.
+    {
+        id: 'insertLines',
+        keymap: 'excel',
+        description: 'Insert rows / columns',
+        key: '+',
+        primary: true,
+        shift: 'any',
+    },
+    // Shift must stay up: Ctrl+Shift+`-` is Excel's "remove borders".
+    {
+        id: 'deleteLines',
+        keymap: 'excel',
+        description: 'Delete rows / columns',
+        key: '-',
+        primary: true,
+    },
+    {
+        id: 'zoomIn',
+        keymap: 'excel',
+        description: 'Zoom in',
+        key: ['=', '+', '≠'],
+        primary: true,
+        alt: true,
+        shift: 'any',
+    },
+    {
+        id: 'zoomOut',
+        keymap: 'excel',
+        description: 'Zoom out',
+        key: ['-', '_', '–', '—'],
+        primary: true,
+        alt: true,
+        shift: 'any',
+    },
+    // Excel has no reset chord; Ctrl+0 hides columns there (below), so reset
+    // joins the other zoom keys on Alt.
+    {
+        id: 'zoomReset',
+        keymap: 'excel',
+        description: 'Reset zoom',
+        key: ['0', 'º'],
+        primary: true,
+        alt: true,
+    },
+
+    // ---- Excel-only chords a browser keeps for itself ----
+    // Ctrl+T opens a tab and Ctrl+9 jumps to the last tab in every browser,
+    // and the page never sees them, so these exist only where there is no
+    // browser around the grid.
+    {
+        id: 'convertToBlock',
+        keymap: 'excel',
+        description: 'Convert to block',
+        key: 't',
+        primary: true,
+    },
+    {
+        id: 'hideRows',
+        keymap: 'excel',
+        description: 'Hide rows',
+        key: '9',
+        primary: true,
+    },
+    {
+        id: 'hideColumns',
+        keymap: 'excel',
+        description: 'Hide columns',
+        key: '0',
+        primary: true,
+    },
+    // With Shift held, a US layout reports '(' / ')' for 9 / 0.
+    {
+        id: 'unhideRows',
+        keymap: 'excel',
+        description: 'Unhide rows',
+        key: ['9', '('],
+        primary: true,
+        shift: true,
+    },
+    {
+        id: 'unhideColumns',
+        keymap: 'excel',
+        description: 'Unhide columns',
+        key: ['0', ')'],
+        primary: true,
+        shift: true,
+    },
 ]
 
 function modOk(pressed: boolean, req: ModReq | undefined): boolean {
     return req === 'any' ? true : pressed === !!req
 }
 
-function matches(e: KeyboardEvent, spec: ShortcutSpec): boolean {
+function matches(
+    e: KeyboardEvent,
+    spec: ShortcutSpec,
+    keymap: Keymap
+): boolean {
+    if (spec.keymap && spec.keymap !== keymap) return false
     const keys = Array.isArray(spec.key) ? spec.key : [spec.key]
     if (!keys.some((k) => k.toLowerCase() === e.key.toLowerCase())) return false
     if (primaryPressed(e) !== !!spec.primary) return false
@@ -296,9 +530,12 @@ function matches(e: KeyboardEvent, spec: ShortcutSpec): boolean {
     return true
 }
 
-/** The shortcut a key event maps to, or null. */
-export function matchShortcut(e: KeyboardEvent): ShortcutId | null {
-    return SHORTCUTS.find((s) => matches(e, s))?.id ?? null
+/** The shortcut a key event maps to under `keymap`, or null. */
+export function matchShortcut(
+    e: KeyboardEvent,
+    keymap: Keymap = 'web'
+): ShortcutId | null {
+    return SHORTCUTS.find((s) => matches(e, s, keymap))?.id ?? null
 }
 
 /** A handler per shortcut. All optional — unhandled shortcuts fall through. */
@@ -313,9 +550,10 @@ export type ShortcutHandlers = Partial<
  */
 export function dispatchShortcut(
     e: KeyboardEvent,
-    handlers: ShortcutHandlers
+    handlers: ShortcutHandlers,
+    keymap: Keymap = 'web'
 ): boolean {
-    const id = matchShortcut(e)
+    const id = matchShortcut(e, keymap)
     if (!id) return false
     const handler = handlers[id]
     if (!handler) return false
@@ -323,9 +561,14 @@ export function dispatchShortcut(
     return true
 }
 
-/** Platform-aware display label, e.g. "⌘C" on Mac, "Ctrl+C" on Windows. */
-export function shortcutLabel(id: ShortcutId): string {
-    const spec = SHORTCUTS.find((s) => s.id === id)
+/**
+ * Platform-aware display label, e.g. "⌘C" on Mac, "Ctrl+C" on Windows. Empty
+ * when `id` has no binding under `keymap`.
+ */
+export function shortcutLabel(id: ShortcutId, keymap: Keymap = 'web'): string {
+    const spec = SHORTCUTS.find(
+        (s) => s.id === id && (!s.keymap || s.keymap === keymap)
+    )
     if (!spec) return ''
     const apple = isApplePlatform()
     const parts: string[] = []
@@ -333,6 +576,8 @@ export function shortcutLabel(id: ShortcutId): string {
     if (spec.shift === true) parts.push(apple ? '⇧' : 'Shift')
     if (spec.alt === true) parts.push(apple ? '⌥' : 'Alt')
     const key = Array.isArray(spec.key) ? spec.key[0] : spec.key
-    parts.push(key.length === 1 ? key.toUpperCase() : key)
+    parts.push(
+        key === ' ' ? 'Space' : key.length === 1 ? key.toUpperCase() : key
+    )
     return apple ? parts.join('') : parts.join('+')
 }

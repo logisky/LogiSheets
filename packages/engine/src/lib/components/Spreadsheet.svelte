@@ -53,7 +53,12 @@
     import SheetTabs from './SheetTabs.svelte'
     import Scrollbar from './Scrollbar.svelte'
     import type { ContextMenuContext } from './contextMenuTypes'
-    import { dispatchShortcut, type ShortcutHandlers } from './shortcuts'
+    import {
+        dispatchShortcut,
+        HOST_SHORTCUTS,
+        type HostShortcutId,
+        type ShortcutHandlers,
+    } from './shortcuts'
     // Pure wheel/selection arithmetic, kept out of this file so it can be
     // unit-tested without a worker or a canvas (see grid_nav.test.ts).
     import {
@@ -130,6 +135,13 @@ let isDragging = false; // True while user is drag-selecting
         /** Ctrl/⌘+K on the active cell — host opens its insert/edit link UI. */
         onInsertHyperlink?: (row: number, col: number) => void
         /**
+         * A shortcut whose action is the host's (HOST_SHORTCUTS: save, format
+         * dialog, AutoSum, convert to block, hide/unhide, new sheet, comment,
+         * number formats). `selectedData` is the selection it applies to.
+         * Without this callback those keys fall through to the browser.
+         */
+        onShortcutIntent?: (id: HostShortcutId, selectedData: SelectedData) => void
+        /**
          * The user asked to zoom (Ctrl/⌘ + wheel, trackpad pinch, or a zoom
          * shortcut). Zoom is engine-global, so the view only reports the
          * requested factor and the point to hold still; the Engine clamps it
@@ -163,6 +175,7 @@ let isDragging = false; // True while user is drag-selecting
         onFind,
         onFollowHyperlink,
         onInsertHyperlink,
+        onShortcutIntent,
         onZoomRequest,
         onNoDataBoundary,
         dataService: externalDataService = null,
@@ -1861,10 +1874,10 @@ let isDragging = false; // True while user is drag-selecting
     // be a fixed key — "type any printable char to start editing" — stays as a
     // fallback at the bottom of onKeyDown.
     //
-    // Remaining chord handlers (copy/cut/paste/selectAll/bold/italic/underline/
-    // fillDown/fillRight/find/formatCells/insertDate/insertTime/autoSum/
-    // toggleFormulas) are intentionally omitted — an absent entry falls through
-    // and preserves native/default behavior. Add one when the feature lands.
+    // Copy/cut/paste are intentionally omitted: the host handles the native
+    // clipboard events, which an absent entry leaves alone. toggleFormulas has
+    // no handler because there is no show-formulas view yet. The host-owned
+    // shortcuts (HOST_SHORTCUTS) are added in `shortcutHandlers` below.
     const baseShortcutHandlers: ShortcutHandlers = {
         // Shift extends the selection from its anchor instead of moving it.
         moveUp: (e) => (e.shiftKey ? extendSelection('up') : moveSelection('up')),
@@ -1900,11 +1913,11 @@ let isDragging = false; // True while user is drag-selecting
         fillRight: () => fillFromSelection('right'),
         insertLines: () => insertOrDeleteLines('insert'),
         deleteLines: () => insertOrDeleteLines('delete'),
+        selectAll: () => selectUsedRange(),
+        selectRows: () => selectWholeLines('row'),
+        selectColumns: () => selectWholeLines('col'),
         undo: () => dataService?.undo(),
         redo: () => dataService?.redo(),
-        // Persisting is the host's call (file export, server sync, ...); the
-        // grid just forwards the intent.
-        save: () => onSave?.(),
         // Find is owned by the host UI (a React overlay). The grid only
         // forwards the intent; returning a handler makes dispatchShortcut
         // preventDefault, so the browser's native Ctrl+F is suppressed.
@@ -1924,11 +1937,28 @@ let isDragging = false; // True while user is drag-selecting
     // Drop the zoom bindings when the host turned zoom shortcuts off, so
     // Ctrl/⌘ +/-/0 falls through to the browser instead of being swallowed
     // (an unhandled shortcut is not preventDefault'd — see dispatchShortcut).
+    //
+    // The host-owned shortcuts are only registered when a host listens, for
+    // the same reason: a handler means preventDefault.
     const shortcutHandlers: ShortcutHandlers = $derived.by(() => {
-        if (cfg.zoomShortcuts) return baseShortcutHandlers
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { zoomIn, zoomOut, zoomReset, ...rest } = baseShortcutHandlers
-        return rest
+        const handlers: ShortcutHandlers = cfg.zoomShortcuts
+            ? { ...baseShortcutHandlers }
+            : rest
+        if (onShortcutIntent) {
+            const report = onShortcutIntent
+            for (const id of HOST_SHORTCUTS)
+                handlers[id] = () => report(id, selectedData)
+        }
+        // Persisting is the host's call (file export, server sync, ...). A
+        // host that passes `onSave` gets it there; otherwise Ctrl/⌘+S is one
+        // more intent, and with neither it falls through to the browser.
+        if (onSave) {
+            const save = onSave
+            handlers.save = () => save()
+        }
+        return handlers
     })
 
     /** Multiply the current zoom by `step`, anchored at the canvas center. */
@@ -2118,6 +2148,49 @@ let isDragging = false; // True while user is drag-selecting
         })
     }
 
+    /**
+     * Ctrl/⌘+Space / Shift+Space: widen the selection to whole columns / rows.
+     * A selection of the other axis's lines already covers every cell, so it
+     * is left alone.
+     */
+    function selectWholeLines(axis: 'row' | 'col') {
+        const range = getSelectedCellRange(selectedData)
+        const lines = getSelectedLines(selectedData)
+        let start: number
+        let end: number
+        if (range) {
+            ;[start, end] =
+                axis === 'row'
+                    ? [range.startRow, range.endRow]
+                    : [range.startCol, range.endCol]
+        } else if (lines && lines.type === axis) {
+            ;[start, end] = [lines.start, lines.end]
+        } else return
+        const d = buildSelectedDataFromLines(
+            Math.min(start, end),
+            Math.max(start, end),
+            axis,
+            'none'
+        )
+        selectedData = d
+        onSelectedDataChange?.(d)
+    }
+
+    /**
+     * Ctrl/⌘+A: select from A1 to the last used cell. There is no
+     * whole-sheet selection to stand for Excel's, and the used range is what
+     * a select-all is wanted for (copy it, format it).
+     */
+    async function selectUsedRange() {
+        if (!dataService) return
+        const dim = await dataService.getSheetDimension(activeSheet)
+        if (isErrorMessage(dim)) return
+        applyExtendedSelection(
+            { row: 0, col: 0 },
+            { row: Math.max(0, dim.maxRow), col: Math.max(0, dim.maxCol) }
+        )
+    }
+
     async function fillFromSelection(direction: 'down' | 'right') {
         if (!dataService) return
         const sel = getSelectedCellRange(selectedData)
@@ -2149,7 +2222,7 @@ let isDragging = false; // True while user is drag-selecting
 
     async function onKeyDown(e: KeyboardEvent) {
         // 1) Registered key bindings (navigation, edit, Ctrl/⌘ chords).
-        if (dispatchShortcut(e, shortcutHandlers)) {
+        if (dispatchShortcut(e, shortcutHandlers, cfg.keymap)) {
             e.preventDefault()
             e.stopPropagation()
             return

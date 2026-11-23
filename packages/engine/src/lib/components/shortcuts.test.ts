@@ -1,5 +1,11 @@
 import {describe, it, expect, afterEach} from 'vitest'
-import {SHORTCUTS, matchShortcut, dispatchShortcut} from './shortcuts'
+import {
+    SHORTCUTS,
+    HOST_SHORTCUTS,
+    matchShortcut,
+    dispatchShortcut,
+    shortcutLabel,
+} from './shortcuts'
 
 /**
  * The bindings table is where key conflicts hide: two specs that can both match
@@ -50,9 +56,76 @@ afterEach(() => {
 })
 
 describe('the bindings table', () => {
-    it('has no duplicate ids', () => {
-        const ids = SHORTCUTS.map((s) => s.id)
-        expect(new Set(ids).size).toBe(ids.length)
+    it('binds each id at most once per keymap', () => {
+        for (const keymap of ['web', 'excel'] as const) {
+            const ids = SHORTCUTS.filter(
+                (s) => !s.keymap || s.keymap === keymap
+            ).map((s) => s.id)
+            expect(new Set(ids).size).toBe(ids.length)
+        }
+    })
+
+    it('gives every host shortcut a binding in the excel keymap', () => {
+        setPlatform('Win32')
+        for (const id of HOST_SHORTCUTS)
+            expect(shortcutLabel(id, 'excel')).not.toBe('')
+    })
+})
+
+describe('matchShortcut (excel keymap, non-Apple)', () => {
+    const m = (init: KeyInit) => matchShortcut(ev(init), 'excel')
+    const setup = () => setPlatform('Win32')
+
+    it('inserts on Ctrl++ and deletes on Ctrl+-, as Excel does', () => {
+        setup()
+        // Shift+'=' reports '+'; the numpad '+' reports it with Shift up.
+        expect(m({key: '+', ctrlKey: true, shiftKey: true})).toBe('insertLines')
+        expect(m({key: '+', ctrlKey: true})).toBe('insertLines')
+        expect(m({key: '-', ctrlKey: true})).toBe('deleteLines')
+        // Bare Ctrl+= is unbound in Excel, and Ctrl+Shift+- is its
+        // "remove borders", so neither may reach insert / delete.
+        expect(m({key: '=', ctrlKey: true})).toBeNull()
+        expect(m({key: '_', ctrlKey: true, shiftKey: true})).toBeNull()
+    })
+
+    it('moves zoom onto the Alt chords', () => {
+        setup()
+        expect(m({key: '=', ctrlKey: true, altKey: true})).toBe('zoomIn')
+        expect(m({key: '-', ctrlKey: true, altKey: true})).toBe('zoomOut')
+        expect(m({key: '0', ctrlKey: true, altKey: true})).toBe('zoomReset')
+    })
+
+    it('hides with Ctrl+9 / Ctrl+0 and unhides with Shift added', () => {
+        setup()
+        expect(m({key: '9', ctrlKey: true})).toBe('hideRows')
+        expect(m({key: '0', ctrlKey: true})).toBe('hideColumns')
+        // A US layout reports the shifted digits as '(' / ')'.
+        expect(m({key: '(', ctrlKey: true, shiftKey: true})).toBe('unhideRows')
+        expect(m({key: ')', ctrlKey: true, shiftKey: true})).toBe(
+            'unhideColumns'
+        )
+    })
+
+    it('binds Ctrl+T to convert to block', () => {
+        setup()
+        expect(m({key: 't', ctrlKey: true})).toBe('convertToBlock')
+    })
+
+    it('keeps the bindings both keymaps share', () => {
+        setup()
+        expect(m({key: 'd', ctrlKey: true})).toBe('fillDown')
+        expect(m({key: '=', altKey: true})).toBe('autoSum')
+        expect(m({key: ' ', ctrlKey: true})).toBe('selectColumns')
+        expect(m({key: ' ', shiftKey: true})).toBe('selectRows')
+        expect(m({key: 'F11', shiftKey: true})).toBe('newSheet')
+    })
+
+    it('labels the Excel spellings', () => {
+        setup()
+        expect(shortcutLabel('insertLines', 'excel')).toBe('Ctrl++')
+        expect(shortcutLabel('insertLines', 'web')).toBe('Ctrl+Alt+=')
+        expect(shortcutLabel('selectColumns')).toBe('Ctrl+Space')
+        expect(shortcutLabel('hideRows', 'web')).toBe('')
     })
 })
 
@@ -164,6 +237,12 @@ describe('matchShortcut (non-Apple: Ctrl is primary)', () => {
         expect(matchShortcut(ev({key: '0', ctrlKey: true}))).toBe('zoomReset')
     })
 
+    it('leaves the chords a browser keeps for itself unbound', () => {
+        setup()
+        expect(matchShortcut(ev({key: 't', ctrlKey: true}))).toBeNull()
+        expect(matchShortcut(ev({key: '9', ctrlKey: true}))).toBeNull()
+    })
+
     it('keeps AutoSum on the bare Alt+= chord Excel uses', () => {
         setup()
         expect(matchShortcut(ev({key: '=', altKey: true}))).toBe('autoSum')
@@ -238,5 +317,55 @@ describe('dispatchShortcut', () => {
         expect(dispatchShortcut(ev({key: 'F7'}), {pageDown: () => {}})).toBe(
             false
         )
+    })
+})
+
+describe('matchShortcut (Excel chords shared by both keymaps)', () => {
+    const setup = () => setPlatform('Win32')
+    const both = (init: KeyInit) =>
+        (['web', 'excel'] as const).map((k) => matchShortcut(ev(init), k))
+
+    it('binds the Ctrl+Shift number formats, US symbol or bare digit', () => {
+        setup()
+        const cases: [string, string, string][] = [
+            ['~', '`', 'numFmtGeneral'],
+            ['!', '1', 'numFmtNumber'],
+            ['@', '2', 'numFmtTime'],
+            ['#', '3', 'numFmtDate'],
+            ['$', '4', 'numFmtCurrency'],
+            ['%', '5', 'numFmtPercent'],
+            ['^', '6', 'numFmtScientific'],
+        ]
+        for (const [symbol, digit, id] of cases)
+            for (const key of [symbol, digit])
+                expect(both({key, ctrlKey: true, shiftKey: true})).toEqual([
+                    id,
+                    id,
+                ])
+    })
+
+    it('keeps their unshifted neighbours on their own bindings', () => {
+        setup()
+        expect(both({key: '1', ctrlKey: true})).toEqual([
+            'formatCells',
+            'formatCells',
+        ])
+        expect(both({key: '`', ctrlKey: true})).toEqual([
+            'toggleFormulas',
+            'toggleFormulas',
+        ])
+        expect(both({key: ';', ctrlKey: true, shiftKey: true})).toEqual([
+            'insertTime',
+            'insertTime',
+        ])
+    })
+
+    it('binds Shift+F2 to add a comment, and leaves bare F2 editing', () => {
+        setup()
+        expect(both({key: 'F2', shiftKey: true})).toEqual([
+            'addComment',
+            'addComment',
+        ])
+        expect(both({key: 'F2'})).toEqual(['editCell', 'editCell'])
     })
 })

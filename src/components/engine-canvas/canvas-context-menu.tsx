@@ -44,7 +44,9 @@ import type {
     Transaction,
     Payload,
     DataService,
+    SessionEventMap,
 } from 'logisheets-engine'
+import {autoSumPayload} from '@/core/auto-sum'
 import {
     isErrorMessage,
     getSelectedCellRange,
@@ -95,6 +97,37 @@ function selectedLineRange(ctx: ContextMenuContext): [number, number] {
     return [idx, idx]
 }
 
+/**
+ * Excel's Ctrl+Shift number formats, by shortcut id. Currency follows the
+ * UI language at the call site (yen for Chinese), as Excel follows the
+ * locale.
+ */
+const SHORTCUT_NUM_FMTS = {
+    numFmtGeneral: 'General',
+    numFmtNumber: '#,##0.00',
+    numFmtTime: 'h:mm AM/PM',
+    numFmtDate: 'd-mmm-yy',
+    numFmtCurrency: '"$"#,##0.00',
+    numFmtPercent: '0%',
+    numFmtScientific: '0.00E+00',
+} as const
+
+/** The selection's inclusive [lo, hi] along `axis`, or null if it has none. */
+function linesAlong(
+    selectedData: SelectedData,
+    axis: 'row' | 'col'
+): [number, number] | null {
+    const r = getSelectedCellRange(selectedData)
+    if (r)
+        return axis === 'row'
+            ? [Math.min(r.startRow, r.endRow), Math.max(r.startRow, r.endRow)]
+            : [Math.min(r.startCol, r.endCol), Math.max(r.startCol, r.endCol)]
+    const l = getSelectedLines(selectedData)
+    if (l && l.type === axis)
+        return [Math.min(l.start, l.end), Math.max(l.start, l.end)]
+    return null
+}
+
 const lineSelection = (
     start: number,
     end: number,
@@ -114,6 +147,14 @@ export interface CanvasContextMenuProps {
     setSelection: (data: SelectedData) => void
     /** Switch this view's sheet — "Open link" can lead to another sheet. */
     setActiveSheet: (idx: number) => void
+    /**
+     * Subscribe to the view's `shortcutIntent` event, so the keyboard twins
+     * of the menu's items (format cells, convert to block, hide / unhide,
+     * AutoSum) work too. Returns an unsubscribe.
+     */
+    subscribeShortcut?: (
+        cb: (e: SessionEventMap['shortcutIntent']) => void
+    ) => () => void
 }
 
 export function CanvasContextMenu({
@@ -122,8 +163,9 @@ export function CanvasContextMenu({
     getActiveSheet,
     setSelection,
     setActiveSheet,
+    subscribeShortcut,
 }: CanvasContextMenuProps): ReactNode {
-    const {t} = useTranslation()
+    const {t, i18n} = useTranslation()
     const {toast} = useToast()
     const ops = useOps()
     const [menu, setMenu] = useState<{
@@ -278,10 +320,13 @@ export function CanvasContextMenu({
         })
     }
 
-    const openFormat = (ctx: ContextMenuContext) => {
-        setFmtSelectedData(ctx.selectedData)
+    const openFormatFor = (selectedData: SelectedData) => {
+        setFmtSelectedData(selectedData)
         setFmtValue({})
         setFmtOpen(true)
+    }
+    const openFormat = (ctx: ContextMenuContext) => {
+        openFormatFor(ctx.selectedData)
         close()
     }
 
@@ -347,8 +392,17 @@ export function CanvasContextMenu({
         hidden: boolean
     ) => {
         close()
-        const sheetIdx = getActiveSheet()
         const [lo, hi] = selectedLineRange(ctx)
+        await setRangeHidden(axis, lo, hi, hidden)
+    }
+
+    const setRangeHidden = async (
+        axis: 'row' | 'col',
+        lo: number,
+        hi: number,
+        hidden: boolean
+    ) => {
+        const sheetIdx = getActiveSheet()
         try {
             if (hidden) {
                 await ops.setLinesVisible(sheetIdx, axis, lo, hi, false)
@@ -515,7 +569,11 @@ export function CanvasContextMenu({
     // convert mode pre-filled. The user confirms/edits before it's created.
     const convertToBlock = async (ctx: ContextMenuContext) => {
         close()
-        const result = await inferBlockFromSelection(dataSvc, ctx.selectedData)
+        await convertSelection(ctx.selectedData)
+    }
+
+    const convertSelection = async (selectedData: SelectedData) => {
+        const result = await inferBlockFromSelection(dataSvc, selectedData)
         if ('error' in result) {
             toast(String(t(result.error)), {type: 'info'})
             return
@@ -597,6 +655,73 @@ export function CanvasContextMenu({
             } as Payload,
         ])
     }
+
+    // Keyboard twins of the items above (Ctrl/⌘+1, Alt+=, Ctrl+T, Ctrl+9/0
+    // and their Shift unhides). The grid reports the key with the selection
+    // it applies to; the work is the same as the menu item's. Read through a
+    // ref so the one subscription always reaches this render's closures.
+    const onShortcut = async ({
+        id,
+        selectedData,
+    }: SessionEventMap['shortcutIntent']) => {
+        if (id in SHORTCUT_NUM_FMTS) {
+            const code =
+                id === 'numFmtCurrency' && i18n.language.startsWith('zh')
+                    ? '"¥"#,##0.00'
+                    : SHORTCUT_NUM_FMTS[id as keyof typeof SHORTCUT_NUM_FMTS]
+            await ops.setNumFmt(getActiveSheet(), selectedData, code)
+            return
+        }
+        switch (id) {
+            case 'save':
+                globalStore.requestSave()
+                return
+            case 'addComment': {
+                const r = getSelectedCellRange(selectedData)
+                if (!r) return
+                globalStore.requestAddComment({
+                    sheetIdx: getActiveSheet(),
+                    row: r.startRow,
+                    col: r.startCol,
+                })
+                return
+            }
+            case 'formatCells':
+                openFormatFor(selectedData)
+                return
+            case 'convertToBlock':
+                await convertSelection(selectedData)
+                return
+            case 'autoSum': {
+                const r = getSelectedCellRange(selectedData)
+                if (!r) return
+                const p = await autoSumPayload(
+                    dataSvc,
+                    getActiveSheet(),
+                    r.startRow,
+                    r.startCol
+                )
+                if (p) await doTxn([p])
+                return
+            }
+            case 'hideRows':
+            case 'hideColumns':
+            case 'unhideRows':
+            case 'unhideColumns': {
+                const axis = id.endsWith('Rows') ? 'row' : 'col'
+                const span = linesAlong(selectedData, axis)
+                if (span)
+                    await setRangeHidden(axis, ...span, !id.startsWith('un'))
+                return
+            }
+        }
+    }
+    const onShortcutRef = useRef(onShortcut)
+    onShortcutRef.current = onShortcut
+    useEffect(
+        () => subscribeShortcut?.((e) => void onShortcutRef.current(e)),
+        [subscribeShortcut]
+    )
 
     const ctx = menu?.context
     const items: ReactNode = !ctx

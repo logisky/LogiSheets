@@ -2554,11 +2554,9 @@ impl<'a> Worksheet<'a> {
             .row_info
             .get_row_info(row_id)?;
 
-        let row_height = if row_info.custom_height {
-            row_info.ht.unwrap_or(self.get_default_row_height())
-        } else {
-            self.get_default_row_height()
-        };
+        // A stored height applies whether the user set it or a fit did
+        // (`custom_height` only says which); Excel writes `ht` for both.
+        let row_height = row_info.ht.unwrap_or(self.get_default_row_height());
 
         let row_idx = self
             .controller
@@ -2571,6 +2569,7 @@ impl<'a> Worksheet<'a> {
             idx: row_idx,
             height: row_height,
             hidden: row_info.hidden,
+            custom_height: row_info.custom_height,
         };
         Some(info)
     }
@@ -2627,12 +2626,8 @@ impl<'a> Worksheet<'a> {
             return Ok(self.get_default_row_height());
         }
 
-        let row_info = row_info.unwrap();
-        if row_info.custom_height {
-            Ok(row_info.ht.unwrap_or(self.get_default_row_height()))
-        } else {
-            Ok(self.get_default_row_height())
-        }
+        // See get_row_info_by_id: a fitted height counts as much as a set one.
+        Ok(row_info.unwrap().ht.unwrap_or(self.get_default_row_height()))
     }
 
     /// Column width in character-width units; the sheet default unless custom.
