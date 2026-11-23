@@ -18,11 +18,28 @@ import {BorderHelper} from './border_helper'
 // toggled at runtime via setShowCellValues (see Engine.setShowCellValues).
 // When false, cell fills, borders and gridlines still render — only the cell
 // TEXT (values) is skipped. Mirrors the setGridVisibility flag in border_helper.
-const VALUE_SETTINGS = {showCellValues: true}
+const VALUE_SETTINGS = {showCellValues: true, showFormulas: false}
 
 /** Show/hide cell VALUES (text). Fills, borders and gridlines are unaffected. */
 export function setShowCellValues(show: boolean): void {
     VALUE_SETTINGS.showCellValues = show
+}
+
+/**
+ * Excel's "Show formulas" (Ctrl+`): a formula cell draws its `=formula`
+ * instead of its result, and every other value draws unformatted (a date as
+ * its serial number). View-only — nothing in the workbook changes.
+ */
+export function setShowFormulas(show: boolean): void {
+    VALUE_SETTINGS.showFormulas = show
+}
+
+/** The text a cell draws, honoring the show-formulas view. */
+function displayText(info: StandardCell): string {
+    if (!VALUE_SETTINGS.showFormulas) return info.getFormattedText()
+    if (info.formula) return `=${info.formula}`
+    const num = info.getNumber()
+    return num !== undefined ? String(num) : info.getText()
 }
 
 // ============================================================================
@@ -91,6 +108,8 @@ class Box {
 // type: numbers right, booleans/errors centered, everything else (text,
 // empty) left.
 function defaultHorizontalAlign(info: StandardCell): string {
+    // A shown formula is text, whatever it evaluates to (Excel agrees).
+    if (VALUE_SETTINGS.showFormulas && info.formula) return 'left'
     switch (info.value?.cellValueOneof?.$case) {
         case 'number':
             return 'right'
@@ -154,6 +173,42 @@ export class Painter {
                 heights.set(startRow, needed)
         })
         return heights
+    }
+
+    /**
+     * The width (CSS px, padding included) each column's text needs on one
+     * line, by column index. Wrapped cells are left out (they take the width
+     * they are given) and so are merges spanning columns, as in Excel's
+     * auto-fit. Columns with no text are absent.
+     */
+    public measureColContent(resp: CellView): Map<number, number> {
+        const widths = new Map<number, number>()
+        if (!this._ctx) return widths
+        const spanning = new Set(
+            resp.mergeCells
+                .filter((m) => m.coordinate.endCol > m.coordinate.startCol)
+                .map((m) => `${m.coordinate.startRow}-${m.coordinate.startCol}`)
+        )
+        resp.cells.forEach((cell) => {
+            const info = cell.info
+            if (cell.skipRender || !info) return
+            if (info.style?.alignment?.wrapText === true) return
+            const {startRow, startCol} = cell.coordinate
+            if (spanning.has(`${startRow}-${startCol}`)) return
+            const t = displayText(info)
+            if (!t) return
+            const font = info.style?.getFont() ?? new StandardFont()
+            this._ctx!.font = font.toCssFont()
+            let w = 0
+            for (const line of t.split('\n'))
+                w = Math.max(w, this._ctx!.measureText(line).width)
+            // The same 2px inset each side that the text is drawn with, plus
+            // a little air so the last glyph does not touch the gridline.
+            const needed = Math.ceil(w) + 8
+            if ((widths.get(startCol) ?? 0) < needed)
+                widths.set(startCol, needed)
+        })
+        return widths
     }
 
     public renderContent(
@@ -462,7 +517,7 @@ export class Painter {
 
     private _text(box: Box, info: StandardCell, render = true): number {
         if (!this._ctx) return 0
-        const t = info.getFormattedText()
+        const t = displayText(info)
         if (!t) return 0
 
         const font = info.style?.getFont() ?? new StandardFont()

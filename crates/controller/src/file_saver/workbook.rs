@@ -528,9 +528,10 @@ pub fn save_workbook<S: SaverTrait>(
                 ));
             }
 
-            // Round-trip Excel data validation, stored verbatim per sheet.
+            // Data validation renders each rule's `sqref` from where its anchors
+            // are now, so a rule follows rows inserted above it.
             worksheet.worksheet_part.data_validations =
-                data_validation_manager.get_sheet(sheet_id).cloned();
+                data_validation_manager_to_xml(data_validation_manager, navigator, sheet_id);
 
             // Conditional formatting: the modeled rules render their `sqref`
             // from the current positions of their anchor ids, so a rule whose
@@ -829,6 +830,39 @@ fn get_workbook(
 /// Render a sheet's modeled conditional formatting back to OOXML. A block whose
 /// every range lost its anchors (the rows/columns were deleted) yields no
 /// element — matching Excel, where deleting the covered rows removes the rule.
+fn data_validation_manager_to_xml(
+    manager: &DataValidationManager,
+    navigator: &crate::navigator::Navigator,
+    sheet_id: logisheets_base::SheetId,
+) -> Option<logisheets_workbook::prelude::CtDataValidations> {
+    use crate::conditional_formatting_manager::resolve::ranges_to_sqref;
+    let sheet = manager.get_sheet(sheet_id)?;
+    let mut data_validations: Vec<_> = sheet
+        .rules
+        .iter()
+        .filter_map(|r| {
+            let sqref = ranges_to_sqref(navigator, sheet_id, &r.ranges);
+            // Every anchor deleted: the rule covers nothing any more.
+            (!sqref.is_empty()).then(|| {
+                let mut rule = r.rule.clone();
+                rule.sqref = sqref;
+                rule
+            })
+        })
+        .collect();
+    data_validations.extend(sheet.unmodeled.iter().cloned());
+    if data_validations.is_empty() {
+        return None;
+    }
+    Some(logisheets_workbook::prelude::CtDataValidations {
+        count: data_validations.len() as u32,
+        data_validations,
+        disable_prompts: sheet.disable_prompts,
+        x_window: sheet.x_window,
+        y_window: sheet.y_window,
+    })
+}
+
 fn conditional_formatting_manager_to_xml(
     manager: &crate::conditional_formatting_manager::ConditionalFormattingManager,
     navigator: &Navigator,

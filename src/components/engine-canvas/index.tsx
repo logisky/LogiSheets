@@ -86,17 +86,24 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
 
     // Find overlay (Ctrl/⌘+F). The engine emits `find`; we own the UI.
     const [findOpen, setFindOpen] = useState(false)
+    const [findReplace, setFindReplace] = useState(false)
     const selectedDataRef = useRef(selectedData)
     selectedDataRef.current = selectedData
     useEffect(() => {
-        const openFind = () => setFindOpen(true)
+        const openFind = () => {
+            setFindReplace(false)
+            setFindOpen(true)
+        }
         engine.on('find', openFind)
         return () => engine.off('find', openFind)
     }, [engine])
-    // The toolbar's Find button raises a store request rather than a keystroke.
+    // The toolbar's Find button and Ctrl+H (from any view) raise a store
+    // request rather than a keystroke.
     const findRequest = globalStore.findRequest
     useEffect(() => {
-        if (findRequest > 0) setFindOpen(true)
+        if (findRequest === 0) return
+        setFindReplace(globalStore.findReplace)
+        setFindOpen(true)
     }, [findRequest])
     const getActiveCell = useCallback(() => {
         const r = getSelectedCellRange(selectedDataRef.current)
@@ -245,6 +252,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                 canvasStartX={canvasPos.x}
                 canvasStartY={canvasPos.y}
                 navigateToCell={navigateToCell}
+                selectedData={selectedData}
             />
             <CanvasContextMenu
                 subscribe={subscribeContextMenu}
@@ -266,6 +274,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
                 sheetIdx={activeSheet}
                 getActiveCell={getActiveCell}
                 onNavigate={navigateToCell}
+                replaceMode={findReplace}
             />
         </div>
     )

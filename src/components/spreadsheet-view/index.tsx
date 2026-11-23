@@ -242,6 +242,7 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                     canvasStartX={canvasPos.x}
                     canvasStartY={canvasPos.y}
                     navigateToCell={navigateToCell}
+                    selectedData={selectedData}
                 />
                 <ActiveViewBadge active={isActive} />
             </div>

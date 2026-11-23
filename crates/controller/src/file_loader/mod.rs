@@ -464,9 +464,10 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
                         &mut chart_manager,
                     );
                 }
-                // Excel data validation is stored verbatim per sheet for round-trip.
+                // Data validation is anchored on cell ids once load settles
+                // (see `model_loaded` below).
                 if let Some(dv) = &ws.worksheet_part.data_validations {
-                    data_validation_manager.set_sheet(sheet_id, dv.clone());
+                    data_validation_manager.set_loaded(sheet_id, dv.clone());
                 }
                 // Unmodeled worksheet parts (conditional formatting, hyperlinks,
                 // filters, page setup, protection, ...) are preserved verbatim so
@@ -589,6 +590,11 @@ pub fn load_file(wb: Wb, book_name: String) -> Controller {
     // converted table has to anchor on block cell ids, not the normal cell ids
     // those coordinates had mid-load.
     model_conditional_formatting(&mut controller);
+    // Same reason: a rule over a converted table anchors on its block cells.
+    let status = &mut controller.status;
+    status
+        .data_validation_manager
+        .model_loaded(&status.navigator);
     controller
 }
 

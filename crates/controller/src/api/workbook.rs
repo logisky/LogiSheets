@@ -85,9 +85,16 @@ impl Workbook {
             EditAction::Payloads(p) => p.payloads.iter().any(is_conditional_formatting_payload),
             _ => false,
         };
+        let dv_full = match &action {
+            EditAction::Undo | EditAction::Redo => true,
+            EditAction::Payloads(p) => p.payloads.iter().any(is_data_validation_payload),
+            _ => false,
+        };
+        let had_dv = !self.controller.status.data_validation_manager.is_empty();
         let effect = self.controller.handle_action(action);
         self.invalidate_positioners();
         self.resync_conditional_formatting(&effect, restores_snapshot);
+        self.resync_data_validation(&effect, dv_full, had_dv);
         effect
     }
 
@@ -98,10 +105,13 @@ impl Workbook {
             .payloads
             .iter()
             .any(is_conditional_formatting_payload);
+        let dv_full = action.payloads.iter().any(is_data_validation_payload);
+        let had_dv = !self.controller.status.data_validation_manager.is_empty();
         let effect = self.controller.handle_action_amend(action, temp);
         self.invalidate_positioners();
         if !temp {
             self.resync_conditional_formatting(&effect, restores_snapshot);
+            self.resync_data_validation(&effect, dv_full, had_dv);
         }
         effect
     }
@@ -152,79 +162,103 @@ impl Workbook {
         self.sync_conditional_formatting_shadows(Some(&touched));
     }
 
-    /// Install a `ShadowKind::Validation` shadow formula on every non-empty
-    /// cell that is covered by a data-validation rule and doesn't have one yet.
-    /// The shadow evaluates the rule to a boolean; the frontend flags cells
-    /// whose shadow is `false`. Read-only rules → we never remove shadows here.
-    /// Empty cells are intentionally left unshadowed (unflagged).
+    /// The data-validation twin of [`Self::resync_conditional_formatting`]:
+    /// materialize shadows for cells an edit just filled, and re-walk every
+    /// covered cell when the rules themselves may have moved — a rule edit, an
+    /// undo/redo (which swaps the rule store with the snapshot) or a structural
+    /// edit (which moves the covered ranges).
     ///
-    /// Only run once at load (`from_file`): shadows are materialized for the
-    /// cells that are non-empty in the loaded file. Cells edited afterwards are
-    /// not (re)synced for now.
-    fn sync_data_validation_shadows(&mut self) {
-        use crate::data_validation_manager::{parse_sqref, translate};
+    /// `had_rules` is whether any rule existed before the edit: with none before
+    /// or after there is nothing to walk, which keeps undo in a workbook without
+    /// validation from scanning every cell.
+    fn resync_data_validation(&mut self, effect: &ActionEffect, full: bool, had_rules: bool) {
+        let has_rules = !self.controller.status.data_validation_manager.is_empty();
+        if !had_rules && !has_rules {
+            return;
+        }
+        let structural = !effect.row_inserted.is_empty()
+            || !effect.row_removed.is_empty()
+            || !effect.col_inserted.is_empty()
+            || !effect.col_removed.is_empty();
+        if full || structural {
+            self.sync_data_validation_shadows(None);
+            return;
+        }
+        if !has_rules {
+            return;
+        }
+        let touched: std::collections::HashSet<(SheetId, CellId)> = effect
+            .value_changed
+            .iter()
+            .map(|c| (c.sheet_id, c.cell_id))
+            .collect();
+        if !touched.is_empty() {
+            self.sync_data_validation_shadows(Some(&touched));
+        }
+    }
+
+    /// Keep each normal cell's `ShadowKind::Validation` shadow in step with
+    /// the data-validation rules: a covered cell holds the rule (see
+    /// `translate::shadow_formula`), and a cell that has a shadow but is no
+    /// longer covered gets `=TRUE`, so it stops being flagged.
+    ///
+    /// Shadows are materialized for non-empty cells only — a rule on whole
+    /// columns would otherwise mean a million ephemeral cells. A blank cell
+    /// that already has one keeps its rule, which passes blanks.
+    ///
+    /// Block cells are skipped: their `Validation` shadow is the block field's.
+    /// `only` restricts the walk to those cells (the incremental path).
+    fn sync_data_validation_shadows(
+        &mut self,
+        only: Option<&std::collections::HashSet<(SheetId, CellId)>>,
+    ) {
+        use crate::data_validation_manager::translate;
         use crate::edit_action::{EphemeralCellInput, PayloadsAction};
         use crate::sid_assigner::ShadowKind;
         use logisheets_base::CellValue;
 
-        if self.controller.status.data_validation_manager.is_empty() {
-            return;
-        }
-
-        // Pass 1 (immutable): collect the cells that need a new shadow.
+        // Pass 1 (immutable): what each cell's shadow should hold.
         let mut pending: Vec<(usize, SheetId, CellId, String)> = Vec::new();
         {
             let status = &self.controller.status;
-            for (sheet_id, dvs) in status.data_validation_manager.validations.iter() {
-                let rules: Vec<(Vec<_>, String)> = dvs
-                    .data_validations
-                    .iter()
-                    .filter_map(|dv| {
-                        let f = translate::rule_to_formula(dv)?;
-                        Some((parse_sqref(&dv.sqref), f))
-                    })
-                    .collect();
-                if rules.is_empty() {
+            let manager = &status.data_validation_manager;
+            for (sheet_idx, sheet_id) in status.sheet_info_manager.pos.iter().enumerate() {
+                let has_rules = manager.get_sheet(*sheet_id).is_some();
+                let Some(container) = status.container.get_sheet_container(*sheet_id) else {
                     continue;
-                }
-                let sheet_idx = match status
-                    .sheet_info_manager
-                    .pos
-                    .iter()
-                    .position(|s| s == sheet_id)
-                {
-                    Some(i) => i,
-                    None => continue,
-                };
-                let container = match status.container.get_sheet_container(*sheet_id) {
-                    Some(c) => c,
-                    None => continue,
                 };
                 for (cell_id, cell) in container.cells.iter() {
-                    if matches!(cell.value, CellValue::Blank) {
+                    if !matches!(cell_id, CellId::NormalCell(_)) {
                         continue;
                     }
-                    let nc = match cell_id {
-                        CellId::NormalCell(nc) => nc,
-                        _ => continue,
-                    };
-                    if self
+                    if let Some(only) = only {
+                        if !only.contains(&(*sheet_id, *cell_id)) {
+                            continue;
+                        }
+                    }
+                    let has_shadow = self
                         .controller
                         .sid_assigner
                         .find_shadow_id(*sheet_id, *cell_id, ShadowKind::Validation)
-                        .is_some()
-                    {
+                        .is_some();
+                    let blank = matches!(cell.value, CellValue::Blank);
+                    if !has_shadow && (blank || !has_rules) {
                         continue;
                     }
-                    let (row, col) = match status.navigator.fetch_normal_cell_idx(sheet_id, nc) {
-                        Ok(x) => x,
-                        Err(_) => continue,
+                    let Ok((row, col)) = status.navigator.fetch_cell_idx(sheet_id, cell_id) else {
+                        continue;
                     };
-                    if let Some((_, formula)) = rules
-                        .iter()
-                        .find(|(ranges, _)| ranges.iter().any(|r| r.contains(row, col)))
-                    {
-                        pending.push((sheet_idx, *sheet_id, *cell_id, formula.clone()));
+                    let formula = manager
+                        .rule_at(&status.navigator, *sheet_id, row, col)
+                        .and_then(|(rule, anchor)| {
+                            translate::shadow_formula(rule, (row, col), anchor)
+                        });
+                    match formula {
+                        Some(f) => pending.push((sheet_idx, *sheet_id, *cell_id, format!("={f}"))),
+                        None if has_shadow => {
+                            pending.push((sheet_idx, *sheet_id, *cell_id, "=TRUE".to_string()))
+                        }
+                        None => {}
                     }
                 }
             }
@@ -233,9 +267,9 @@ impl Workbook {
             return;
         }
 
-        // Pass 2 (mut): allocate shadow ids, then install formulas.
+        // Pass 2 (mut): allocate shadow ids, then install the formulas.
         let mut payloads = Vec::with_capacity(pending.len());
-        for (sheet_idx, sheet_id, cell_id, formula) in pending {
+        for (sheet_idx, sheet_id, cell_id, content) in pending {
             let sid = self.controller.sid_assigner.get_shawdow_id(
                 sheet_id,
                 cell_id,
@@ -245,7 +279,7 @@ impl Workbook {
                 EphemeralCellInput {
                     sheet_idx,
                     id: sid,
-                    content: format!("={formula}"),
+                    content,
                 },
             ));
         }
@@ -489,7 +523,7 @@ impl Workbook {
         };
         // Materialize validation shadows for the loaded, non-empty cells before
         // snapshotting the init status, so the baseline includes them.
-        wb.sync_data_validation_shadows();
+        wb.sync_data_validation_shadows(None);
         wb.sync_conditional_formatting_shadows(None);
         wb.controller
             .version_manager
@@ -522,20 +556,14 @@ impl Workbook {
         row: usize,
         col: usize,
     ) -> Option<crate::data_validation_manager::ListValidation> {
-        use crate::data_validation_manager::{list_validation, parse_sqref};
+        use crate::data_validation_manager::list_validation;
         let sheet_id = self.controller.get_sheet_id_by_idx(sheet_idx)?;
-        let dvs = self
-            .controller
-            .status
-            .data_validation_manager
-            .get_sheet(sheet_id)?;
-        dvs.data_validations.iter().find_map(|dv| {
-            let opts = list_validation(dv)?;
-            parse_sqref(&dv.sqref)
-                .iter()
-                .any(|r| r.contains(row, col))
-                .then_some(opts)
-        })
+        let status = &self.controller.status;
+        let (rule, _) =
+            status
+                .data_validation_manager
+                .rule_at(&status.navigator, sheet_id, row, col)?;
+        list_validation(rule)
     }
 
     /// Flattened, wasm-friendly form of [`Workbook::get_cell_list_validation`]: the enum
@@ -1421,6 +1449,10 @@ fn collect_func_ids(node: &ast::Node, out: &mut BTreeSet<FuncId>) {
 
 /// Whether a payload changes the conditional-formatting rule set, and therefore
 /// requires the shadows to be rebuilt across the sheet rather than incrementally.
+fn is_data_validation_payload(p: &crate::edit_action::EditPayload) -> bool {
+    matches!(p, crate::edit_action::EditPayload::SetDataValidation(_))
+}
+
 fn is_conditional_formatting_payload(p: &crate::edit_action::EditPayload) -> bool {
     use crate::edit_action::EditPayload;
     matches!(

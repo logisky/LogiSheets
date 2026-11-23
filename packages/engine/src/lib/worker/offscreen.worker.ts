@@ -4,18 +4,19 @@
 
 import {isErrorMessage} from 'logisheets-web'
 import type {CellImageInfo} from 'logisheets-web'
-import type {Grid, RowFitHeight} from '$types/index'
+import type {ColFitWidth, Grid, RowFitHeight} from '$types/index'
 import type {IWorkbookWorker, Result} from './types'
 import {OffscreenRenderName} from './types'
 import {ViewManager} from './view_manager'
 import type {CellView} from './view_manager'
-import {Painter, setShowCellValues} from './painter'
+import {Painter, setShowCellValues, setShowFormulas} from './painter'
 import {Pool} from './pool'
 import {setGridVisibility} from './border_helper'
 import {
     getZoomFactor,
     ptToPx,
     pxToPt,
+    pxToWidth,
     setZoomFactor,
     widthToPx,
 } from './standable'
@@ -115,6 +116,11 @@ export class OffscreenWorkerService {
      */
     public setShowCellValues(show: boolean): void {
         setShowCellValues(show)
+    }
+
+    /** Show formulas instead of results (worker-global). Callers re-render. */
+    public setShowFormulas(show: boolean): void {
+        setShowFormulas(show)
     }
 
     public resize(
@@ -391,65 +397,135 @@ export class OffscreenWorkerService {
      * Measures at 100%: the painter's fonts do not scale with the zoom but
      * cell widths do, so a zoomed measurement would wrap differently.
      */
+    /**
+     * Measure rows `fromRow..=toRow` against every used column and return
+     * the height each row's content needs, for the rows that need a change.
+     * By default this is the follow-up to an edit, so rows the user sized by
+     * hand and rows with no text are left alone. `force` is the user asking
+     * (double-clicking a row border): every visible row is fitted, and an
+     * empty one goes back to the default height.
+     */
     public getRowFitHeights(
         sheetIdx: number,
         fromRow: number,
-        toRow: number
+        toRow: number,
+        force = false
     ): Result<RowFitHeight[]> {
+        const dim = this._workbook.getSheetDimension(sheetIdx)
+        if (isErrorMessage(dim)) return dim
+        return this._measure(
+            sheetIdx,
+            {fromRow, toRow, fromCol: 0, toCol: Math.max(0, dim.maxCol)},
+            (view) => {
+                const content = this._painter.measureRowContent(
+                    view.data,
+                    0,
+                    view.anchorY
+                )
+                const fits: RowFitHeight[] = []
+                view.data.data.forEach((chunk) =>
+                    chunk.rowMeta.forEach((meta, row) => {
+                        if (row < fromRow || row > toRow || meta.hidden) return
+                        if (meta.customHeight && !force) return
+                        const px = content.get(row)
+                        if (px === undefined && !force) return
+                        const height = Math.max(
+                            DEFAULT_ROW_PT,
+                            px === undefined ? 0 : pxToPt(px)
+                        )
+                        // A forced fit of a hand-sized row must land even at
+                        // the same height: it clears the custom flag.
+                        if (
+                            Math.abs(height - meta.height) < 0.5 &&
+                            !(force && meta.customHeight)
+                        )
+                            return
+                        fits.push({row, height})
+                    })
+                )
+                return fits
+            }
+        )
+    }
+
+    /**
+     * Measure columns `fromCol..=toCol` against every used row and return the
+     * width (column-width units) each one's widest single-line text needs.
+     * Columns with no text, and hidden ones, are left out — Excel leaves an
+     * empty column's width alone too.
+     */
+    public getColFitWidths(
+        sheetIdx: number,
+        fromCol: number,
+        toCol: number
+    ): Result<ColFitWidth[]> {
+        const dim = this._workbook.getSheetDimension(sheetIdx)
+        if (isErrorMessage(dim)) return dim
+        return this._measure(
+            sheetIdx,
+            {fromRow: 0, toRow: Math.max(0, dim.maxRow), fromCol, toCol},
+            (view) => {
+                const hidden = new Set<number>()
+                view.data.data.forEach((chunk) =>
+                    chunk.colMeta.forEach(
+                        (m, col) => m.hidden && hidden.add(col)
+                    )
+                )
+                const fits: ColFitWidth[] = []
+                this._painter
+                    .measureColContent(view.data)
+                    .forEach((px, col) => {
+                        if (col < fromCol || col > toCol || hidden.has(col))
+                            return
+                        fits.push({col, width: pxToWidth(px)})
+                    })
+                return fits
+            }
+        )
+    }
+
+    /**
+     * Lay out the cells `rows × cols` of `sheetIdx` at zoom 1 on the scratch
+     * canvas — as if a canvas that size were scrolled there — and hand the
+     * result to `measure`. Fits are stored in zoom-independent units, so the
+     * view's zoom must not leak into them.
+     */
+    private _measure<T>(
+        sheetIdx: number,
+        range: {fromRow: number; toRow: number; fromCol: number; toCol: number},
+        measure: (view: {data: CellView; anchorY: number}) => T
+    ): Result<T> {
         const zoom = getZoomFactor()
         setZoomFactor(1)
         try {
-            const dim = this._workbook.getSheetDimension(sheetIdx)
-            if (isErrorMessage(dim)) return dim
             const top = this._workbook.getCellPosition({
                 sheetIdx,
-                row: fromRow,
-                col: 0,
+                row: range.fromRow,
+                col: range.fromCol,
             })
             if (isErrorMessage(top)) return top
             const bottom = this._workbook.getCellPosition({
                 sheetIdx,
-                row: toRow + 1,
-                col: Math.max(0, dim.maxCol) + 1,
+                row: range.toRow + 1,
+                col: range.toCol + 1,
             })
             if (isErrorMessage(bottom)) return bottom
-
-            // A window over exactly these rows and every used column, as if
-            // a canvas that size were scrolled there.
+            const anchorX = widthToPx(top.x)
             const anchorY = ptToPx(top.y)
             const view = new ViewManager(
                 this._workbook,
                 sheetIdx,
                 pool
             ).getViewResponse(
-                0,
+                anchorX,
                 anchorY,
                 ptToPx(bottom.y - top.y),
-                widthToPx(bottom.x)
+                widthToPx(bottom.x - top.x)
             )
             if (isErrorMessage(view)) return view
-
             this._measureCanvas ??= new OffscreenCanvas(1, 1)
             this._painter.setCanvas(this._measureCanvas)
-            const content = this._painter.measureRowContent(
-                view.data,
-                0,
-                anchorY
-            )
-
-            const fits: RowFitHeight[] = []
-            view.data.data.forEach((chunk) =>
-                chunk.rowMeta.forEach((meta, row) => {
-                    if (row < fromRow || row > toRow) return
-                    if (meta.customHeight || meta.hidden) return
-                    const px = content.get(row)
-                    if (px === undefined) return
-                    const height = Math.max(DEFAULT_ROW_PT, pxToPt(px))
-                    if (Math.abs(height - meta.height) < 0.5) return
-                    fits.push({row, height})
-                })
-            )
-            return fits
+            return measure({data: view.data, anchorY})
         } finally {
             setZoomFactor(zoom)
         }
@@ -472,7 +548,9 @@ export class OffscreenWorkerService {
             m !== OffscreenRenderName.SetGridLines &&
             m !== OffscreenRenderName.SetZoom &&
             m !== OffscreenRenderName.SetShowCellValues &&
+            m !== OffscreenRenderName.SetShowFormulas &&
             m !== OffscreenRenderName.GetRowFitHeights &&
+            m !== OffscreenRenderName.GetColFitWidths &&
             !this._canvases.has(canvasId)
         ) {
             this._ctx.postMessage({
@@ -511,7 +589,15 @@ export class OffscreenWorkerService {
                     result = this.getRowFitHeights(
                         args.sheetIdx,
                         args.fromRow,
-                        args.toRow
+                        args.toRow,
+                        args.force
+                    )
+                    break
+                case OffscreenRenderName.GetColFitWidths:
+                    result = this.getColFitWidths(
+                        args.sheetIdx,
+                        args.fromCol,
+                        args.toCol
                     )
                     break
                 case OffscreenRenderName.SetGridLines:
@@ -522,6 +608,9 @@ export class OffscreenWorkerService {
                     break
                 case OffscreenRenderName.SetShowCellValues:
                     result = this.setShowCellValues(args.show)
+                    break
+                case OffscreenRenderName.SetShowFormulas:
+                    result = this.setShowFormulas(args.show)
                     break
                 default:
                     this._ctx.postMessage({

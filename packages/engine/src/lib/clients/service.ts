@@ -183,6 +183,14 @@ export class DataService {
     }
 
     /**
+     * Show formulas instead of their results. Worker-global; the caller
+     * (Engine.setShowFormulas) re-renders the mounted views.
+     */
+    public setShowFormulas(show: boolean): void {
+        this._offscreen.setShowFormulas(show)
+    }
+
+    /**
      * Set the worker-global zoom factor. Returns a promise so the caller
      * (Engine.setZoom) can await the worker adopting it before re-rendering.
      */
@@ -542,6 +550,69 @@ export class DataService {
                 amend: true,
             },
             temp: transaction.temp,
+        })
+        if (isErrorMessage(r)) return r
+        return
+    }
+
+    /**
+     * Fit rows `fromRow..=toRow` to their content as one undoable step — the
+     * user's own double-click on a row border, so rows sized by hand are
+     * fitted too and empty rows return to the default height.
+     */
+    public async autoFitRows(
+        sheetIdx: number,
+        fromRow: number,
+        toRow: number
+    ): Resp<void> {
+        const fits = await this._offscreen.getRowFitHeights(
+            sheetIdx,
+            fromRow,
+            toRow,
+            true
+        )
+        if (!Array.isArray(fits) || fits.length === 0) return
+        const r = await this._workbook.handleTransaction({
+            transaction: {
+                payloads: fits.map(({row, height}) => ({
+                    type: 'setRowHeight' as const,
+                    value: {sheetIdx, row, height, autoFit: true},
+                })),
+                undoable: true,
+                temp: false,
+            },
+            temp: false,
+        })
+        if (isErrorMessage(r)) return r
+        return
+    }
+
+    /**
+     * Fit columns `fromCol..=toCol` to their widest single-line text as one
+     * undoable step (double-clicking a column border). Empty columns keep
+     * their width.
+     */
+    public async autoFitCols(
+        sheetIdx: number,
+        fromCol: number,
+        toCol: number
+    ): Resp<void> {
+        const fits = await this._offscreen.getColFitWidths(
+            sheetIdx,
+            fromCol,
+            toCol
+        )
+        if (!Array.isArray(fits) || fits.length === 0) return
+        const r = await this._workbook.handleTransaction({
+            transaction: {
+                payloads: fits.map(({col, width}) => ({
+                    type: 'setColWidth' as const,
+                    value: {sheetIdx, col, width},
+                })),
+                undoable: true,
+                temp: false,
+            },
+            temp: false,
         })
         if (isErrorMessage(r)) return r
         return

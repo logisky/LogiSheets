@@ -11,7 +11,10 @@ import {
     PivotExcelNote,
     PivotPlanForParams,
     MayModifyBlockParams,
+    CheckDataValidationParams,
     CheckFieldValidationParams,
+    DataValidationInfo,
+    DataValidationVerdict,
     FieldValidationVerdict,
     GetCellParams,
     HyperlinkInfo,
@@ -856,6 +859,37 @@ export class Workbook {
     ): Result<FieldValidationVerdict> {
         return rpc(
             'checkFieldValidation',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * The data-validation rule (Excel's Data ▸ Data validation) covering a
+     * cell, or `null`. Set one with the `setDataValidation` payload.
+     */
+    public getDataValidation(
+        params: GetCellParams
+    ): Result<DataValidationInfo | null> {
+        return rpc(
+            'getDataValidation',
+            params as unknown as Record<string, unknown>,
+            this._id
+        )
+    }
+
+    /**
+     * Whether writing `proposed` would break the cell's data-validation rule —
+     * the verdict an Excel-style "Stop" alert needs BEFORE the write, since the
+     * cell's marker only ever judges a value it already holds. Carries the
+     * rule's error style and message. Writes nothing but the cell's validation
+     * shadow, which the write would install anyway.
+     */
+    public checkDataValidation(
+        params: CheckDataValidationParams
+    ): Result<DataValidationVerdict> {
+        return rpc(
+            'checkDataValidation',
             params as unknown as Record<string, unknown>,
             this._id
         )

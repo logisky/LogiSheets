@@ -31,8 +31,10 @@ export class GlobalStore {
             diffLayerEnabled: observable,
             showGridlines: observable,
             showComments: observable,
+            showFormulas: observable,
             pendingCommentCell: observableRef,
             findRequest: observable,
+            findReplace: observable,
             saveRequest: observable,
             traceRequest: observableRef,
             traceResult: observableRef,
@@ -47,6 +49,7 @@ export class GlobalStore {
             setDiffLayerEnabled: action,
             setShowGridlines: action,
             setShowComments: action,
+            setShowFormulas: action,
             requestAddComment: action,
             clearPendingCommentCell: action,
             requestFind: action,
@@ -149,6 +152,15 @@ export class GlobalStore {
         this.showComments = v
     }
 
+    // Excel's "Show formulas" (Ctrl+`): formula cells draw their formula
+    // instead of the result. View-only. Raised by the View toggle or the
+    // shortcut from any view; the toolbar mirrors it to engine.setShowFormulas.
+    showFormulas = false
+
+    setShowFormulas(v: boolean) {
+        this.showFormulas = v
+    }
+
     // A one-shot request to open the "new comment" editor on a specific cell,
     // raised by the right-click "Add comment" menu item and consumed by the
     // matching view's CommentLayer. Cleared once handled.
@@ -170,8 +182,11 @@ export class GlobalStore {
     // end at the same state. A counter rather than a boolean so a second click
     // re-opens it after the user closed it.
     findRequest = 0
+    // Whether the latest request asked for the Replace row (Ctrl+H).
+    findReplace = false
 
-    requestFind() {
+    requestFind(replace = false) {
+        this.findReplace = replace
         this.findRequest += 1
     }
 

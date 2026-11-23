@@ -3,20 +3,19 @@
  * value matches a query, mirroring Excel's Ctrl+F "Find All" semantics.
  *
  * It does NOT touch the Rust engine: it drives the existing worker RPCs
- * `getSheetDimension` (used-range bounds) and `getReproducibleCells`
- * (batch value read that, unlike `getDisplayWindow`, returns each cell's
- * coordinate). Matches come back in row-major order so navigation and the
- * "x of y" counter can share one scan.
+ * `getSheetDimension` (used-range bounds) and `getCells` (a dense, row-major
+ * read of a rectangle). Matches come back in row-major order so navigation
+ * and the "x of y" counter can share one scan.
  *
  * Known limitation: we search the raw cell value (numbers via `String(n)`,
  * bools as TRUE/FALSE, errors verbatim), NOT the number-formatted display
  * string. A cell formatted as `1,200` or a date still matches on its
- * underlying value (`1200`). Formula text is also not searched — the batch
- * reader doesn't return it.
+ * underlying value (`1200`). Formula text is not searched; a match whose
+ * VALUE comes from a formula is flagged so Replace can leave it alone.
  */
 
 import type {Engine} from 'logisheets-engine'
-import type {Value, SheetCoordinate} from 'logisheets-web'
+import type {Value} from 'logisheets-web'
 import {isErrorMessage} from 'logisheets-web'
 
 export interface FindOptions {
@@ -30,6 +29,15 @@ export interface FindOptions {
 export interface FindMatch {
     row: number
     col: number
+}
+
+/** A match as the scan saw it: what was searched, and where it came from. */
+export interface FoundCell extends FindMatch {
+    /** The searched text (see {@link valueToSearchString}). */
+    text: string
+    /** The value is a formula's result — replacing it would destroy the
+     *  formula, so Replace skips these. */
+    isFormula: boolean
 }
 
 /** A cancellation flag the caller can flip to abort an in-flight scan. */
@@ -83,6 +91,34 @@ export function buildMatcher(
     }
 }
 
+function escapeRegExp(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Build the rewrite Replace applies to one matched cell's text, honoring the
+ * same options as {@link buildMatcher}: every occurrence is replaced (Excel's
+ * Replace works within the cell, not on the first hit), "whole cell" swaps the
+ * entire text, and a regex replacement may use `$1`-style groups. A literal
+ * replacement is inserted verbatim — `$` in it means nothing. Throws on an
+ * invalid regex, like buildMatcher.
+ */
+export function buildReplacer(
+    query: string,
+    replacement: string,
+    opts: FindOptions
+): (text: string) => string {
+    const flags = opts.matchCase ? 'g' : 'gi'
+    if (opts.useRegex) {
+        const pattern = opts.wholeCell ? `^(?:${query})$` : query
+        const re = new RegExp(pattern, flags)
+        return (text) => text.replace(re, replacement)
+    }
+    if (opts.wholeCell) return () => replacement
+    const re = new RegExp(escapeRegExp(query), flags)
+    return (text) => text.replace(re, () => replacement)
+}
+
 /**
  * Scan the sheet's used range and return every matching cell in row-major
  * order. Yields between row bands so the caller can cancel via `signal`.
@@ -92,7 +128,7 @@ export async function findAllMatches(
     sheetIdx: number,
     matcher: (text: string) => boolean,
     signal?: FindSignal
-): Promise<FindMatch[]> {
+): Promise<FoundCell[]> {
     const wb = engine.getWorkbook()
     const dim = await wb.getSheetDimension(sheetIdx)
     if (isErrorMessage(dim)) return []
@@ -100,36 +136,34 @@ export async function findAllMatches(
     const {maxRow, maxCol} = dim
     const cols = maxCol + 1
     const bandRows = Math.max(1, Math.floor(TARGET_COORDS_PER_REQUEST / cols))
-    const matches: FindMatch[] = []
+    const matches: FoundCell[] = []
 
     for (let startRow = 0; startRow <= maxRow; startRow += bandRows) {
         if (signal?.cancelled) return matches
         const endRow = Math.min(startRow + bandRows - 1, maxRow)
 
-        const coordinates: SheetCoordinate[] = []
-        for (let r = startRow; r <= endRow; r++) {
-            for (let c = 0; c <= maxCol; c++) {
-                coordinates.push({row: r, col: c})
-            }
-        }
-
-        const cells = await wb.getReproducibleCells({sheetIdx, coordinates})
+        // Dense and row-major, so the position in the list is the address.
+        const cells = await wb.getCells({
+            sheetIdx,
+            startRow,
+            startCol: 0,
+            endRow,
+            endCol: maxCol,
+        })
         if (isErrorMessage(cells)) continue
 
-        for (const cell of cells) {
+        cells.forEach((cell, i) => {
             const text = valueToSearchString(cell.value)
             if (text !== '' && matcher(text)) {
                 matches.push({
-                    row: cell.coordinate.row,
-                    col: cell.coordinate.col,
+                    row: startRow + Math.floor(i / cols),
+                    col: i % cols,
+                    text,
+                    isFormula: cell.formula !== '',
                 })
             }
-        }
+        })
     }
-
-    // getReproducibleCells doesn't guarantee input order — sort so navigation
-    // and the counter see a stable row-major sequence.
-    matches.sort((a, b) => a.row - b.row || a.col - b.col)
     return matches
 }
 

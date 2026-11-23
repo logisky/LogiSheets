@@ -20,8 +20,8 @@ import type {
     BlockSortOrder,
 } from 'logisheets-web'
 
-import type {Grid, RowFitHeight} from '$types/index'
-export type {RowFitHeight} from '$types/index'
+import type {ColFitWidth, Grid, RowFitHeight} from '$types/index'
+export type {ColFitWidth, RowFitHeight} from '$types/index'
 
 // ============================================================================
 // Worker Update Events - Posted from worker to main thread
@@ -103,6 +103,8 @@ export enum MethodName {
     PivotPlanFor = 'pivotPlanFor',
     MayModifyBlock = 'mayModifyBlock',
     CheckFieldValidation = 'checkFieldValidation',
+    GetDataValidation = 'getDataValidation',
+    CheckDataValidation = 'checkDataValidation',
     GetHyperlink = 'getHyperlink',
     GetBlockModifyInfo = 'getBlockModifyInfo',
     GetAvailableBlockId = 'getAvailableBlockId',
@@ -149,9 +151,11 @@ export enum OffscreenRenderName {
     Init = 'init',
     Dispose = 'dispose',
     GetRowFitHeights = 'getRowFitHeights',
+    GetColFitWidths = 'getColFitWidths',
     SetGridLines = 'setGridLines',
     SetZoom = 'setZoom',
     SetShowCellValues = 'setShowCellValues',
+    SetShowFormulas = 'setShowFormulas',
 }
 
 // ============================================================================
@@ -211,8 +215,14 @@ export interface IOffscreenWorker {
     getRowFitHeights(
         sheetIdx: number,
         fromRow: number,
-        toRow: number
+        toRow: number,
+        force?: boolean
     ): Result<RowFitHeight[]>
+    getColFitWidths(
+        sheetIdx: number,
+        fromCol: number,
+        toCol: number
+    ): Result<ColFitWidth[]>
 }
 
 // ============================================================================

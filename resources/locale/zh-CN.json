@@ -508,6 +508,7 @@
             "diffLayer": "差异图层",
             "blockOverlays": "始终显示块覆盖层",
             "showGridlines": "显示网格线",
+            "showFormulas": "显示公式",
             "showComments": "显示批注",
             "zoomOut": "缩小",
             "zoomIn": "放大",
@@ -537,8 +538,12 @@
             "nameManagerTip": "定义、重命名和删除名称区域与常量"
         },
         "data": {
-            "conditionalFormatting": "条件格式…",
-            "findReplace": "查找和替换"
+            "conditionalFormatting": "条件格式",
+            "findReplace": "查找和替换",
+            "dataValidation": "数据验证",
+            "conditionalFormattingTip": "为满足规则的单元格设置格式",
+            "dataValidationTip": "限制所选单元格可输入的内容",
+            "findReplaceTip": "查找和替换（Ctrl+H）"
         },
         "advanced": {
             "createBlock": "创建块",
@@ -903,7 +908,8 @@
             "save": "保存",
             "create": "创建",
             "unknown": "未知",
-            "somethingWrong": "出了点问题。"
+            "somethingWrong": "出了点问题。",
+            "ok": "确定"
         },
         "menu": {
             "formatCells": "设置单元格格式",
@@ -939,7 +945,8 @@
             "linkToBlockTitle": "链接到块",
             "orLinkExisting": "或链接到已有的块",
             "selectRangeFirst": "请先选择一个单元格区域。",
-            "selectionTooLarge": "所选区域太大，无法转换为块。"
+            "selectionTooLarge": "所选区域太大，无法转换为块。",
+            "dataValidation": "数据验证…"
         },
         "hyperlink": {
             "insertTitle": "插入链接",
@@ -969,7 +976,19 @@
             "next": "下一个（Enter）",
             "close": "关闭（Esc）",
             "matchCase": "区分大小写",
-            "wholeCell": "全字匹配"
+            "wholeCell": "全字匹配",
+            "found": "找到 {{count}} 处",
+            "position": "第 {{index}} 处，共 {{count}} 处",
+            "regex": "正则",
+            "toggleReplace": "展开替换（Ctrl+H）",
+            "replaceWith": "替换为",
+            "replace": "替换",
+            "replaceTip": "替换当前匹配（Enter）",
+            "replaceAll": "全部替换",
+            "replaceAllTip": "替换所有匹配（Ctrl+Enter）",
+            "replaced": "已替换 {{count}} 个单元格",
+            "replacedSkipped": "已替换 {{count}} 个单元格；跳过 {{skipped}} 个公式单元格",
+            "formulaSkipped": "公式结果不能替换，已跳过"
         },
         "format": {
             "category": "分类",
@@ -1232,6 +1251,60 @@
             "refersTo": "引用位置",
             "notARange": "{{name}} 不是区域，无法选中",
             "defined": "已定义 {{name}}"
+        },
+        "dv": {
+            "title": "数据验证",
+            "appliesTo": "应用于 {{range}}",
+            "sharedRule": "当前规则还覆盖 {{sqref}}；确定只修改所选区域。",
+            "allow": "允许",
+            "data": "数据",
+            "value": "值",
+            "minimum": "最小值",
+            "maximum": "最大值",
+            "source": "来源",
+            "formula": "公式",
+            "valueHint": "数字，或公式，如 =B1",
+            "dateHint": "2026-01-31，或公式，如 =TODAY()",
+            "timeHint": "09:30，或公式",
+            "sourceHint": "是, 否 —— 或区域，如 =$D$1:$D$5",
+            "formulaHint": "有效时为 TRUE，按 {{cell}} 书写，如 =COUNTIF($A:$A,{{cell}})=1",
+            "ignoreBlank": "忽略空值",
+            "inCellDropdown": "提供下拉箭头",
+            "inputMessage": "输入信息（选中单元格时显示）",
+            "errorAlert": "出错警告（值不符合规则时显示）",
+            "style": "样式",
+            "messageTitle": "标题",
+            "message": "内容",
+            "clearAll": "全部清除",
+            "kind": {
+                "any": "任何值",
+                "whole": "整数",
+                "decimal": "小数",
+                "list": "序列",
+                "date": "日期",
+                "time": "时间",
+                "textLength": "文本长度",
+                "custom": "自定义"
+            },
+            "errorStyle": {
+                "stop": "停止",
+                "warning": "警告",
+                "information": "信息"
+            },
+            "errorStyleTip": {
+                "stop": "拒绝输入该值。",
+                "warning": "保留该值，并给出警告。",
+                "information": "保留该值，并给出提示。"
+            },
+            "err": {
+                "source": "请输入序列选项或区域。",
+                "formula": "请输入公式。",
+                "value": "请输入值。",
+                "value2": "请输入最大值。"
+            },
+            "refused": "此处不允许输入“{{value}}”。",
+            "warned": "“{{value}}”不符合该单元格的验证规则。",
+            "pick": "选择一个值"
         }
     }
 }

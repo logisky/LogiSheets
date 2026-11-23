@@ -83,6 +83,9 @@ fn convert_diff<C: VersionExecCtx>(
         EditPayload::DefineName(_) | EditPayload::RenameName(_) | EditPayload::RemoveName(_) => {
             Ok(None)
         }
+        // A validation rule changes no cell; the verdicts it produces land in
+        // non-undoable shadow cells installed after the edit.
+        EditPayload::SetDataValidation(_) => Ok(None),
         // A conditional-formatting edit changes how the whole covered range
         // renders, and the range is not known here without resolving anchors, so
         // the sheet is marked wholly stale rather than diffed cell by cell.

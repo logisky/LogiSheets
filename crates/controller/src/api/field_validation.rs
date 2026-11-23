@@ -185,7 +185,7 @@ impl Workbook {
     /// The restore is unconditional and covers the "cell had no entry" case
     /// too: a validated-but-empty cell has nothing in the container, and
     /// leaving a blank one behind would turn a question into an edit.
-    fn eval_against(
+    pub(crate) fn eval_against(
         &mut self,
         sheet_id: SheetId,
         cell_id: CellId,

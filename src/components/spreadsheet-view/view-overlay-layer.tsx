@@ -1,9 +1,10 @@
 import {FC, useEffect, useRef} from 'react'
-import {Grid} from 'logisheets-engine'
+import {Grid, type SelectedData} from 'logisheets-engine'
 import {BlockInterfaceComponent} from '@/components/block-interface'
 import {CraftInteractionComponent} from '@/components/craft-interaction'
 import {CommentLayer} from '@/components/comment-layer'
 import {DataValidationOverlay} from '@/components/data-validation-overlay'
+import {ActiveCellValidationLayer} from '@/components/data-validation/active-cell-layer'
 import {TraceLayer} from './trace-layer'
 import {LinkLayer} from './link-layer'
 
@@ -20,6 +21,8 @@ export interface ViewOverlayLayerProps {
      * are navigable from either end.
      */
     navigateToCell?: (row: number, col: number) => void
+    /** This view's selection, for what the active cell's rules show. */
+    selectedData?: SelectedData
 }
 
 /**
@@ -55,6 +58,7 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
     canvasStartX,
     canvasStartY,
     navigateToCell,
+    selectedData,
 }) => {
     const rootRef = useRef<HTMLDivElement>(null)
 
@@ -124,6 +128,13 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
             )}
             {grid && (
                 <DataValidationOverlay grid={grid} activeSheet={activeSheet} />
+            )}
+            {grid && (
+                <ActiveCellValidationLayer
+                    grid={grid}
+                    activeSheet={activeSheet}
+                    selectedData={selectedData}
+                />
             )}
             {grid && <TraceLayer grid={grid} activeSheet={activeSheet} />}
             {grid && <LinkLayer grid={grid} activeSheet={activeSheet} />}

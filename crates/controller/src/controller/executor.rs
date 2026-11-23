@@ -297,6 +297,17 @@ impl<'a> Executor<'a> {
         let (cf_executor, cf_updated) = result.execute_conditional_formatting(payload.clone())?;
         result.status.conditional_formatting_manager = cf_executor.manager;
 
+        let (dv_executor, dv_updated) =
+            crate::data_validation_manager::executor::DataValidationExecutor::new(
+                result.status.data_validation_manager.clone(),
+            )
+            .execute(
+                &result.status.navigator,
+                &result.status.sheet_info_manager,
+                payload.clone(),
+            )?;
+        result.status.data_validation_manager = dv_executor.manager;
+
         let mut dirty_ranges = range_executor.dirty_ranges;
         range_executor.removed_ranges.into_iter().for_each(|e| {
             dirty_ranges.insert(e);
@@ -375,6 +386,7 @@ impl<'a> Executor<'a> {
             || image_updated
             || chart_updated
             || cf_updated
+            || dv_updated
             || enum_sets_updated
             || result.updated_cells.len() > 0
             || result.cells_removed.len() > 0;

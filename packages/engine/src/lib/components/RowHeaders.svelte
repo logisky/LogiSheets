@@ -12,6 +12,7 @@
         onSelectRowRange?: (startRow: number, endRow: number) => void
         onContextMenu?: (row: number, e: MouseEvent) => void
         onResizeRow?: (rowIdx: number, deltaPx: number) => void
+        onAutoFitRow?: (rowIdx: number) => void
     }
 
     let {
@@ -23,6 +24,7 @@
         onSelectRowRange,
         onContextMenu,
         onResizeRow,
+        onAutoFitRow,
     }: Props = $props()
 
     let hostEl: HTMLDivElement | undefined = $state()
@@ -123,6 +125,7 @@
                 y={bottomEdge}
                 length={leftTopWidth}
                 onResizeEnd={(deltaPx) => onResizeRow?.(row.idx, deltaPx)}
+                onAutoFit={() => onAutoFitRow?.(row.idx)}
             />
         {/each}
         {#each hiddenLineBoundaries(grid.rows.map((r) => ({ idx: r.idx, size: r.height })), grid.anchorY, grid.subOffsetY) as y}

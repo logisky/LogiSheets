@@ -45,7 +45,10 @@ import type {
     PivotPlanParams,
     PivotPlanForParams,
     MayModifyBlockParams,
+    CheckDataValidationParams,
     CheckFieldValidationParams,
+    DataValidationInfo,
+    DataValidationVerdict,
     FieldValidationVerdict,
     GetCellParams,
     HyperlinkInfo,
@@ -449,6 +452,20 @@ export class WorkbookWorkerService implements IWorkbookWorker {
         params: CheckFieldValidationParams
     ): Result<FieldValidationVerdict> {
         return this.workbook.checkFieldValidation(params)
+    }
+
+    /** The data-validation rule covering a cell, or null. Read-only. */
+    public getDataValidation(
+        params: GetCellParams
+    ): Result<DataValidationInfo | null> {
+        return this.workbook.getDataValidation(params)
+    }
+
+    /** Whether a proposed value would break the cell's data validation. */
+    public checkDataValidation(
+        params: CheckDataValidationParams
+    ): Result<DataValidationVerdict> {
+        return this.workbook.checkDataValidation(params)
     }
 
     /** Where a cell's link goes, or null. Read-only. */
@@ -893,6 +910,12 @@ export class WorkbookWorkerService implements IWorkbookWorker {
                     break
                 case MethodName.CheckFieldValidation:
                     result = this.checkFieldValidation(args)
+                    break
+                case MethodName.GetDataValidation:
+                    result = this.getDataValidation(args)
+                    break
+                case MethodName.CheckDataValidation:
+                    result = this.checkDataValidation(args)
                     break
                 case MethodName.GetHyperlink:
                     result = this.getHyperlink(args)

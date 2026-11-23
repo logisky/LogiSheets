@@ -11,7 +11,42 @@
   border: 1px solid #e6e8eb;
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-  width: 320px;
+  width: 380px;
+}
+
+.toggle :global(svg) {
+  transition: transform 0.12s ease;
+}
+
+.toggleOpen :global(svg) {
+  transform: rotate(90deg);
+}
+
+// Lines the Replace input up under the Find input.
+.toggleSpacer {
+  flex: 0 0 28px;
+}
+
+.textBtn {
+  font: inherit;
+  font-size: 12px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #cfd4d9;
+  border-radius: 4px;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: #f1f3f5;
+  }
+
+  &:disabled {
+    color: #b7bcc2;
+    cursor: default;
+  }
 }
 
 .row {

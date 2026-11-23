@@ -508,6 +508,7 @@
             "diffLayer": "Diff layer",
             "blockOverlays": "Block overlays always visible",
             "showGridlines": "Show gridlines",
+            "showFormulas": "Show formulas",
             "showComments": "Show comments",
             "zoomOut": "Zoom out",
             "zoomIn": "Zoom in",
@@ -537,8 +538,12 @@
             "nameManagerTip": "Define, rename and delete named ranges and constants"
         },
         "data": {
-            "conditionalFormatting": "Conditional formatting…",
-            "findReplace": "Find & replace"
+            "conditionalFormatting": "Conditional formatting",
+            "findReplace": "Find & replace",
+            "dataValidation": "Data validation",
+            "conditionalFormattingTip": "Format cells that meet a rule",
+            "dataValidationTip": "Limit what can be entered in the selected cells",
+            "findReplaceTip": "Find and replace (Ctrl+H)"
         },
         "advanced": {
             "createBlock": "CreateBlock",
@@ -903,7 +908,8 @@
             "save": "Save",
             "create": "Create",
             "unknown": "Unknown",
-            "somethingWrong": "Something went wrong."
+            "somethingWrong": "Something went wrong.",
+            "ok": "OK"
         },
         "menu": {
             "formatCells": "Format Cells",
@@ -939,7 +945,8 @@
             "linkToBlockTitle": "Link to block",
             "orLinkExisting": "or link to an existing block",
             "selectRangeFirst": "Select a range of cells first.",
-            "selectionTooLarge": "Selection is too large to convert to a block."
+            "selectionTooLarge": "Selection is too large to convert to a block.",
+            "dataValidation": "Data validation…"
         },
         "hyperlink": {
             "insertTitle": "Insert link",
@@ -969,7 +976,19 @@
             "next": "Next (Enter)",
             "close": "Close (Esc)",
             "matchCase": "Match case",
-            "wholeCell": "Whole cell"
+            "wholeCell": "Whole cell",
+            "found": "{{count}} found",
+            "position": "{{index}} of {{count}}",
+            "regex": "Regex",
+            "toggleReplace": "Toggle replace (Ctrl+H)",
+            "replaceWith": "Replace with",
+            "replace": "Replace",
+            "replaceTip": "Replace this match (Enter)",
+            "replaceAll": "Replace all",
+            "replaceAllTip": "Replace every match (Ctrl+Enter)",
+            "replaced": "Replaced {{count}} cell(s)",
+            "replacedSkipped": "Replaced {{count}} cell(s); skipped {{skipped}} formula cell(s)",
+            "formulaSkipped": "Formula results can't be replaced; skipped"
         },
         "format": {
             "category": "Category",
@@ -1232,6 +1251,60 @@
             "refersTo": "Refers to",
             "notARange": "{{name}} is not a range, so there is nothing to select",
             "defined": "Defined {{name}}"
+        },
+        "dv": {
+            "title": "Data validation",
+            "appliesTo": "Applies to {{range}}",
+            "sharedRule": "The current rule also covers {{sqref}}; OK changes only the selection.",
+            "allow": "Allow",
+            "data": "Data",
+            "value": "Value",
+            "minimum": "Minimum",
+            "maximum": "Maximum",
+            "source": "Source",
+            "formula": "Formula",
+            "valueHint": "A number, or a formula such as =B1",
+            "dateHint": "2026-01-31, or a formula such as =TODAY()",
+            "timeHint": "09:30, or a formula",
+            "sourceHint": "Yes, No — or a range such as =$D$1:$D$5",
+            "formulaHint": "TRUE when valid, written for {{cell}}, e.g. =COUNTIF($A:$A,{{cell}})=1",
+            "ignoreBlank": "Ignore blank",
+            "inCellDropdown": "In-cell dropdown",
+            "inputMessage": "Input message (shown when the cell is selected)",
+            "errorAlert": "Error alert (shown when a value breaks the rule)",
+            "style": "Style",
+            "messageTitle": "Title",
+            "message": "Message",
+            "clearAll": "Clear all",
+            "kind": {
+                "any": "Any value",
+                "whole": "Whole number",
+                "decimal": "Decimal",
+                "list": "List",
+                "date": "Date",
+                "time": "Time",
+                "textLength": "Text length",
+                "custom": "Custom"
+            },
+            "errorStyle": {
+                "stop": "Stop",
+                "warning": "Warning",
+                "information": "Information"
+            },
+            "errorStyleTip": {
+                "stop": "The value is refused.",
+                "warning": "The value is kept, with a warning.",
+                "information": "The value is kept, with a note."
+            },
+            "err": {
+                "source": "Enter the list's options or a range.",
+                "formula": "Enter a formula.",
+                "value": "Enter a value.",
+                "value2": "Enter a maximum."
+            },
+            "refused": "“{{value}}” isn't allowed here.",
+            "warned": "“{{value}}” breaks this cell's validation rule.",
+            "pick": "Choose a value"
         }
     }
 }

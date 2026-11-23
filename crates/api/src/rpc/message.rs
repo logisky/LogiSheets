@@ -25,11 +25,12 @@ use crate::{
     ActionEffect, AppData, AppendixWithCell, BlockActor, BlockDataRow, BlockField, BlockInfo,
     BlockModifyInfo, BlockOp, BlockOpForPayload, BlockOpPolicy, BlockSortOrder,
     CellCoordinateWithSheet, CellImageInfo, CellInfo, CellInput, CellPosition, CellRefRange,
-    CfRuleInfo, ChartInfo, ColId, Comment, DefinedNameInfo, DependentCell, DisplayWindow,
-    DisplayWindowWithStartPoint, DuplicateBlockKey, EditPayload, EnumSetInfo, ErrorMessage,
-    FieldValidationVerdict, FormulaDisplayInfo, HyperlinkInfo, LinkInfo, MergeCell, PivotExcelNote,
-    PivotPlan, PivotSpecParts, ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo,
-    SheetCellId, SheetCoordinate, SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
+    CfRuleInfo, ChartInfo, ColId, Comment, DataValidationInfo, DataValidationVerdict,
+    DefinedNameInfo, DependentCell, DisplayWindow, DisplayWindowWithStartPoint, DuplicateBlockKey,
+    EditPayload, EnumSetInfo, ErrorMessage, FieldValidationVerdict, FormulaDisplayInfo,
+    HyperlinkInfo, LinkInfo, MergeCell, PivotExcelNote, PivotPlan, PivotSpecParts,
+    ReproducibleCell, RowId, RowInfo, SaveFileResult, ShadowCellInfo, SheetCellId, SheetCoordinate,
+    SheetDimension, SheetId, SheetInfo, Style, TempStatusDiff, Value,
 };
 
 // ============================================================================
@@ -96,6 +97,8 @@ pub enum Message {
     PivotPlanFor(PivotPlanForParams),
     MayModifyBlock(MayModifyBlockParams),
     CheckFieldValidation(CheckFieldValidationParams),
+    GetDataValidation(GetCellParams),
+    CheckDataValidation(CheckDataValidationParams),
     GetHyperlink(GetCellParams),
     GetBlockModifyInfo(GetBlockModifyInfoParams),
     GetShadowCellId(GetShadowCellIdParams),
@@ -703,6 +706,21 @@ pub struct CheckFieldValidationParams {
     pub proposed: String,
 }
 
+/// Ask whether a value would break a cell's data-validation rule (Excel's "Data
+/// validation"), before writing it — the host's half of the "Stop" alert.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "check_data_validation_params.ts",
+    rename_all = "camelCase"
+)]
+pub struct CheckDataValidationParams {
+    pub sheet_idx: usize,
+    pub row: usize,
+    pub col: usize,
+    /// The value the caller is about to write, exactly as the user typed it.
+    pub proposed: String,
+}
+
 /// A block's governance metadata on its own — owner, default policy,
 /// per-operation overrides, description — without its cells.
 ///
@@ -1112,6 +1130,18 @@ pub struct WorkbookMethods {
         params: CheckFieldValidationParams,
         book_id: Option<usize>,
     ) -> Result<FieldValidationVerdict, ErrorMessage>,
+    /// The data-validation rule covering a cell, or null. Block cells report
+    /// their sheet-level rule here too; their field rules are separate.
+    pub get_data_validation: fn(
+        params: GetCellParams,
+        book_id: Option<usize>,
+    ) -> Result<Option<DataValidationInfo>, ErrorMessage>,
+    /// Whether writing a value would break the cell's data-validation rule.
+    /// Installs the cell's validation shadow if it has none; writes nothing else.
+    pub check_data_validation: fn(
+        params: CheckDataValidationParams,
+        book_id: Option<usize>,
+    ) -> Result<DataValidationVerdict, ErrorMessage>,
     /// Where the link in a cell goes, or null when the cell is not one. A
     /// `HYPERLINK` formula's target is evaluated now; nothing is written.
     pub get_hyperlink: fn(

@@ -52,7 +52,11 @@ fn dispatched_functions() -> BTreeSet<String> {
             set.insert(name.to_string());
         }
     }
-    assert!(set.len() > 100, "parsed too few dispatch arms ({})", set.len());
+    assert!(
+        set.len() > 100,
+        "parsed too few dispatch arms ({})",
+        set.len()
+    );
     set
 }
 

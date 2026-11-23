@@ -2627,7 +2627,10 @@ impl<'a> Worksheet<'a> {
         }
 
         // See get_row_info_by_id: a fitted height counts as much as a set one.
-        Ok(row_info.unwrap().ht.unwrap_or(self.get_default_row_height()))
+        Ok(row_info
+            .unwrap()
+            .ht
+            .unwrap_or(self.get_default_row_height()))
     }
 
     /// Column width in character-width units; the sheet default unless custom.

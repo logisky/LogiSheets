@@ -1,4 +1,5 @@
 use crate::conditional_formatting_manager::spec::CfRuleSpec;
+use crate::data_validation_manager::spec::DataValidationSpec;
 use gents_derives::TS;
 use logisheets_base::{BlockId, CellId, ColId, EphemeralId, RowId, SheetId, async_func::Task};
 
@@ -161,6 +162,7 @@ pub enum EditPayload {
     UpdateConditionalFormattingRule(UpdateConditionalFormattingRule),
     MoveConditionalFormattingRule(MoveConditionalFormattingRule),
     DeleteConditionalFormattingRule(DeleteConditionalFormattingRule),
+    SetDataValidation(SetDataValidation),
     DeleteChart(DeleteChart),
     CreateChart(CreateChart),
     UpdateChart(UpdateChart),
@@ -651,6 +653,30 @@ pub struct MoveConditionalFormattingRule {
 pub struct DeleteConditionalFormattingRule {
     pub sheet_idx: usize,
     pub rule_id: u32,
+}
+
+/// Give the cells `start`..`end` (corners in any order) a data-validation rule,
+/// or clear theirs with `rule: None`.
+///
+/// Excel keeps one rule per cell, so whatever rules covered these cells before
+/// stop covering them, and a rule left covering nothing is dropped. The range is
+/// anchored on cell ids and follows later row/column edits; one spanning every
+/// row is stored as whole columns (`A:A`), so it also covers rows inserted
+/// later. Block cells are covered on paper but never checked — a block's own
+/// field rules govern its cells.
+#[derive(Debug, Clone, TS)]
+#[ts(
+    file_name = "set_data_validation.ts",
+    builder,
+    rename_all = "camelCase"
+)]
+pub struct SetDataValidation {
+    pub sheet_idx: usize,
+    pub start_row: usize,
+    pub start_col: usize,
+    pub end_row: usize,
+    pub end_col: usize,
+    pub rule: Option<DataValidationSpec>,
 }
 
 #[derive(Debug, Clone, TS)]
@@ -2302,6 +2328,12 @@ impl From<MoveChart> for EditPayload {
     }
 }
 impl Payload for MoveChart {}
+impl From<SetDataValidation> for EditPayload {
+    fn from(value: SetDataValidation) -> Self {
+        EditPayload::SetDataValidation(value)
+    }
+}
+impl Payload for SetDataValidation {}
 impl From<CreateConditionalFormattingRule> for EditPayload {
     fn from(value: CreateConditionalFormattingRule) -> Self {
         EditPayload::CreateConditionalFormattingRule(value)

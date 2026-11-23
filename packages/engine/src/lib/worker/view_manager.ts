@@ -150,6 +150,10 @@ export class CellViewData {
         {height: number; customHeight: boolean; hidden: boolean}
     > = new Map()
 
+    /** Each column's hidden flag, by column index — a fit leaves hidden
+     *  columns alone. */
+    public colMeta: ReadonlyMap<number, {hidden: boolean}> = new Map()
+
     constructor(
         public rows: readonly RenderCell[],
         public cols: readonly RenderCell[],
@@ -317,8 +321,10 @@ function parseDisplayWindow(
     const yStart = ptToPx(origin.startY)
 
     let x = xStart
+    const colMeta = new Map<number, {hidden: boolean}>()
     const cols = window.window.cols.map((c) => {
         const colInfo = StandardColInfo.from(c)
+        colMeta.set(c.idx, {hidden: c.hidden})
         const renderCol = getRenderCell()
             .setCoordinate(
                 getRange().setStartCol(colInfo.idx).setEndCol(colInfo.idx)
@@ -518,5 +524,6 @@ function parseDisplayWindow(
         window.window.blocks
     )
     data.rowMeta = rowMeta
+    data.colMeta = colMeta
     return data
 }
