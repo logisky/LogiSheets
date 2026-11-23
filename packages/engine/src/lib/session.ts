@@ -22,6 +22,7 @@ import {isErrorMessage} from 'logisheets-web'
 import type {DataService} from './clients/service'
 import {isLoadCancelled} from './clients/service'
 import type {Grid, EngineConfig, ZoomOrigin} from '$types/index'
+import type {HostShortcutId} from './components/shortcuts'
 import {mount, unmount} from 'svelte'
 import Spreadsheet from './components/Spreadsheet.svelte'
 import type {ContextMenuContext} from './components/contextMenuTypes'
@@ -38,6 +39,7 @@ export type SessionEventType =
     | 'contextMenu'
     | 'followHyperlink'
     | 'insertHyperlink'
+    | 'shortcutIntent'
     | 'error'
 
 export interface SessionEventMap {
@@ -65,6 +67,21 @@ export interface SessionEventMap {
      * The engine has no dialog; the host opens one.
      */
     insertHyperlink: {sheetIdx: number; row: number; col: number}
+    /**
+     * A shortcut the grid cannot carry out itself — every id in
+     * `HOST_SHORTCUTS`: Ctrl/⌘+S save, Ctrl/⌘+1 format cells, Alt+= AutoSum,
+     * Shift+F11 new sheet, Shift+F2 comment, Ctrl/⌘+Shift+~ ! @ # $ % ^
+     * number formats, and under the `excel` keymap Ctrl+T, Ctrl+9 / 0 hide,
+     * Ctrl+Shift+9 / 0 unhide. The host acts on `selectedData`, the view's
+     * selection when the key was pressed.
+     * The key is consumed either way, so a host that ignores an id leaves
+     * that key doing nothing.
+     */
+    shortcutIntent: {
+        id: HostShortcutId
+        sheetIdx: number
+        selectedData: SelectedData
+    }
     error: Error
 }
 
@@ -155,6 +172,7 @@ export class Session {
                 'contextMenu',
                 'followHyperlink',
                 'insertHyperlink',
+                'shortcutIntent',
                 'error',
             ] as SessionEventType[]
         ).forEach((type) => {
@@ -241,6 +259,16 @@ export class Session {
                         sheetIdx: this._currentSheetIdx,
                         row,
                         col,
+                    })
+                },
+                onShortcutIntent: (
+                    id: HostShortcutId,
+                    selectedData: SelectedData
+                ) => {
+                    this._emit('shortcutIntent', {
+                        id,
+                        sheetIdx: this._currentSheetIdx,
+                        selectedData,
                     })
                 },
                 // Zoom is engine-global; hand the gesture up rather than applying it

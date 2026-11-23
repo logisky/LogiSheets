@@ -1,4 +1,5 @@
-import {useState, FC, useEffect} from 'react'
+import {useState, FC, useEffect, useRef} from 'react'
+import type {Session, SessionEventMap} from 'logisheets-engine'
 import {useTranslation} from 'react-i18next'
 import {
     getSelectedCellRange,
@@ -38,6 +39,12 @@ export interface SheetTabProps {
     grid?: Grid | null
     /** Drives the status read-out on the right of the strip. */
     selectedData?: SelectedData
+    /**
+     * The view this strip belongs to, for its shortcuts (Shift+F11 adds a
+     * sheet). A split or pop-out pane passes its own session; omitted means
+     * the main view, which the Engine itself speaks for.
+     */
+    shortcutSource?: Pick<Session, 'on' | 'off'> | null
 }
 
 export const SheetsTabComponent: FC<SheetTabProps> = ({
@@ -45,6 +52,7 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
     activeSheet$,
     grid,
     selectedData,
+    shortcutSource,
 }) => {
     const {t} = useTranslation()
     const engine = useEngine()
@@ -181,6 +189,21 @@ export const SheetsTabComponent: FC<SheetTabProps> = ({
         if (!isErrorMessage(refreshed)) setSheets(refreshed)
         activeSheet$(newIdx)
     }
+
+    // Shift+F11, Excel's "insert worksheet": the grid only reports the key,
+    // on the session of the view it was pressed in.
+    const addSheetRef = useRef(addSheet)
+    addSheetRef.current = addSheet
+    useEffect(() => {
+        const source: Pick<Session, 'on' | 'off'> | null =
+            shortcutSource === undefined ? engine : shortcutSource
+        if (!source) return
+        const onIntent = (e: SessionEventMap['shortcutIntent']) => {
+            if (e.id === 'newSheet') void addSheetRef.current()
+        }
+        source.on('shortcutIntent', onIntent)
+        return () => source.off('shortcutIntent', onIntent)
+    }, [engine, shortcutSource])
 
     return (
         <div className={styles['host']}>

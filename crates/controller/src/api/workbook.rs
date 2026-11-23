@@ -91,6 +91,21 @@ impl Workbook {
         effect
     }
 
+    /// Execute `action` as part of the most recent undo step (on the temp
+    /// branch's history when `temp`). See `Controller::handle_action_amend`.
+    pub fn handle_action_amend(&mut self, action: PayloadsAction, temp: bool) -> ActionEffect {
+        let restores_snapshot = action
+            .payloads
+            .iter()
+            .any(is_conditional_formatting_payload);
+        let effect = self.controller.handle_action_amend(action, temp);
+        self.invalidate_positioners();
+        if !temp {
+            self.resync_conditional_formatting(&effect, restores_snapshot);
+        }
+        effect
+    }
+
     /// Keep the set of materialized conditional-formatting shadows in step with
     /// the edit that just landed.
     ///

@@ -1216,6 +1216,10 @@ pub struct SetRowHeight {
     pub sheet_idx: usize,
     pub row: usize,
     pub height: f64,
+    /// The height came from fitting the row to its content, so the row stays
+    /// auto-sized and a later fit may change it again. Omitted means a height
+    /// the user chose (Excel's `customHeight`), which fits leave alone.
+    pub auto_fit: Option<bool>,
 }
 
 #[derive(Debug, Clone, TS)]

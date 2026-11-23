@@ -660,6 +660,9 @@ pub struct RowInfo {
     /// Points.
     pub height: f64,
     pub hidden: bool,
+    /// The user set this height (Excel's `customHeight`). An auto-fit
+    /// leaves such a row alone; any other row sizes to its content.
+    pub custom_height: bool,
 }
 
 impl RowInfo {
@@ -669,6 +672,7 @@ impl RowInfo {
             idx,
             height: get_default_row_height(),
             hidden: false,
+            custom_height: false,
         }
     }
 }

@@ -129,6 +129,10 @@ export type {
     ContextMenuContext,
 } from './components/contextMenuTypes'
 
+// Keyboard shortcuts
+export {shortcutLabel} from './components/shortcuts'
+export type {Keymap, ShortcutId, HostShortcutId} from './components/shortcuts'
+
 // Framework adapters
 export {convertCanvasPropsToAdapterProps} from './adapters'
 

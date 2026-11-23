@@ -2,7 +2,7 @@
  * Offscreen Client - communicates with the worker for rendering operations.
  */
 
-import type {Grid, AppropriateHeight} from '$types/index'
+import type {Grid, RowFitHeight} from '$types/index'
 import type {ErrorMessage} from 'logisheets-web'
 import {OffscreenRenderName} from '../worker/types'
 
@@ -52,18 +52,18 @@ export class OffscreenClient {
         }) as Resp<Grid>
     }
 
-    getAppropriateHeights(
-        canvasId: number,
-        sheetId: number,
-        anchorX: number,
-        anchorY: number
-    ): Resp<readonly AppropriateHeight[]> {
-        return this._call(OffscreenRenderName.GetAppropriateHeights, {
-            canvasId,
-            sheetId,
-            anchorX,
-            anchorY,
-        }) as Resp<readonly AppropriateHeight[]>
+    /** See OffscreenWorkerService.getRowFitHeights. */
+    getRowFitHeights(
+        sheetIdx: number,
+        fromRow: number,
+        toRow: number
+    ): Resp<readonly RowFitHeight[]> {
+        return this._call(OffscreenRenderName.GetRowFitHeights, {
+            canvasId: 0,
+            sheetIdx,
+            fromRow,
+            toRow,
+        }) as Resp<readonly RowFitHeight[]>
     }
 
     resize(

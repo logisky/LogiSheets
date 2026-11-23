@@ -28,6 +28,26 @@ impl VersionManager {
         self.version += 1;
     }
 
+    /// Fold `status` into the most recent step instead of adding one: the
+    /// current snapshot is replaced and `processes`' diffs join that step's.
+    /// Neither stack moves and `version` stays put, so undo goes back past
+    /// both changes at once and redo restores both. Used for follow-up
+    /// layout (row heights, column widths) measured after the step it fits.
+    /// With no step recorded yet it amends the baseline.
+    pub fn amend(
+        &mut self,
+        mut status: Status,
+        processes: PayloadsAction,
+        updated_cells: HashSet<(SheetId, CellId)>,
+    ) {
+        let diffs = convert_payloads_to_sheet_diff(&mut status, processes, updated_cells);
+        for (sheet_id, diff) in diffs {
+            let current = self.current_diffs.entry(sheet_id).or_default();
+            diff.data.into_iter().for_each(|d| current.insert_diff(d));
+        }
+        self.current_status = status;
+    }
+
     // `None` means that users can not update the workbook to the latest one incremently.
     pub fn get_sheet_diffs_from_version(&self, sheet: SheetId, version: u32) -> Option<SheetDiff> {
         if version > self.version {

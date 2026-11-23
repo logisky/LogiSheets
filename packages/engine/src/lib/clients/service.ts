@@ -99,16 +99,6 @@ export class DataService {
     private _activeSheetIdx = 0
     private _activeSheetId = 0
 
-    // Last render across any canvas (last-write-wins). Used only by the
-    // app-level handleTransactionAndAdjustRowHeights helper to know which
-    // sheet/anchor/canvas to repaint after an event-less transaction.
-    private _lastRender = {
-        sheetId: 0,
-        anchorX: 0,
-        anchorY: 0,
-        canvasId: 0,
-    }
-
     constructor(worker: Worker) {
         this._workbook = new WorkbookClient(worker)
         this._offscreen = new OffscreenClient(worker)
@@ -148,14 +138,7 @@ export class DataService {
         anchorY: number,
         canvasId = 0
     ): Resp<Grid> {
-        return this._offscreen
-            .render(canvasId, sheetId, anchorX, anchorY)
-            .then((v) => {
-                if (!isErrorMessage(v)) {
-                    this._lastRender = {sheetId, anchorX, anchorY, canvasId}
-                }
-                return v
-            })
+        return this._offscreen.render(canvasId, sheetId, anchorX, anchorY)
     }
 
     /**
@@ -521,40 +504,46 @@ export class DataService {
     }
 
     /**
-     * INCOMPLETE: applies `transaction` without events and measures row
-     * heights for the last-rendered canvas, but never applies the heights
-     * (`onlyIncrease`/`fromRowIdx`/`toRowIdx` are unused). A rejected
-     * transaction is swallowed — this resolves undefined either way — and the
-     * last render is repainted. Prefer {@link handleTransaction}.
+     * Apply `transaction`, then fit rows `fromRow..=toRow` of `sheetIdx` to
+     * their content — for an edit that changes how much room text needs
+     * (wrap, font size). The fit is measured after the edit lands and joins
+     * the same undo step (`amend`), so undo reverts both and redo restores
+     * both. Rows the user sized by hand stay as they are. Resolves the
+     * edit's own failure, if any; a fit that cannot be measured is skipped.
      */
-    public async handleTransactionAndAdjustRowHeights(
+    public async handleTransactionAndFitRows(
         transaction: Transaction,
-        onlyIncrease = false,
-        fromRowIdx?: number,
-        toRowIdx?: number
+        sheetIdx: number,
+        fromRow: number,
+        toRow: number
     ): Resp<void> {
-        const {sheetId, anchorX, anchorY, canvasId} = this._lastRender
-        const affectResult =
-            await this._workbook.handleTransactionWithoutEvents({
-                transaction,
-                temp: false,
-            })
-        if (isErrorMessage(affectResult)) {
-            await this._offscreen.render(canvasId, sheetId, anchorX, anchorY)
-            return
-        }
-        const heights = await this._offscreen.getAppropriateHeights(
-            canvasId,
-            sheetId,
-            anchorX,
-            anchorY
+        const effect = await this._workbook.handleTransaction({
+            transaction,
+            temp: transaction.temp,
+        })
+        if (isErrorMessage(effect)) return effect
+        if (effect.status.type === 'err') return
+        const fits = await this._offscreen.getRowFitHeights(
+            sheetIdx,
+            fromRow,
+            toRow
         )
-        if (isErrorMessage(heights)) {
-            await this._offscreen.render(canvasId, sheetId, anchorX, anchorY)
-            return
-        }
-        // Note: SetRowHeightBuilder would need to be imported from logisheets-web
-        // This is simplified for the migration
+        // The offscreen channel reports a worker failure as a bare string, not
+        // an ErrorMessage, so test for the array rather than for an error.
+        if (!Array.isArray(fits) || fits.length === 0) return
+        const r = await this._workbook.handleTransaction({
+            transaction: {
+                payloads: fits.map(({row, height}) => ({
+                    type: 'setRowHeight' as const,
+                    value: {sheetIdx, row, height, autoFit: true},
+                })),
+                undoable: transaction.undoable,
+                temp: transaction.temp,
+                amend: true,
+            },
+            temp: transaction.temp,
+        })
+        if (isErrorMessage(r)) return r
         return
     }
 

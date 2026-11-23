@@ -1,7 +1,12 @@
 import {useEffect, useRef, useState, useCallback} from 'react'
 import {observer} from 'mobx-react-lite'
 import {useEngine} from '@/core/engine/provider'
-import type {Session, Grid, SelectedData} from 'logisheets-engine'
+import type {
+    Session,
+    Grid,
+    SelectedData,
+    SessionEventMap,
+} from 'logisheets-engine'
 import {buildSelectedDataFromCell} from 'logisheets-engine'
 import {SheetsTabComponent} from '@/components/sheets-tab'
 import {globalStore} from '@/store'
@@ -107,6 +112,15 @@ export const SpreadsheetView = observer(function SpreadsheetView({
             if (!s) return () => {}
             s.on('contextMenu', cb)
             return () => s.off('contextMenu', cb)
+        },
+        [session]
+    )
+    const subscribeShortcut = useCallback(
+        (cb: (e: SessionEventMap['shortcutIntent']) => void) => {
+            const s = session
+            if (!s) return () => {}
+            s.on('shortcutIntent', cb)
+            return () => s.off('shortcutIntent', cb)
         },
         [session]
     )
@@ -237,6 +251,7 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                 getActiveSheet={getActiveSheet}
                 setSelection={setSelection}
                 setActiveSheet={setViewSheet}
+                subscribeShortcut={subscribeShortcut}
             />
             <HyperlinkDialog
                 dataSvc={dataSvc}
@@ -244,6 +259,7 @@ export const SpreadsheetView = observer(function SpreadsheetView({
                 onClose={() => setLinkTarget(null)}
             />
             <SheetsTabComponent
+                shortcutSource={session}
                 activeSheet={activeSheet}
                 activeSheet$={(idx) => {
                     setActiveSheet(idx)

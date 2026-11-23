@@ -33,6 +33,7 @@ export class GlobalStore {
             showComments: observable,
             pendingCommentCell: observableRef,
             findRequest: observable,
+            saveRequest: observable,
             traceRequest: observableRef,
             traceResult: observableRef,
             linkRevision: observable,
@@ -49,6 +50,7 @@ export class GlobalStore {
             requestAddComment: action,
             clearPendingCommentCell: action,
             requestFind: action,
+            requestSave: action,
             requestTrace: action,
             setTraceResult: action,
             clearTrace: action,
@@ -171,6 +173,14 @@ export class GlobalStore {
 
     requestFind() {
         this.findRequest += 1
+    }
+
+    // A one-shot Ctrl/⌘+S from whichever view has focus, consumed by the
+    // toolbar, which owns saving. A counter for the same reason as above.
+    saveRequest = 0
+
+    requestSave() {
+        this.saveRequest += 1
     }
 
     // ─── Formula auditing: trace precedents / dependents ────────────────────

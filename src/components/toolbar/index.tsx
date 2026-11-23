@@ -14,6 +14,7 @@ import styles from './toolbar.module.scss'
 import {
     getSelectedCellRange,
     getSelectedLines,
+    getSelectedRows,
     toA1notation,
     Grid,
 } from 'logisheets-engine'
@@ -44,6 +45,7 @@ import {
     getFirstCell,
 } from 'logisheets-engine'
 import {tx} from '@/core/transaction'
+import {autoSumPayload} from '@/core/auto-sum'
 import {hydrateEnumSetsFromWorkbook} from '@/core/blocks/enum-hydrate'
 import {
     getPersistentInteractions,
@@ -785,6 +787,28 @@ export const Toolbar = observer(
             }).then(() => setFontName(v))
         }
 
+        /**
+         * Apply a style edit that changes how much room text needs (wrap,
+         * font size), then refit the rows it covers in the same undo step.
+         * A column selection covers every used row.
+         */
+        const applyAndFitRows = async (payloads: readonly Payload[]) => {
+            if (!selectedData) return
+            const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
+            let [from, to] = getSelectedRows(selectedData)
+            if (from === undefined || to === undefined) {
+                const dim = await DATA_SERVICE.getSheetDimension(sheetIdx)
+                if (isErrorMessage(dim)) return
+                ;[from, to] = [0, Math.max(0, dim.maxRow)]
+            }
+            return DATA_SERVICE.handleTransactionAndFitRows(
+                tx(payloads, true),
+                sheetIdx,
+                Math.min(from, to),
+                Math.max(from, to)
+            )
+        }
+
         const onToggleWrapText = () => {
             if (!selectedData) return
             const v = !wrapText
@@ -793,10 +817,7 @@ export const Toolbar = observer(
                 selectedData,
                 v
             )
-            DATA_SERVICE.handleTransactionAndAdjustRowHeights(
-                tx(payloads, true),
-                true
-            ).then(() => setWrapText(v))
+            applyAndFitRows(payloads).then(() => setWrapText(v))
         }
 
         const onAlignClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -924,63 +945,19 @@ export const Toolbar = observer(
             })
         }
 
-        /**
-         * Sum the run of cells directly above the selection (or to its left
-         * when the selection spans a row), writing `=SUM(range)` into it —
-         * Excel's AutoSum, which guesses the range instead of asking.
-         */
+        /** Excel's AutoSum into the active cell — see autoSumPayload. */
         const autoSum = async () => {
             if (!selectedData) return
             const r = getSelectedCellRange(selectedData)
             if (!r) return
             const sheetIdx = DATA_SERVICE.getCurrentSheetIdx()
-            const numericAt = async (row: number, col: number) => {
-                if (row < 0 || col < 0) return false
-                const info = await DATA_SERVICE.getCellInfo(sheetIdx, row, col)
-                if (isErrorMessage(info)) return false
-                const v = info.toCellInfo().value
-                return v !== 'empty' && v.type === 'number'
-            }
-            // Walk up first; a single row of numbers to the left is the other
-            // shape people expect.
-            let start = r.startRow
-            while (start > 0 && (await numericAt(start - 1, r.startCol)))
-                start--
-            if (start < r.startRow) {
-                const col = toA1notation(r.startCol)
-                runTxn([
-                    {
-                        type: 'cellInput',
-                        value: {
-                            sheetIdx,
-                            row: r.startRow,
-                            col: r.startCol,
-                            content: `=SUM($${col}$${start + 1}:$${col}$${
-                                r.startRow
-                            })`,
-                        },
-                    } as Payload,
-                ])
-                return
-            }
-            let left = r.startCol
-            while (left > 0 && (await numericAt(r.startRow, left - 1))) left--
-            if (left < r.startCol) {
-                const row = r.startRow + 1
-                runTxn([
-                    {
-                        type: 'cellInput',
-                        value: {
-                            sheetIdx,
-                            row: r.startRow,
-                            col: r.startCol,
-                            content: `=SUM($${toA1notation(
-                                left
-                            )}$${row}:$${toA1notation(r.startCol - 1)}$${row})`,
-                        },
-                    } as Payload,
-                ])
-            }
+            const p = await autoSumPayload(
+                DATA_SERVICE,
+                sheetIdx,
+                r.startRow,
+                r.startCol
+            )
+            if (p) runTxn([p])
         }
 
         /** Zoom is engine state, so the buttons just drive its API. */
@@ -1068,14 +1045,11 @@ export const Toolbar = observer(
             const rounded = Math.round(pt * 2) / 2 // Excel allows half points
             setFontPt(rounded)
             setFontPtDraft(null)
-            DATA_SERVICE.handleTransactionAndAdjustRowHeights(
-                tx(
-                    generateFontPayload(
-                        DATA_SERVICE.getCurrentSheetIdx(),
-                        selectedData,
-                        {size: rounded}
-                    ),
-                    true
+            applyAndFitRows(
+                generateFontPayload(
+                    DATA_SERVICE.getCurrentSheetIdx(),
+                    selectedData,
+                    {size: rounded}
                 )
             )
         }
@@ -1095,9 +1069,7 @@ export const Toolbar = observer(
                 selectedData,
                 {size: ty === 'increase' ? fontSize + 1 : fontSize - 1}
             )
-            DATA_SERVICE.handleTransactionAndAdjustRowHeights(
-                tx(payloads, true)
-            )
+            applyAndFitRows(payloads)
         }
 
         const onMergeOrSplitClick = () => {
@@ -1295,6 +1267,13 @@ export const Toolbar = observer(
                 setSaving(false)
             }
         }
+        // Ctrl/⌘+S in any view arrives as a store request (see requestSave).
+        const saveRef = useRef(saveWorkbook)
+        saveRef.current = saveWorkbook
+        const saveRequest = globalStore.saveRequest
+        useEffect(() => {
+            if (saveRequest > 0) void saveRef.current()
+        }, [saveRequest])
 
         async function onSave(): Promise<void> {
             const persistentData = BLOCK_MANAGER.getPersistentData([])

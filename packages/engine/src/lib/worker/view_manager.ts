@@ -143,6 +143,12 @@ export class CellViewData {
     public toRow = 0
     public fromCol = 0
     public toCol = 0
+    /** Each row's stored height (pt) and flags, by row index — what a fit
+     *  compares against and must leave alone. */
+    public rowMeta: ReadonlyMap<
+        number,
+        {height: number; customHeight: boolean; hidden: boolean}
+    > = new Map()
 
     constructor(
         public rows: readonly RenderCell[],
@@ -329,8 +335,17 @@ function parseDisplayWindow(
     })
 
     let y = yStart
+    const rowMeta = new Map<
+        number,
+        {height: number; customHeight: boolean; hidden: boolean}
+    >()
     const rows = window.window.rows.map((r) => {
         const rowInfo = StandardRowInfo.from(r)
+        rowMeta.set(r.idx, {
+            height: r.height,
+            customHeight: r.customHeight,
+            hidden: r.hidden,
+        })
         const renderRow = getRenderCell()
             .setCoordinate(
                 getRange().setStartRow(rowInfo.idx).setEndRow(rowInfo.idx)
@@ -494,7 +509,7 @@ function parseDisplayWindow(
         return renderCell
     })
 
-    return new CellViewData(
+    const data = new CellViewData(
         rows,
         cols,
         cells,
@@ -502,4 +517,6 @@ function parseDisplayWindow(
         window.window.comments,
         window.window.blocks
     )
+    data.rowMeta = rowMeta
+    return data
 }

@@ -283,6 +283,39 @@ impl Controller {
     /// one, or you may be writing into someone else's. Temp writes do not
     /// bump `revision`.
     pub fn handle_action_in_temp_status(&mut self, action: PayloadsAction) -> ActionEffect {
+        self.run_in_temp_status(action, false)
+    }
+
+    /// Apply `action` as part of the most recent undo step rather than as a
+    /// step of its own — on the temp branch's history when `temp`, else on
+    /// the main one. Undo then reverts it together with that step, and redo
+    /// restores both. Meant for layout measured after an edit landed (row
+    /// heights, column widths): the edit is executed first so its results can
+    /// be measured, and the fit joins it here. `action.undoable` and
+    /// `action.init` are ignored.
+    pub fn handle_action_amend(&mut self, action: PayloadsAction, temp: bool) -> ActionEffect {
+        if temp {
+            return self.run_in_temp_status(action, true);
+        }
+        let recorded = action.clone();
+        let effect = self.handle_action(EditAction::Payloads(PayloadsAction {
+            undoable: false,
+            init: false,
+            ..action
+        }));
+        if matches!(effect.status, StatusCode::Ok(_)) {
+            let updated = effect
+                .value_changed
+                .iter()
+                .map(|c| (c.sheet_id, c.cell_id))
+                .collect();
+            self.version_manager
+                .amend(self.status.clone(), recorded, updated);
+        }
+        effect
+    }
+
+    fn run_in_temp_status(&mut self, action: PayloadsAction, amend: bool) -> ActionEffect {
         // Initialize temp branch on first temp transaction
         if self.temp_status.is_none() {
             // The branch's history must start at the fork point, or its first
@@ -346,11 +379,19 @@ impl Controller {
                     WorkbookUpdateType::DoNothing
                 };
 
-                result.version_manager.record(
-                    result.status.clone(),
-                    action.clone(),
-                    result.updated_cells.clone(),
-                );
+                if amend {
+                    result.version_manager.amend(
+                        result.status.clone(),
+                        action.clone(),
+                        result.updated_cells.clone(),
+                    );
+                } else {
+                    result.version_manager.record(
+                        result.status.clone(),
+                        action.clone(),
+                        result.updated_cells.clone(),
+                    );
+                }
                 let accumulated_cells: Vec<_> = result.updated_cells.iter().copied().collect();
                 let header_updated: Vec<u32> = result
                     .header_updated

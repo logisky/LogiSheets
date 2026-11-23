@@ -111,6 +111,8 @@ export function InlineCellEditor({
             formulaFunctions: getFormulaFunctions(),
             inputCell: (s, r, c, t) => latest.current.ops.inputCell(s, r, c, t),
             setSelection: (d) => latest.current.onSelectionChange(d),
+            // Ctrl/⌘+Enter fills the selection through the fill-handle path.
+            fill: (s, src, dst) => dataSvc.fill(s, src, dst),
             setViewSheet: (i) => latest.current.setViewSheet(i),
             coordinator: formulaEditCoordinator,
             canEdit: (s, r, c, g) => isCellUserEditableSync(s, r, c, g),

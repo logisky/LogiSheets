@@ -484,6 +484,12 @@ export interface FormulaEditorOptions {
      * up" instead of down.
      */
     onSubmit?: (value: string, shiftKey: boolean) => void
+    /**
+     * Ctrl/⌘+Enter: Excel's "enter into every selected cell". A grid host
+     * fills its selection and keeps it. Without this, Ctrl/⌘+Enter acts as
+     * plain Enter.
+     */
+    onSubmitAll?: (value: string) => void
     /** Escape. The editor does not revert the text itself. */
     onCancel?: () => void
     /**
@@ -603,6 +609,7 @@ export function createFormulaEditor(
         onChange: options.onChange,
         onBlur: options.onBlur,
         onSubmit: options.onSubmit,
+        onSubmitAll: options.onSubmitAll,
         onCancel: options.onCancel,
         onArrowKey: options.onArrowKey,
         getDisplayUnits: options.getDisplayUnits,
@@ -809,6 +816,15 @@ export function createFormulaEditor(
                 },
                 shift: (v) => {
                     live.onSubmit?.(v.state.doc.toString(), true)
+                    return true
+                },
+            },
+            {
+                key: 'Mod-Enter',
+                run: (v) => {
+                    const value = v.state.doc.toString()
+                    if (live.onSubmitAll) live.onSubmitAll(value)
+                    else live.onSubmit?.(value, false)
                     return true
                 },
             },
@@ -1067,6 +1083,7 @@ export function createFormulaEditor(
             if ('onChange' in opts) live.onChange = opts.onChange
             if ('onBlur' in opts) live.onBlur = opts.onBlur
             if ('onSubmit' in opts) live.onSubmit = opts.onSubmit
+            if ('onSubmitAll' in opts) live.onSubmitAll = opts.onSubmitAll
             if ('onCancel' in opts) live.onCancel = opts.onCancel
             if ('onArrowKey' in opts) live.onArrowKey = opts.onArrowKey
             if (opts.getDisplayUnits)

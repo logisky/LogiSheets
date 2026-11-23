@@ -4,7 +4,7 @@
 
 import {isErrorMessage} from 'logisheets-web'
 import type {CellImageInfo} from 'logisheets-web'
-import type {Grid, AppropriateHeight} from '$types/index'
+import type {Grid, RowFitHeight} from '$types/index'
 import type {IWorkbookWorker, Result} from './types'
 import {OffscreenRenderName} from './types'
 import {ViewManager} from './view_manager'
@@ -12,9 +12,18 @@ import type {CellView} from './view_manager'
 import {Painter, setShowCellValues} from './painter'
 import {Pool} from './pool'
 import {setGridVisibility} from './border_helper'
-import {setZoomFactor} from './standable'
+import {
+    getZoomFactor,
+    ptToPx,
+    pxToPt,
+    setZoomFactor,
+    widthToPx,
+} from './standable'
 
 const pool = new Pool()
+
+/** Excel's default row height; a fitted row is never shorter. */
+const DEFAULT_ROW_PT = 15
 
 /** Decode a standard base64 string to bytes (workers provide `atob`). */
 function base64ToBytes(b64: string): Uint8Array {
@@ -45,6 +54,8 @@ export class OffscreenWorkerService {
     // single shared instance serves all canvases.
     private _canvases: Map<number, CanvasState> = new Map()
     private _painter: Painter = new Painter()
+    // Scratch surface for getRowFitHeights: measuring must not touch a view.
+    private _measureCanvas: OffscreenCanvas | null = null
 
     // Decoded cell images, keyed by their stable image id. Decoding is async
     // (createImageBitmap), so the first render that needs an image schedules the
@@ -370,50 +381,78 @@ export class OffscreenWorkerService {
             })
     }
 
-    public getAppropriateHeights(
-        canvasId: number,
-        sheetId: number,
-        anchorX: number,
-        anchorY: number
-    ): Result<AppropriateHeight[]> {
-        const state = this._getCanvas(canvasId)
-        const canvas = state.canvas
-        const dpr = state.dpr
-        // Recorded BEFORE the id is validated below: a render for a deleted
-        // sheet sticks, and later resize/image-ready re-renders of this
-        // canvas keep failing until a render with a live id.
-        state.sheetId = sheetId
+    /**
+     * Heights (pt) rows `fromRow..=toRow` of sheet `sheetIdx` need to show
+     * their content, on screen or not, measured the way the painter lays
+     * text out. Only rows that would change are returned. Rows the user
+     * sized by hand (`customHeight`), hidden rows and rows with no text are
+     * left out, and a fit never goes below Excel's 15pt default.
+     *
+     * Measures at 100%: the painter's fonts do not scale with the zoom but
+     * cell widths do, so a zoomed measurement would wrap differently.
+     */
+    public getRowFitHeights(
+        sheetIdx: number,
+        fromRow: number,
+        toRow: number
+    ): Result<RowFitHeight[]> {
+        const zoom = getZoomFactor()
+        setZoomFactor(1)
+        try {
+            const dim = this._workbook.getSheetDimension(sheetIdx)
+            if (isErrorMessage(dim)) return dim
+            const top = this._workbook.getCellPosition({
+                sheetIdx,
+                row: fromRow,
+                col: 0,
+            })
+            if (isErrorMessage(top)) return top
+            const bottom = this._workbook.getCellPosition({
+                sheetIdx,
+                row: toRow + 1,
+                col: Math.max(0, dim.maxCol) + 1,
+            })
+            if (isErrorMessage(bottom)) return bottom
 
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-            throw new Error('Failed to get 2D context')
+            // A window over exactly these rows and every used column, as if
+            // a canvas that size were scrolled there.
+            const anchorY = ptToPx(top.y)
+            const view = new ViewManager(
+                this._workbook,
+                sheetIdx,
+                pool
+            ).getViewResponse(
+                0,
+                anchorY,
+                ptToPx(bottom.y - top.y),
+                widthToPx(bottom.x)
+            )
+            if (isErrorMessage(view)) return view
+
+            this._measureCanvas ??= new OffscreenCanvas(1, 1)
+            this._painter.setCanvas(this._measureCanvas)
+            const content = this._painter.measureRowContent(
+                view.data,
+                0,
+                anchorY
+            )
+
+            const fits: RowFitHeight[] = []
+            view.data.data.forEach((chunk) =>
+                chunk.rowMeta.forEach((meta, row) => {
+                    if (row < fromRow || row > toRow) return
+                    if (meta.customHeight || meta.hidden) return
+                    const px = content.get(row)
+                    if (px === undefined) return
+                    const height = Math.max(DEFAULT_ROW_PT, pxToPt(px))
+                    if (Math.abs(height - meta.height) < 0.5) return
+                    fits.push({row, height})
+                })
+            )
+            return fits
+        } finally {
+            setZoomFactor(zoom)
         }
-
-        const sheetIdx = this._workbook.getSheetIdx({sheetId})
-        if (isErrorMessage(sheetIdx)) return sheetIdx
-
-        ctx.setTransform(1, 0, 0, 1, 0, 0)
-        ctx.scale(dpr, dpr)
-
-        const viewManager = new ViewManager(this._workbook, sheetIdx, pool)
-
-        // Pass CSS pixel dimensions
-        const viewResponse = viewManager.getViewResponse(
-            anchorX,
-            anchorY,
-            canvas.height / dpr,
-            canvas.width / dpr
-        )
-        if (isErrorMessage(viewResponse)) return viewResponse
-
-        state.anchorX = viewResponse.anchorX
-        state.anchorY = viewResponse.anchorY
-        this._painter.setCanvas(canvas)
-        return this._painter.getAppropriateHeights(
-            viewResponse.data,
-            anchorX,
-            anchorY
-        )
     }
 
     // ========================================================================
@@ -433,6 +472,7 @@ export class OffscreenWorkerService {
             m !== OffscreenRenderName.SetGridLines &&
             m !== OffscreenRenderName.SetZoom &&
             m !== OffscreenRenderName.SetShowCellValues &&
+            m !== OffscreenRenderName.GetRowFitHeights &&
             !this._canvases.has(canvasId)
         ) {
             this._ctx.postMessage({
@@ -467,12 +507,11 @@ export class OffscreenWorkerService {
                 case OffscreenRenderName.Dispose:
                     result = this.dispose(canvasId)
                     break
-                case OffscreenRenderName.GetAppropriateHeights:
-                    result = this.getAppropriateHeights(
-                        canvasId,
-                        args.sheetId,
-                        args.anchorX,
-                        args.anchorY
+                case OffscreenRenderName.GetRowFitHeights:
+                    result = this.getRowFitHeights(
+                        args.sheetIdx,
+                        args.fromRow,
+                        args.toRow
                     )
                     break
                 case OffscreenRenderName.SetGridLines:

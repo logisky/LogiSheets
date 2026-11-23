@@ -566,6 +566,9 @@ pub fn handle_transaction(
     };
 
     let wb = mgr.workbook_mut(id)?;
+    if transaction.amend == Some(true) {
+        return Ok(wb.handle_action_amend(payloads_action, transaction.temp));
+    }
     Ok(if transaction.temp {
         wb.handle_action_in_temp_status(payloads_action)
     } else {
