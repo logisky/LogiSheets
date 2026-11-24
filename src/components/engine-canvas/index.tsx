@@ -8,12 +8,7 @@
 
 import {FC, useRef, useEffect, useState, useCallback} from 'react'
 import {useEngine} from '@/core/engine/provider'
-import type {
-    Grid,
-    SelectedData,
-    CellLayout,
-    SessionEventMap,
-} from 'logisheets-engine'
+import type {Grid, SelectedData, SessionEventMap} from 'logisheets-engine'
 import {
     buildSelectedDataFromCell,
     getSelectedCellRange,
@@ -43,7 +38,6 @@ export interface EngineCanvasProps {
     selectedDataContentChanged$: (e: object) => void
     grid: Grid | null
     setGrid: (grid: Grid | null) => void
-    cellLayouts: CellLayout[]
     /** Diff state for showing uncommitted temp transaction changes */
     diffState?: DiffState
 }
@@ -56,7 +50,6 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
     selectedDataContentChanged$,
     grid,
     setGrid,
-    cellLayouts,
     diffState,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null)
@@ -154,7 +147,6 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
         engine.mount(containerRef.current, {
             showSheetTabs: false, // We use our own SheetsTabComponent
             showScrollbars: true,
-            cellLayouts,
             // Don't steal focus while THIS view is editing, or while ANY view
             // has an open formula edit (so clicking cells here points into it).
             getIsEditingFormula: () =>
@@ -166,7 +158,7 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             engine.unmount()
             mountedRef.current = false
         }
-    }, [engine, cellLayouts])
+    }, [engine])
 
     // Sync active sheet changes from engine → React state
     useEffect(() => {

@@ -388,7 +388,11 @@ Everything below appears **after** the iframe loads — guard with `whenReady`.
   [data connections](./data-connections); `sql-query` in the registry is the
   worked example.
 - **Host UI** — `window.notifyCraft('success'|'info'|'warn'|'error', msg)` shows a
-  toast; `window.setCellLayouts([...])` overlays markers on cells.
+  toast. `window.setCellLayouts([{sheetIdx, row, col, background?, tooltip?}])`
+  tints cells and replaces whatever list you set before (`[]` clears it). The
+  tint is multiplied over the cell, so pick light colours and the text stays
+  readable; a cell's `tooltip` shows under it while it is the selected cell.
+  Nothing is written to the workbook.
 - **Keymap** — `window.uiSettings.getKeymap()` is `'excel'` on desktop and `'web'`
   in a browser, which keeps a few chords (Ctrl+T, Ctrl+9/0, Ctrl+=/-) for itself,
   so the grid binds those actions to other keys there. It doesn't change during a

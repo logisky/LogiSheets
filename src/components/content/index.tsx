@@ -5,7 +5,7 @@ import styles from './content.module.scss'
 import {EditBarComponent} from './edit-bar'
 import {SheetsTabComponent} from '@/components/sheets-tab'
 import {Grid} from 'logisheets-engine'
-import {CellLayout, SelectedData} from 'logisheets-engine'
+import {SelectedData} from 'logisheets-engine'
 import {useDiffLayer} from '@/components/diff-layer'
 import {SpreadsheetView} from '@/components/spreadsheet-view'
 import {ActiveViewBadge} from '@/components/spreadsheet-view/active-view-badge'
@@ -21,7 +21,6 @@ export interface ContentProps {
     selectedData: SelectedData
     grid: Grid | null
     setGrid: (grid: Grid | null) => void
-    cellLayouts: CellLayout[]
     activeSheet: number
     setActiveSheet: (sheet: number) => void
 }
@@ -33,7 +32,6 @@ export const ContentComponent = observer(function ContentComponent({
     selectedData,
     activeSheet,
     setActiveSheet,
-    cellLayouts,
 }: ContentProps) {
     const [selectedDataContentChanged, setSelectedDataContentChanged] =
         useState({})
@@ -60,7 +58,6 @@ export const ContentComponent = observer(function ContentComponent({
             selectedDataContentChanged$={setSelectedDataContentChanged}
             grid={grid}
             setGrid={setGrid}
-            cellLayouts={cellLayouts}
             diffState={
                 globalStore.diffLayerEnabled ? diffLayer.diffState : undefined
             }

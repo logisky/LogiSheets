@@ -1,6 +1,7 @@
 import {makeObservable, observable, observableRef, action} from 'mobx'
 import {createContext} from 'react'
 import {SelectedData} from 'logisheets-engine'
+import type {CellLayout} from 'logisheets-web'
 
 /**
  * The selection context of whichever view is currently active. The single
@@ -32,6 +33,7 @@ export class GlobalStore {
             showGridlines: observable,
             showComments: observable,
             showFormulas: observable,
+            cellLayouts: observableRef,
             pendingCommentCell: observableRef,
             findRequest: observable,
             findReplace: observable,
@@ -50,6 +52,7 @@ export class GlobalStore {
             setShowGridlines: action,
             setShowComments: action,
             setShowFormulas: action,
+            setCellLayouts: action,
             requestAddComment: action,
             clearPendingCommentCell: action,
             requestFind: action,
@@ -159,6 +162,15 @@ export class GlobalStore {
 
     setShowFormulas(v: boolean) {
         this.showFormulas = v
+    }
+
+    // Cell tints and tooltips a craft asked for (`window.setCellLayouts`),
+    // every sheet's at once; each view's overlay draws its own sheet's. A new
+    // call replaces the whole list.
+    cellLayouts: readonly CellLayout[] = []
+
+    setCellLayouts(layouts: readonly CellLayout[]) {
+        this.cellLayouts = layouts
     }
 
     // A one-shot request to open the "new comment" editor on a specific cell,

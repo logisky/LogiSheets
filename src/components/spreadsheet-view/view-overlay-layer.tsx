@@ -7,6 +7,7 @@ import {DataValidationOverlay} from '@/components/data-validation-overlay'
 import {ActiveCellValidationLayer} from '@/components/data-validation/active-cell-layer'
 import {TraceLayer} from './trace-layer'
 import {LinkLayer} from './link-layer'
+import {CellLayoutLayer} from '@/components/cell-layout-layer'
 
 export interface ViewOverlayLayerProps {
     grid: Grid | null
@@ -116,6 +117,13 @@ export const ViewOverlayLayer: FC<ViewOverlayLayerProps> = ({
                 <CraftInteractionComponent
                     grid={grid}
                     activeSheet={activeSheet}
+                />
+            )}
+            {grid && (
+                <CellLayoutLayer
+                    grid={grid}
+                    activeSheet={activeSheet}
+                    selectedData={selectedData}
                 />
             )}
             {grid && (
