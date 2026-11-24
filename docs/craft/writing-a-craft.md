@@ -360,6 +360,13 @@ Everything below appears **after** the iframe loads — guard with `whenReady`.
   | set column width | `{type:'setColWidth', value:{sheetIdx, col, width}}` |
   | set row height | `{type:'setRowHeight', value:{sheetIdx, row, height}}` |
 
+- **Workbook changes** — `window.onWorkbookChange(cb)` calls back after any
+  committed write: the user's, undo/redo, another craft's, and your own. A burst
+  of writes arrives as one call, `cb({version})`; save `getVersion()` after your
+  own writes and skip a callback with that version. It keeps firing while the
+  panel is closed. Returns a disposer. React to it rather than polling
+  `getVersion()`. Like every `window.on…` subscription, register it once when
+  your page loads: it lasts until the panel switches to another craft.
 - **Selection** — `window.selection` (a `{sheetIdx, data}` snapshot),
   `window.onSelectionChange(cb)` (returns a disposer), `window.setSelection(sheetIdx, row, col)`,
   and `window.setSelectionSuppressed(true)` to hide the highlight (painting/game crafts use this).
@@ -382,6 +389,10 @@ Everything below appears **after** the iframe loads — guard with `whenReady`.
   worked example.
 - **Host UI** — `window.notifyCraft('success'|'info'|'warn'|'error', msg)` shows a
   toast; `window.setCellLayouts([...])` overlays markers on cells.
+- **Keymap** — `window.uiSettings.getKeymap()` is `'excel'` on desktop and `'web'`
+  in a browser, which keeps a few chords (Ctrl+T, Ctrl+9/0, Ctrl+=/-) for itself,
+  so the grid binds those actions to other keys there. It doesn't change during a
+  session. Read it before showing a shortcut hint for one of those actions.
 - **Language** — `window.locale` is the language the host is speaking (a BCP-47
   tag: `'en'`, `'zh-CN'`), and `window.onLocaleChange(cb)` calls back when the
   user switches (returns a disposer). The host also puts the same tag in your
