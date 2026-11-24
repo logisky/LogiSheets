@@ -40,6 +40,7 @@ import {getDataConnectionsBackend} from '@/core/data-connections'
 import type {AiRole} from 'logisheets-logician'
 import {injectCraftInteractionAPIs} from '@/components/craft-interaction'
 import {blockEditBus} from '@/components/block-interface/edit-bus'
+import {createCraftEventHub, createWorkbookChangeEmitter} from './events'
 import {globalStore} from '@/store'
 import {getLocale} from '@/core/i18n/i18n'
 import {toast} from 'react-toastify'
@@ -185,15 +186,10 @@ export const CraftPanel = ({
         }
     }, [iframeSrc])
     const iframeRef = useRef<HTMLIFrameElement | null>(null)
-    // Crafts that need to react to the sheet selection subscribe here instead
-    // of polling `window.selection`. The set persists across `inject()` re-runs
-    // (which happen on every selection change); it's cleared only when the
-    // iframe navigates to a fresh page, since a reloaded craft's callbacks
-    // belong to a now-dead realm.
-    const selectionListeners = useRef(new Set<(s: Selection) => void>())
-    // Same lifecycle as the selection listeners, for crafts that re-render
-    // their own UI when the host's language changes.
-    const localeListeners = useRef(new Set<(locale: string) => void>())
+    // Every `window.on<Event>` the craft subscribes through. It outlives
+    // `inject()` re-runs (one per selection change) and is cleared only when
+    // the panel switches craft — see ./events for why not on close.
+    const hub = useMemo(() => createCraftEventHub(), [])
     const engine = useEngine()
     const DATA_SERVICE = engine.getDataService()
     const BLOCK_MANAGER = engine.getBlockManager()
@@ -256,10 +252,8 @@ export const CraftPanel = ({
         // it. The value is a BCP-47 tag ('en', 'zh-CN'), the same string the
         // host uses internally.
         win.locale = getLocale()
-        win.onLocaleChange = (cb: (locale: string) => void) => {
-            localeListeners.current.add(cb)
-            return () => localeListeners.current.delete(cb)
-        }
+        win.onLocaleChange = (cb: (locale: string) => void) =>
+            hub.subscribe('locale', cb)
 
         // Host UI controls a craft might want to toggle (e.g. switching
         // into temp mode for a series of speculative edits, or pinning
@@ -270,13 +264,28 @@ export const CraftPanel = ({
             setAlwaysShowBlockInfo: (v: boolean) =>
                 globalStore.setAlwaysShowBlockInfo(v),
             getAlwaysShowBlockInfo: () => globalStore.alwaysShowBlockInfo,
+            // Which shortcut table the grid answers to: 'excel' on desktop,
+            // 'web' in a browser, which keeps chords like Ctrl+T, Ctrl+9 and
+            // Ctrl+=/- for itself (see `Keymap` in the engine's shortcuts).
+            // Fixed for the session, so a craft showing shortcut hints reads
+            // it once.
+            getKeymap: (): 'web' | 'excel' => engine.getConfig().keymap,
         }
         // Subscribe to user-driven edits committed through the
         // block-interface widgets (bool/enum/datetime/fieldRef/
         // multiSelectRef). Returns a disposer the craft can call to stop
         // listening. Crafts may register multiple callbacks.
-        win.onBlockCellEdit = (cb: (e: unknown) => void) =>
-            blockEditBus.on(cb as Parameters<typeof blockEditBus.on>[0])
+        win.onBlockCellEdit = (
+            cb: Parameters<typeof blockEditBus.on>[0]
+        ): (() => void) => hub.subscribe('blockCellEdit', cb)
+        // Subscribe to workbook changes: any committed write — the user's,
+        // undo/redo, another craft's or this craft's own. A burst of writes
+        // arrives as one call, `cb({version})`; compare `version` with one you
+        // saved to skip your own writes. Fires while the panel is hidden too.
+        // Returns a disposer.
+        win.onWorkbookChange = (
+            cb: (change: {version?: number}) => void
+        ): (() => void) => hub.subscribe('workbook', cb)
         // Craft → host message channel. Crafts call this to surface
         // setup errors, validation hits, or completion notes to the
         // user via the existing toast system. Levels match react-
@@ -375,12 +384,8 @@ export const CraftPanel = ({
         // the host invokes it with the current Selection whenever the selection
         // moves (see the effect below) and returns a disposer. Registration
         // survives inject() re-runs because the listener set lives in a ref.
-        win.onSelectionChange = (cb: (s: Selection) => void): (() => void) => {
-            selectionListeners.current.add(cb)
-            return () => {
-                selectionListeners.current.delete(cb)
-            }
-        }
+        win.onSelectionChange = (cb: (s: Selection) => void): (() => void) =>
+            hub.subscribe('selection', cb)
         injectCraftInteractionAPIs(win)
     }
 
@@ -394,14 +399,38 @@ export const CraftPanel = ({
         // craft (or to normal spreadsheet use). A craft that wants it re-opts in
         // via win.setSelectionSuppressed after it loads.
         setSelectionSuppressed(false)
-        // A different craft is taking over: the previous page's callbacks
-        // belong to a realm that is going away. Dropped here rather than in
-        // the iframe's `onLoad`, which fires AFTER the incoming craft may
-        // already have registered its own (see whenHostReady in the crafts).
-        selectionListeners.current.clear()
-        localeListeners.current.clear()
         return () => setActiveCraft(null)
     }, [open, iframeSrc, setSelectionSuppressed])
+
+    // A different craft is taking over: the previous page's callbacks belong
+    // to a realm that is going away. Only on a craft switch — closing the
+    // panel hides the iframe but keeps the page, whose subscriptions were made
+    // once at load and must keep working when it reopens. Dropped here rather
+    // than in the iframe's `onLoad`, which fires AFTER the incoming craft may
+    // already have registered its own (see whenHostReady in the crafts).
+    useEffect(() => () => hub.clear(), [iframeSrc, hub])
+
+    // Feed the hub from the host's own sources.
+    useEffect(
+        () =>
+            blockEditBus.on((e) => {
+                hub.emit('blockCellEdit', e)
+            }),
+        [hub]
+    )
+    useEffect(() => {
+        const workbook = DATA_SERVICE.getWorkbook()
+        const emitter = createWorkbookChangeEmitter(
+            async () => {
+                const v = await workbook.getVersion()
+                return typeof v === 'number' ? v : undefined
+            },
+            (change) => hub.emit('workbook', change)
+        )
+        const onChange = () => emitter.notify()
+        engine.on('cellChange', onChange)
+        return () => engine.off('cellChange', onChange)
+    }, [engine, DATA_SERVICE, hub])
 
     useEffect(() => {
         inject()
@@ -421,14 +450,8 @@ export const CraftPanel = ({
     // Tell crafts that subscribed. Separate from inject() so a craft that
     // re-renders on the callback sees the new `win.locale` already in place.
     useEffect(() => {
-        localeListeners.current.forEach((l) => {
-            try {
-                l(getLocale())
-            } catch {
-                /* one craft's listener throwing must not stop the others */
-            }
-        })
-    }, [i18n.language])
+        hub.emit('locale', getLocale())
+    }, [i18n.language, hub])
 
     // Push selection changes to subscribed crafts. Declared after the inject()
     // effect so it runs second — window.selection is already refreshed by the
@@ -438,14 +461,8 @@ export const CraftPanel = ({
             sheetIdx: DATA_SERVICE.getCurrentSheetIdx(),
             data: selectedData,
         } as Selection
-        selectionListeners.current.forEach((l) => {
-            try {
-                l(selection)
-            } catch {
-                /* a craft listener throwing must not break the others */
-            }
-        })
-    }, [selectedData, DATA_SERVICE])
+        hub.emit('selection', selection)
+    }, [selectedData, DATA_SERVICE, hub])
 
     // Fills its slot in the left dock (the dock owns positioning + the edge
     // border). Compact header: craft selector + close, then the iframe.
