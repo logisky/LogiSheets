@@ -36,7 +36,6 @@ export const RootContainer = () => {
     const [isCraftPanelVisible, setCraftPanelVisible] =
         useState(!!craftDeepLink)
 
-    const [cellLayouts, setCellLayouts] = useState<CellLayout[]>([])
     const [activeSheet, setActiveSheet] = useState(0)
     const [isWatsonVisible, setWatsonVisible] = useState(false)
 
@@ -83,7 +82,6 @@ export const RootContainer = () => {
                         selectedData={selectedData}
                         grid={grid}
                         setGrid={setGrid}
-                        cellLayouts={cellLayouts}
                         activeSheet={activeSheet}
                         setActiveSheet={setActiveSheet}
                     />
@@ -106,7 +104,9 @@ export const RootContainer = () => {
                         selectedData={selectedData}
                         setSelectionSuppressed={setSuppressSelection}
                         onClose={() => setCraftPanelVisible(false)}
-                        setCellLayouts={setCellLayouts}
+                        setCellLayouts={(l: CellLayout[]) =>
+                            globalStore.setCellLayouts(l)
+                        }
                         setActiveSheet={setActiveSheet}
                     />
                 }
