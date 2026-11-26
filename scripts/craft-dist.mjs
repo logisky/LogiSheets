@@ -47,9 +47,16 @@ function tauriOverride(dist) {
         productName: dist.productName,
         identifier: dist.identifier,
         app: {
+            // Tauri's config merge REPLACES arrays, so this entry stands in
+            // for the whole of tauri.conf.json's `windows` and must restate
+            // `create: false`: the setup hook builds `main` itself (it needs
+            // the new-window handler for pop-outs), and a window Tauri also
+            // created on its own makes that fail with "a webview with label
+            // `main` already exists" — an abort at launch.
             windows: [
                 {
                     label: 'main',
+                    create: false,
                     title: dist.windowTitle || dist.productName,
                     width: 1280,
                     height: 800,

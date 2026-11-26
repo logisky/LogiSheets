@@ -79,8 +79,11 @@ impl ResolvedRect {
 ///   1. Inside a block but not at its far edge → jump to that edge.
 ///   2. The immediately adjacent cell enters a block → jump through to the
 ///      block's far edge.
-///   3. Otherwise stop at the nearest of: the cell just before a block we'd
-///      enter (a gap precedes it), or the next non-empty data cell.
+///   3. On data with data right after it → run to the last cell of that
+///      stretch of data (Excel's Ctrl+Arrow inside a filled range).
+///   4. Otherwise stop at the next non-empty data cell.
+/// Rules 3 and 4 still stop short at the cell just before a block ahead
+/// (when a gap precedes it), whichever comes first.
 fn boundary_1d(
     p0: usize,
     occupied: &BTreeSet<usize>,
@@ -105,7 +108,16 @@ fn boundary_1d(
                 best = Some(best.map_or(cand, |b| b.min(cand)));
             }
         }
-        if let Some(&d) = occupied.range(p0 + 1..).next() {
+        let data = if occupied.contains(&p0) && occupied.contains(&(p0 + 1)) {
+            let mut end = p0 + 1;
+            while occupied.contains(&(end + 1)) {
+                end += 1;
+            }
+            Some(end)
+        } else {
+            occupied.range(p0 + 1..).next().copied()
+        };
+        if let Some(d) = data {
             best = Some(best.map_or(d, |b| b.min(d)));
         }
         best
@@ -128,7 +140,16 @@ fn boundary_1d(
             }
         }
         if p0 > 0 {
-            if let Some(&d) = occupied.range(..p0).next_back() {
+            let data = if occupied.contains(&p0) && occupied.contains(&(p0 - 1)) {
+                let mut start = p0 - 1;
+                while start > 0 && occupied.contains(&(start - 1)) {
+                    start -= 1;
+                }
+                Some(start)
+            } else {
+                occupied.range(..p0).next_back().copied()
+            };
+            if let Some(d) = data {
                 best = Some(best.map_or(d, |b| b.max(d)));
             }
         }
@@ -3234,6 +3255,37 @@ mod boundary_tests {
         assert_eq!(boundary_1d(4, &occ(&[]), &blocks, true), Some(9));
         // At the bottom edge (9): leaving -> nothing further -> None.
         assert_eq!(boundary_1d(9, &occ(&[]), &blocks, true), None);
+    }
+
+    #[test]
+    fn inside_a_run_goes_to_its_end() {
+        // A filled stretch 0..=9, then a gap, then 14..=16.
+        let o: BTreeSet<usize> = (0..10).chain(14..17).collect();
+        // Down inside the run: to its last cell, not the next one.
+        assert_eq!(boundary_1d(0, &o, &[], true), Some(9));
+        assert_eq!(boundary_1d(4, &o, &[], true), Some(9));
+        // At the run's end: across the gap to the next run's first cell.
+        assert_eq!(boundary_1d(9, &o, &[], true), Some(14));
+        // From a gap: to the next data cell.
+        assert_eq!(boundary_1d(11, &o, &[], true), Some(14));
+        assert_eq!(boundary_1d(14, &o, &[], true), Some(16));
+        assert_eq!(boundary_1d(16, &o, &[], true), None);
+        // Up mirrors it.
+        assert_eq!(boundary_1d(16, &o, &[], false), Some(14));
+        assert_eq!(boundary_1d(14, &o, &[], false), Some(9));
+        assert_eq!(boundary_1d(5, &o, &[], false), Some(0));
+        assert_eq!(boundary_1d(20, &o, &[], false), Some(16));
+    }
+
+    #[test]
+    fn a_run_stops_before_a_block() {
+        // Data 0..=7 running into a block that starts after a gap at 9.
+        let o: BTreeSet<usize> = (0..8).collect();
+        let blocks = [(9usize, 12usize)];
+        assert_eq!(boundary_1d(0, &o, &blocks, true), Some(7));
+        // A run long enough to reach past the block's pre-edge stops there.
+        let long: BTreeSet<usize> = (0..12).collect();
+        assert_eq!(boundary_1d(0, &long, &[(15usize, 18usize)], true), Some(11));
     }
 
     #[test]
