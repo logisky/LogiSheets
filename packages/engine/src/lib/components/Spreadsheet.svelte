@@ -887,13 +887,25 @@ let isDragging = false; // True while user is drag-selecting
         return size
     }
 
-    function handleResize() {
+    // The worker repaints the canvas at the new size and lays out a new set of
+    // rows and columns; that layout has to be taken like any render's. The
+    // headers, selection and hit-testing all read `grid`, so dropping it left
+    // an enlarged view painting cells the headers stopped short of.
+    async function handleResize() {
         if (!canvasEl || !dataService) return
         const rect = canvasEl.getBoundingClientRect()
         const dpr = dprWin.devicePixelRatio || 1
-        dataService.resize(rect.width, rect.height, dpr, canvasId)
         visibleHeight = rect.height
         visibleWidth = rect.width
+        const seq = ++renderSeq
+        const g = await dataService.resize(rect.width, rect.height, dpr, canvasId)
+        if (isErrorMessage(g)) return
+        // A render or resize issued since this one owns the layout now.
+        if (seq !== renderSeq) return
+        grid = g
+        anchorX = pendingAnchorX = g.anchorX
+        anchorY = pendingAnchorY = g.anchorY
+        onGridChange?.(grid)
     }
 
     async function updateDocumentDimensions() {
