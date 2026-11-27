@@ -307,6 +307,11 @@ export class Engine {
         this.getDefaultSession().setSelection(selection)
     }
 
+    /** Give the default view's canvas the keyboard; see `Session.focus`. */
+    focus(): void {
+        this._defaultSession?.focus()
+    }
+
     /** 0-based sheet index shown by the default session (0 if none yet). */
     getCurrentSheetIndex(): number {
         return this._defaultSession?.getCurrentSheetIndex() ?? 0

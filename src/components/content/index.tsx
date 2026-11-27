@@ -14,6 +14,7 @@ import {TempModeBar} from '@/components/temp-mode'
 import {globalStore, POPOUT_VIEW_ID} from '@/store'
 import {PopoutWindow} from '@/ui/popout-window'
 import {useTranslation} from 'react-i18next'
+import {useEngine} from '@/core/engine/provider'
 // import {DiffLayerTestPanel} from '@/components/diff-layer/DiffLayerTestPanel'
 
 export interface ContentProps {
@@ -37,6 +38,7 @@ export const ContentComponent = observer(function ContentComponent({
         useState({})
     const diffLayer = useDiffLayer()
     const {t} = useTranslation()
+    const engine = useEngine()
 
     // While the main view is active, publish its selection context so the top
     // edit bar targets it. (Secondary views publish their own.)
@@ -46,8 +48,15 @@ export const ContentComponent = observer(function ContentComponent({
             selectedData,
             sheetIdx: activeSheet,
             setSelection: selectedData$,
+            focus: () => engine.focus(),
         })
-    }, [selectedData, activeSheet, selectedData$, globalStore.activeViewId])
+    }, [
+        selectedData,
+        activeSheet,
+        selectedData$,
+        engine,
+        globalStore.activeViewId,
+    ])
 
     const mainCanvas = (
         <EngineCanvas

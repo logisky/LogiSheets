@@ -703,6 +703,83 @@ let isDragging = false; // True while user is drag-selecting
         return cleanup
     })
 
+    // ========================================================================
+    // Keyboard focus
+    // ========================================================================
+    //
+    // The selection is drawn blue only while typing would land in this view;
+    // otherwise grey. "In this view" is the canvas, or an element inside the
+    // host's mount target marked `data-grid-input` — the host's in-cell
+    // editor, where typing is typing into the grid. Anything else there (a
+    // find bar, an overlay's text field) takes typing elsewhere. A window
+    // that has lost focus (another app, another pop-out) counts as unfocused.
+
+    let rootEl: HTMLDivElement | null = $state(null)
+    let viewFocused = $state(false)
+
+    /** The host's mount target: our root's parent. */
+    function focusScope(): HTMLElement | null {
+        return rootEl?.parentElement ?? rootEl
+    }
+
+    $effect(() => {
+        const scope = focusScope()
+        if (!scope) return
+        const win = hostWindow(scope)
+        const doc = scope.ownerDocument
+        const read = () => {
+            const active = doc.activeElement
+            viewFocused =
+                doc.hasFocus() &&
+                !!active &&
+                (active === canvasEl ||
+                    (scope.contains(active) &&
+                        !!active.closest('[data-grid-input]')))
+        }
+        // Focus moving between two elements fires focusout then focusin, with
+        // the body active in between; reading on the next frame skips that
+        // and avoids a grey flash.
+        let frame = 0
+        const schedule = () => {
+            win.cancelAnimationFrame(frame)
+            frame = win.requestAnimationFrame(read)
+        }
+        read()
+        doc.addEventListener('focusin', schedule, true)
+        doc.addEventListener('focusout', schedule, true)
+        win.addEventListener('focus', schedule)
+        win.addEventListener('blur', schedule)
+        return () => {
+            win.cancelAnimationFrame(frame)
+            doc.removeEventListener('focusin', schedule, true)
+            doc.removeEventListener('focusout', schedule, true)
+            win.removeEventListener('focus', schedule)
+            win.removeEventListener('blur', schedule)
+        }
+    })
+
+    /**
+     * Give this view's canvas the keyboard, so the selection the user sees is
+     * where their typing goes. Declines while a formula is being edited
+     * (clicking cells points into it). `bySelecting` is focus taken because
+     * the selection moved: that also yields to an element marked
+     * `data-keeps-focus` — a find bar that moves the selection as the user
+     * types in it — which an explicit request (closing that bar) does not.
+     */
+    export function focusGrid(bySelecting = false) {
+        if (!canvasEl) return
+        if (getIsEditingFormula?.()) return
+        const active = canvasEl.ownerDocument.activeElement
+        if (
+            bySelecting &&
+            active &&
+            active !== canvasEl &&
+            active.closest('[data-keeps-focus]')
+        )
+            return
+        canvasEl.focus({ preventScroll: true })
+    }
+
     async function initializeAsync() {
         dprWin = hostWindow(canvasEl) as typeof window
         // If external data service is provided, use it; otherwise create our own
@@ -2762,7 +2839,7 @@ let isDragging = false; // True while user is drag-selecting
     }
 </script>
 
-<div class="spreadsheet-container">
+<div class="spreadsheet-container" bind:this={rootEl}>
     <div class="canvas-area" class:with-tabs={showSheetTabs}>
         <div class="canvas-wrapper">
             <!-- Corner cell -->
@@ -2833,10 +2910,11 @@ let isDragging = false; // True while user is drag-selecting
 
             <!-- Selection indicator -->
             {#if selector}
-                <Selector {...selector} />
+                <Selector {...selector} active={viewFocused} />
                 <!-- Fill handle: small square at the selection's bottom-right corner -->
                 <div
                     class="fill-handle"
+                    class:inactive={!viewFocused}
                     style="left: {selector.x + selector.width - 3}px; top: {selector.y + selector.height - 3}px;"
                     onmousedown={onFillHandleMouseDown}
                     role="presentation"
@@ -3222,6 +3300,10 @@ let isDragging = false; // True while user is drag-selecting
         border: 1px solid #fff;
         cursor: crosshair;
         z-index: 11;
+    }
+
+    .fill-handle.inactive {
+        background: #9aa0a6;
     }
 
     .fill-preview {

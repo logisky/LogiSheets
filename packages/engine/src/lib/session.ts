@@ -492,8 +492,10 @@ export class Session {
     }
 
     /**
-     * Replace the selection, emit `selectionChange`, and push it into the
-     * mounted component (which redraws the selector and scrolls it into view).
+     * Replace the selection, emit `selectionChange`, push it into the mounted
+     * component (which redraws the selector and scrolls it into view), and
+     * give this view the keyboard: a highlighted cell is one the user can type
+     * into straight away. See {@link focus} for when focus is not taken.
      */
     setSelection(selection: SelectedData): void {
         this._selectedData = selection
@@ -506,6 +508,22 @@ export class Session {
         const mounted = this._mountedComponent as any
         if (mounted && typeof mounted.setSelectedData === 'function') {
             mounted.setSelectedData(selection)
+        }
+        // Not while focus is inside an element marked `data-keeps-focus`: a
+        // find bar moves the selection as the user types into it.
+        if (mounted && typeof mounted.focusGrid === 'function') {
+            mounted.focusGrid(true)
+        }
+    }
+
+    /**
+     * Move keyboard focus to this view's canvas. Does nothing while a formula
+     * is being edited (cell clicks point into it; see `getIsEditingFormula`).
+     */
+    focus(): void {
+        const mounted = this._mountedComponent as any
+        if (mounted && typeof mounted.focusGrid === 'function') {
+            mounted.focusGrid()
         }
     }
 

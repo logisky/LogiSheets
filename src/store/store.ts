@@ -12,8 +12,13 @@ export interface ActiveViewContext {
     selectedData: SelectedData
     /** Active view's current sheet index. */
     sheetIdx: number
-    /** Move the active view's selection (e.g. after committing with Enter). */
+    /**
+     * Move the active view's selection (e.g. after committing with Enter).
+     * Selecting also gives that view the keyboard.
+     */
     setSelection: (d: SelectedData) => void
+    /** Give the active view the keyboard without moving its selection. */
+    focus: () => void
 }
 
 /** View id of the pop-out window's view (see `popoutWindow`). */

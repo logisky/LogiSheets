@@ -255,7 +255,9 @@ export const FindOverlay: FC<FindOverlayProps> = ({
     const navDisabled = matches.length === 0
 
     return (
-        <div className={styles.findBar} onKeyDown={onKeyDown}>
+        // data-keeps-focus: each hit moves the selection, which would
+        // otherwise hand the keyboard to the grid mid-search.
+        <div className={styles.findBar} onKeyDown={onKeyDown} data-keeps-focus>
             <div className={styles.row}>
                 <button
                     type="button"

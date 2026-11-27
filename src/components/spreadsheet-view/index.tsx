@@ -162,6 +162,7 @@ export const SpreadsheetView = observer(function SpreadsheetView({
             selectedData,
             sheetIdx: activeSheet,
             setSelection: (d) => sessionRef.current?.setSelection(d),
+            focus: () => sessionRef.current?.focus(),
         })
     }, [viewId, selectedData, activeSheet, globalStore.activeViewId])
 
