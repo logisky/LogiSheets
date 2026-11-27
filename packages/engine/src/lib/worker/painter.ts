@@ -38,8 +38,8 @@ export function setShowFormulas(show: boolean): void {
 function displayText(info: StandardCell): string {
     if (!VALUE_SETTINGS.showFormulas) return info.getFormattedText()
     if (info.formula) return `=${info.formula}`
-    const num = info.getNumber()
-    return num !== undefined ? String(num) : info.getText()
+    // Unformatted, but a number still at Excel's 15 digits (as getText gives).
+    return info.getText()
 }
 
 // ============================================================================

@@ -124,6 +124,20 @@ const storedTokenUnitsField = StateField.define<
     },
 })
 
+// The reference the last F4 wrote, as [from, to] in the doc. The backend's
+// token units for the new text arrive asynchronously, so a second F4 pressed
+// before they do would find only the stale tokens of the previous form and do
+// nothing; this span keeps the cycle going. Any other edit clears it.
+const setLastCycled = StateEffect.define<{from: number; to: number} | null>()
+const lastCycledField = StateField.define<{from: number; to: number} | null>({
+    create: () => null,
+    update(span, tr) {
+        for (const effect of tr.effects)
+            if (effect.is(setLastCycled)) return effect.value
+        return tr.docChanged ? null : span
+    },
+})
+
 // State field to hold token decorations
 const tokenDecorationsField = StateField.define<DecorationSet>({
     create() {
@@ -396,28 +410,37 @@ function cycleReferenceUnderCursor(v: EditorView): boolean {
     const text = state.doc.toString()
     if (!isFormula(text)) return false
     const tokenUnits = state.field(storedTokenUnitsField)
-    if (tokenUnits.length === 0) return false
 
     const hasEq = text.startsWith('=')
     const offset = hasEq ? 1 : 0
     const byteToCharIdx = makeByteToCharIdx(hasEq ? text.slice(1) : text)
     const cursor = state.selection.main.head
 
-    for (const tu of tokenUnits) {
-        if (tu.tokenType !== 'cellReference') continue
-        const from = byteToCharIdx(tu.start) + offset
-        const to = byteToCharIdx(tu.end) + offset
-        // Match when the cursor is within the reference or right at its end
-        // (the just-typed case: type `A1`, press F4).
-        if (cursor < from || cursor > to) continue
+    // Match when the cursor is within the reference or right at its end (the
+    // just-typed case: type `A1`, press F4).
+    const cycle = (from: number, to: number): boolean => {
         const orig = text.slice(from, to)
         const cycled = cycleReferenceAbsolute(orig)
         if (cycled === null || cycled === orig) return false
         v.dispatch({
             changes: {from, to, insert: cycled},
             selection: {anchor: from + cycled.length},
+            effects: setLastCycled.of({from, to: from + cycled.length}),
         })
         return true
+    }
+
+    // Pressed again before the backend re-tokenized the previous F4's result.
+    const last = state.field(lastCycledField)
+    if (last && cursor >= last.from && cursor <= last.to)
+        return cycle(last.from, last.to)
+
+    for (const tu of tokenUnits) {
+        if (tu.tokenType !== 'cellReference') continue
+        const from = byteToCharIdx(tu.start) + offset
+        const to = byteToCharIdx(tu.end) + offset
+        if (cursor < from || cursor > to) continue
+        return cycle(from, to)
     }
     return false
 }
@@ -951,6 +974,7 @@ export function createFormulaEditor(
             history(),
             tokenDecorationsField,
             storedTokenUnitsField,
+            lastCycledField,
             autocompletion({
                 override: [formulaCompletion],
                 activateOnTyping: true,

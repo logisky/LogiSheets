@@ -154,18 +154,24 @@ fn convert_cell_reference(pair: Pair<Rule>, cell_ref: &mut CellRef) {
                 cell_ref.sheet2 = Some(s);
             }
         }
+        // Both spans keep an absolute reference's `$` (`$4`, `$B`): the
+        // grammar's absolute rules are silent. A component that doesn't
+        // convert (row 0, an absurd column) is left out rather than panicking
+        // — this runs on every keystroke of a half-typed formula.
         Rule::a1_row => {
-            let s = pair.as_str().to_string();
-            let row = s.parse::<usize>().unwrap();
+            let Some(row) = row_label_to_index(pair.as_str()) else {
+                return;
+            };
             if cell_ref.row1.is_none() {
-                cell_ref.row1 = Some(row - 1);
+                cell_ref.row1 = Some(row);
             } else {
-                cell_ref.row2 = Some(row - 1);
+                cell_ref.row2 = Some(row);
             }
         }
         Rule::a1_column => {
-            let s = pair.as_str().to_string();
-            let col = column_label_to_index(&s);
+            let Some(col) = column_label_to_index(pair.as_str()) else {
+                return;
+            };
             if cell_ref.col1.is_none() {
                 cell_ref.col1 = Some(col);
             } else {
@@ -180,13 +186,28 @@ fn convert_cell_reference(pair: Pair<Rule>, cell_ref: &mut CellRef) {
     }
 }
 
-fn column_label_to_index(label: &str) -> usize {
+/// `"4"` / `"$4"` → 3 (0-based). `None` for row 0 or overflow.
+fn row_label_to_index(label: &str) -> Option<usize> {
+    label
+        .trim_start_matches('$')
+        .parse::<usize>()
+        .ok()?
+        .checked_sub(1)
+}
+
+/// `"B"` / `"$B"` → 1 (0-based). `None` for anything but letters, or overflow.
+fn column_label_to_index(label: &str) -> Option<usize> {
     let mut result: usize = 0;
-    for (i, c) in label.chars().rev().enumerate() {
+    for c in label.trim_start_matches('$').chars() {
         let u = c.to_ascii_uppercase();
-        result += (u as usize - 'A' as usize + 1) * 26_usize.pow(i as u32);
+        if !u.is_ascii_uppercase() {
+            return None;
+        }
+        result = result
+            .checked_mul(26)?
+            .checked_add(u as usize - 'A' as usize + 1)?;
     }
-    result - 1
+    result.checked_sub(1)
 }
 
 #[test]
@@ -398,4 +419,64 @@ fn test_lex_and_fmt_wrong() {
             ]
         }
     )
+}
+
+/// `$` (absolute) references used to underflow in the column conversion and
+/// panic on `"$4".parse()` in the row one, so `$B$4` got no tokens at all: no
+/// highlight, and nothing for F4 to cycle on the next press.
+#[test]
+fn test_lex_and_fmt_absolute_refs() {
+    let cases: [(
+        &str,
+        usize,
+        Option<usize>,
+        Option<usize>,
+        Option<usize>,
+        Option<usize>,
+    ); 6] = [
+        ("$B$4", 4, Some(3), Some(1), None, None),
+        ("B$4", 3, Some(3), Some(1), None, None),
+        ("$B4", 3, Some(3), Some(1), None, None),
+        ("$AA$10", 6, Some(9), Some(26), None, None),
+        ("$B$4:$C5", 8, Some(3), Some(1), Some(4), Some(2)),
+        ("Sheet1!$B$4", 11, Some(3), Some(1), None, None),
+    ];
+    for (s, len, row1, col1, row2, col2) in cases {
+        let result = lex_and_fmt(s).unwrap();
+        assert_eq!(
+            result.token_units,
+            vec![TokenUnit {
+                start: 0,
+                end: len,
+                token_type: TokenType::CellReference
+            }],
+            "{s}"
+        );
+        let r = &result.cell_refs[0];
+        assert_eq!(
+            (r.row1, r.col1, r.row2, r.col2),
+            (row1, col1, row2, col2),
+            "{s}"
+        );
+    }
+}
+
+/// Inside a larger formula, after a function and an operator.
+#[test]
+fn test_lex_and_fmt_absolute_ref_in_formula() {
+    let result = lex_and_fmt("SUM(A1)+$B$4").unwrap();
+    let refs: Vec<_> = result
+        .token_units
+        .iter()
+        .filter(|t| t.token_type == TokenType::CellReference)
+        .map(|t| (t.start, t.end))
+        .collect();
+    assert_eq!(refs, vec![(4, 6), (8, 12)]);
+}
+
+/// Row 0 is not a row: the reference still tokenizes, without a row index.
+#[test]
+fn test_lex_and_fmt_row_zero_does_not_panic() {
+    let result = lex_and_fmt("A0").unwrap();
+    assert_eq!(result.cell_refs[0].row1, None);
 }

@@ -27,6 +27,15 @@ describe('numfmt (native ssf-rs via WASM)', () => {
         ['[h]:mm:ss', 1.5, '36:00:00'],
         ['000-00-0000', 123456789, '123-45-6789'],
         ['(###) ###-####', 8005551234, '(800) 555-1234'],
+        // General is how a cell shows an unformatted number (the grid uses
+        // it): no binary tails, about 11 characters, E notation from 12
+        // integer digits — what Excel shows.
+        ['General', 0.1 + 0.2, '0.3'],
+        ['General', 10.2 - 10, '0.2'],
+        ['General', 1.1 * 1.1, '1.21'],
+        ['General', 1 / 3, '0.333333333'],
+        ['General', 12345678901, '12345678901'],
+        ['General', 123456789012, '1.23457E+11'],
     ]
 
     it.each(cases)('formatNumber(%j, %d) === %j', (fmt, val, want) => {
