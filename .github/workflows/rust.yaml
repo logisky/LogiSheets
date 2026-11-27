@@ -36,8 +36,8 @@ jobs:
       - name: Test logisheets-engine
         run: yarn workspace logisheets-engine test
 
-      - name: Install Playwright browser
-        run: yarn playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: yarn playwright install --with-deps chromium webkit
       - name: Run engine UI e2e tests
         run: yarn test:e2e
 
