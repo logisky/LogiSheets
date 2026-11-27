@@ -1,0 +1,8 @@
+{
+    "name": "PDURATION",
+    "description": "functions.pduration.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [{"argName": "rate"}, {"argName": "pv"}, {"argName": "fv"}]
+}

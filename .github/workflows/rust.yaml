@@ -33,11 +33,17 @@ jobs:
           yarn workspace logisheets-web test
           yarn workspace logisheets-core test
 
+      # The root app's own suite (src/, crafts/): locales, and the formula
+      # function list kept in step with the engine's dispatch. Needs the
+      # merged resources/funcs/out/funcs.json, which ci-build.sh generates.
+      - name: Test the app
+        run: yarn test
+
       - name: Test logisheets-engine
         run: yarn workspace logisheets-engine test
 
-      - name: Install Playwright browser
-        run: yarn playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: yarn playwright install --with-deps chromium webkit
       - name: Run engine UI e2e tests
         run: yarn test:e2e
 

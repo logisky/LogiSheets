@@ -1,0 +1,8 @@
+{
+    "name": "SKEW",
+    "description": "functions.skew.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "number", "startRepeated": true}]
+}

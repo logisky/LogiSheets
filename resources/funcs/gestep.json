@@ -1,0 +1,6 @@
+{
+    "name": "GESTEP",
+    "description": "functions.gestep.description",
+    "argCount": {"ge": 1, "le": 2},
+    "args": [{"argName": "number"}, {"argName": "step"}]
+}

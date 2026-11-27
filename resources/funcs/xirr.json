@@ -1,0 +1,9 @@
+{
+    "name": "XIRR",
+    "description": "functions.xirr.description",
+    "argCount": {
+        "ge": 2,
+        "le": 3
+    },
+    "args": [{"argName": "values"}, {"argName": "dates"}, {"argName": "guess"}]
+}

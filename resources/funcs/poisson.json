@@ -1,0 +1,8 @@
+{
+    "name": "POISSON",
+    "description": "functions.poisson.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [{"argName": "x"}, {"argName": "mean"}, {"argName": "cumulative"}]
+}

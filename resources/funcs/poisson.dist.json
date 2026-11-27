@@ -1,0 +1,8 @@
+{
+    "name": "POISSON.DIST",
+    "description": "functions.poisson.dist.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [{"argName": "x"}, {"argName": "mean"}, {"argName": "cumulative"}]
+}

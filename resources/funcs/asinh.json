@@ -1,0 +1,8 @@
+{
+    "name": "ASINH",
+    "description": "functions.asinh.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

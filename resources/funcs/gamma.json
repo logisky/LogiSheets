@@ -1,0 +1,6 @@
+{
+    "name": "GAMMA",
+    "description": "functions.gamma.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "SQRT",
+    "description": "functions.sqrt.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

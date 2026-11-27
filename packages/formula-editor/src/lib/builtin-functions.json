@@ -1,13 +1,4911 @@
 [
   {
-    "name": "ABS",
-    "description": "Returns the absolute value of a number. The absolute value of a number is the number without its sign.",
+    "name": "YIELDMAT",
+    "description": "Returns the annual yield of a security that pays interest at maturity.",
+    "argCount": {
+      "ge": 5,
+      "le": 6
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "issue"
+      },
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "pr"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "YIELDDISC",
+    "description": "Returns the annual yield for a discounted security.",
+    "argCount": {
+      "ge": 4,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "pr"
+      },
+      {
+        "argName": "redemption"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "YEARFRAC",
+    "description": "Returns the fraction of the year represented by the number of whole days between two dates.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "start_date"
+      },
+      {
+        "argName": "end_date"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "YEAR",
+    "description": "Returns the year corresponding to a date.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "serial_number"
+      }
+    ]
+  },
+  {
+    "name": "XOR",
+    "description": "Returns TRUE when an odd number of arguments are TRUE.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "logical",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "XNPV",
+    "description": "Returns the net present value for a schedule of cash flows that is not necessarily periodic.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "values"
+      },
+      {
+        "argName": "dates"
+      }
+    ]
+  },
+  {
+    "name": "XIRR",
+    "description": "Returns the internal rate of return for a schedule of cash flows that is not necessarily periodic.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "values"
+      },
+      {
+        "argName": "dates"
+      },
+      {
+        "argName": "guess"
+      }
+    ]
+  },
+  {
+    "name": "WEIBULL",
+    "description": "Returns the Weibull distribution.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "alpha"
+      },
+      {
+        "argName": "beta"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "WEIBULL.DIST",
+    "description": "Returns the Weibull distribution.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "alpha"
+      },
+      {
+        "argName": "beta"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "WEEKDAY",
+    "description": "Returns the day of the week corresponding to a date, typically 1 (Sunday) through 7 (Saturday) depending on return_type.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "serial_number"
+      },
+      {
+        "argName": "return_type"
+      }
+    ]
+  },
+  {
+    "name": "VLOOKUP",
+    "description": "Looks for a value in the first column of a table and returns a value in the same row from the column you specify.",
+    "argCount": {
+      "ge": 3,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "lookup_value"
+      },
+      {
+        "argName": "table_array"
+      },
+      {
+        "argName": "col_index_num"
+      },
+      {
+        "argName": "range_lookup"
+      }
+    ]
+  },
+  {
+    "name": "VARP",
+    "description": "Calculates variance based on the entire population.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "VAR.S",
+    "description": "Estimates variance based on a sample.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "VAR.P",
+    "description": "Calculates variance based on the entire population.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "VAR",
+    "description": "Estimates variance based on a sample.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "VALUE",
+    "description": "Converts a text string that represents a number into a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "USDOLLAR",
+    "description": "Converts a number to text using US dollar currency format. Legacy alias of DOLLAR.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "decimals"
+      }
+    ]
+  },
+  {
+    "name": "UPPER",
+    "description": "Converts text to uppercase.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "TYPE",
+    "description": "Returns a number indicating the data type of a value.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "TRUNC",
+    "description": "Truncates a number to an integer by removing the fractional part, or to a given number of digits.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "num_digits"
+      }
+    ]
+  },
+  {
+    "name": "TRUE",
+    "description": "Returns the logical value TRUE.",
+    "argCount": {
+      "eq": 0
+    },
+    "args": []
+  },
+  {
+    "name": "TRIMMEAN",
+    "description": "Returns the mean of the interior of a data set, excluding a percentage of points from the top and bottom.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "percent"
+      }
+    ]
+  },
+  {
+    "name": "TRIM",
+    "description": "Removes extra spaces from text, leaving single spaces between words.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "TODAY",
+    "description": "Returns the current date as a serial number. The value updates when the worksheet is recalculated or opened.",
+    "argCount": {
+      "eq": 0
+    },
+    "args": []
+  },
+  {
+    "name": "TIME",
+    "description": "Returns the decimal number for a particular time.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "hour"
+      },
+      {
+        "argName": "minute"
+      },
+      {
+        "argName": "second"
+      }
+    ]
+  },
+  {
+    "name": "TEXTJOIN",
+    "description": "Joins text from multiple ranges or strings using a delimiter, optionally ignoring empty values.",
+    "argCount": {
+      "ge": 3
+    },
+    "args": [
+      {
+        "argName": "delimiter"
+      },
+      {
+        "argName": "ignore_empty"
+      },
+      {
+        "argName": "text",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "TEXT",
+    "description": "Formats a number and converts it to text using the given number-format code (e.g. \"0.00%\", \"yyyy-mm-dd\").",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "value"
+      },
+      {
+        "argName": "format_text"
+      }
+    ]
+  },
+  {
+    "name": "TBILLYIELD",
+    "description": "Returns the yield for a Treasury bill given settlement, maturity and price/discount.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "price_or_discount"
+      }
+    ]
+  },
+  {
+    "name": "TBILLPRICE",
+    "description": "Returns the price per $100 face value for a Treasury bill given settlement, maturity and discount.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "discount"
+      }
+    ]
+  },
+  {
+    "name": "TBILLEQ",
+    "description": "Returns the bond-equivalent yield for a Treasury bill.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "discount_or_price"
+      }
+    ]
+  },
+  {
+    "name": "TANH",
+    "description": "Returns the hyperbolic tangent of a number.",
     "argCount": {
       "eq": 1
     },
     "args": [
       {
         "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "TAN",
+    "description": "Returns the tangent of a given angle (in radians).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "T",
+    "description": "Returns the text referred to by value, or empty text if the value is not text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "SYD",
+    "description": "Returns the sum-of-years' digits depreciation of an asset for a specified period.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "cost"
+      },
+      {
+        "argName": "salvage"
+      },
+      {
+        "argName": "life"
+      },
+      {
+        "argName": "per"
+      }
+    ]
+  },
+  {
+    "name": "SWITCH",
+    "description": " evaluates one value (called the expression) against a list of values, and returns the result corresponding to the first matching value. If there is no match, an optional default value may be returned.",
+    "argCount": {
+      "ge": 3,
+      "odd": true
+    },
+    "args": [
+      {
+        "argName": "expr"
+      },
+      {
+        "argName": "condition",
+        "startRepeated": true
+      },
+      {
+        "argName": "caseValue"
+      }
+    ]
+  },
+  {
+    "name": "SUMXMY2",
+    "description": "Returns the sum of squares of the differences of corresponding values in two arrays.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array_x"
+      },
+      {
+        "argName": "array_y"
+      }
+    ]
+  },
+  {
+    "name": "SUMX2PY2",
+    "description": "Returns the sum of the sums of squares of corresponding values in two arrays.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array_x"
+      },
+      {
+        "argName": "array_y"
+      }
+    ]
+  },
+  {
+    "name": "SUMX2MY2",
+    "description": "Returns the sum of the differences of squares of corresponding values in two arrays.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array_x"
+      },
+      {
+        "argName": "array_y"
+      }
+    ]
+  },
+  {
+    "name": "SUMSQ",
+    "description": "Returns the sum of the squares of the supplied arguments.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "SUMPRODUCT",
+    "description": "Multiplies corresponding components in the given arrays and returns the sum of those products.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "array",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "SUMIFS",
+    "description": "Adds the cells in a range that meet multiple criteria.",
+    "argCount": {
+      "ge": 3,
+      "odd": true
+    },
+    "args": [
+      {
+        "argName": "sum_range",
+        "refOnly": true
+      },
+      {
+        "argName": "criteria_range",
+        "refOnly": true,
+        "startRepeated": true
+      },
+      {
+        "argName": "criteria"
+      }
+    ]
+  },
+  {
+    "name": "SUMIF",
+    "description": "Adds the cells specified by a given condition or criteria.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "range",
+        "refOnly": true
+      },
+      {
+        "argName": "criteria"
+      },
+      {
+        "argName": "sum_range",
+        "refOnly": true
+      }
+    ]
+  },
+  {
+    "name": "SUM",
+    "description": "Adds all the numbers in a range of cells.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "SUBTOTAL",
+    "description": "Returns a subtotal of a list or range, using the aggregate function chosen by function_num.",
+    "argCount": {
+      "ge": 2
+    },
+    "args": [
+      {
+        "argName": "function_num"
+      },
+      {
+        "argName": "ref",
+        "refOnly": true,
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "SUBSTITUTE",
+    "description": "Replaces occurrences of old text with new text in a string; optionally only the nth occurrence.",
+    "argCount": {
+      "ge": 3,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "old_text"
+      },
+      {
+        "argName": "new_text"
+      },
+      {
+        "argName": "instance_num"
+      }
+    ]
+  },
+  {
+    "name": "STDEVP",
+    "description": "Calculates the standard deviation based on the entire population.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "STDEV.S",
+    "description": "Estimates the standard deviation based on a sample.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "STDEV.P",
+    "description": "Calculates the standard deviation based on the entire population.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "STDEV",
+    "description": "Estimates the standard deviation based on a sample.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "value",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "STANDARDIZE",
+    "description": "Returns a normalized value from a distribution characterized by a mean and standard deviation.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "mean"
+      },
+      {
+        "argName": "standard_dev"
+      }
+    ]
+  },
+  {
+    "name": "SQRTPI",
+    "description": "Returns the square root of pi times a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "SQRT",
+    "description": "Returns the positive square root of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "SMALL",
+    "description": "Returns the k-th smallest value in a data set.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "k"
+      }
+    ]
+  },
+  {
+    "name": "SLOPE",
+    "description": "Returns the slope of the linear regression line through the given data points.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "known_ys"
+      },
+      {
+        "argName": "known_xs"
+      }
+    ]
+  },
+  {
+    "name": "SLN",
+    "description": "Returns the straight-line depreciation of an asset for one period.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "cost"
+      },
+      {
+        "argName": "salvage"
+      },
+      {
+        "argName": "life"
+      }
+    ]
+  },
+  {
+    "name": "SKEW.P",
+    "description": "Returns the skewness of a distribution, based on the entire population.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "SKEW",
+    "description": "Returns the skewness of a distribution, based on a sample.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "SINH",
+    "description": "Returns the hyperbolic sine of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "SIN",
+    "description": "Returns the sine of the given angle (in radians).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "SIGN",
+    "description": "Returns the sign of a number: 1 (positive), 0 (zero), or -1 (negative).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "SECOND",
+    "description": "Returns the seconds of a time value, a number from 0 to 59.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "serial_number"
+      }
+    ]
+  },
+  {
+    "name": "SEARCHB",
+    "description": "Returns the position, in bytes, of one text string within another (not case-sensitive).",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "find_text"
+      },
+      {
+        "argName": "within_text"
+      },
+      {
+        "argName": "start_num"
+      }
+    ]
+  },
+  {
+    "name": "SEARCH",
+    "description": "Returns the position of one text string within another (case-insensitive).",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "find_text"
+      },
+      {
+        "argName": "within_text"
+      },
+      {
+        "argName": "start_num"
+      }
+    ]
+  },
+  {
+    "name": "RSQ",
+    "description": "Returns the square of the Pearson correlation coefficient through the given data points.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "known_ys"
+      },
+      {
+        "argName": "known_xs"
+      }
+    ]
+  },
+  {
+    "name": "RRI",
+    "description": "Returns the equivalent interest rate for the growth of an investment.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "fv"
+      }
+    ]
+  },
+  {
+    "name": "ROWS",
+    "description": "Returns the number of rows in a reference or array.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "array"
+      }
+    ]
+  },
+  {
+    "name": "ROW",
+    "description": "Returns the row number of a reference. If omitted, returns the row number of the cell containing the formula.",
+    "argCount": {
+      "le": 1
+    },
+    "args": [
+      {
+        "argName": "reference",
+        "description": "Optional. The reference from which to return the row number."
+      }
+    ]
+  },
+  {
+    "name": "ROUNDUP",
+    "description": "Rounds a number up, away from zero, to the given number of digits.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "num_digits"
+      }
+    ]
+  },
+  {
+    "name": "ROUNDDOWN",
+    "description": "Rounds a number down, toward zero, to the given number of digits.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "num_digits"
+      }
+    ]
+  },
+  {
+    "name": "ROUND",
+    "description": "Rounds a number to a specified number of digits.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "num_digits"
+      }
+    ]
+  },
+  {
+    "name": "RIGHTB",
+    "description": "Returns the last character or characters in a text string, based on the number of bytes you specify.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "num_bytes"
+      }
+    ]
+  },
+  {
+    "name": "RIGHT",
+    "description": "Returns the last character or characters in a text string, based on the number of characters you specify.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "num_chars"
+      }
+    ]
+  },
+  {
+    "name": "REPT",
+    "description": "Repeats text a given number of times.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "number_times"
+      }
+    ]
+  },
+  {
+    "name": "REPLACEB",
+    "description": "Replaces part of a text string, based on the number of bytes you specify, with a different text string.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "old_text"
+      },
+      {
+        "argName": "start_num"
+      },
+      {
+        "argName": "num_bytes"
+      },
+      {
+        "argName": "new_text"
+      }
+    ]
+  },
+  {
+    "name": "REPLACE",
+    "description": "Replaces part of a text string, based on the number of characters you specify, with another string.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "old_text"
+      },
+      {
+        "argName": "start_num"
+      },
+      {
+        "argName": "num_chars"
+      },
+      {
+        "argName": "new_text"
+      }
+    ]
+  },
+  {
+    "name": "REGEXTEST",
+    "description": "Checks whether any part of the text matches the given regular expression pattern, returning TRUE or FALSE.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "pattern"
+      },
+      {
+        "argName": "case_sensitivity"
+      }
+    ]
+  },
+  {
+    "name": "REGEXREPLACE",
+    "description": "Replaces text in a string that matches a regular expression pattern with the given replacement.",
+    "argCount": {
+      "ge": 3,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "pattern"
+      },
+      {
+        "argName": "replacement"
+      },
+      {
+        "argName": "occurrence"
+      },
+      {
+        "argName": "case_sensitivity"
+      }
+    ]
+  },
+  {
+    "name": "REGEXEXTRACT",
+    "description": "Extracts text from a string that matches a regular expression pattern.",
+    "argCount": {
+      "ge": 2,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "pattern"
+      },
+      {
+        "argName": "return_mode"
+      },
+      {
+        "argName": "case_sensitivity"
+      }
+    ]
+  },
+  {
+    "name": "RECEIVED",
+    "description": "Returns the amount received at maturity for a fully invested security.",
+    "argCount": {
+      "ge": 4,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "investment"
+      },
+      {
+        "argName": "discount"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "RATE",
+    "description": "Returns the interest rate per period of an annuity.",
+    "argCount": {
+      "ge": 3,
+      "le": 6
+    },
+    "args": [
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pmt"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "fv"
+      },
+      {
+        "argName": "type"
+      },
+      {
+        "argName": "guess"
+      }
+    ]
+  },
+  {
+    "name": "RANK",
+    "description": "Returns the rank of a number in a list of numbers (ties averaged in older Excel versions).",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "ref",
+        "refOnly": true
+      },
+      {
+        "argName": "order"
+      }
+    ]
+  },
+  {
+    "name": "RANK.EQ",
+    "description": "Returns the rank of a number in a list of numbers; if more than one value has the same rank, the top rank of that set is returned.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "ref",
+        "refOnly": true
+      },
+      {
+        "argName": "order"
+      }
+    ]
+  },
+  {
+    "name": "RANK.AVG",
+    "description": "Returns the rank of a number in a list of numbers; if several values share a rank, the average rank is returned.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "ref",
+        "refOnly": true
+      },
+      {
+        "argName": "order"
+      }
+    ]
+  },
+  {
+    "name": "RANDBETWEEN",
+    "description": "Returns a random integer between the numbers you specify.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "bottom"
+      },
+      {
+        "argName": "top"
+      }
+    ]
+  },
+  {
+    "name": "RAND",
+    "description": "Returns an evenly distributed random real number greater than or equal to 0 and less than 1.",
+    "argCount": {
+      "eq": 0
+    },
+    "args": []
+  },
+  {
+    "name": "RADIANS",
+    "description": "Converts degrees to radians.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "angle"
+      }
+    ]
+  },
+  {
+    "name": "QUOTIENT",
+    "description": "Returns the integer portion of a division.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "numerator"
+      },
+      {
+        "argName": "denominator"
+      }
+    ]
+  },
+  {
+    "name": "QUARTILE",
+    "description": "Returns the quartile of a data set.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "quart"
+      }
+    ]
+  },
+  {
+    "name": "QUARTILE.INC",
+    "description": "Returns the quartile of a data set, based on percentile values from 0 to 1, inclusive.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "quart"
+      }
+    ]
+  },
+  {
+    "name": "PV",
+    "description": "Calculates the present value of an investment based on periodic, constant payments and a constant interest rate.",
+    "argCount": {
+      "ge": 3,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pmt"
+      },
+      {
+        "argName": "fv"
+      },
+      {
+        "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "PROPER",
+    "description": "Capitalizes the first letter of each word in a text string and lowercases the rest.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "PRODUCT",
+    "description": "Multiplies all the numbers given as arguments and returns the product.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "PRICEMAT",
+    "description": "Returns the price per $100 face value of a security that pays interest at maturity.",
+    "argCount": {
+      "ge": 5,
+      "le": 6
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "issue"
+      },
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "yld"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "PRICEDISC",
+    "description": "Returns the price per $100 face value of a discounted security.",
+    "argCount": {
+      "ge": 4,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "discount"
+      },
+      {
+        "argName": "redemption"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "PRICE",
+    "description": "Returns the price per $100 face value of a security that pays periodic interest.",
+    "argCount": {
+      "ge": 6,
+      "le": 7
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "yld"
+      },
+      {
+        "argName": "redemption"
+      },
+      {
+        "argName": "frequency"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "PPMT",
+    "description": "Returns the payment on the principal for a given period for an investment.",
+    "argCount": {
+      "ge": 4,
+      "le": 6
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "per"
+      },
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "fv"
+      },
+      {
+        "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "POWER",
+    "description": "Returns the result of a number raised to a power.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "power"
+      }
+    ]
+  },
+  {
+    "name": "POISSON",
+    "description": "Returns the Poisson distribution.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "mean"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "POISSON.DIST",
+    "description": "Returns the Poisson distribution.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "mean"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "PMT",
+    "description": "Calculates the payment for a loan based on constant payments and a constant interest rate.",
+    "argCount": {
+      "ge": 3,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "fv"
+      },
+      {
+        "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "PI",
+    "description": "Returns the number 3.14159265358979, the mathematical constant pi, accurate to 15 digits.",
+    "argCount": {
+      "eq": 0
+    },
+    "args": []
+  },
+  {
+    "name": "PERMUT",
+    "description": "Returns the number of permutations for a given number of objects (ordered arrangements).",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "number_chosen"
+      }
+    ]
+  },
+  {
+    "name": "PERCENTRANK",
+    "description": "Returns the rank of a value in a data set as a percentage of the data set.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "significance"
+      }
+    ]
+  },
+  {
+    "name": "PERCENTRANK.INC",
+    "description": "Returns the rank of a value in a data set as a percentage (0 to 1, inclusive) of the data set.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "significance"
+      }
+    ]
+  },
+  {
+    "name": "PERCENTILE",
+    "description": "Returns the k-th percentile of values in a range.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "k"
+      }
+    ]
+  },
+  {
+    "name": "PERCENTILE.INC",
+    "description": "Returns the k-th percentile of values in a range, where k is in the range 0 to 1, inclusive.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "k"
+      }
+    ]
+  },
+  {
+    "name": "PEARSON",
+    "description": "Returns the Pearson product moment correlation coefficient.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array1"
+      },
+      {
+        "argName": "array2"
+      }
+    ]
+  },
+  {
+    "name": "PDURATION",
+    "description": "Returns the number of periods required by an investment to reach a specified value.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "fv"
+      }
+    ]
+  },
+  {
+    "name": "OR",
+    "description": "Returns TRUE if any argument is TRUE; returns FALSE if all arguments are FALSE.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "logical",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "OFFSET",
+    "description": "Returns a reference offset from a starting reference by a number of rows and columns, optionally resized.",
+    "argCount": {
+      "ge": 3,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "reference"
+      },
+      {
+        "argName": "rows"
+      },
+      {
+        "argName": "cols"
+      },
+      {
+        "argName": "height"
+      },
+      {
+        "argName": "width"
+      }
+    ]
+  },
+  {
+    "name": "ODD",
+    "description": "Rounds a number up to the nearest odd integer.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "OCT2HEX",
+    "description": "Converts an octal number to hexadecimal.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "OCT2DEC",
+    "description": "Converts an octal number to decimal.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "OCT2BIN",
+    "description": "Converts an octal number to binary.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "NPV",
+    "description": "Calculates the net present value of an investment based on a discount rate and a series of future payments.",
+    "argCount": {
+      "ge": 2
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "value",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "NPER",
+    "description": "Returns the number of periods for an investment based on periodic, constant payments and a constant interest rate.",
+    "argCount": {
+      "ge": 3,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "pmt"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "fv"
+      },
+      {
+        "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "NOW",
+    "description": "Returns the serial number of the current date and time.",
+    "argCount": {
+      "eq": 0
+    },
+    "args": []
+  },
+  {
+    "name": "NOT",
+    "description": "Reverses the logical value of its argument.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "logical"
+      }
+    ]
+  },
+  {
+    "name": "NORMSINV",
+    "description": "Returns the inverse of the standard normal cumulative distribution.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "probability"
+      }
+    ]
+  },
+  {
+    "name": "NORMSDIST",
+    "description": "Returns the standard normal cumulative distribution for a given z-score (legacy NORMSDIST).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "z"
+      }
+    ]
+  },
+  {
+    "name": "NORMINV",
+    "description": "Returns the inverse of the normal cumulative distribution for the specified mean and standard deviation.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "probability"
+      },
+      {
+        "argName": "mean"
+      },
+      {
+        "argName": "standard_dev"
+      }
+    ]
+  },
+  {
+    "name": "NORMDIST",
+    "description": "Returns the normal distribution for the specified mean and standard deviation.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "mean"
+      },
+      {
+        "argName": "standard_dev"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "NORM.S.INV",
+    "description": "Returns the inverse of the standard normal cumulative distribution.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "probability"
+      }
+    ]
+  },
+  {
+    "name": "NORM.S.DIST",
+    "description": "Returns the standard normal distribution, with a mean of zero and a standard deviation of one.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "z"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "NORM.DIST",
+    "description": "Returns the normal distribution for the specified mean and standard deviation.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "mean"
+      },
+      {
+        "argName": "standard_dev"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "NOMINAL",
+    "description": "Converts an effective annual interest rate to a nominal rate.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "effect_rate"
+      },
+      {
+        "argName": "npery"
+      }
+    ]
+  },
+  {
+    "name": "NETWORKDAYS",
+    "description": "Returns the number of whole working days between two dates, excluding weekends and holidays.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "start_date"
+      },
+      {
+        "argName": "end_date"
+      },
+      {
+        "argName": "holidays"
+      }
+    ]
+  },
+  {
+    "name": "NEGBINOMDIST",
+    "description": "Returns the negative binomial distribution (probability) for a given number of failures before a specified number of successes.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "number_f"
+      },
+      {
+        "argName": "number_s"
+      },
+      {
+        "argName": "probability_s"
+      }
+    ]
+  },
+  {
+    "name": "NEGBINOM.DIST",
+    "description": "Returns the negative binomial distribution.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "number_f"
+      },
+      {
+        "argName": "number_s"
+      },
+      {
+        "argName": "probability_s"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "NA",
+    "description": "Returns the error value #N/A.",
+    "argCount": {
+      "eq": 0
+    },
+    "args": []
+  },
+  {
+    "name": "N",
+    "description": "Returns a value converted to a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "MULTINOMIAL",
+    "description": "Returns the multinomial of a set of numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "MROUND",
+    "description": "Returns a number rounded to the desired multiple.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "multiple"
+      }
+    ]
+  },
+  {
+    "name": "MONTH",
+    "description": "Returns the month of a date represented by a serial number (1-12).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "serial_number"
+      }
+    ]
+  },
+  {
+    "name": "MODE.SNGL",
+    "description": "Returns the most frequently occurring value in a data set.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "MODE",
+    "description": "Returns the most frequently occurring value in a range or list of arguments.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "value",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "MOD",
+    "description": "Returns the remainder after a number is divided by a divisor; the result has the same sign as the divisor.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "divisor"
+      }
+    ]
+  },
+  {
+    "name": "MINUTE",
+    "description": "Returns the minute component of a time value, a number from 0 to 59.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "serial_number"
+      }
+    ]
+  },
+  {
+    "name": "MINIFS",
+    "description": "Returns the minimum value among cells specified by a given set of conditions or criteria.",
+    "argCount": {
+      "ge": 3,
+      "odd": true
+    },
+    "args": [
+      {
+        "argName": "min_range",
+        "refOnly": true
+      },
+      {
+        "argName": "criteria_range",
+        "refOnly": true,
+        "startRepeated": true
+      },
+      {
+        "argName": "criteria"
+      }
+    ]
+  },
+  {
+    "name": "MIN",
+    "description": "Returns the smallest value in a set of numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "MIDB",
+    "description": "Returns a specific number of characters from a text string, starting at the position you specify, counted in bytes.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "start_num"
+      },
+      {
+        "argName": "num_bytes"
+      }
+    ]
+  },
+  {
+    "name": "MID",
+    "description": "Returns a specific number of characters from a text string, starting at the position you specify.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "start_num"
+      },
+      {
+        "argName": "num_chars"
+      }
+    ]
+  },
+  {
+    "name": "MEDIAN",
+    "description": "Returns the median (the middle value) of the given numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "MAXIFS",
+    "description": "Returns the maximum value among cells specified by a set of conditions.",
+    "argCount": {
+      "ge": 3,
+      "odd": true
+    },
+    "args": [
+      {
+        "argName": "max_range",
+        "refOnly": true
+      },
+      {
+        "argName": "criteria_range",
+        "refOnly": true,
+        "startRepeated": true
+      },
+      {
+        "argName": "criteria"
+      }
+    ]
+  },
+  {
+    "name": "MAX",
+    "description": "Returns the largest value in a set of numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "MATCH",
+    "description": "Returns the relative position of an item in a range that matches a specified value.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "lookup_value"
+      },
+      {
+        "argName": "lookup_array"
+      },
+      {
+        "argName": "match_type"
+      }
+    ]
+  },
+  {
+    "name": "LOWER",
+    "description": "Converts text to lowercase.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "LOG10",
+    "description": "Returns the base-10 logarithm of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "LOG",
+    "description": "Returns the logarithm of a number to the base you specify (default 10).",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "base"
+      }
+    ]
+  },
+  {
+    "name": "LN",
+    "description": "Returns the natural logarithm of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "LENB",
+    "description": "Returns the number of bytes used to represent the characters in a text string.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "LEN",
+    "description": "Returns the number of characters in a text string.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "LEFTB",
+    "description": "Returns the specified number of characters from the start of a text string, counted in bytes.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "num_bytes"
+      }
+    ]
+  },
+  {
+    "name": "LEFT",
+    "description": "Returns the first character or characters in a text string, based on the number of characters you specify.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "text"
+      },
+      {
+        "argName": "num_chars"
+      }
+    ]
+  },
+  {
+    "name": "LCM",
+    "description": "Returns the least common multiple of integers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "LARGE",
+    "description": "Returns the k-th largest value in a data set.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "k"
+      }
+    ]
+  },
+  {
+    "name": "KURT",
+    "description": "Returns the kurtosis of a data set.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "ISTEXT",
+    "description": "Checks whether a value is text, and returns TRUE or FALSE.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "ISODD",
+    "description": "Returns TRUE if the number is odd.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ISNUMBER",
+    "description": "Checks whether a value is a number, and returns TRUE or FALSE.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "ISNONTEXT",
+    "description": "Returns TRUE if the value is not text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "ISNA",
+    "description": "Returns TRUE if the value is the #N/A error; otherwise returns FALSE.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "ISLOGICAL",
+    "description": "Returns TRUE if the value is a logical value.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "ISFORMULA",
+    "description": "Returns TRUE if the reference is to a cell that contains a formula.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "reference",
+        "refOnly": true
+      }
+    ]
+  },
+  {
+    "name": "ISEVEN",
+    "description": "Returns TRUE if the number is even.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ISERROR",
+    "description": "Returns TRUE if the value is any error value except #N/A.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "ISERR",
+    "description": "Returns TRUE if the value is any error value except #N/A.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "ISBLANK",
+    "description": "Returns TRUE if the value is blank.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "value"
+      }
+    ]
+  },
+  {
+    "name": "IRR",
+    "description": "Returns the internal rate of return for a series of cash flows.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "values",
+        "refOnly": true
+      },
+      {
+        "argName": "guess"
+      }
+    ]
+  },
+  {
+    "name": "IPMT",
+    "description": "Returns the interest payment for a given period of an investment.",
+    "argCount": {
+      "ge": 4,
+      "le": 6
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "per"
+      },
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "fv"
+      },
+      {
+        "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "INTRATE",
+    "description": "Returns the interest rate for a fully invested security.",
+    "argCount": {
+      "ge": 4,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "investment"
+      },
+      {
+        "argName": "redemption"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "INTERCEPT",
+    "description": "Returns the intercept of the linear regression line through the known x and y values.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "known_ys"
+      },
+      {
+        "argName": "known_xs"
+      }
+    ]
+  },
+  {
+    "name": "INT",
+    "description": "Rounds a number down to the nearest integer.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "INDIRECT",
+    "description": "Returns the reference specified by a text string.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "ref_text"
+      },
+      {
+        "argName": "a1"
+      }
+    ]
+  },
+  {
+    "name": "INDEX",
+    "description": "Returns the value of the element at the given row and column of a table or range.",
+    "argCount": {
+      "ge": 2,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "array"
+      },
+      {
+        "argName": "row_num"
+      },
+      {
+        "argName": "column_num"
+      },
+      {
+        "argName": "area_num"
+      }
+    ]
+  },
+  {
+    "name": "IMTANH",
+    "description": "Returns the hyperbolic tangent of a complex number supplied as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMTAN",
+    "description": "Returns the tangent of a complex number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMSUM",
+    "description": "Returns the sum of complex numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "inumber",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "IMSUB",
+    "description": "Returns the difference between two complex numbers.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "inumber1"
+      },
+      {
+        "argName": "inumber2"
+      }
+    ]
+  },
+  {
+    "name": "IMSINH",
+    "description": "Returns the hyperbolic sine of a complex number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMSIN",
+    "description": "Returns the sine of a complex number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMSEC",
+    "description": "Returns the secant of a complex number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMREAL",
+    "description": "Returns the real coefficient of a complex number given as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMPRODUCT",
+    "description": "Returns the product of complex numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "inumber",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "IMLOG2",
+    "description": "Returns the base-2 logarithm of a complex number given as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMLOG10",
+    "description": "Returns the base-10 logarithm of a complex number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMLN",
+    "description": "Returns the natural logarithm of a complex number given as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMEXP",
+    "description": "Returns the exponential of a complex number given as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMDIV",
+    "description": "Returns the quotient of two complex numbers.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "inumber1"
+      },
+      {
+        "argName": "inumber2"
+      }
+    ]
+  },
+  {
+    "name": "IMCSC",
+    "description": "Returns the cosecant of a complex number provided as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMCOT",
+    "description": "Returns the cotangent of a complex number supplied as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMCOSH",
+    "description": "Returns the hyperbolic cosine of a complex number provided as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMCOS",
+    "description": "Returns the cosine of a complex number supplied as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMCONJUGATE",
+    "description": "Returns the complex conjugate of a complex number given as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMAGINARY",
+    "description": "Returns the imaginary coefficient of a complex number given as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IMABS",
+    "description": "Returns the absolute value (modulus) of a complex number given as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "inumber"
+      }
+    ]
+  },
+  {
+    "name": "IFS",
+    "description": "Checks whether one or more conditions are met and returns the value that corresponds to the first TRUE condition.",
+    "argCount": {
+      "ge": 2,
+      "even": true
+    },
+    "args": [
+      {
+        "argName": "logical_test",
+        "startRepeated": true
+      },
+      {
+        "argName": "value_if_true"
+      }
+    ]
+  },
+  {
+    "name": "IFNA",
+    "description": "Returns a value you specify if the expression resolves to #N/A; otherwise returns the result of the expression.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "value"
+      },
+      {
+        "argName": "value_if_na"
+      }
+    ]
+  },
+  {
+    "name": "IFERROR",
+    "description": "Returns a value you specify if a formula evaluates to an error; otherwise returns the result of the formula.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "value"
+      },
+      {
+        "argName": "value_if_error"
+      }
+    ]
+  },
+  {
+    "name": "IF",
+    "description": "Returns one value if a condition is TRUE and another value if it is FALSE.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "logical_test"
+      },
+      {
+        "argName": "value_if_true"
+      },
+      {
+        "argName": "value_if_false"
+      }
+    ]
+  },
+  {
+    "name": "HYPERLINK",
+    "description": "Creates a link that opens a web page, a file, or a place in this workbook. The cell shows friendly_name, or the link itself when it is omitted.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "link_location"
+      },
+      {
+        "argName": "friendly_name"
+      }
+    ]
+  },
+  {
+    "name": "HOUR",
+    "description": "Converts a serial number to an hour.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "serial_number"
+      }
+    ]
+  },
+  {
+    "name": "HLOOKUP",
+    "description": "Looks in the top row of a table and returns the value in the same column from a row you specify.",
+    "argCount": {
+      "ge": 3,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "lookup_value"
+      },
+      {
+        "argName": "table_array"
+      },
+      {
+        "argName": "row_index_num"
+      },
+      {
+        "argName": "range_lookup"
+      }
+    ]
+  },
+  {
+    "name": "HEX2OCT",
+    "description": "Converts a hexadecimal number to octal.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "HEX2DEC",
+    "description": "Converts a hexadecimal number to decimal.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "HEX2BIN",
+    "description": "Converts a hexadecimal number to binary.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "HARMEAN",
+    "description": "Returns the harmonic mean of a data set.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "value",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "GESTEP",
+    "description": "Tests whether a number is greater than or equal to a threshold value, returning 1 if so and 0 otherwise.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "step"
+      }
+    ]
+  },
+  {
+    "name": "GEOMEAN",
+    "description": "Returns the geometric mean of an array or range of positive numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "GCD",
+    "description": "Returns the greatest common divisor of two or more integers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "GAMMALN.PRECISE",
+    "description": "Returns the natural logarithm of the gamma function.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "GAMMALN",
+    "description": "Returns the natural logarithm of the Gamma function, Γ(number).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "GAMMADIST",
+    "description": "Returns the gamma distribution.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "alpha"
+      },
+      {
+        "argName": "beta"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "GAMMA",
+    "description": "Returns the Gamma function value for a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "GAMMA.DIST",
+    "description": "Returns the gamma distribution.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "alpha"
+      },
+      {
+        "argName": "beta"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "FV",
+    "description": "Returns the future value of an investment based on periodic, constant payments and a constant interest rate.",
+    "argCount": {
+      "ge": 3,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pmt"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "FORMULATEXT",
+    "description": "Returns the formula at the given reference as text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "reference",
+        "refOnly": true
+      }
+    ]
+  },
+  {
+    "name": "FORECAST",
+    "description": "Returns a value along a linear trend fitted to known x and y values.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "known_ys"
+      },
+      {
+        "argName": "known_xs"
+      }
+    ]
+  },
+  {
+    "name": "FLOOR",
+    "description": "Rounds a number down, toward zero, to the nearest multiple of significance.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "significance"
+      }
+    ]
+  },
+  {
+    "name": "FIXED",
+    "description": "Rounds a number to the specified number of decimals and returns it as text, with or without thousands separators.",
+    "argCount": {
+      "ge": 1,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "decimals"
+      },
+      {
+        "argName": "no_commas"
+      }
+    ]
+  },
+  {
+    "name": "FISHERINV",
+    "description": "Returns the inverse of the Fisher transformation.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "y"
+      }
+    ]
+  },
+  {
+    "name": "FISHER",
+    "description": "Returns the Fisher transformation of a value.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "x"
+      }
+    ]
+  },
+  {
+    "name": "FINDB",
+    "description": "Returns the position of one text string within another (case-sensitive), counting bytes for double-byte characters.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "find_text"
+      },
+      {
+        "argName": "within_text"
+      },
+      {
+        "argName": "start_num"
+      }
+    ]
+  },
+  {
+    "name": "FIND",
+    "description": "Returns the position of one text string within another (case-sensitive).",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "find_text"
+      },
+      {
+        "argName": "within_text"
+      },
+      {
+        "argName": "start_num"
+      }
+    ]
+  },
+  {
+    "name": "FDIST",
+    "description": "Returns the right-tailed F probability distribution, the degree of diversity between two data sets.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "deg_freedom1"
+      },
+      {
+        "argName": "deg_freedom2"
+      }
+    ]
+  },
+  {
+    "name": "FALSE",
+    "description": "Returns the logical value FALSE.",
+    "argCount": {
+      "eq": 0
+    },
+    "args": []
+  },
+  {
+    "name": "FACTDOUBLE",
+    "description": "Returns the double factorial of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "FACT",
+    "description": "Returns the factorial of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "F.DIST",
+    "description": "Returns the F probability distribution.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "deg_freedom1"
+      },
+      {
+        "argName": "deg_freedom2"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "EXPONDIST",
+    "description": "Returns the exponential distribution.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "lambda"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "EXPON.DIST",
+    "description": "Returns the exponential distribution.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "lambda"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "EXP",
+    "description": "Returns e raised to the power of a given number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "EXACT",
+    "description": "Checks whether two text strings are exactly the same (case-sensitive).",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "text1"
+      },
+      {
+        "argName": "text2"
+      }
+    ]
+  },
+  {
+    "name": "EVEN",
+    "description": "Rounds a number up, away from zero, to the nearest even integer.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "EOMONTH",
+    "description": "Returns the serial number of the last day of the month before or after a specified number of months.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "start_date"
+      },
+      {
+        "argName": "months"
+      }
+    ]
+  },
+  {
+    "name": "EFFECT",
+    "description": "Returns the effective annual interest rate, given the nominal annual rate and the number of compounding periods per year.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "nominal_rate"
+      },
+      {
+        "argName": "npery"
+      }
+    ]
+  },
+  {
+    "name": "EDATE",
+    "description": "Returns the serial number of the date that is the indicated number of months before or after the start date.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "start_date"
+      },
+      {
+        "argName": "months"
+      }
+    ]
+  },
+  {
+    "name": "DOLLAR",
+    "description": "Converts a number to text using currency format, with a dollar sign, thousands separators, and the specified number of decimals.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "decimals"
+      }
+    ]
+  },
+  {
+    "name": "DISC",
+    "description": "Returns the discount rate for a security.",
+    "argCount": {
+      "ge": 4,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "pr"
+      },
+      {
+        "argName": "redemption"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "DEVSQ",
+    "description": "Returns the sum of squares of deviations of data points from their sample mean.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "DELTA",
+    "description": "Tests whether two numbers are equal, returning 1 if they are and 0 otherwise.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number1"
+      },
+      {
+        "argName": "number2"
+      }
+    ]
+  },
+  {
+    "name": "DEGREES",
+    "description": "Converts radians to degrees.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "radians"
+      }
+    ]
+  },
+  {
+    "name": "DEC2OCT",
+    "description": "Converts a decimal number to octal.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "DEC2HEX",
+    "description": "Converts a decimal number to hexadecimal.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "DEC2BIN",
+    "description": "Converts a decimal number to binary.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "DDB",
+    "description": "Returns the depreciation of an asset for a specified period using the double-declining balance method or another method you specify.",
+    "argCount": {
+      "ge": 4,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "cost"
+      },
+      {
+        "argName": "salvage"
+      },
+      {
+        "argName": "life"
+      },
+      {
+        "argName": "period"
+      },
+      {
+        "argName": "factor"
+      }
+    ]
+  },
+  {
+    "name": "DB",
+    "description": "Returns the depreciation of an asset for a specified period using the fixed-declining balance method.",
+    "argCount": {
+      "ge": 4,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "cost"
+      },
+      {
+        "argName": "salvage"
+      },
+      {
+        "argName": "life"
+      },
+      {
+        "argName": "period"
+      },
+      {
+        "argName": "month"
+      }
+    ]
+  },
+  {
+    "name": "DAYS360",
+    "description": "Returns the number of days between two dates based on a 360-day year.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "start_date"
+      },
+      {
+        "argName": "end_date"
+      },
+      {
+        "argName": "method"
+      }
+    ]
+  },
+  {
+    "name": "DAYS",
+    "description": "Returns the number of days between two dates.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "end_date"
+      },
+      {
+        "argName": "start_date"
+      }
+    ]
+  },
+  {
+    "name": "DAY",
+    "description": "Returns the day of the month (1–31) from a date.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "serial_number"
+      }
+    ]
+  },
+  {
+    "name": "DATEDIF",
+    "description": "Calculates the number of days, months, or years between two dates.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "start_date"
+      },
+      {
+        "argName": "end_date"
+      },
+      {
+        "argName": "unit"
+      }
+    ]
+  },
+  {
+    "name": "DATE",
+    "description": "Returns the serial number of a particular date.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "year"
+      },
+      {
+        "argName": "month"
+      },
+      {
+        "argName": "day"
+      }
+    ]
+  },
+  {
+    "name": "CUMPRINC",
+    "description": "Returns the cumulative principal paid on a loan between two periods.",
+    "argCount": {
+      "eq": 6
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "start_period"
+      },
+      {
+        "argName": "end_period"
+      },
+      {
+        "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "CUMIPMT",
+    "description": "Returns the cumulative interest paid on a loan between two periods.",
+    "argCount": {
+      "eq": 6
+    },
+    "args": [
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "nper"
+      },
+      {
+        "argName": "pv"
+      },
+      {
+        "argName": "start_period"
+      },
+      {
+        "argName": "end_period"
+      },
+      {
+        "argName": "type"
+      }
+    ]
+  },
+  {
+    "name": "CSC",
+    "description": "Returns the cosecant of an angle given in radians.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "COVARIANCE.S",
+    "description": "Returns the sample covariance, the average of the products of deviations for each data point pair in two data sets.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array1"
+      },
+      {
+        "argName": "array2"
+      }
+    ]
+  },
+  {
+    "name": "COVARIANCE.P",
+    "description": "Returns the population covariance, the average of the products of deviations for each data point pair in two data sets.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array1"
+      },
+      {
+        "argName": "array2"
+      }
+    ]
+  },
+  {
+    "name": "COVAR",
+    "description": "Returns the population covariance, the average of the products of paired deviations. Kept for compatibility with earlier versions; use COVARIANCE.P.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array1"
+      },
+      {
+        "argName": "array2"
+      }
+    ]
+  },
+  {
+    "name": "COUPPCD",
+    "description": "Returns the previous coupon date before the settlement date.",
+    "argCount": {
+      "ge": 3,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "frequency"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "COUPNUM",
+    "description": "Returns the number of coupons payable between the settlement date and the maturity date.",
+    "argCount": {
+      "ge": 3,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "frequency"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "COUPNCD",
+    "description": "Returns the next coupon date after the settlement date.",
+    "argCount": {
+      "ge": 3,
+      "le": 4
+    },
+    "args": [
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "maturity"
+      },
+      {
+        "argName": "frequency"
+      },
+      {
+        "argName": "basis"
+      }
+    ]
+  },
+  {
+    "name": "COUNTIFS",
+    "description": "Counts the number of cells that meet multiple criteria across one or more ranges.",
+    "argCount": {
+      "ge": 2,
+      "even": true
+    },
+    "args": [
+      {
+        "argName": "criteria_range",
+        "refOnly": true,
+        "startRepeated": true
+      },
+      {
+        "argName": "criteria"
+      }
+    ]
+  },
+  {
+    "name": "COUNTIF",
+    "description": "Counts the number of cells within a range that meet the given condition.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "range",
+        "refOnly": true
+      },
+      {
+        "argName": "criteria"
+      }
+    ]
+  },
+  {
+    "name": "COUNTBLANK",
+    "description": "Counts the number of empty cells in a specified range of cells.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "area",
+        "refOnly": true
+      }
+    ]
+  },
+  {
+    "name": "COUNTA",
+    "description": "Counts the number of cells that are not empty.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "value",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "COUNT",
+    "description": "Counts how many numbers are in the list of supplied arguments.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "value",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "COTH",
+    "description": "Returns the hyperbolic cotangent of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "COT",
+    "description": "Returns the cotangent of an angle (in radians).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "COSH",
+    "description": "Returns the hyperbolic cosine of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "COS",
+    "description": "Returns the cosine of a given angle (in radians).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "CORREL",
+    "description": "Returns the correlation coefficient between two data sets.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "array1"
+      },
+      {
+        "argName": "array2"
+      }
+    ]
+  },
+  {
+    "name": "CONCATENATE",
+    "description": "Joins several text items into one text string.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "text",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "CONCAT",
+    "description": "Joins the text from multiple values or ranges into a single string.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "text",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "COMPLEX",
+    "description": "Returns a complex number as text given real and imaginary coefficients and an optional suffix.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "real_num"
+      },
+      {
+        "argName": "i_num"
+      },
+      {
+        "argName": "suffix"
+      }
+    ]
+  },
+  {
+    "name": "COMBIN",
+    "description": "Returns the number of combinations for a given number of items.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "number_chosen"
+      }
+    ]
+  },
+  {
+    "name": "COLUMNS",
+    "description": "Returns the number of columns in an array or reference.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "array"
+      }
+    ]
+  },
+  {
+    "name": "COLUMN",
+    "description": "Returns the column number of a reference.",
+    "argCount": {
+      "le": 1
+    },
+    "args": [
+      {
+        "argName": "reference",
+        "refOnly": true
+      }
+    ]
+  },
+  {
+    "name": "CODE",
+    "description": "Returns the numeric code of the first character in a text string.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "CLEAN",
+    "description": "Removes all nonprintable characters from text.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "text"
+      }
+    ]
+  },
+  {
+    "name": "CHOOSE",
+    "description": "Uses an index number to pick one value from a list of values.",
+    "argCount": {
+      "ge": 2
+    },
+    "args": [
+      {
+        "argName": "index_num"
+      },
+      {
+        "argName": "value",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "CHISQ.DIST.RT",
+    "description": "Returns the right-tailed probability of the chi-squared distribution.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "deg_freedom"
+      }
+    ]
+  },
+  {
+    "name": "CHISQ.DIST",
+    "description": "Returns the left-tailed probability of the chi-squared distribution.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "x"
+      },
+      {
+        "argName": "deg_freedom"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "CHAR",
+    "description": "Returns the character specified by a code number (1-255).",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "CEILING",
+    "description": "Rounds a number up, away from zero, to the nearest multiple of significance.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "significance"
+      }
+    ]
+  },
+  {
+    "name": "BLOCKREFS",
+    "description": "Fetches block cell values whose key and field matches conditions",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "ref"
+      },
+      {
+        "argName": "keyFilter"
+      },
+      {
+        "argName": "fieldFilter"
+      }
+    ]
+  },
+  {
+    "name": "BLOCKREF",
+    "description": "Fetches a block cell value through its key and field",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "ref"
+      },
+      {
+        "argName": "key"
+      },
+      {
+        "argName": "field"
+      }
+    ]
+  },
+  {
+    "name": "BITXOR",
+    "description": "Performs a bitwise XOR operation on two integer values and returns the result.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number1"
+      },
+      {
+        "argName": "number2"
+      }
+    ]
+  },
+  {
+    "name": "BITRSHIFT",
+    "description": "Shifts bits of a number to the right by a specified number of positions.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "shift_amount"
+      }
+    ]
+  },
+  {
+    "name": "BITOR",
+    "description": "Performs a bitwise OR operation on two integer values and returns the result.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number1"
+      },
+      {
+        "argName": "number2"
+      }
+    ]
+  },
+  {
+    "name": "BITLSHIFT",
+    "description": "Shifts bits of a number to the left by a specified number of positions.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "shift_amount"
+      }
+    ]
+  },
+  {
+    "name": "BITAND",
+    "description": "Performs a bitwise AND operation on two integer values and returns the result.",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "number1"
+      },
+      {
+        "argName": "number2"
+      }
+    ]
+  },
+  {
+    "name": "BINOMDIST",
+    "description": "Returns the individual term binomial distribution probability. Kept for compatibility with earlier versions; use BINOM.DIST.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "number_s"
+      },
+      {
+        "argName": "trials"
+      },
+      {
+        "argName": "probability_s"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "BINOM.INV",
+    "description": "Returns the smallest value for which the cumulative binomial distribution is greater than or equal to a criterion value.",
+    "argCount": {
+      "eq": 3
+    },
+    "args": [
+      {
+        "argName": "trials"
+      },
+      {
+        "argName": "probability_s"
+      },
+      {
+        "argName": "alpha"
+      }
+    ]
+  },
+  {
+    "name": "BINOM.DIST",
+    "description": "Returns the individual term binomial distribution probability.",
+    "argCount": {
+      "eq": 4
+    },
+    "args": [
+      {
+        "argName": "number_s"
+      },
+      {
+        "argName": "trials"
+      },
+      {
+        "argName": "probability_s"
+      },
+      {
+        "argName": "cumulative"
+      }
+    ]
+  },
+  {
+    "name": "BIN2OCT",
+    "description": "Converts a binary number to octal.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "BIN2HEX",
+    "description": "Converts a binary number to hexadecimal.",
+    "argCount": {
+      "ge": 1,
+      "le": 2
+    },
+    "args": [
+      {
+        "argName": "number"
+      },
+      {
+        "argName": "places"
+      }
+    ]
+  },
+  {
+    "name": "BIN2DEC",
+    "description": "Converts a binary number to decimal.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "AVERAGEIFS",
+    "description": "Returns the average of cells that meet multiple criteria.",
+    "argCount": {
+      "ge": 3,
+      "odd": true
+    },
+    "args": [
+      {
+        "argName": "average_range",
+        "refOnly": true
+      },
+      {
+        "argName": "criteria_range",
+        "refOnly": true,
+        "startRepeated": true
+      },
+      {
+        "argName": "criteria"
+      }
+    ]
+  },
+  {
+    "name": "AVERAGEIF",
+    "description": "Returns the average of the cells in a range that meet the given condition.",
+    "argCount": {
+      "ge": 2,
+      "le": 3
+    },
+    "args": [
+      {
+        "argName": "range",
+        "refOnly": true
+      },
+      {
+        "argName": "criteria"
+      },
+      {
+        "argName": "average_range",
+        "refOnly": true
+      }
+    ]
+  },
+  {
+    "name": "AVERAGE",
+    "description": "Returns the average (arithmetic mean) of the supplied numbers.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "AVEDEV",
+    "description": "Returns the average of the absolute deviations of data points from their mean.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "number",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "ATANH",
+    "description": "Returns the inverse hyperbolic tangent of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ATAN2",
+    "description": "Returns the arctangent of the specified x- and y-coordinates, in radians in the range -pi to pi (excluding -pi).",
+    "argCount": {
+      "eq": 2
+    },
+    "args": [
+      {
+        "argName": "x_num"
+      },
+      {
+        "argName": "y_num"
+      }
+    ]
+  },
+  {
+    "name": "ATAN",
+    "description": "Returns the arctangent, or inverse tangent, of a number, in radians in the range -pi/2 to pi/2.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ASINH",
+    "description": "Returns the inverse hyperbolic sine of a number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ASIN",
+    "description": "Returns the arcsine, or inverse sine, of a number. The result is in radians.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "AND",
+    "description": "Returns TRUE if all of its arguments are TRUE, and FALSE if any argument is FALSE.",
+    "argCount": {
+      "ge": 1
+    },
+    "args": [
+      {
+        "argName": "logical",
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "AGGREGATE",
+    "description": "Returns an aggregate in a list or database. The AGGREGATE function can apply different aggregate functions to a list or database with the option to ignore hidden rows and error values.",
+    "argCount": {
+      "ge": 2
+    },
+    "args": [
+      {
+        "argName": "function_num"
+      },
+      {
+        "argName": "options"
+      },
+      {
+        "argName": "ref",
+        "refOnly": true,
+        "startRepeated": true
+      }
+    ]
+  },
+  {
+    "name": "ADDRESS",
+    "description": "Creates a cell reference as text, given the row and column numbers.",
+    "argCount": {
+      "ge": 2,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "row_num"
+      },
+      {
+        "argName": "col_num"
+      },
+      {
+        "argName": "abs_num"
+      },
+      {
+        "argName": "a1"
+      },
+      {
+        "argName": "sheet_text"
+      }
+    ]
+  },
+  {
+    "name": "ACOSH",
+    "description": "Returns the inverse hyperbolic cosine of a number. The number must be greater than or equal to 1. The inverse hyperbolic cosine is the value whose hyperbolic cosine is number, so ACOSH(COSH(number)) equals number.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ACOS",
+    "description": "Returns the arccosine, or inverse cosine, of a number. The arccosine is the angle whose cosine is number. The returned angle is given in radians in the range 0 (zero) to pi.",
+    "argCount": {
+      "eq": 1
+    },
+    "args": [
+      {
+        "argName": "number"
+      }
+    ]
+  },
+  {
+    "name": "ACCRINTM",
+    "description": "Returns the accrued interest for a security that pays interest at maturity.",
+    "argCount": {
+      "ge": 4,
+      "le": 5
+    },
+    "args": [
+      {
+        "argName": "issue"
+      },
+      {
+        "argName": "settlement"
+      },
+      {
+        "argName": "rate"
+      },
+      {
+        "argName": "par"
+      },
+      {
+        "argName": "basis"
       }
     ]
   },
@@ -43,2086 +4941,14 @@
     ]
   },
   {
-    "name": "ACOS",
-    "description": "Returns the arccosine, or inverse cosine, of a number. The arccosine is the angle whose cosine is number. The returned angle is given in radians in the range 0 (zero) to pi.",
+    "name": "ABS",
+    "description": "Returns the absolute value of a number. The absolute value of a number is the number without its sign.",
     "argCount": {
       "eq": 1
     },
     "args": [
       {
         "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "ACOSH",
-    "description": "Returns the inverse hyperbolic cosine of a number. The number must be greater than or equal to 1. The inverse hyperbolic cosine is the value whose hyperbolic cosine is number, so ACOSH(COSH(number)) equals number.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "ADDRESS",
-    "description": "Creates a cell reference as text, given the row and column numbers.",
-    "argCount": {
-      "ge": 2,
-      "le": 5
-    },
-    "args": [
-      {
-        "argName": "row_num"
-      },
-      {
-        "argName": "col_num"
-      },
-      {
-        "argName": "abs_num"
-      },
-      {
-        "argName": "a1"
-      },
-      {
-        "argName": "sheet_text"
-      }
-    ]
-  },
-  {
-    "name": "AGGREGATE",
-    "description": "Returns an aggregate in a list or database. The AGGREGATE function can apply different aggregate functions to a list or database with the option to ignore hidden rows and error values.",
-    "argCount": {
-      "ge": 2
-    },
-    "args": [
-      {
-        "argName": "function_num"
-      },
-      {
-        "argName": "options"
-      },
-      {
-        "argName": "ref",
-        "refOnly": true,
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "ASIN",
-    "description": "Returns the arcsine, or inverse sine, of a number. The result is in radians.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "AVERAGE",
-    "description": "Returns the average (arithmetic mean) of the supplied numbers.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "number",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "AVERAGEIFS",
-    "description": "Returns the average of cells that meet multiple criteria.",
-    "argCount": {
-      "ge": 3,
-      "odd": true
-    },
-    "args": [
-      {
-        "argName": "average_range",
-        "refOnly": true
-      },
-      {
-        "argName": "criteria_range",
-        "refOnly": true,
-        "startRepeated": true
-      },
-      {
-        "argName": "criteria"
-      }
-    ]
-  },
-  {
-    "name": "BITLSHIFT",
-    "description": "Shifts bits of a number to the left by a specified number of positions.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "shift_amount"
-      }
-    ]
-  },
-  {
-    "name": "BITOR",
-    "description": "Performs a bitwise OR operation on two integer values and returns the result.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number1"
-      },
-      {
-        "argName": "number2"
-      }
-    ]
-  },
-  {
-    "name": "BITRSHIFT",
-    "description": "Shifts bits of a number to the right by a specified number of positions.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "shift_amount"
-      }
-    ]
-  },
-  {
-    "name": "BITXOR",
-    "description": "Performs a bitwise XOR operation on two integer values and returns the result.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number1"
-      },
-      {
-        "argName": "number2"
-      }
-    ]
-  },
-  {
-    "name": "BLOCKREF",
-    "description": "Fetches a block cell value through its key and field",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "ref"
-      },
-      {
-        "argName": "key"
-      },
-      {
-        "argName": "field"
-      }
-    ]
-  },
-  {
-    "name": "BLOCKREFS",
-    "description": "Fetches block cell values whose key and field matches conditions",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "ref"
-      },
-      {
-        "argName": "keyFilter"
-      },
-      {
-        "argName": "fieldFilter"
-      }
-    ]
-  },
-  {
-    "name": "CEILING",
-    "description": "Rounds a number up, away from zero, to the nearest multiple of significance.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "significance"
-      }
-    ]
-  },
-  {
-    "name": "CHAR",
-    "description": "Returns the character specified by a code number (1-255).",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "CODE",
-    "description": "Returns the numeric code of the first character in a text string.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "text"
-      }
-    ]
-  },
-  {
-    "name": "COMPLEX",
-    "description": "Returns a complex number as text given real and imaginary coefficients and an optional suffix.",
-    "argCount": {
-      "ge": 2,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "real_num"
-      },
-      {
-        "argName": "i_num"
-      },
-      {
-        "argName": "suffix"
-      }
-    ]
-  },
-  {
-    "name": "CONCAT",
-    "description": "Joins the text from multiple values or ranges into a single string.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "text",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "CONCATENATE",
-    "description": "Joins several text items into one text string.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "text",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "COS",
-    "description": "Returns the cosine of a given angle (in radians).",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "COUNT",
-    "description": "Counts how many numbers are in the list of supplied arguments.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "value",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "COUNTA",
-    "description": "Counts the number of cells that are not empty.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "value",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "COUNTBLANK",
-    "description": "Counts the number of empty cells in a specified range of cells.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "area",
-        "refOnly": true
-      }
-    ]
-  },
-  {
-    "name": "COUNTIF",
-    "description": "Counts the number of cells within a range that meet the given condition.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "range",
-        "refOnly": true
-      },
-      {
-        "argName": "criteria"
-      }
-    ]
-  },
-  {
-    "name": "DAY",
-    "description": "Returns the day of the month (1–31) from a date.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "serial_number"
-      }
-    ]
-  },
-  {
-    "name": "DAYS",
-    "description": "Returns the number of days between two dates.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "end_date"
-      },
-      {
-        "argName": "start_date"
-      }
-    ]
-  },
-  {
-    "name": "DEC2OCT",
-    "description": "Converts a decimal number to octal.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "places"
-      }
-    ]
-  },
-  {
-    "name": "DEGREES",
-    "description": "Converts radians to degrees.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "radians"
-      }
-    ]
-  },
-  {
-    "name": "DOLLAR",
-    "description": "Converts a number to text using currency format, with a dollar sign, thousands separators, and the specified number of decimals.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "decimals"
-      }
-    ]
-  },
-  {
-    "name": "EXACT",
-    "description": "Checks whether two text strings are exactly the same (case-sensitive).",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "text1"
-      },
-      {
-        "argName": "text2"
-      }
-    ]
-  },
-  {
-    "name": "EXP",
-    "description": "Returns e raised to the power of a given number.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "EXPONDIST",
-    "description": "Returns the exponential distribution.",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "x"
-      },
-      {
-        "argName": "lambda"
-      },
-      {
-        "argName": "cumulative"
-      }
-    ]
-  },
-  {
-    "name": "FALSE",
-    "description": "Returns the logical value FALSE.",
-    "argCount": {
-      "eq": 0
-    },
-    "args": []
-  },
-  {
-    "name": "FIND",
-    "description": "Returns the position of one text string within another (case-sensitive).",
-    "argCount": {
-      "ge": 2,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "find_text"
-      },
-      {
-        "argName": "within_text"
-      },
-      {
-        "argName": "start_num"
-      }
-    ]
-  },
-  {
-    "name": "FIXED",
-    "description": "Rounds a number to the specified number of decimals and returns it as text, with or without thousands separators.",
-    "argCount": {
-      "ge": 1,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "decimals"
-      },
-      {
-        "argName": "no_commas"
-      }
-    ]
-  },
-  {
-    "name": "FLOOR",
-    "description": "Rounds a number down, toward zero, to the nearest multiple of significance.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "significance"
-      }
-    ]
-  },
-  {
-    "name": "FORMULATEXT",
-    "description": "Returns the formula in the referenced cell as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "reference"
-      }
-    ]
-  },
-  {
-    "name": "FV",
-    "description": "Returns the future value of an investment based on periodic, constant payments and a constant interest rate.",
-    "argCount": {
-      "ge": 3,
-      "le": 5
-    },
-    "args": [
-      {
-        "argName": "rate"
-      },
-      {
-        "argName": "nper"
-      },
-      {
-        "argName": "pmt"
-      },
-      {
-        "argName": "pv"
-      },
-      {
-        "argName": "type"
-      }
-    ]
-  },
-  {
-    "name": "GAMMA.DIST",
-    "description": "Returns the gamma distribution.",
-    "argCount": {
-      "eq": 4
-    },
-    "args": [
-      {
-        "argName": "x"
-      },
-      {
-        "argName": "alpha"
-      },
-      {
-        "argName": "beta"
-      },
-      {
-        "argName": "cumulative"
-      }
-    ]
-  },
-  {
-    "name": "GAMMALN",
-    "description": "Returns the natural logarithm of the Gamma function, Γ(number).",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "GAMMALN.PRECISE",
-    "description": "Returns the natural logarithm of the gamma function.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "GCD",
-    "description": "Returns the greatest common divisor of two or more integers.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "number",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "HARMEAN",
-    "description": "Returns the harmonic mean of a data set.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "value",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "HEX2BIN",
-    "description": "Converts a hexadecimal number to binary.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "places"
-      }
-    ]
-  },
-  {
-    "name": "HEX2DEC",
-    "description": "Converts a hexadecimal number to decimal.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "HEX2OCT",
-    "description": "Converts a hexadecimal number to octal.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "places"
-      }
-    ]
-  },
-  {
-    "name": "HYPERLINK",
-    "description": "Creates a link that opens a web page, a file, or a place in this workbook. The cell shows friendly_name, or the link itself when it is omitted.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "link_location"
-      },
-      {
-        "argName": "friendly_name"
-      }
-    ]
-  },
-  {
-    "name": "IFERROR",
-    "description": "Returns a value you specify if a formula evaluates to an error; otherwise returns the result of the formula.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "value"
-      },
-      {
-        "argName": "value_if_error"
-      }
-    ]
-  },
-  {
-    "name": "IMABS",
-    "description": "Returns the absolute value (modulus) of a complex number given as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "IMAGINARY",
-    "description": "Returns the imaginary coefficient of a complex number given as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "IMCONJUGATE",
-    "description": "Returns the complex conjugate of a complex number given as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "IMCOSH",
-    "description": "Returns the hyperbolic cosine of a complex number provided as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "IMCSC",
-    "description": "Returns the cosecant of a complex number provided as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "IMEXP",
-    "description": "Returns the exponential of a complex number given as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "IMLN",
-    "description": "Returns the natural logarithm of a complex number given as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "IMLOG2",
-    "description": "Returns the base-2 logarithm of a complex number given as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "IMREAL",
-    "description": "Returns the real coefficient of a complex number given as text.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "inumber"
-      }
-    ]
-  },
-  {
-    "name": "INT",
-    "description": "Rounds a number down to the nearest integer.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "IPMT",
-    "description": "Returns the interest payment for a given period of an investment.",
-    "argCount": {
-      "ge": 4,
-      "le": 6
-    },
-    "args": [
-      {
-        "argName": "rate"
-      },
-      {
-        "argName": "per"
-      },
-      {
-        "argName": "nper"
-      },
-      {
-        "argName": "pv"
-      },
-      {
-        "argName": "fv"
-      },
-      {
-        "argName": "type"
-      }
-    ]
-  },
-  {
-    "name": "IRR",
-    "description": "Returns the internal rate of return for a series of cash flows.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "values",
-        "refOnly": true
-      },
-      {
-        "argName": "guess"
-      }
-    ]
-  },
-  {
-    "name": "ISERROR",
-    "description": "Returns TRUE if the value is any error value except #N/A.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "value"
-      }
-    ]
-  },
-  {
-    "name": "ISEVEN",
-    "description": "Returns TRUE if the number is even.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "ISFORMULA",
-    "description": "Returns TRUE if the reference is to a cell containing a formula; otherwise returns FALSE.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "reference"
-      }
-    ]
-  },
-  {
-    "name": "ISNA",
-    "description": "Returns TRUE if the value is the #N/A error; otherwise returns FALSE.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "value"
-      }
-    ]
-  },
-  {
-    "name": "ISODD",
-    "description": "Returns TRUE if the number is odd.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "LEFT",
-    "description": "Returns the first character or characters in a text string, based on the number of characters you specify.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "text"
-      },
-      {
-        "argName": "num_chars"
-      }
-    ]
-  },
-  {
-    "name": "LEN",
-    "description": "Returns the number of characters in a text string.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "text"
-      }
-    ]
-  },
-  {
-    "name": "LN",
-    "description": "Returns the natural logarithm of a number.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "LOG",
-    "description": "Returns the logarithm of a number to the base you specify (default 10).",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "base"
-      }
-    ]
-  },
-  {
-    "name": "LOG10",
-    "description": "Returns the base-10 logarithm of a number.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "LOWER",
-    "description": "Converts text to lowercase.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "text"
-      }
-    ]
-  },
-  {
-    "name": "MATCH",
-    "description": "Returns the relative position of an item in a range that matches a specified value.",
-    "argCount": {
-      "ge": 2,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "lookup_value"
-      },
-      {
-        "argName": "lookup_array"
-      },
-      {
-        "argName": "match_type"
-      }
-    ]
-  },
-  {
-    "name": "MAX",
-    "description": "Returns the largest value in a set of numbers.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "number",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "MAXIFS",
-    "description": "Returns the maximum value among cells specified by a set of conditions.",
-    "argCount": {
-      "ge": 3,
-      "odd": true
-    },
-    "args": [
-      {
-        "argName": "max_range",
-        "refOnly": true
-      },
-      {
-        "argName": "criteria_range",
-        "refOnly": true,
-        "startRepeated": true
-      },
-      {
-        "argName": "criteria"
-      }
-    ]
-  },
-  {
-    "name": "MEDIAN",
-    "description": "Returns the median (the middle value) of the given numbers.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "number",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "MID",
-    "description": "Returns a specific number of characters from a text string, starting at the position you specify.",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "text"
-      },
-      {
-        "argName": "start_num"
-      },
-      {
-        "argName": "num_chars"
-      }
-    ]
-  },
-  {
-    "name": "MIN",
-    "description": "Returns the smallest value in a set of numbers.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "number",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "MINUTE",
-    "description": "Returns the minute component of a time value, a number from 0 to 59.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "serial_number"
-      }
-    ]
-  },
-  {
-    "name": "MOD",
-    "description": "Returns the remainder after a number is divided by a divisor; the result has the same sign as the divisor.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "divisor"
-      }
-    ]
-  },
-  {
-    "name": "MODE",
-    "description": "Returns the most frequently occurring value in a range or list of arguments.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "value",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "MONTH",
-    "description": "Returns the month of a date represented by a serial number (1-12).",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "serial_number"
-      }
-    ]
-  },
-  {
-    "name": "NA",
-    "description": "Returns the error value #N/A.",
-    "argCount": {
-      "eq": 0
-    },
-    "args": []
-  },
-  {
-    "name": "NEGBINOMDIST",
-    "description": "Returns the negative binomial distribution (probability) for a given number of failures before a specified number of successes.",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "number_f"
-      },
-      {
-        "argName": "number_s"
-      },
-      {
-        "argName": "probability_s"
-      }
-    ]
-  },
-  {
-    "name": "NORM.DIST",
-    "description": "Returns the normal distribution for the specified mean and standard deviation.",
-    "argCount": {
-      "eq": 4
-    },
-    "args": [
-      {
-        "argName": "x"
-      },
-      {
-        "argName": "mean"
-      },
-      {
-        "argName": "standard_dev"
-      },
-      {
-        "argName": "cumulative"
-      }
-    ]
-  },
-  {
-    "name": "NORM.S.INV",
-    "description": "Returns the inverse of the standard normal cumulative distribution.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "probability"
-      }
-    ]
-  },
-  {
-    "name": "NOT",
-    "description": "Reverses the logical value of its argument.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "logical"
-      }
-    ]
-  },
-  {
-    "name": "NPV",
-    "description": "Calculates the net present value of an investment based on a discount rate and a series of future payments.",
-    "argCount": {
-      "ge": 2
-    },
-    "args": [
-      {
-        "argName": "rate"
-      },
-      {
-        "argName": "value",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "OCT2BIN",
-    "description": "Converts an octal number to binary.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "places"
-      }
-    ]
-  },
-  {
-    "name": "OCT2HEX",
-    "description": "Converts an octal number to hexadecimal.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "places"
-      }
-    ]
-  },
-  {
-    "name": "ODD",
-    "description": "Rounds a number up to the nearest odd integer.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "OFFSET",
-    "description": "Returns a reference offset from a starting reference by a number of rows and columns, optionally resized.",
-    "argCount": {
-      "ge": 3,
-      "le": 5
-    },
-    "args": [
-      {
-        "argName": "reference"
-      },
-      {
-        "argName": "rows"
-      },
-      {
-        "argName": "cols"
-      },
-      {
-        "argName": "height"
-      },
-      {
-        "argName": "width"
-      }
-    ]
-  },
-  {
-    "name": "OR",
-    "description": "Returns TRUE if any argument is TRUE; returns FALSE if all arguments are FALSE.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "logical",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "PERMUT",
-    "description": "Returns the number of permutations for a given number of objects (ordered arrangements).",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "number_chosen"
-      }
-    ]
-  },
-  {
-    "name": "PI",
-    "description": "Returns the number 3.14159265358979, the mathematical constant pi, accurate to 15 digits.",
-    "argCount": {
-      "eq": 0
-    },
-    "args": []
-  },
-  {
-    "name": "POWER",
-    "description": "Returns the result of a number raised to a power.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "power"
-      }
-    ]
-  },
-  {
-    "name": "PPMT",
-    "description": "Returns the payment on the principal for a given period for an investment.",
-    "argCount": {
-      "ge": 4,
-      "le": 6
-    },
-    "args": [
-      {
-        "argName": "rate"
-      },
-      {
-        "argName": "per"
-      },
-      {
-        "argName": "nper"
-      },
-      {
-        "argName": "pv"
-      },
-      {
-        "argName": "fv"
-      },
-      {
-        "argName": "type"
-      }
-    ]
-  },
-  {
-    "name": "PRODUCT",
-    "description": "Multiplies all the numbers given as arguments and returns the product.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "number",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "PROPER",
-    "description": "Capitalizes the first letter of each word in a text string and lowercases the rest.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "text"
-      }
-    ]
-  },
-  {
-    "name": "PV",
-    "description": "Calculates the present value of an investment based on periodic, constant payments and a constant interest rate.",
-    "argCount": {
-      "ge": 3,
-      "le": 5
-    },
-    "args": [
-      {
-        "argName": "rate"
-      },
-      {
-        "argName": "nper"
-      },
-      {
-        "argName": "pmt"
-      },
-      {
-        "argName": "fv"
-      },
-      {
-        "argName": "type"
-      }
-    ]
-  },
-  {
-    "name": "QUOTIENT",
-    "description": "Returns the integer portion of a division.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "numerator"
-      },
-      {
-        "argName": "denominator"
-      }
-    ]
-  },
-  {
-    "name": "RAND",
-    "description": "Returns an evenly distributed random real number greater than or equal to 0 and less than 1.",
-    "argCount": {
-      "eq": 0
-    },
-    "args": []
-  },
-  {
-    "name": "RANK.EQ",
-    "description": "Returns the rank of a number in a list of numbers; if more than one value has the same rank, the top rank of that set is returned.",
-    "argCount": {
-      "ge": 2,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "ref",
-        "refOnly": true
-      },
-      {
-        "argName": "order"
-      }
-    ]
-  },
-  {
-    "name": "RANK",
-    "description": "Returns the rank of a number in a list of numbers (ties averaged in older Excel versions).",
-    "argCount": {
-      "ge": 2,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "ref",
-        "refOnly": true
-      },
-      {
-        "argName": "order"
-      }
-    ]
-  },
-  {
-    "name": "REPLACE",
-    "description": "Replaces part of a text string, based on the number of characters you specify, with another string.",
-    "argCount": {
-      "eq": 4
-    },
-    "args": [
-      {
-        "argName": "old_text"
-      },
-      {
-        "argName": "start_num"
-      },
-      {
-        "argName": "num_chars"
-      },
-      {
-        "argName": "new_text"
-      }
-    ]
-  },
-  {
-    "name": "RIGHT",
-    "description": "Returns the last character or characters in a text string, based on the number of characters you specify.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "text"
-      },
-      {
-        "argName": "num_chars"
-      }
-    ]
-  },
-  {
-    "name": "ROUND",
-    "description": "Rounds a number to a specified number of digits.",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "num_digits"
-      }
-    ]
-  },
-  {
-    "name": "ROW",
-    "description": "Returns the row number of a reference. If omitted, returns the row number of the cell containing the formula.",
-    "argCount": {
-      "le": 1
-    },
-    "args": [
-      {
-        "argName": "reference",
-        "description": "Optional. The reference from which to return the row number."
-      }
-    ]
-  },
-  {
-    "name": "SEARCH",
-    "description": "Returns the position of one text string within another (case-insensitive).",
-    "argCount": {
-      "ge": 2,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "find_text"
-      },
-      {
-        "argName": "within_text"
-      },
-      {
-        "argName": "start_num"
-      }
-    ]
-  },
-  {
-    "name": "SECOND",
-    "description": "Returns the seconds of a time value, a number from 0 to 59.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "serial_number"
-      }
-    ]
-  },
-  {
-    "name": "SIGN",
-    "description": "Returns the sign of a number: 1 (positive), 0 (zero), or -1 (negative).",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "SIN",
-    "description": "Returns the sine of the given angle (in radians).",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "SLN",
-    "description": "Returns the straight-line depreciation of an asset for one period.",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "cost"
-      },
-      {
-        "argName": "salvage"
-      },
-      {
-        "argName": "life"
-      }
-    ]
-  },
-  {
-    "name": "SQRTPI",
-    "description": "Returns the square root of pi times a number.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "STDEV",
-    "description": "Estimates the standard deviation based on a sample.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "value",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "SUBSTITUTE",
-    "description": "Replaces occurrences of old text with new text in a string; optionally only the nth occurrence.",
-    "argCount": {
-      "ge": 3,
-      "le": 4
-    },
-    "args": [
-      {
-        "argName": "text"
-      },
-      {
-        "argName": "old_text"
-      },
-      {
-        "argName": "new_text"
-      },
-      {
-        "argName": "instance_num"
-      }
-    ]
-  },
-  {
-    "name": "SUM",
-    "description": "Adds all the numbers in a range of cells.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "number",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "SUMIF",
-    "description": "Adds the cells specified by a given condition or criteria.",
-    "argCount": {
-      "ge": 2,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "range",
-        "refOnly": true
-      },
-      {
-        "argName": "criteria"
-      },
-      {
-        "argName": "sum_range",
-        "refOnly": true
-      }
-    ]
-  },
-  {
-    "name": "SUMIFS",
-    "description": "Adds the cells in a range that meet multiple criteria.",
-    "argCount": {
-      "ge": 3,
-      "odd": true
-    },
-    "args": [
-      {
-        "argName": "sum_range",
-        "refOnly": true
-      },
-      {
-        "argName": "criteria_range",
-        "refOnly": true,
-        "startRepeated": true
-      },
-      {
-        "argName": "criteria"
-      }
-    ]
-  },
-  {
-    "name": "SUMPRODUCT",
-    "description": "Multiplies corresponding components in the given arrays and returns the sum of those products.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "array",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "SUMSQ",
-    "description": "Returns the sum of the squares of the supplied arguments.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "number",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "SWITCH",
-    "description": " evaluates one value (called the expression) against a list of values, and returns the result corresponding to the first matching value. If there is no match, an optional default value may be returned.",
-    "argCount": {
-      "ge": 3,
-      "odd": true
-    },
-    "args": [
-      {
-        "argName": "expr"
-      },
-      {
-        "argName": "condition",
-        "startRepeated": true
-      },
-      {
-        "argName": "caseValue"
-      }
-    ]
-  },
-  {
-    "name": "TAN",
-    "description": "Returns the tangent of a given angle (in radians).",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "number"
-      }
-    ]
-  },
-  {
-    "name": "TBILLEQ",
-    "description": "Returns the bond-equivalent yield for a Treasury bill.",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "settlement"
-      },
-      {
-        "argName": "maturity"
-      },
-      {
-        "argName": "discount_or_price"
-      }
-    ]
-  },
-  {
-    "name": "TBILLPRICE",
-    "description": "Returns the price per $100 face value for a Treasury bill given settlement, maturity and discount.",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "settlement"
-      },
-      {
-        "argName": "maturity"
-      },
-      {
-        "argName": "discount"
-      }
-    ]
-  },
-  {
-    "name": "TBILLYIELD",
-    "description": "Returns the yield for a Treasury bill given settlement, maturity and price/discount.",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "settlement"
-      },
-      {
-        "argName": "maturity"
-      },
-      {
-        "argName": "price_or_discount"
-      }
-    ]
-  },
-  {
-    "name": "TEXT",
-    "description": "Formats a number and converts it to text using the given number-format code (e.g. \"0.00%\", \"yyyy-mm-dd\").",
-    "argCount": {
-      "eq": 2
-    },
-    "args": [
-      {
-        "argName": "value"
-      },
-      {
-        "argName": "format_text"
-      }
-    ]
-  },
-  {
-    "name": "TEXTJOIN",
-    "description": "Joins text from multiple ranges or strings using a delimiter, optionally ignoring empty values.",
-    "argCount": {
-      "ge": 3
-    },
-    "args": [
-      {
-        "argName": "delimiter"
-      },
-      {
-        "argName": "ignore_empty"
-      },
-      {
-        "argName": "text",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "TODAY",
-    "description": "Returns the current date as a serial number. The value updates when the worksheet is recalculated or opened.",
-    "argCount": {
-      "eq": 0
-    },
-    "args": []
-  },
-  {
-    "name": "TRIM",
-    "description": "Removes extra spaces from text, leaving single spaces between words.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "text"
-      }
-    ]
-  },
-  {
-    "name": "TRUE",
-    "description": "Returns the logical value TRUE.",
-    "argCount": {
-      "eq": 0
-    },
-    "args": []
-  },
-  {
-    "name": "TRUNC",
-    "description": "Truncates a number to an integer by removing the fractional part, or to a given number of digits.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "num_digits"
-      }
-    ]
-  },
-  {
-    "name": "USDOLLAR",
-    "description": "Converts a number to text using US dollar currency format. Legacy alias of DOLLAR.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "number"
-      },
-      {
-        "argName": "decimals"
-      }
-    ]
-  },
-  {
-    "name": "VALUE",
-    "description": "Converts a text string that represents a number into a number.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "text"
-      }
-    ]
-  },
-  {
-    "name": "WEEKDAY",
-    "description": "Returns the day of the week corresponding to a date, typically 1 (Sunday) through 7 (Saturday) depending on return_type.",
-    "argCount": {
-      "ge": 1,
-      "le": 2
-    },
-    "args": [
-      {
-        "argName": "serial_number"
-      },
-      {
-        "argName": "return_type"
-      }
-    ]
-  },
-  {
-    "name": "WEIBULL",
-    "description": "Returns the Weibull distribution.",
-    "argCount": {
-      "eq": 4
-    },
-    "args": [
-      {
-        "argName": "x"
-      },
-      {
-        "argName": "alpha"
-      },
-      {
-        "argName": "beta"
-      },
-      {
-        "argName": "cumulative"
-      }
-    ]
-  },
-  {
-    "name": "XIRR",
-    "description": "Returns the internal rate of return for a schedule of cash flows that is not necessarily periodic.",
-    "argCount": {
-      "ge": 2,
-      "le": 3
-    },
-    "args": [
-      {
-        "argName": "values"
-      },
-      {
-        "argName": "dates"
-      },
-      {
-        "argName": "guess"
-      }
-    ]
-  },
-  {
-    "name": "XNPV",
-    "description": "Returns the net present value for a schedule of cash flows that is not necessarily periodic.",
-    "argCount": {
-      "eq": 3
-    },
-    "args": [
-      {
-        "argName": "rate"
-      },
-      {
-        "argName": "values"
-      },
-      {
-        "argName": "dates"
-      }
-    ]
-  },
-  {
-    "name": "XOR",
-    "description": "Returns TRUE when an odd number of arguments are TRUE.",
-    "argCount": {
-      "ge": 1
-    },
-    "args": [
-      {
-        "argName": "logical",
-        "startRepeated": true
-      }
-    ]
-  },
-  {
-    "name": "YEAR",
-    "description": "Returns the year corresponding to a date.",
-    "argCount": {
-      "eq": 1
-    },
-    "args": [
-      {
-        "argName": "serial_number"
       }
     ]
   }

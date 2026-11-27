@@ -21,3 +21,13 @@ CHECKERR C5 #NUM!
 # k greater than the number of values -> #NUM!
 INPUT C6 =LARGE(A1:A5,6)
 CHECKERR C6 #NUM!
+
+
+# A union reference pools every area (Excel); it used to panic.
+INPUT X1 1
+INPUT X2 5
+INPUT X3 3
+INPUT Y1 9
+INPUT Y2 2
+INPUT C7 =LARGE((X1:X3,Y1:Y2),2)
+CHECKNUM C7 5

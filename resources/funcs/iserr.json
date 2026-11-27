@@ -1,0 +1,6 @@
+{
+    "name": "ISERR",
+    "description": "functions.iserr.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "value"}]
+}

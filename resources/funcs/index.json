@@ -1,0 +1,11 @@
+{
+    "name": "INDEX",
+    "description": "functions.index.description",
+    "argCount": {"ge": 2, "le": 4},
+    "args": [
+        {"argName": "array"},
+        {"argName": "row_num"},
+        {"argName": "column_num"},
+        {"argName": "area_num"}
+    ]
+}

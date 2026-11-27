@@ -1,0 +1,12 @@
+{
+    "name": "COUNTIFS",
+    "description": "functions.countifs.description",
+    "argCount": {
+        "ge": 2,
+        "even": true
+    },
+    "args": [
+        {"argName": "criteria_range", "refOnly": true, "startRepeated": true},
+        {"argName": "criteria"}
+    ]
+}

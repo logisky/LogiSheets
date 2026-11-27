@@ -75,6 +75,7 @@ fn count_an_arg(
             });
             Ok(())
         }
-        CalcValue::Union(_) => unreachable!(),
+        // `(A1:A3,C1:C3)`: every area counts (Excel).
+        CalcValue::Union(u) => u.into_iter().try_for_each(|b| count_an_arg(*b, bmap)),
     }
 }

@@ -1,0 +1,11 @@
+{
+    "name": "CHOOSE",
+    "description": "functions.choose.description",
+    "argCount": {
+        "ge": 2
+    },
+    "args": [
+        {"argName": "index_num"},
+        {"argName": "value", "startRepeated": true}
+    ]
+}

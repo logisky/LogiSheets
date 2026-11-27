@@ -1,2 +1,10 @@
 INPUT   A4  =AND(21,24)
 CHECKSTR A4  TRUE
+
+# A union reference counts every area (Excel); it used to panic.
+INPUT X1 1
+INPUT Y1 0
+INPUT A5 =AND((X1,Y1))
+CHECKSTR A5 FALSE
+INPUT A6 =AND((X1,X1))
+CHECKSTR A6 TRUE

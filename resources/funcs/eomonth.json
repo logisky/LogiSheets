@@ -1,0 +1,6 @@
+{
+    "name": "EOMONTH",
+    "description": "functions.eomonth.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "start_date"}, {"argName": "months"}]
+}

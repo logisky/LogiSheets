@@ -1,0 +1,6 @@
+{
+    "name": "ISNONTEXT",
+    "description": "functions.isnontext.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "value"}]
+}

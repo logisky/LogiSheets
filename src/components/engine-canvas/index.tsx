@@ -22,6 +22,7 @@ import type {DiffState} from '@/components/diff-layer'
 import {CanvasContextMenu, type ContextMenuTrigger} from './canvas-context-menu'
 import {useCraftInputInterception} from '@/core/craft-input/use-interception'
 import {globalStore} from '@/store'
+import {reaction} from 'mobx'
 import {
     HyperlinkDialog,
     useFollowHyperlink,
@@ -91,13 +92,22 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
         return () => engine.off('find', openFind)
     }, [engine])
     // The toolbar's Find button and Ctrl+H (from any view) raise a store
-    // request rather than a keystroke.
-    const findRequest = globalStore.findRequest
-    useEffect(() => {
-        if (findRequest === 0) return
-        setFindReplace(globalStore.findReplace)
-        setFindOpen(true)
-    }, [findRequest])
+    // request rather than a keystroke. Subscribed with a reaction: this
+    // component is not an observer, so reading the counter during render only
+    // worked when something else happened to re-render it — in Chromium the
+    // clicked button took focus and did; in WebKit (the desktop app) buttons
+    // don't, and the Find button did nothing.
+    useEffect(
+        () =>
+            reaction(
+                () => globalStore.findRequest,
+                () => {
+                    setFindReplace(globalStore.findReplace)
+                    setFindOpen(true)
+                }
+            ),
+        []
+    )
     const getActiveCell = useCallback(() => {
         const r = getSelectedCellRange(selectedDataRef.current)
         return r ? {row: r.startRow, col: r.startCol} : null
@@ -181,10 +191,13 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
         }
     }, [engine, activeSheet])
 
-    // Sync React selection → engine (external changes)
+    // Sync React selection → engine (external changes). By identity, not
+    // content: an echo of the engine's own selection is the very object it
+    // emitted, while a jump (name box, Go To, a craft, a link) builds a new
+    // one — and must reach the engine even when it names the cell already
+    // selected, because selecting is what gives the grid the keyboard.
     useEffect(() => {
-        const current = engine.getSelection()
-        if (JSON.stringify(current) !== JSON.stringify(selectedData)) {
+        if (engine.getSelection() !== selectedData) {
             engine.setSelection(selectedData)
         }
     }, [engine, selectedData])
@@ -261,7 +274,12 @@ export const EngineCanvas: FC<EngineCanvasProps> = ({
             />
             <FindOverlay
                 open={findOpen}
-                onClose={() => setFindOpen(false)}
+                // The find bar kept the keyboard while it moved the
+                // selection; hand it back to the grid with the bar.
+                onClose={() => {
+                    setFindOpen(false)
+                    engine.focus()
+                }}
                 engine={engine}
                 sheetIdx={activeSheet}
                 getActiveCell={getActiveCell}

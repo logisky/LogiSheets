@@ -1,0 +1,14 @@
+{
+    "name": "REGEXEXTRACT",
+    "description": "functions.regexextract.description",
+    "argCount": {
+        "ge": 2,
+        "le": 4
+    },
+    "args": [
+        {"argName": "text"},
+        {"argName": "pattern"},
+        {"argName": "return_mode"},
+        {"argName": "case_sensitivity"}
+    ]
+}

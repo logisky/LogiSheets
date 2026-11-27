@@ -1,0 +1,6 @@
+{
+    "name": "EXPON.DIST",
+    "description": "functions.expon.dist.description",
+    "argCount": {"eq": 3},
+    "args": [{"argName": "x"}, {"argName": "lambda"}, {"argName": "cumulative"}]
+}

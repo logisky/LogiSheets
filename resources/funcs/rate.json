@@ -1,0 +1,16 @@
+{
+    "name": "RATE",
+    "description": "functions.rate.description",
+    "argCount": {
+        "ge": 3,
+        "le": 6
+    },
+    "args": [
+        {"argName": "nper"},
+        {"argName": "pmt"},
+        {"argName": "pv"},
+        {"argName": "fv"},
+        {"argName": "type"},
+        {"argName": "guess"}
+    ]
+}

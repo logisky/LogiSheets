@@ -1,0 +1,6 @@
+{
+    "name": "ISLOGICAL",
+    "description": "functions.islogical.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "value"}]
+}

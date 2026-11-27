@@ -1,0 +1,8 @@
+{
+    "name": "STANDARDIZE",
+    "description": "functions.standardize.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [{"argName": "x"}, {"argName": "mean"}, {"argName": "standard_dev"}]
+}

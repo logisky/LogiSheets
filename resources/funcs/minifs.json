@@ -1,0 +1,13 @@
+{
+    "name": "MINIFS",
+    "description": "functions.minifs.description",
+    "argCount": {
+        "ge": 3,
+        "odd": true
+    },
+    "args": [
+        {"argName": "min_range", "refOnly": true},
+        {"argName": "criteria_range", "refOnly": true, "startRepeated": true},
+        {"argName": "criteria"}
+    ]
+}

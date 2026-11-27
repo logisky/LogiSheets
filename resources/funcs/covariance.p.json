@@ -1,0 +1,8 @@
+{
+    "name": "COVARIANCE.P",
+    "description": "functions.covariance.p.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "array1"}, {"argName": "array2"}]
+}

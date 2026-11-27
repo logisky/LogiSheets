@@ -1,0 +1,8 @@
+{
+    "name": "LARGE",
+    "description": "functions.large.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "array"}, {"argName": "k"}]
+}

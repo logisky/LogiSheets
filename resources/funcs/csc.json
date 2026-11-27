@@ -1,0 +1,8 @@
+{
+    "name": "CSC",
+    "description": "functions.csc.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

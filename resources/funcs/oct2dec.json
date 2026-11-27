@@ -1,0 +1,8 @@
+{
+    "name": "OCT2DEC",
+    "description": "functions.oct2dec.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

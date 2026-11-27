@@ -26,7 +26,14 @@ export default defineConfig({
         baseURL: BASE_URL,
         trace: 'on-first-retry',
     },
-    projects: [{name: 'chromium', use: {...devices['Desktop Chrome']}}],
+    projects: [
+        {name: 'chromium', use: {...devices['Desktop Chrome']}},
+        // The macOS desktop app runs on WebKit, which differs from Chromium in
+        // ways that only show as "invisible on desktop" (e.g. CodeMirror
+        // tooltips clipped by the in-cell editor). Only tests tagged @webkit
+        // run here, so the suite isn't doubled.
+        {name: 'webkit', use: {...devices['Desktop Safari']}, grep: /@webkit/},
+    ],
     webServer: {
         command: serveCommand,
         url: BASE_URL,

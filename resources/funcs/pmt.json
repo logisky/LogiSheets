@@ -1,0 +1,15 @@
+{
+    "name": "PMT",
+    "description": "functions.pmt.description",
+    "argCount": {
+        "ge": 3,
+        "le": 5
+    },
+    "args": [
+        {"argName": "rate"},
+        {"argName": "nper"},
+        {"argName": "pv"},
+        {"argName": "fv"},
+        {"argName": "type"}
+    ]
+}

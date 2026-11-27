@@ -1,0 +1,8 @@
+{
+    "name": "T",
+    "description": "functions.t.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "value"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "TRIMMEAN",
+    "description": "functions.trimmean.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "array"}, {"argName": "percent"}]
+}

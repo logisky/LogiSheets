@@ -1,0 +1,8 @@
+{
+    "name": "RRI",
+    "description": "functions.rri.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [{"argName": "nper"}, {"argName": "pv"}, {"argName": "fv"}]
+}

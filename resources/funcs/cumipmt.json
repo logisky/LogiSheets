@@ -1,0 +1,15 @@
+{
+    "name": "CUMIPMT",
+    "description": "functions.cumipmt.description",
+    "argCount": {
+        "eq": 6
+    },
+    "args": [
+        {"argName": "rate"},
+        {"argName": "nper"},
+        {"argName": "pv"},
+        {"argName": "start_period"},
+        {"argName": "end_period"},
+        {"argName": "type"}
+    ]
+}

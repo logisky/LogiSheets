@@ -1,0 +1,9 @@
+{
+    "name": "BIN2OCT",
+    "description": "functions.bin2oct.description",
+    "argCount": {
+        "ge": 1,
+        "le": 2
+    },
+    "args": [{"argName": "number"}, {"argName": "places"}]
+}

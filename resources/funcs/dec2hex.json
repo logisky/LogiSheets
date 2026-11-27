@@ -1,0 +1,9 @@
+{
+    "name": "DEC2HEX",
+    "description": "functions.dec2hex.description",
+    "argCount": {
+        "ge": 1,
+        "le": 2
+    },
+    "args": [{"argName": "number"}, {"argName": "places"}]
+}

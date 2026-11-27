@@ -1,0 +1,8 @@
+{
+    "name": "DEVSQ",
+    "description": "functions.devsq.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "number", "startRepeated": true}]
+}

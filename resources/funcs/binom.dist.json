@@ -1,0 +1,13 @@
+{
+    "name": "BINOM.DIST",
+    "description": "functions.binom.dist.description",
+    "argCount": {
+        "eq": 4
+    },
+    "args": [
+        {"argName": "number_s"},
+        {"argName": "trials"},
+        {"argName": "probability_s"},
+        {"argName": "cumulative"}
+    ]
+}

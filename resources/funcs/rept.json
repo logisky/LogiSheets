@@ -1,0 +1,8 @@
+{
+    "name": "REPT",
+    "description": "functions.rept.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "text"}, {"argName": "number_times"}]
+}

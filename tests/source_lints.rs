@@ -95,7 +95,7 @@ fn panics_reachable_from_data_do_not_increase() {
         // unimplemented corner of a function is a `todo!()` today, and an
         // argument that has already been checked is unwrapped. Every one is a
         // formula someone can type.
-        ("crates/controller/src/calc_engine", 438),
+        ("crates/controller/src/calc_engine", 432),
         // What the calculator reads references through, and the parser that
         // turns typed text into them.
         ("crates/controller/src/connectors", 12),

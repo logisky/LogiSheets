@@ -1,0 +1,6 @@
+{
+    "name": "GEOMEAN",
+    "description": "functions.geomean.description",
+    "argCount": {"ge": 1},
+    "args": [{"argName": "number", "startRepeated": true}]
+}

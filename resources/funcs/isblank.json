@@ -1,0 +1,6 @@
+{
+    "name": "ISBLANK",
+    "description": "functions.isblank.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "value"}]
+}

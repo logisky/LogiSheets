@@ -1,0 +1,13 @@
+{
+    "name": "SYD",
+    "description": "functions.syd.description",
+    "argCount": {
+        "eq": 4
+    },
+    "args": [
+        {"argName": "cost"},
+        {"argName": "salvage"},
+        {"argName": "life"},
+        {"argName": "per"}
+    ]
+}

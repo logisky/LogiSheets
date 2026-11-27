@@ -1,0 +1,6 @@
+{
+    "name": "IMSIN",
+    "description": "functions.imsin.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "SUMXMY2",
+    "description": "functions.sumxmy2.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "array_x"}, {"argName": "array_y"}]
+}

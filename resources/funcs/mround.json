@@ -1,0 +1,8 @@
+{
+    "name": "MROUND",
+    "description": "functions.mround.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "number"}, {"argName": "multiple"}]
+}

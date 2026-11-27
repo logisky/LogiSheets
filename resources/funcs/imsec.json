@@ -1,0 +1,6 @@
+{
+    "name": "IMSEC",
+    "description": "functions.imsec.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

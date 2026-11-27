@@ -243,7 +243,7 @@ where
         "FACT" => fact::calc(args, fetcher),
         "FACTDOUBLE" => scalar_number::calc_factdouble(args, fetcher),
         "FALSE" => boolean::calc_false(args),
-        "FDIST" => distribution::fisher::calc(args, fetcher),
+        "FDIST" => distribution::fisher::calc_fdist(args, fetcher),
         "FIND" => search::calc_find(args, fetcher),
         "FIXED" => text::calc_fixed(args, fetcher),
         "FLOOR" => round::calc_floor(args, fetcher),

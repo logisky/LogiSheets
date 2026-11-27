@@ -27,10 +27,13 @@ where
                 CalcValue::Cube(c) => c
                     .into_iter()
                     .fold(0., |prev, v| if is_blank(v) { prev + 1. } else { prev }),
-                CalcValue::Union(_) => unreachable!(),
+                // COUNTBLANK takes one range; a multi-area union is #VALUE!.
+                CalcValue::Union(_) => return CalcVertex::from_error(ast::Error::Value),
             };
             CalcVertex::from_number(num)
         }
+        // `(A1,B1)`: COUNTBLANK takes one range, so a union is #VALUE!.
+        CalcVertex::Union(_) => CalcVertex::from_error(ast::Error::Value),
         _ => CalcVertex::from_error(ast::Error::Unspecified),
     }
 }

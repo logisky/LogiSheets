@@ -1,0 +1,6 @@
+{
+    "name": "IFNA",
+    "description": "functions.ifna.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "value"}, {"argName": "value_if_na"}]
+}

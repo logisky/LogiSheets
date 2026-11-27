@@ -90,7 +90,12 @@ fn get_nums(calc_value: CalcValue) -> Result<Vec<f64>, ast::Error> {
                 }
             }
         }
-        CalcValue::Union(_) => unreachable!(),
+        // `(A1:A3,C1:C3)`: every area's numbers, pooled (Excel).
+        CalcValue::Union(u) => {
+            for b in u.into_iter() {
+                result.extend(get_nums(*b)?);
+            }
+        }
     };
 
     Ok(result)

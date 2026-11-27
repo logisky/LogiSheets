@@ -1,0 +1,14 @@
+{
+    "name": "COUPNUM",
+    "description": "functions.coupnum.description",
+    "argCount": {
+        "ge": 3,
+        "le": 4
+    },
+    "args": [
+        {"argName": "settlement"},
+        {"argName": "maturity"},
+        {"argName": "frequency"},
+        {"argName": "basis"}
+    ]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "RANDBETWEEN",
+    "description": "functions.randbetween.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "bottom"}, {"argName": "top"}]
+}

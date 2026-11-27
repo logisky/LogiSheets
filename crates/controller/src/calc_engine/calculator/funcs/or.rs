@@ -23,12 +23,7 @@ where
 {
     args.into_iter()
         .map(|arg| fetcher.get_calc_value(arg))
-        .try_fold(OrResult::Blank, |or, e| match e {
-            CalcValue::Scalar(s) => cal_or_result(or, s),
-            CalcValue::Range(r) => r.into_iter().try_fold(or, cal_or_result),
-            CalcValue::Cube(_) => Err(ast::Error::Ref),
-            CalcValue::Union(_) => todo!(),
-        })
+        .try_fold(OrResult::Blank, fold_value)
         .map_or_else(
             |e| CalcVertex::from_error(e),
             |ok| match ok {
@@ -41,6 +36,17 @@ where
 enum OrResult {
     Bool(bool),
     Blank,
+}
+
+/// One argument's contribution. A union (`(A1:A3,C1)`) contributes every
+/// area in turn, as in Excel.
+fn fold_value(or: OrResult, v: CalcValue) -> Result<OrResult, ast::Error> {
+    match v {
+        CalcValue::Scalar(s) => cal_or_result(or, s),
+        CalcValue::Range(r) => r.into_iter().try_fold(or, cal_or_result),
+        CalcValue::Cube(_) => Err(ast::Error::Ref),
+        CalcValue::Union(u) => u.into_iter().try_fold(or, |or, b| fold_value(or, *b)),
+    }
 }
 
 fn cal_or_result(or: OrResult, v: Value) -> Result<OrResult, ast::Error> {

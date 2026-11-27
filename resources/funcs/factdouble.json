@@ -1,0 +1,6 @@
+{
+    "name": "FACTDOUBLE",
+    "description": "functions.factdouble.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

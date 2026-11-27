@@ -1,0 +1,8 @@
+{
+    "name": "RSQ",
+    "description": "functions.rsq.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "known_ys"}, {"argName": "known_xs"}]
+}

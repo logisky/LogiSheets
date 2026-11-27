@@ -1,0 +1,8 @@
+{
+    "name": "PEARSON",
+    "description": "functions.pearson.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "array1"}, {"argName": "array2"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "MULTINOMIAL",
+    "description": "functions.multinomial.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "number", "startRepeated": true}]
+}

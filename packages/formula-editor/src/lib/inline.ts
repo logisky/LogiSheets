@@ -536,6 +536,9 @@ export function createInlineCellEditor(
         wrapperEl = document.createElement('div')
         // Stable hook for hosts/tests to find the open in-cell editor.
         wrapperEl.className = 'logisheets-inline-cell-editor'
+        // Typing here is typing into the grid: the engine keeps drawing the
+        // selection as focused while the keyboard is in this editor.
+        wrapperEl.dataset.gridInput = ''
         // Explicit, opaque box so the in-cell editor clearly stands out over
         // the grid (white fill, defined border + shadow, above everything).
         wrapperEl.style.cssText =

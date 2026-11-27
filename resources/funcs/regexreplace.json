@@ -1,0 +1,15 @@
+{
+    "name": "REGEXREPLACE",
+    "description": "functions.regexreplace.description",
+    "argCount": {
+        "ge": 3,
+        "le": 5
+    },
+    "args": [
+        {"argName": "text"},
+        {"argName": "pattern"},
+        {"argName": "replacement"},
+        {"argName": "occurrence"},
+        {"argName": "case_sensitivity"}
+    ]
+}

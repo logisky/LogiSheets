@@ -1,0 +1,12 @@
+{
+    "name": "FDIST",
+    "description": "functions.fdist.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [
+        {"argName": "x"},
+        {"argName": "deg_freedom1"},
+        {"argName": "deg_freedom2"}
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "name": "NPER",
+    "description": "functions.nper.description",
+    "argCount": {
+        "ge": 3,
+        "le": 5
+    },
+    "args": [
+        {"argName": "rate"},
+        {"argName": "pmt"},
+        {"argName": "pv"},
+        {"argName": "fv"},
+        {"argName": "type"}
+    ]
+}

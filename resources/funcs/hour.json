@@ -1,0 +1,6 @@
+{
+    "name": "HOUR",
+    "description": "functions.hour.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "serial_number"}]
+}

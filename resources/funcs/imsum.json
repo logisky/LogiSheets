@@ -1,0 +1,6 @@
+{
+    "name": "IMSUM",
+    "description": "functions.imsum.description",
+    "argCount": {"ge": 1},
+    "args": [{"argName": "inumber", "startRepeated": true}]
+}

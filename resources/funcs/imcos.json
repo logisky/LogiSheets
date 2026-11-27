@@ -1,0 +1,6 @@
+{
+    "name": "IMCOS",
+    "description": "functions.imcos.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

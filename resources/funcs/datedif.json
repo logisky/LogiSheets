@@ -1,0 +1,12 @@
+{
+    "name": "DATEDIF",
+    "description": "functions.datedif.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [
+        {"argName": "start_date"},
+        {"argName": "end_date"},
+        {"argName": "unit"}
+    ]
+}

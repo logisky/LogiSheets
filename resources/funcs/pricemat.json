@@ -1,0 +1,16 @@
+{
+    "name": "PRICEMAT",
+    "description": "functions.pricemat.description",
+    "argCount": {
+        "ge": 5,
+        "le": 6
+    },
+    "args": [
+        {"argName": "settlement"},
+        {"argName": "maturity"},
+        {"argName": "issue"},
+        {"argName": "rate"},
+        {"argName": "yld"},
+        {"argName": "basis"}
+    ]
+}

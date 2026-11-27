@@ -74,6 +74,7 @@ export const EditBarComponent = observer(function EditBarComponent({
     const selectedData = av?.selectedData ?? propSelectedData
     const sheetIdx = av?.sheetIdx ?? dataSvc.getCurrentSheetIdx()
     const selectedData$ = av?.setSelection ?? propSelectedData$
+    const focusView = () => (av ? av.focus() : engine.focus())
     const [coordinate, setCoordinate] = useState('')
     // `formulaText` is the editor's source-of-truth string and includes the
     // leading '=' for formulas. `rawValue` is the cell's display text used
@@ -241,15 +242,12 @@ export const EditBarComponent = observer(function EditBarComponent({
         [selectedData, ops, sheetIdx]
     )
 
+    // Re-selecting the cell hands the keyboard back to the view that owns it
+    // (selecting focuses; see Session.setSelection) — the active view, which
+    // may be a pop-out window.
     const refocusGrid = () => {
         const cell = getFirstCell(selectedData)
         selectedData$(buildSelectedDataFromCell(cell.y, cell.x, 'editbar'))
-        requestAnimationFrame(() => {
-            const el = document.querySelector(
-                '.host canvas'
-            ) as HTMLCanvasElement | null
-            el?.focus({preventScroll: true})
-        })
     }
 
     const commitFormula = async (value: string) => {
@@ -400,7 +398,12 @@ export const EditBarComponent = observer(function EditBarComponent({
                     e.target.select()
                 }}
                 onKeyDown={(e) => {
-                    if (e.key === 'Enter') e.currentTarget.blur()
+                    if (e.key !== 'Enter') return
+                    // Nothing typed: no jump to make, but Enter still means
+                    // "back to the grid", selection unchanged.
+                    const unchanged = !nameBoxEditing
+                    e.currentTarget.blur()
+                    if (unchanged) focusView()
                 }}
                 onBlur={(e) => void locationChange(e.target.value)}
                 disabled={!hasSelectedData}

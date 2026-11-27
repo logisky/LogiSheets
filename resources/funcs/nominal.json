@@ -1,0 +1,8 @@
+{
+    "name": "NOMINAL",
+    "description": "functions.nominal.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "effect_rate"}, {"argName": "npery"}]
+}

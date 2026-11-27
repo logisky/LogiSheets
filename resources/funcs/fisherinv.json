@@ -1,0 +1,6 @@
+{
+    "name": "FISHERINV",
+    "description": "functions.fisherinv.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "y"}]
+}

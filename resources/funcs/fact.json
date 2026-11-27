@@ -1,0 +1,6 @@
+{
+    "name": "FACT",
+    "description": "functions.fact.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

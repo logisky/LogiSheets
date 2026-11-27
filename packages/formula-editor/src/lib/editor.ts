@@ -26,6 +26,7 @@ import {
     placeholder as placeholderExt,
     showTooltip,
     Tooltip,
+    tooltips,
 } from '@codemirror/view'
 import {
     autocompletion,
@@ -923,8 +924,11 @@ export function createFormulaEditor(
             '.cm-tooltip.cm-tooltip-autocomplete li': {
                 padding: '4px 8px',
             },
+            // CodeMirror's default selected row is white text on dark blue;
+            // a light background needs the text color reset with it.
             '.cm-tooltip.cm-tooltip-autocomplete li[aria-selected]': {
                 backgroundColor: '#e3f2fd',
+                color: 'inherit',
             },
             '.cm-completionLabel': {
                 fontWeight: '500',
@@ -936,6 +940,14 @@ export function createFormulaEditor(
         })
 
         const extensions = [
+            // Tooltips (autocomplete, signature) live in the document body,
+            // not inside the editor: hosts put the editor in small
+            // overflow-clipped boxes (the in-cell editor is one cell tall).
+            // Chromium escapes that clip with position:fixed, but WebKit
+            // (Safari, the macOS desktop app) makes CodeMirror fall back to
+            // position:absolute, where the list is clipped away entirely.
+            // The editor's own document, so a pop-out window works too.
+            tooltips({parent: parent.ownerDocument.body}),
             history(),
             tokenDecorationsField,
             storedTokenUnitsField,

@@ -1,0 +1,11 @@
+{
+    "name": "SUBTOTAL",
+    "description": "functions.subtotal.description",
+    "argCount": {
+        "ge": 2
+    },
+    "args": [
+        {"argName": "function_num"},
+        {"argName": "ref", "refOnly": true, "startRepeated": true}
+    ]
+}

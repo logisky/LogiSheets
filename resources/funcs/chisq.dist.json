@@ -1,0 +1,12 @@
+{
+    "name": "CHISQ.DIST",
+    "description": "functions.chisq.dist.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [
+        {"argName": "x"},
+        {"argName": "deg_freedom"},
+        {"argName": "cumulative"}
+    ]
+}
