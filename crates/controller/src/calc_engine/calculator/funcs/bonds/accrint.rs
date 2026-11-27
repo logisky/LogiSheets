@@ -63,11 +63,14 @@ where
     CalcVertex::from_number(result)
 }
 
+/// ACCRINTM(issue, settlement, rate, par, [basis]): interest accrued by a
+/// security that pays at maturity (`settlement` is the maturity date). Unlike
+/// ACCRINT there is no coupon frequency.
 pub fn calc_accrintm<C>(args: Vec<CalcVertex>, fetcher: &mut C) -> CalcVertex
 where
     C: Connector,
 {
-    assert_or_return!(args.len() >= 6 && args.len() <= 7, ast::Error::Unspecified);
+    assert_or_return!(args.len() >= 4 && args.len() <= 5, ast::Error::Unspecified);
     let mut args_iter = args.into_iter();
 
     let first = fetcher.get_calc_value(args_iter.next().unwrap());
@@ -85,10 +88,6 @@ where
     let fourth = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_f64_from_calc_value!(par, fourth);
     assert_or_return!(par > 0., ast::Error::Num);
-
-    let fifth = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_f64_from_calc_value!(freq, fifth);
-    assert_or_return!(freq == 1. || freq == 2. || freq == 4., ast::Error::Num);
 
     assert_or_return!(settlement > issue, ast::Error::Num);
 

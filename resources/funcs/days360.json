@@ -1,0 +1,13 @@
+{
+    "name": "DAYS360",
+    "description": "functions.days360.description",
+    "argCount": {
+        "ge": 2,
+        "le": 3
+    },
+    "args": [
+        {"argName": "start_date"},
+        {"argName": "end_date"},
+        {"argName": "method"}
+    ]
+}

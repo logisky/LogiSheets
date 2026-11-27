@@ -1,0 +1,6 @@
+{
+    "name": "INDIRECT",
+    "description": "functions.indirect.description",
+    "argCount": {"ge": 1, "le": 2},
+    "args": [{"argName": "ref_text"}, {"argName": "a1"}]
+}

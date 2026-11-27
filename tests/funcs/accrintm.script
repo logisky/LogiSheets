@@ -1,0 +1,17 @@
+# ACCRINTM(issue, settlement, rate, par, [basis]): interest accrued by a
+# security that pays at maturity. Excel's documented example: issued
+# 2008-04-01, matures 2008-06-15, 10%, par 1000, actual/365 -> 20.54794521.
+INPUT A1 =ACCRINTM(DATE(2008,4,1),DATE(2008,6,15),0.1,1000,3)
+CHECKNUM A1 20.54794521
+
+# basis omitted: US 30/360, 74 days -> 1000 * 0.1 * 74/360
+INPUT A2 =ACCRINTM(DATE(2008,4,1),DATE(2008,6,15),0.1,1000)
+CHECKNUM A2 20.5555556
+
+# issue on or after settlement -> #NUM!
+INPUT A3 =ACCRINTM(DATE(2008,6,15),DATE(2008,4,1),0.1,1000)
+CHECKERR A3 #NUM!
+
+# rate or par not positive -> #NUM!
+INPUT A4 =ACCRINTM(DATE(2008,4,1),DATE(2008,6,15),0,1000)
+CHECKERR A4 #NUM!

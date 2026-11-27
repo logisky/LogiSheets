@@ -1,0 +1,8 @@
+{
+    "name": "BITAND",
+    "description": "functions.bitand.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "number1"}, {"argName": "number2"}]
+}

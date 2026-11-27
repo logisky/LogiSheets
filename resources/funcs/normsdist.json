@@ -1,0 +1,8 @@
+{
+    "name": "NORMSDIST",
+    "description": "functions.normsdist.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "z"}]
+}

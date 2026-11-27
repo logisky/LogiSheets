@@ -8,3 +8,7 @@ CHECKSTR L4 left
 # negative chars -> #VALUE!
 INPUT L5 =LEFT("left",-1)
 CHECKERR L5 #VALUE!
+
+# num_chars is optional and defaults to 1 (Excel)
+INPUT L6 =LEFT("left")
+CHECKSTR L6 l

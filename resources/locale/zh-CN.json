@@ -122,6 +122,9 @@
             "s": {
                 "inv": {
                     "description": "返回标准正态累积分布函数的反函数（z 值）。"
+                },
+                "dist": {
+                    "description": "返回标准正态分布（平均值为 0，标准偏差为 1）。"
                 }
             }
         },
@@ -258,7 +261,10 @@
             "description": "返回面值 100 元的国库券的价格。"
         },
         "mode": {
-            "description": "返回一组数据或区域中出现频率最高的值。"
+            "description": "返回一组数据或区域中出现频率最高的值。",
+            "sngl": {
+                "description": "返回在数据集内出现次数最多的值。"
+            }
         },
         "ln": {
             "description": "返回数字的自然对数。"
@@ -330,7 +336,13 @@
             "description": "如果值为除 #N/A 之外的任何错误值，则返回 TRUE。"
         },
         "stdev": {
-            "description": "基于样本估算标准偏差。"
+            "description": "基于样本估算标准偏差。",
+            "p": {
+                "description": "基于整个总体计算标准偏差。"
+            },
+            "s": {
+                "description": "基于样本估算标准偏差。"
+            }
         },
         "trim": {
             "description": "删除文本中多余的空格，仅在词之间保留一个空格。"
@@ -345,7 +357,10 @@
             "description": "返回给定角度（以弧度表示）的正切值。"
         },
         "weibull": {
-            "description": "返回韦伯分布。"
+            "description": "返回韦伯分布。",
+            "dist": {
+                "description": "返回韦伯分布。"
+            }
         },
         "gamma.dist": {
             "description": "返回伽马分布。"
@@ -387,6 +402,9 @@
             "description": "返回数字在一组数字中的排位（旧版 Excel 中并列取平均值）。",
             "eq": {
                 "description": "返回数字在一组数字中的排位；若多个值排位相同，则返回该组的最高排位。"
+            },
+            "avg": {
+                "description": "返回一个数字在数字列表中的排位；如果多个值具有相同的排位，则返回平均排位。"
             }
         },
         "sign": {
@@ -475,6 +493,486 @@
         },
         "nominal": {
             "description": "将实际年利率转换为名义利率。"
+        },
+        "accrintm": {
+            "description": "返回在到期日支付利息的有价证券的应计利息。"
+        },
+        "and": {
+            "description": "如果所有参数均为 TRUE，则返回 TRUE；只要有一个参数为 FALSE，即返回 FALSE。"
+        },
+        "asinh": {
+            "description": "返回数字的反双曲正弦值。"
+        },
+        "atan": {
+            "description": "返回数字的反正切值（以弧度表示），范围为 -π/2 到 π/2。"
+        },
+        "atan2": {
+            "description": "返回给定 x 及 y 坐标的反正切值（以弧度表示），范围为 -π 到 π（不包括 -π）。"
+        },
+        "avedev": {
+            "description": "返回一组数据点与其平均值的绝对偏差的平均值。"
+        },
+        "averageif": {
+            "description": "返回区域中满足给定条件的单元格的平均值。"
+        },
+        "bin2hex": {
+            "description": "将二进制数转换为十六进制数。"
+        },
+        "bin2oct": {
+            "description": "将二进制数转换为八进制数。"
+        },
+        "binom": {
+            "dist": {
+                "description": "返回一元二项式分布的概率。"
+            },
+            "inv": {
+                "description": "返回使累积二项式分布大于或等于临界值的最小值。"
+            }
+        },
+        "binomdist": {
+            "description": "返回一元二项式分布的概率。此函数用于与早期版本兼容，建议使用 BINOM.DIST。"
+        },
+        "bitand": {
+            "description": "对两个整数执行按位“与”运算并返回结果。"
+        },
+        "chisq": {
+            "dist": {
+                "description": "返回 χ² 分布的左尾概率。",
+                "rt": {
+                    "description": "返回 χ² 分布的右尾概率。"
+                }
+            }
+        },
+        "choose": {
+            "description": "根据索引号从值列表中选择一个值。"
+        },
+        "clean": {
+            "description": "删除文本中所有不能打印的字符。"
+        },
+        "column": {
+            "description": "返回引用的列号。"
+        },
+        "columns": {
+            "description": "返回数组或引用中包含的列数。"
+        },
+        "combin": {
+            "description": "返回给定数目对象的组合数。"
+        },
+        "correl": {
+            "description": "返回两个数据集之间的相关系数。"
+        },
+        "cosh": {
+            "description": "返回数字的双曲余弦值。"
+        },
+        "coth": {
+            "description": "返回数字的双曲余切值。"
+        },
+        "countifs": {
+            "description": "计算一个或多个区域中满足多个条件的单元格的个数。"
+        },
+        "coupncd": {
+            "description": "返回结算日之后的下一个付息日。"
+        },
+        "coupnum": {
+            "description": "返回结算日与到期日之间可支付的付息次数。"
+        },
+        "couppcd": {
+            "description": "返回结算日之前的上一个付息日。"
+        },
+        "covar": {
+            "description": "返回总体协方差，即每对数据点偏差乘积的平均值。此函数用于与早期版本兼容，建议使用 COVARIANCE.P。"
+        },
+        "covariance": {
+            "p": {
+                "description": "返回总体协方差，即两个数据集中每对数据点偏差乘积的平均值。"
+            },
+            "s": {
+                "description": "返回样本协方差，即两个数据集中每对数据点偏差乘积的平均值。"
+            }
+        },
+        "csc": {
+            "description": "返回以弧度表示的角度的余割值。"
+        },
+        "cumprinc": {
+            "description": "返回一笔贷款在给定的两个期间之间累计偿还的本金数额。"
+        },
+        "datedif": {
+            "description": "计算两个日期之间相隔的天数、月数或年数。"
+        },
+        "days360": {
+            "description": "按一年 360 天计算两个日期之间相差的天数。"
+        },
+        "db": {
+            "description": "使用固定余额递减法，计算资产在给定期间内的折旧值。"
+        },
+        "ddb": {
+            "description": "使用双倍余额递减法或其他指定方法，计算资产在给定期间内的折旧值。"
+        },
+        "dec2bin": {
+            "description": "将十进制数转换为二进制数。"
+        },
+        "dec2hex": {
+            "description": "将十进制数转换为十六进制数。"
+        },
+        "delta": {
+            "description": "检验两个数值是否相等，相等时返回 1，否则返回 0。"
+        },
+        "devsq": {
+            "description": "返回各数据点与其样本平均值的偏差的平方和。"
+        },
+        "disc": {
+            "description": "返回有价证券的贴现率。"
+        },
+        "edate": {
+            "description": "返回表示开始日期之前或之后指定月数的日期的序列号。"
+        },
+        "effect": {
+            "description": "根据名义年利率和每年的复利期数，返回实际年利率。"
+        },
+        "eomonth": {
+            "description": "返回指定月数之前或之后的月份的最后一天的序列号。"
+        },
+        "even": {
+            "description": "将数字向远离零的方向舍入到最接近的偶数。"
+        },
+        "expon": {
+            "dist": {
+                "description": "返回指数分布。"
+            }
+        },
+        "f": {
+            "dist": {
+                "description": "返回 F 概率分布。"
+            }
+        },
+        "factdouble": {
+            "description": "返回数字的双倍阶乘。"
+        },
+        "fdist": {
+            "description": "返回两组数据的右尾 F 概率分布，用于判断两组数据的离散程度是否不同。"
+        },
+        "findb": {
+            "description": "返回一个文本字符串在另一个文本字符串中的起始位置（区分大小写），双字节字符按字节计数。"
+        },
+        "fisher": {
+            "description": "返回 Fisher 变换值。"
+        },
+        "fisherinv": {
+            "description": "返回 Fisher 变换的反函数值。"
+        },
+        "forecast": {
+            "description": "根据已知的 x 值和 y 值，返回线性趋势上的预测值。"
+        },
+        "formulatext": {
+            "description": "以文本形式返回给定引用处的公式。"
+        },
+        "gammadist": {
+            "description": "返回伽马分布。"
+        },
+        "geomean": {
+            "description": "返回正数数组或区域的几何平均值。"
+        },
+        "gestep": {
+            "description": "检验数字是否大于或等于阈值，是则返回 1，否则返回 0。"
+        },
+        "hlookup": {
+            "description": "在表格的首行中查找，并返回指定行中同一列的值。"
+        },
+        "hour": {
+            "description": "将序列号转换为小时。"
+        },
+        "if": {
+            "description": "如果条件为 TRUE 则返回一个值，为 FALSE 则返回另一个值。"
+        },
+        "ifna": {
+            "description": "如果表达式解析为 #N/A，则返回指定的值，否则返回表达式的结果。"
+        },
+        "ifs": {
+            "description": "检查是否满足一个或多个条件，并返回与第一个 TRUE 条件对应的值。"
+        },
+        "imcot": {
+            "description": "返回以文本表示的复数的余切值。"
+        },
+        "imdiv": {
+            "description": "返回两个复数的商。"
+        },
+        "imlog10": {
+            "description": "返回复数的以 10 为底的对数。"
+        },
+        "improduct": {
+            "description": "返回多个复数的乘积。"
+        },
+        "imsec": {
+            "description": "返回复数的正割值。"
+        },
+        "imsin": {
+            "description": "返回复数的正弦值。"
+        },
+        "imsinh": {
+            "description": "返回复数的双曲正弦值。"
+        },
+        "imsub": {
+            "description": "返回两个复数的差。"
+        },
+        "imsum": {
+            "description": "返回多个复数的和。"
+        },
+        "imtan": {
+            "description": "返回复数的正切值。"
+        },
+        "index": {
+            "description": "返回表格或区域中指定行和列交叉处元素的值。"
+        },
+        "indirect": {
+            "description": "返回由文本字符串指定的引用。"
+        },
+        "intercept": {
+            "description": "返回通过已知 x 值和 y 值的线性回归线的截距。"
+        },
+        "intrate": {
+            "description": "返回一次性付息证券的利率。"
+        },
+        "isblank": {
+            "description": "如果值为空，则返回 TRUE。"
+        },
+        "iserr": {
+            "description": "如果值为除 #N/A 以外的任何错误值，则返回 TRUE。"
+        },
+        "isformula": {
+            "description": "如果引用的单元格包含公式，则返回 TRUE。"
+        },
+        "islogical": {
+            "description": "如果值为逻辑值，则返回 TRUE。"
+        },
+        "isnontext": {
+            "description": "如果值不是文本，则返回 TRUE。"
+        },
+        "isnumber": {
+            "description": "检查值是否为数字，并返回 TRUE 或 FALSE。"
+        },
+        "istext": {
+            "description": "检查值是否为文本，并返回 TRUE 或 FALSE。"
+        },
+        "kurt": {
+            "description": "返回数据集的峰值。"
+        },
+        "large": {
+            "description": "返回数据集中第 k 个最大值。"
+        },
+        "lcm": {
+            "description": "返回整数的最小公倍数。"
+        },
+        "leftb": {
+            "description": "根据所指定的字节数，返回文本字符串中第一个或前几个字符。"
+        },
+        "lenb": {
+            "description": "返回文本字符串中用于代表字符的字节数。"
+        },
+        "midb": {
+            "description": "根据指定的字节数，返回文本字符串中从指定位置开始的特定数目的字符。"
+        },
+        "minifs": {
+            "description": "返回一组给定条件或标准指定的单元格中的最小值。"
+        },
+        "mround": {
+            "description": "返回舍入到所需倍数的数字。"
+        },
+        "multinomial": {
+            "description": "返回一组数字的多项式。"
+        },
+        "n": {
+            "description": "返回转换为数字的值。"
+        },
+        "negbinom": {
+            "dist": {
+                "description": "返回负二项式分布。"
+            }
+        },
+        "networkdays": {
+            "description": "返回两个日期之间的完整工作日数，不包括周末和节假日。"
+        },
+        "normdist": {
+            "description": "返回指定平均值和标准偏差的正态分布函数。"
+        },
+        "norminv": {
+            "description": "返回指定平均值和标准偏差的正态累积分布函数的反函数。"
+        },
+        "normsinv": {
+            "description": "返回标准正态累积分布函数的反函数。"
+        },
+        "now": {
+            "description": "返回当前日期和时间的序列号。"
+        },
+        "nper": {
+            "description": "基于固定利率及等额分期付款方式，返回某项投资的总期数。"
+        },
+        "oct2dec": {
+            "description": "将八进制数转换为十进制数。"
+        },
+        "pduration": {
+            "description": "返回投资达到指定值所需的期数。"
+        },
+        "pearson": {
+            "description": "返回皮尔生乘积矩相关系数。"
+        },
+        "percentile": {
+            "description": "返回区域中数值的第 k 个百分点的值。",
+            "inc": {
+                "description": "返回区域中数值的第 k 个百分点的值，k 为 0 到 1 之间的值（包含 0 和 1）。"
+            }
+        },
+        "percentrank": {
+            "description": "返回数据集中值的百分比排位。",
+            "inc": {
+                "description": "返回数据集中值的百分比排位（介于 0 到 1 之间，包含 0 和 1）。"
+            }
+        },
+        "poisson": {
+            "description": "返回泊松分布。",
+            "dist": {
+                "description": "返回泊松分布。"
+            }
+        },
+        "price": {
+            "description": "返回定期付息的有价证券每 100 元面值的价格。"
+        },
+        "pricedisc": {
+            "description": "返回折价发行的有价证券每 100 元面值的价格。"
+        },
+        "pricemat": {
+            "description": "返回到期付息的有价证券每 100 元面值的价格。"
+        },
+        "quartile": {
+            "description": "返回数据集的四分位数。",
+            "inc": {
+                "description": "基于 0 到 1 之间（包含 0 和 1）的百分点值，返回数据集的四分位数。"
+            }
+        },
+        "radians": {
+            "description": "将度数转换为弧度。"
+        },
+        "randbetween": {
+            "description": "返回位于两个指定数之间的一个随机整数。"
+        },
+        "rate": {
+            "description": "返回年金的各期利率。"
+        },
+        "received": {
+            "description": "返回一次性付息的有价证券到期收回的金额。"
+        },
+        "regexextract": {
+            "description": "从字符串中提取与正则表达式模式匹配的文本。"
+        },
+        "regexreplace": {
+            "description": "将字符串中与正则表达式模式匹配的文本替换为指定的替换内容。"
+        },
+        "regextest": {
+            "description": "检查文本的任意部分是否与指定的正则表达式模式匹配，返回 TRUE 或 FALSE。"
+        },
+        "replaceb": {
+            "description": "根据指定的字节数，将文本字符串的一部分替换为另一个文本字符串。"
+        },
+        "rept": {
+            "description": "将文本重复指定的次数。"
+        },
+        "rightb": {
+            "description": "根据指定的字节数，返回文本字符串中的最后一个或多个字符。"
+        },
+        "rounddown": {
+            "description": "将数字朝零的方向向下舍入到指定位数。"
+        },
+        "roundup": {
+            "description": "将数字朝远离零的方向向上舍入到指定位数。"
+        },
+        "rows": {
+            "description": "返回引用或数组中的行数。"
+        },
+        "rsq": {
+            "description": "返回根据给定数据点计算得出的皮尔生乘积矩相关系数的平方。"
+        },
+        "searchb": {
+            "description": "以字节为单位，返回一个文本字符串在另一个文本字符串中的起始位置（不区分大小写）。"
+        },
+        "sinh": {
+            "description": "返回数字的双曲正弦值。"
+        },
+        "skew": {
+            "description": "基于样本返回分布的偏斜度。",
+            "p": {
+                "description": "基于总体返回分布的偏斜度。"
+            }
+        },
+        "slope": {
+            "description": "返回根据给定数据点计算得出的线性回归直线的斜率。"
+        },
+        "small": {
+            "description": "返回数据集中第 k 个最小值。"
+        },
+        "sqrt": {
+            "description": "返回数字的正平方根。"
+        },
+        "standardize": {
+            "description": "返回以平均值和标准偏差表示的分布的正态化数值。"
+        },
+        "stdevp": {
+            "description": "基于整个总体计算标准偏差。"
+        },
+        "subtotal": {
+            "description": "按 function_num 指定的汇总函数，返回列表或区域的分类汇总。"
+        },
+        "sumx2my2": {
+            "description": "返回两个数组中对应数值的平方差之和。"
+        },
+        "sumx2py2": {
+            "description": "返回两个数组中对应数值的平方和之和。"
+        },
+        "sumxmy2": {
+            "description": "返回两个数组中对应数值之差的平方和。"
+        },
+        "syd": {
+            "description": "返回某项资产按年限总和折旧法计算的指定期间的折旧值。"
+        },
+        "t": {
+            "description": "如果值是文本则返回该文本，否则返回空文本。"
+        },
+        "tanh": {
+            "description": "返回数字的双曲正切值。"
+        },
+        "trimmean": {
+            "description": "返回数据集的内部平均值，即去除头部和尾部一定百分比的数据点后求平均值。"
+        },
+        "type": {
+            "description": "返回表示值的数据类型的数字。"
+        },
+        "upper": {
+            "description": "将文本转换为大写形式。"
+        },
+        "var": {
+            "description": "基于样本估算方差。",
+            "p": {
+                "description": "基于整个总体计算方差。"
+            },
+            "s": {
+                "description": "基于样本估算方差。"
+            }
+        },
+        "varp": {
+            "description": "基于整个总体计算方差。"
+        },
+        "vlookup": {
+            "description": "在表格的首列查找指定的值，并返回同一行中指定列的值。"
+        },
+        "xirr": {
+            "description": "返回一组不一定定期发生的现金流的内部收益率。"
+        },
+        "xnpv": {
+            "description": "返回一组不一定定期发生的现金流的净现值。"
+        },
+        "yearfrac": {
+            "description": "返回两个日期之间的完整天数占全年天数的比例。"
+        },
+        "yieldmat": {
+            "description": "返回到期付息的有价证券的年收益率。"
         }
     },
     "toolbar": {

@@ -1,0 +1,8 @@
+{
+    "name": "SUMX2PY2",
+    "description": "functions.sumx2py2.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "array_x"}, {"argName": "array_y"}]
+}

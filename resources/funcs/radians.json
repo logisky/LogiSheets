@@ -1,0 +1,8 @@
+{
+    "name": "RADIANS",
+    "description": "functions.radians.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "angle"}]
+}

@@ -1,0 +1,9 @@
+{
+    "name": "DELTA",
+    "description": "functions.delta.description",
+    "argCount": {
+        "ge": 1,
+        "le": 2
+    },
+    "args": [{"argName": "number1"}, {"argName": "number2"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "COLUMNS",
+    "description": "functions.columns.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "array"}]
+}

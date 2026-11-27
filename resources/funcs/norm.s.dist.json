@@ -1,0 +1,8 @@
+{
+    "name": "NORM.S.DIST",
+    "description": "functions.norm.s.dist.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "z"}, {"argName": "cumulative"}]
+}

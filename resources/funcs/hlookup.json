@@ -1,0 +1,11 @@
+{
+    "name": "HLOOKUP",
+    "description": "functions.hlookup.description",
+    "argCount": {"ge": 3, "le": 4},
+    "args": [
+        {"argName": "lookup_value"},
+        {"argName": "table_array"},
+        {"argName": "row_index_num"},
+        {"argName": "range_lookup"}
+    ]
+}

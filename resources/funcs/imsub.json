@@ -1,0 +1,6 @@
+{
+    "name": "IMSUB",
+    "description": "functions.imsub.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "inumber1"}, {"argName": "inumber2"}]
+}

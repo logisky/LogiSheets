@@ -1,0 +1,9 @@
+{
+    "name": "IFS",
+    "description": "functions.ifs.description",
+    "argCount": {"ge": 2, "even": true},
+    "args": [
+        {"argName": "logical_test", "startRepeated": true},
+        {"argName": "value_if_true"}
+    ]
+}

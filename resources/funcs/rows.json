@@ -1,0 +1,8 @@
+{
+    "name": "ROWS",
+    "description": "functions.rows.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "array"}]
+}

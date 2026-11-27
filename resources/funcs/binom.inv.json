@@ -1,0 +1,12 @@
+{
+    "name": "BINOM.INV",
+    "description": "functions.binom.inv.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [
+        {"argName": "trials"},
+        {"argName": "probability_s"},
+        {"argName": "alpha"}
+    ]
+}

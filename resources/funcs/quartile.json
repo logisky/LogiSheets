@@ -1,0 +1,8 @@
+{
+    "name": "QUARTILE",
+    "description": "functions.quartile.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "array"}, {"argName": "quart"}]
+}

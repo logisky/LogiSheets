@@ -1,0 +1,13 @@
+{
+    "name": "PERCENTRANK.INC",
+    "description": "functions.percentrank.inc.description",
+    "argCount": {
+        "ge": 2,
+        "le": 3
+    },
+    "args": [
+        {"argName": "array"},
+        {"argName": "x"},
+        {"argName": "significance"}
+    ]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "TYPE",
+    "description": "functions.type.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "value"}]
+}

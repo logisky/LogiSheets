@@ -1,0 +1,6 @@
+{
+    "name": "FORMULATEXT",
+    "description": "functions.formulatext.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "reference", "refOnly": true}]
+}

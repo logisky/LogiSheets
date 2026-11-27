@@ -1,0 +1,6 @@
+{
+    "name": "IMDIV",
+    "description": "functions.imdiv.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "inumber1"}, {"argName": "inumber2"}]
+}

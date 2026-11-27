@@ -1,0 +1,15 @@
+{
+    "name": "DDB",
+    "description": "functions.ddb.description",
+    "argCount": {
+        "ge": 4,
+        "le": 5
+    },
+    "args": [
+        {"argName": "cost"},
+        {"argName": "salvage"},
+        {"argName": "life"},
+        {"argName": "period"},
+        {"argName": "factor"}
+    ]
+}

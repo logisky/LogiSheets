@@ -40,3 +40,10 @@ CHECKSTR A9 FALSE
 # Errors propagate, even if a later arg would have been truthy.
 INPUT A10 =OR(FALSE,#DIV/0!,TRUE)
 CHECKERR A10 #DIV/0!
+
+
+# A union reference counts every area (Excel); it used to panic.
+INPUT X1 0
+INPUT Y1 1
+INPUT A11 =OR((X1,Y1))
+CHECKSTR A11 TRUE

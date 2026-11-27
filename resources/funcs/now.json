@@ -1,0 +1,8 @@
+{
+    "name": "NOW",
+    "description": "functions.now.description",
+    "argCount": {
+        "eq": 0
+    },
+    "args": []
+}

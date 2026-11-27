@@ -1,0 +1,13 @@
+{
+    "name": "REPLACEB",
+    "description": "functions.replaceb.description",
+    "argCount": {
+        "eq": 4
+    },
+    "args": [
+        {"argName": "old_text"},
+        {"argName": "start_num"},
+        {"argName": "num_bytes"},
+        {"argName": "new_text"}
+    ]
+}

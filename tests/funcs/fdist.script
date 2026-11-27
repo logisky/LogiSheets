@@ -7,3 +7,13 @@ CHECKNUM B1 0.99
 
 INPUT B2 =F.DIST(A2,A3,A4,FALSE)
 CHECKNUM B2 0.0012238
+
+
+# Legacy FDIST(x, deg_freedom1, deg_freedom2) is the RIGHT-tailed
+# probability, 1 - F.DIST(x, d1, d2, TRUE). Excel example -> 0.01.
+INPUT B3 =FDIST(A2,A3,A4)
+CHECKNUM B3 0.01
+
+# x < 0 -> #NUM!
+INPUT B4 =FDIST(-1,A3,A4)
+CHECKERR B4 #NUM!

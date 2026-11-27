@@ -1,2 +1,6 @@
 INPUT A1 =RIGHTB("hello",2)
 CHECKSTR A1 lo
+
+# num_bytes is optional and defaults to 1 (Excel)
+INPUT A2 =RIGHTB("hello")
+CHECKSTR A2 o

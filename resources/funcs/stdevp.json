@@ -1,0 +1,8 @@
+{
+    "name": "STDEVP",
+    "description": "functions.stdevp.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "number", "startRepeated": true}]
+}

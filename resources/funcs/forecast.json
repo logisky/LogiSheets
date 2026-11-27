@@ -1,0 +1,6 @@
+{
+    "name": "FORECAST",
+    "description": "functions.forecast.description",
+    "argCount": {"eq": 3},
+    "args": [{"argName": "x"}, {"argName": "known_ys"}, {"argName": "known_xs"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "ISTEXT",
+    "description": "functions.istext.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "value"}]
+}

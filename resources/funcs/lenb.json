@@ -1,0 +1,8 @@
+{
+    "name": "LENB",
+    "description": "functions.lenb.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "text"}]
+}

@@ -1,0 +1,6 @@
+{
+    "name": "IMTANH",
+    "description": "functions.imtanh.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "inumber"}]
+}

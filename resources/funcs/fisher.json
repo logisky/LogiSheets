@@ -1,0 +1,6 @@
+{
+    "name": "FISHER",
+    "description": "functions.fisher.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "x"}]
+}

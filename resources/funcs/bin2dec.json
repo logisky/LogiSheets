@@ -1,0 +1,8 @@
+{
+    "name": "BIN2DEC",
+    "description": "functions.bin2dec.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

@@ -1,0 +1,17 @@
+{
+    "name": "PRICE",
+    "description": "functions.price.description",
+    "argCount": {
+        "ge": 6,
+        "le": 7
+    },
+    "args": [
+        {"argName": "settlement"},
+        {"argName": "maturity"},
+        {"argName": "rate"},
+        {"argName": "yld"},
+        {"argName": "redemption"},
+        {"argName": "frequency"},
+        {"argName": "basis"}
+    ]
+}

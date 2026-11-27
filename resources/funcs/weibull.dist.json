@@ -1,0 +1,13 @@
+{
+    "name": "WEIBULL.DIST",
+    "description": "functions.weibull.dist.description",
+    "argCount": {
+        "eq": 4
+    },
+    "args": [
+        {"argName": "x"},
+        {"argName": "alpha"},
+        {"argName": "beta"},
+        {"argName": "cumulative"}
+    ]
+}

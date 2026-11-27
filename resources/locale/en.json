@@ -122,6 +122,9 @@
             "s": {
                 "inv": {
                     "description": "Returns the inverse of the standard normal cumulative distribution."
+                },
+                "dist": {
+                    "description": "Returns the standard normal distribution, with a mean of zero and a standard deviation of one."
                 }
             }
         },
@@ -258,7 +261,10 @@
             "description": "Returns the price per $100 face value for a Treasury bill given settlement, maturity and discount."
         },
         "mode": {
-            "description": "Returns the most frequently occurring value in a range or list of arguments."
+            "description": "Returns the most frequently occurring value in a range or list of arguments.",
+            "sngl": {
+                "description": "Returns the most frequently occurring value in a data set."
+            }
         },
         "ln": {
             "description": "Returns the natural logarithm of a number."
@@ -330,7 +336,13 @@
             "description": "Returns TRUE if the value is any error value except #N/A."
         },
         "stdev": {
-            "description": "Estimates the standard deviation based on a sample."
+            "description": "Estimates the standard deviation based on a sample.",
+            "p": {
+                "description": "Calculates the standard deviation based on the entire population."
+            },
+            "s": {
+                "description": "Estimates the standard deviation based on a sample."
+            }
         },
         "trim": {
             "description": "Removes extra spaces from text, leaving single spaces between words."
@@ -345,7 +357,10 @@
             "description": "Returns the tangent of a given angle (in radians)."
         },
         "weibull": {
-            "description": "Returns the Weibull distribution."
+            "description": "Returns the Weibull distribution.",
+            "dist": {
+                "description": "Returns the Weibull distribution."
+            }
         },
         "gamma.dist": {
             "description": "Returns the gamma distribution."
@@ -387,6 +402,9 @@
             "description": "Returns the rank of a number in a list of numbers (ties averaged in older Excel versions).",
             "eq": {
                 "description": "Returns the rank of a number in a list of numbers; if more than one value has the same rank, the top rank of that set is returned."
+            },
+            "avg": {
+                "description": "Returns the rank of a number in a list of numbers; if several values share a rank, the average rank is returned."
             }
         },
         "sign": {
@@ -475,6 +493,486 @@
         },
         "nominal": {
             "description": "Converts an effective annual interest rate to a nominal rate."
+        },
+        "accrintm": {
+            "description": "Returns the accrued interest for a security that pays interest at maturity."
+        },
+        "and": {
+            "description": "Returns TRUE if all of its arguments are TRUE, and FALSE if any argument is FALSE."
+        },
+        "asinh": {
+            "description": "Returns the inverse hyperbolic sine of a number."
+        },
+        "atan": {
+            "description": "Returns the arctangent, or inverse tangent, of a number, in radians in the range -pi/2 to pi/2."
+        },
+        "atan2": {
+            "description": "Returns the arctangent of the specified x- and y-coordinates, in radians in the range -pi to pi (excluding -pi)."
+        },
+        "avedev": {
+            "description": "Returns the average of the absolute deviations of data points from their mean."
+        },
+        "averageif": {
+            "description": "Returns the average of the cells in a range that meet the given condition."
+        },
+        "bin2hex": {
+            "description": "Converts a binary number to hexadecimal."
+        },
+        "bin2oct": {
+            "description": "Converts a binary number to octal."
+        },
+        "binom": {
+            "dist": {
+                "description": "Returns the individual term binomial distribution probability."
+            },
+            "inv": {
+                "description": "Returns the smallest value for which the cumulative binomial distribution is greater than or equal to a criterion value."
+            }
+        },
+        "binomdist": {
+            "description": "Returns the individual term binomial distribution probability. Kept for compatibility with earlier versions; use BINOM.DIST."
+        },
+        "bitand": {
+            "description": "Performs a bitwise AND operation on two integer values and returns the result."
+        },
+        "chisq": {
+            "dist": {
+                "description": "Returns the left-tailed probability of the chi-squared distribution.",
+                "rt": {
+                    "description": "Returns the right-tailed probability of the chi-squared distribution."
+                }
+            }
+        },
+        "choose": {
+            "description": "Uses an index number to pick one value from a list of values."
+        },
+        "clean": {
+            "description": "Removes all nonprintable characters from text."
+        },
+        "column": {
+            "description": "Returns the column number of a reference."
+        },
+        "columns": {
+            "description": "Returns the number of columns in an array or reference."
+        },
+        "combin": {
+            "description": "Returns the number of combinations for a given number of items."
+        },
+        "correl": {
+            "description": "Returns the correlation coefficient between two data sets."
+        },
+        "cosh": {
+            "description": "Returns the hyperbolic cosine of a number."
+        },
+        "coth": {
+            "description": "Returns the hyperbolic cotangent of a number."
+        },
+        "countifs": {
+            "description": "Counts the number of cells that meet multiple criteria across one or more ranges."
+        },
+        "coupncd": {
+            "description": "Returns the next coupon date after the settlement date."
+        },
+        "coupnum": {
+            "description": "Returns the number of coupons payable between the settlement date and the maturity date."
+        },
+        "couppcd": {
+            "description": "Returns the previous coupon date before the settlement date."
+        },
+        "covar": {
+            "description": "Returns the population covariance, the average of the products of paired deviations. Kept for compatibility with earlier versions; use COVARIANCE.P."
+        },
+        "covariance": {
+            "p": {
+                "description": "Returns the population covariance, the average of the products of deviations for each data point pair in two data sets."
+            },
+            "s": {
+                "description": "Returns the sample covariance, the average of the products of deviations for each data point pair in two data sets."
+            }
+        },
+        "csc": {
+            "description": "Returns the cosecant of an angle given in radians."
+        },
+        "cumprinc": {
+            "description": "Returns the cumulative principal paid on a loan between two periods."
+        },
+        "datedif": {
+            "description": "Calculates the number of days, months, or years between two dates."
+        },
+        "days360": {
+            "description": "Returns the number of days between two dates based on a 360-day year."
+        },
+        "db": {
+            "description": "Returns the depreciation of an asset for a specified period using the fixed-declining balance method."
+        },
+        "ddb": {
+            "description": "Returns the depreciation of an asset for a specified period using the double-declining balance method or another method you specify."
+        },
+        "dec2bin": {
+            "description": "Converts a decimal number to binary."
+        },
+        "dec2hex": {
+            "description": "Converts a decimal number to hexadecimal."
+        },
+        "delta": {
+            "description": "Tests whether two numbers are equal, returning 1 if they are and 0 otherwise."
+        },
+        "devsq": {
+            "description": "Returns the sum of squares of deviations of data points from their sample mean."
+        },
+        "disc": {
+            "description": "Returns the discount rate for a security."
+        },
+        "edate": {
+            "description": "Returns the serial number of the date that is the indicated number of months before or after the start date."
+        },
+        "effect": {
+            "description": "Returns the effective annual interest rate, given the nominal annual rate and the number of compounding periods per year."
+        },
+        "eomonth": {
+            "description": "Returns the serial number of the last day of the month before or after a specified number of months."
+        },
+        "even": {
+            "description": "Rounds a number up, away from zero, to the nearest even integer."
+        },
+        "expon": {
+            "dist": {
+                "description": "Returns the exponential distribution."
+            }
+        },
+        "f": {
+            "dist": {
+                "description": "Returns the F probability distribution."
+            }
+        },
+        "factdouble": {
+            "description": "Returns the double factorial of a number."
+        },
+        "fdist": {
+            "description": "Returns the right-tailed F probability distribution, the degree of diversity between two data sets."
+        },
+        "findb": {
+            "description": "Returns the position of one text string within another (case-sensitive), counting bytes for double-byte characters."
+        },
+        "fisher": {
+            "description": "Returns the Fisher transformation of a value."
+        },
+        "fisherinv": {
+            "description": "Returns the inverse of the Fisher transformation."
+        },
+        "forecast": {
+            "description": "Returns a value along a linear trend fitted to known x and y values."
+        },
+        "formulatext": {
+            "description": "Returns the formula at the given reference as text."
+        },
+        "gammadist": {
+            "description": "Returns the gamma distribution."
+        },
+        "geomean": {
+            "description": "Returns the geometric mean of an array or range of positive numbers."
+        },
+        "gestep": {
+            "description": "Tests whether a number is greater than or equal to a threshold value, returning 1 if so and 0 otherwise."
+        },
+        "hlookup": {
+            "description": "Looks in the top row of a table and returns the value in the same column from a row you specify."
+        },
+        "hour": {
+            "description": "Converts a serial number to an hour."
+        },
+        "if": {
+            "description": "Returns one value if a condition is TRUE and another value if it is FALSE."
+        },
+        "ifna": {
+            "description": "Returns a value you specify if the expression resolves to #N/A; otherwise returns the result of the expression."
+        },
+        "ifs": {
+            "description": "Checks whether one or more conditions are met and returns the value that corresponds to the first TRUE condition."
+        },
+        "imcot": {
+            "description": "Returns the cotangent of a complex number supplied as text."
+        },
+        "imdiv": {
+            "description": "Returns the quotient of two complex numbers."
+        },
+        "imlog10": {
+            "description": "Returns the base-10 logarithm of a complex number."
+        },
+        "improduct": {
+            "description": "Returns the product of complex numbers."
+        },
+        "imsec": {
+            "description": "Returns the secant of a complex number."
+        },
+        "imsin": {
+            "description": "Returns the sine of a complex number."
+        },
+        "imsinh": {
+            "description": "Returns the hyperbolic sine of a complex number."
+        },
+        "imsub": {
+            "description": "Returns the difference between two complex numbers."
+        },
+        "imsum": {
+            "description": "Returns the sum of complex numbers."
+        },
+        "imtan": {
+            "description": "Returns the tangent of a complex number."
+        },
+        "index": {
+            "description": "Returns the value of the element at the given row and column of a table or range."
+        },
+        "indirect": {
+            "description": "Returns the reference specified by a text string."
+        },
+        "intercept": {
+            "description": "Returns the intercept of the linear regression line through the known x and y values."
+        },
+        "intrate": {
+            "description": "Returns the interest rate for a fully invested security."
+        },
+        "isblank": {
+            "description": "Returns TRUE if the value is blank."
+        },
+        "iserr": {
+            "description": "Returns TRUE if the value is any error value except #N/A."
+        },
+        "isformula": {
+            "description": "Returns TRUE if the reference is to a cell that contains a formula."
+        },
+        "islogical": {
+            "description": "Returns TRUE if the value is a logical value."
+        },
+        "isnontext": {
+            "description": "Returns TRUE if the value is not text."
+        },
+        "isnumber": {
+            "description": "Checks whether a value is a number, and returns TRUE or FALSE."
+        },
+        "istext": {
+            "description": "Checks whether a value is text, and returns TRUE or FALSE."
+        },
+        "kurt": {
+            "description": "Returns the kurtosis of a data set."
+        },
+        "large": {
+            "description": "Returns the k-th largest value in a data set."
+        },
+        "lcm": {
+            "description": "Returns the least common multiple of integers."
+        },
+        "leftb": {
+            "description": "Returns the specified number of characters from the start of a text string, counted in bytes."
+        },
+        "lenb": {
+            "description": "Returns the number of bytes used to represent the characters in a text string."
+        },
+        "midb": {
+            "description": "Returns a specific number of characters from a text string, starting at the position you specify, counted in bytes."
+        },
+        "minifs": {
+            "description": "Returns the minimum value among cells specified by a given set of conditions or criteria."
+        },
+        "mround": {
+            "description": "Returns a number rounded to the desired multiple."
+        },
+        "multinomial": {
+            "description": "Returns the multinomial of a set of numbers."
+        },
+        "n": {
+            "description": "Returns a value converted to a number."
+        },
+        "negbinom": {
+            "dist": {
+                "description": "Returns the negative binomial distribution."
+            }
+        },
+        "networkdays": {
+            "description": "Returns the number of whole working days between two dates, excluding weekends and holidays."
+        },
+        "normdist": {
+            "description": "Returns the normal distribution for the specified mean and standard deviation."
+        },
+        "norminv": {
+            "description": "Returns the inverse of the normal cumulative distribution for the specified mean and standard deviation."
+        },
+        "normsinv": {
+            "description": "Returns the inverse of the standard normal cumulative distribution."
+        },
+        "now": {
+            "description": "Returns the serial number of the current date and time."
+        },
+        "nper": {
+            "description": "Returns the number of periods for an investment based on periodic, constant payments and a constant interest rate."
+        },
+        "oct2dec": {
+            "description": "Converts an octal number to decimal."
+        },
+        "pduration": {
+            "description": "Returns the number of periods required by an investment to reach a specified value."
+        },
+        "pearson": {
+            "description": "Returns the Pearson product moment correlation coefficient."
+        },
+        "percentile": {
+            "description": "Returns the k-th percentile of values in a range.",
+            "inc": {
+                "description": "Returns the k-th percentile of values in a range, where k is in the range 0 to 1, inclusive."
+            }
+        },
+        "percentrank": {
+            "description": "Returns the rank of a value in a data set as a percentage of the data set.",
+            "inc": {
+                "description": "Returns the rank of a value in a data set as a percentage (0 to 1, inclusive) of the data set."
+            }
+        },
+        "poisson": {
+            "description": "Returns the Poisson distribution.",
+            "dist": {
+                "description": "Returns the Poisson distribution."
+            }
+        },
+        "price": {
+            "description": "Returns the price per $100 face value of a security that pays periodic interest."
+        },
+        "pricedisc": {
+            "description": "Returns the price per $100 face value of a discounted security."
+        },
+        "pricemat": {
+            "description": "Returns the price per $100 face value of a security that pays interest at maturity."
+        },
+        "quartile": {
+            "description": "Returns the quartile of a data set.",
+            "inc": {
+                "description": "Returns the quartile of a data set, based on percentile values from 0 to 1, inclusive."
+            }
+        },
+        "radians": {
+            "description": "Converts degrees to radians."
+        },
+        "randbetween": {
+            "description": "Returns a random integer between the numbers you specify."
+        },
+        "rate": {
+            "description": "Returns the interest rate per period of an annuity."
+        },
+        "received": {
+            "description": "Returns the amount received at maturity for a fully invested security."
+        },
+        "regexextract": {
+            "description": "Extracts text from a string that matches a regular expression pattern."
+        },
+        "regexreplace": {
+            "description": "Replaces text in a string that matches a regular expression pattern with the given replacement."
+        },
+        "regextest": {
+            "description": "Checks whether any part of the text matches the given regular expression pattern, returning TRUE or FALSE."
+        },
+        "replaceb": {
+            "description": "Replaces part of a text string, based on the number of bytes you specify, with a different text string."
+        },
+        "rept": {
+            "description": "Repeats text a given number of times."
+        },
+        "rightb": {
+            "description": "Returns the last character or characters in a text string, based on the number of bytes you specify."
+        },
+        "rounddown": {
+            "description": "Rounds a number down, toward zero, to the given number of digits."
+        },
+        "roundup": {
+            "description": "Rounds a number up, away from zero, to the given number of digits."
+        },
+        "rows": {
+            "description": "Returns the number of rows in a reference or array."
+        },
+        "rsq": {
+            "description": "Returns the square of the Pearson correlation coefficient through the given data points."
+        },
+        "searchb": {
+            "description": "Returns the position, in bytes, of one text string within another (not case-sensitive)."
+        },
+        "sinh": {
+            "description": "Returns the hyperbolic sine of a number."
+        },
+        "skew": {
+            "description": "Returns the skewness of a distribution, based on a sample.",
+            "p": {
+                "description": "Returns the skewness of a distribution, based on the entire population."
+            }
+        },
+        "slope": {
+            "description": "Returns the slope of the linear regression line through the given data points."
+        },
+        "small": {
+            "description": "Returns the k-th smallest value in a data set."
+        },
+        "sqrt": {
+            "description": "Returns the positive square root of a number."
+        },
+        "standardize": {
+            "description": "Returns a normalized value from a distribution characterized by a mean and standard deviation."
+        },
+        "stdevp": {
+            "description": "Calculates the standard deviation based on the entire population."
+        },
+        "subtotal": {
+            "description": "Returns a subtotal of a list or range, using the aggregate function chosen by function_num."
+        },
+        "sumx2my2": {
+            "description": "Returns the sum of the differences of squares of corresponding values in two arrays."
+        },
+        "sumx2py2": {
+            "description": "Returns the sum of the sums of squares of corresponding values in two arrays."
+        },
+        "sumxmy2": {
+            "description": "Returns the sum of squares of the differences of corresponding values in two arrays."
+        },
+        "syd": {
+            "description": "Returns the sum-of-years' digits depreciation of an asset for a specified period."
+        },
+        "t": {
+            "description": "Returns the text referred to by value, or empty text if the value is not text."
+        },
+        "tanh": {
+            "description": "Returns the hyperbolic tangent of a number."
+        },
+        "trimmean": {
+            "description": "Returns the mean of the interior of a data set, excluding a percentage of points from the top and bottom."
+        },
+        "type": {
+            "description": "Returns a number indicating the data type of a value."
+        },
+        "upper": {
+            "description": "Converts text to uppercase."
+        },
+        "var": {
+            "description": "Estimates variance based on a sample.",
+            "p": {
+                "description": "Calculates variance based on the entire population."
+            },
+            "s": {
+                "description": "Estimates variance based on a sample."
+            }
+        },
+        "varp": {
+            "description": "Calculates variance based on the entire population."
+        },
+        "vlookup": {
+            "description": "Looks for a value in the first column of a table and returns a value in the same row from the column you specify."
+        },
+        "xirr": {
+            "description": "Returns the internal rate of return for a schedule of cash flows that is not necessarily periodic."
+        },
+        "xnpv": {
+            "description": "Returns the net present value for a schedule of cash flows that is not necessarily periodic."
+        },
+        "yearfrac": {
+            "description": "Returns the fraction of the year represented by the number of whole days between two dates."
+        },
+        "yieldmat": {
+            "description": "Returns the annual yield of a security that pays interest at maturity."
         }
     },
     "toolbar": {

@@ -1,0 +1,12 @@
+{
+    "name": "INTRATE",
+    "description": "functions.intrate.description",
+    "argCount": {"ge": 4, "le": 5},
+    "args": [
+        {"argName": "settlement"},
+        {"argName": "maturity"},
+        {"argName": "investment"},
+        {"argName": "redemption"},
+        {"argName": "basis"}
+    ]
+}

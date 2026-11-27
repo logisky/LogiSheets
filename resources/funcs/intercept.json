@@ -1,0 +1,6 @@
+{
+    "name": "INTERCEPT",
+    "description": "functions.intercept.description",
+    "argCount": {"eq": 2},
+    "args": [{"argName": "known_ys"}, {"argName": "known_xs"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "COT",
+    "description": "functions.cot.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "number"}]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "COLUMN",
+    "description": "functions.column.description",
+    "argCount": {
+        "le": 1
+    },
+    "args": [{"argName": "reference", "refOnly": true}]
+}

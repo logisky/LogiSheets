@@ -1,0 +1,12 @@
+{
+    "name": "NORMINV",
+    "description": "functions.norminv.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [
+        {"argName": "probability"},
+        {"argName": "mean"},
+        {"argName": "standard_dev"}
+    ]
+}

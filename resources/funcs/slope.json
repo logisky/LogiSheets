@@ -1,0 +1,8 @@
+{
+    "name": "SLOPE",
+    "description": "functions.slope.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "known_ys"}, {"argName": "known_xs"}]
+}

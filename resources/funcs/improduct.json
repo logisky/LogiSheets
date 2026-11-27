@@ -1,0 +1,6 @@
+{
+    "name": "IMPRODUCT",
+    "description": "functions.improduct.description",
+    "argCount": {"ge": 1},
+    "args": [{"argName": "inumber", "startRepeated": true}]
+}

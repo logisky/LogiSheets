@@ -8,3 +8,7 @@ CHECKSTR R1 abc
 # negative chars -> #VALUE!
 INPUT R2 =RIGHT("abc",-1)
 CHECKERR R2 #VALUE!
+
+# num_chars is optional and defaults to 1 (Excel)
+INPUT R3 =RIGHT("right")
+CHECKSTR R3 t

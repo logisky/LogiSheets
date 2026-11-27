@@ -1,0 +1,8 @@
+{
+    "name": "VARP",
+    "description": "functions.varp.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "number", "startRepeated": true}]
+}

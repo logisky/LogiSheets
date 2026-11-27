@@ -1,0 +1,8 @@
+{
+    "name": "XNPV",
+    "description": "functions.xnpv.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [{"argName": "rate"}, {"argName": "values"}, {"argName": "dates"}]
+}

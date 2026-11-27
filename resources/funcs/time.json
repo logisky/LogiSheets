@@ -1,0 +1,8 @@
+{
+    "name": "TIME",
+    "description": "functions.time.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [{"argName": "hour"}, {"argName": "minute"}, {"argName": "second"}]
+}

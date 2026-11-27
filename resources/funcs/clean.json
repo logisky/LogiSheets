@@ -1,0 +1,8 @@
+{
+    "name": "CLEAN",
+    "description": "functions.clean.description",
+    "argCount": {
+        "eq": 1
+    },
+    "args": [{"argName": "text"}]
+}

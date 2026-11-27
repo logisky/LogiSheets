@@ -1,0 +1,6 @@
+{
+    "name": "EVEN",
+    "description": "functions.even.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "number"}]
+}

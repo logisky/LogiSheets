@@ -1,0 +1,8 @@
+{
+    "name": "VAR",
+    "description": "functions.var.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "number", "startRepeated": true}]
+}

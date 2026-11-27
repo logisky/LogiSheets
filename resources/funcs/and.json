@@ -1,0 +1,8 @@
+{
+    "name": "AND",
+    "description": "functions.and.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "logical", "startRepeated": true}]
+}

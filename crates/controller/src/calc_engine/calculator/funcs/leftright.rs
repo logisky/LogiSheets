@@ -61,12 +61,20 @@ where
     C: Connector,
     F: Fn(String, usize) -> String,
 {
-    assert_or_return!(args.len() == 2, ast::Error::Unspecified);
+    // LEFT/RIGHT(text, [num_chars]): the count defaults to 1, so `=LEFT(A1)`
+    // is the first character.
+    assert_or_return!(args.len() == 1 || args.len() == 2, ast::Error::Unspecified);
     let mut args_iter = args.into_iter();
     let first = fetcher.get_calc_value(args_iter.next().unwrap());
     assert_text_from_calc_value!(s, first);
-    let second = fetcher.get_calc_value(args_iter.next().unwrap());
-    assert_f64_from_calc_value!(n, second);
+    let n = match args_iter.next() {
+        Some(arg) => {
+            let second = fetcher.get_calc_value(arg);
+            assert_f64_from_calc_value!(n, second);
+            n
+        }
+        None => 1.,
+    };
     // Negative num_chars is #VALUE!; otherwise take that many graphemes
     // (capping past the string length is handled by `take`).
     assert_or_return!(n >= 0., ast::Error::Value);

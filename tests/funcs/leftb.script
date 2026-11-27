@@ -1,2 +1,6 @@
 INPUT A1 =LEFTB("hello",2)
 CHECKSTR A1 he
+
+# num_bytes is optional and defaults to 1 (Excel)
+INPUT A2 =LEFTB("hello")
+CHECKSTR A2 h

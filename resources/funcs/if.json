@@ -1,0 +1,10 @@
+{
+    "name": "IF",
+    "description": "functions.if.description",
+    "argCount": {"ge": 2, "le": 3},
+    "args": [
+        {"argName": "logical_test"},
+        {"argName": "value_if_true"},
+        {"argName": "value_if_false"}
+    ]
+}

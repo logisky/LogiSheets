@@ -1,0 +1,8 @@
+{
+    "name": "ATAN2",
+    "description": "functions.atan2.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "x_num"}, {"argName": "y_num"}]
+}

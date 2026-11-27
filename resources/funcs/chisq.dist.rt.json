@@ -1,0 +1,8 @@
+{
+    "name": "CHISQ.DIST.RT",
+    "description": "functions.chisq.dist.rt.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "x"}, {"argName": "deg_freedom"}]
+}

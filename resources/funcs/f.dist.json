@@ -1,0 +1,11 @@
+{
+    "name": "F.DIST",
+    "description": "functions.f.dist.description",
+    "argCount": {"eq": 4},
+    "args": [
+        {"argName": "x"},
+        {"argName": "deg_freedom1"},
+        {"argName": "deg_freedom2"},
+        {"argName": "cumulative"}
+    ]
+}

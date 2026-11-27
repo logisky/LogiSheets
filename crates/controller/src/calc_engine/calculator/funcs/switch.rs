@@ -44,7 +44,8 @@ where
                 },
                 CalcValue::Range(_) => next_step(expr_value, iter, fetcher),
                 CalcValue::Cube(_) => CalcVertex::from_error(ast::Error::Ref),
-                CalcValue::Union(_) => todo!(),
+                // A multi-area union is not a value to compare: #VALUE!.
+                CalcValue::Union(_) => CalcVertex::from_error(ast::Error::Value),
             }
         }
         (None, Some(_)) => unreachable!(),

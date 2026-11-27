@@ -1,0 +1,8 @@
+{
+    "name": "COMBIN",
+    "description": "functions.combin.description",
+    "argCount": {
+        "eq": 2
+    },
+    "args": [{"argName": "number"}, {"argName": "number_chosen"}]
+}

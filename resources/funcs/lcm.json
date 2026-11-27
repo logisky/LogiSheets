@@ -1,0 +1,8 @@
+{
+    "name": "LCM",
+    "description": "functions.lcm.description",
+    "argCount": {
+        "ge": 1
+    },
+    "args": [{"argName": "number", "startRepeated": true}]
+}

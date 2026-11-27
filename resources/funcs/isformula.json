@@ -1,0 +1,6 @@
+{
+    "name": "ISFORMULA",
+    "description": "functions.isformula.description",
+    "argCount": {"eq": 1},
+    "args": [{"argName": "reference", "refOnly": true}]
+}

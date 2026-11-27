@@ -1,2 +1,8 @@
 INPUT    S9 =SWITCH(1,1,"x")
 CHECKSTR    S9  x
+
+# A union is not a value to compare against: #VALUE! (it used to panic).
+INPUT X1 1
+INPUT Y1 2
+INPUT S10 =SWITCH(1,(X1,Y1),"a","b")
+CHECKERR S10 #VALUE!

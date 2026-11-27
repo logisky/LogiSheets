@@ -13,3 +13,12 @@ INPUT B7 4
 
 INPUT A10 =MODE(B2:B7)
 CHECKNUM A10 4
+
+
+# A union reference pools every area (Excel); it used to panic.
+INPUT X1 7
+INPUT X2 8
+INPUT Y1 8
+INPUT Y2 9
+INPUT A11 =MODE((X1:X2,Y1:Y2))
+CHECKNUM A11 8

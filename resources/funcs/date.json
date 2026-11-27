@@ -1,0 +1,8 @@
+{
+    "name": "DATE",
+    "description": "functions.date.description",
+    "argCount": {
+        "eq": 3
+    },
+    "args": [{"argName": "year"}, {"argName": "month"}, {"argName": "day"}]
+}

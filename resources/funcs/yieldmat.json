@@ -1,0 +1,16 @@
+{
+    "name": "YIELDMAT",
+    "description": "functions.yieldmat.description",
+    "argCount": {
+        "ge": 5,
+        "le": 6
+    },
+    "args": [
+        {"argName": "settlement"},
+        {"argName": "maturity"},
+        {"argName": "issue"},
+        {"argName": "rate"},
+        {"argName": "pr"},
+        {"argName": "basis"}
+    ]
+}
