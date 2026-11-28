@@ -25,7 +25,13 @@ const completions = (page: Page) => page.locator('.cm-tooltip-autocomplete')
 async function startFormula(page: Page, text: string) {
     await page.goto('/')
     await expect(gridCanvas(page)).toBeVisible({timeout: 30_000})
-    await gridCanvas(page).click({position: {x: 150, y: 120}})
+    // The first click can land before the grid is ready to select.
+    await expect(async () => {
+        await gridCanvas(page).click({position: {x: 150, y: 120}})
+        await expect(page.locator('.selector').first()).toBeVisible({
+            timeout: 1_000,
+        })
+    }).toPass({timeout: 20_000})
     // Real keystrokes: the first one opens the editor (type-to-edit), the
     // rest go into it.
     await page.keyboard.type(text, {delay: 50})

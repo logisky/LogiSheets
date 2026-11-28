@@ -1997,7 +1997,7 @@ let isDragging = false; // True while user is drag-selecting
         enter: (e) => moveSelection(e.shiftKey ? 'up' : 'down'),
         tab: (e) => moveSelection(e.shiftKey ? 'left' : 'right'),
         editCell: () => editCurrentCell(),
-        clearCell: () => startEditCurrent(''),
+        clearCell: () => clearSelection(),
         // Ctrl/⌘+Shift+Arrow extends to the boundary rather than jumping to it.
         jumpUp: (e) => jumpToBoundary('up', e.shiftKey),
         jumpDown: (e) => jumpToBoundary('down', e.shiftKey),
@@ -2083,12 +2083,38 @@ let isDragging = false; // True while user is drag-selecting
         )
     }
 
-    /** Begin editing the selected cell, seeding the editor with `initial`. */
-    function startEditCurrent(initial: string) {
-        if (!onStartEdit) return
-        const sel = getSelectedCellRange(selectedData)
-        if (!sel) return
-        onStartEdit(sel.startRow, sel.startCol, initial)
+    /**
+     * Delete / Backspace: empty every selected cell, keeping its formatting,
+     * as Google Sheets and Mac Excel do (Windows Excel's Backspace opens an
+     * empty editor instead, which learners took for a broken key). One undo
+     * step. Uses `cellClear`, not an empty `cellInput`, so dependents
+     * recalculate. Whole rows/columns stop at the sheet's used area.
+     */
+    async function clearSelection() {
+        if (!dataService) return
+        let range = getSelectedCellRange(selectedData)
+        if (!range) {
+            const lines = getSelectedLines(selectedData)
+            if (!lines) return
+            const dim = await dataService.getSheetDimension(activeSheet)
+            if (isErrorMessage(dim)) return
+            range =
+                lines.type === 'row'
+                    ? { startRow: lines.start, endRow: Math.min(lines.end, dim.maxRow), startCol: 0, endCol: dim.maxCol }
+                    : { startRow: 0, endRow: dim.maxRow, startCol: lines.start, endCol: Math.min(lines.end, dim.maxCol) }
+        }
+        const payloads: EditPayload[] = []
+        for (let r = range.startRow; r <= range.endRow; r++) {
+            for (let c = range.startCol; c <= range.endCol; c++) {
+                payloads.push({
+                    type: 'cellClear',
+                    value: { sheetIdx: activeSheet, row: r, col: c },
+                })
+            }
+        }
+        if (payloads.length === 0) return
+        const result = await dataService.handleTransaction({ payloads, undoable: true, temp: false })
+        if (isErrorMessage(result)) console.warn('clear failed:', result.msg)
     }
 
     /**

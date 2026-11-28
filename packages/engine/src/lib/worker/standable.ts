@@ -21,7 +21,7 @@ import type {
     CfDataBar,
     CfIcon,
 } from 'logisheets-web'
-import {formatNumber} from 'logisheets-web'
+import {formatNumber, numberToText} from 'logisheets-web'
 
 // ============================================================================
 // Unit Conversion Functions
@@ -330,6 +330,8 @@ export class StandardValue {
     }
 
     get valueStr(): string {
+        if (this.cellValueOneof?.$case === 'number')
+            return numberToText(this.cellValueOneof.number)
         return this.value.toString()
     }
 
@@ -377,16 +379,17 @@ export class StandardCell {
     getFormattedText(): string {
         const num = this.getNumber()
         if (num !== undefined) {
-            const fmt = this.style?.formatter ?? ''
-            // No format string (or 'general' which ssf interprets identically
-            // to no format) → fall back to default JS stringification so we
-            // don't accidentally show extra precision or scientific notation.
-            if (fmt && fmt.toLowerCase() !== 'general') {
-                // Native numfmt rendering via ssf-rs (WASM). Falls back to String(num)
-                // internally on an unsupported format, matching the previous behavior.
+            // Native numfmt rendering via ssf-rs (WASM), General included: it
+            // is Excel's cell display (about 11 characters — `0.1+0.2` → `0.3`,
+            // `1/3` → `0.333333333`, 12+ digit integers in E notation).
+            // `String(num)` showed binary tails like `0.30000000000000004`.
+            const fmt = this.style?.formatter || 'General'
+            try {
                 return formatNumber(fmt, num)
+            } catch (e) {
+                console.error('[standable] formatNumber failed', fmt, num, e)
+                return numberToText(num)
             }
-            return String(num)
         }
         return this.getText()
     }

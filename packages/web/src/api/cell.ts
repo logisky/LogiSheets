@@ -1,4 +1,5 @@
 import {CellInfo, Value, Style} from '../bindings'
+import {numberToText} from '../utils'
 
 /** Convenience wrapper over one {@link CellInfo} snapshot; it does not track
  *  later edits. */
@@ -9,7 +10,9 @@ export class Cell {
     }
 
     /** The value as a plain string (`''` when empty, `true`/`false` for
-     *  booleans, the error text for errors). Not number-formatted. */
+     *  booleans, the error text for errors). Not number-formatted; a number
+     *  is cut to Excel's 15 significant digits (`0.1+0.2` → `0.3`), as the
+     *  formula bar shows it. See {@link numberToText}. */
     public getText(): string {
         return this._value.valueStr ?? ''
     }
@@ -51,6 +54,8 @@ export class CellValue {
         else return ''
     }
     get valueStr() {
+        if (this.cellValueOneof?.$case === 'number')
+            return numberToText(this.cellValueOneof.number)
         return this.value.toString()
     }
     static from(value: Value) {

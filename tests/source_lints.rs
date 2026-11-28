@@ -100,6 +100,10 @@ fn panics_reachable_from_data_do_not_increase() {
         // turns typed text into them.
         ("crates/controller/src/connectors", 12),
         ("crates/controller/parser/src", 56),
+        // The display lexer runs on every keystroke of a half-typed formula
+        // (highlighting, F4, point mode); a panic there leaves the editor
+        // with no tokens at all.
+        ("crates/controller/lexer4fmt/src", 10),
     ];
     let mut report = Vec::new();
     for (path, budget) in DATA_PATHS {

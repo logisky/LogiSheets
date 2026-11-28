@@ -28,3 +28,24 @@ export function toA1notation(index: number): string {
 
     return ret
 }
+
+/**
+ * A number as text, the way a spreadsheet shows it: rounded to Excel's 15
+ * significant decimal digits, then printed in its shortest form.
+ *
+ * Binary floating point leaves tails a spreadsheet never shows: `0.1+0.2` is
+ * `0.30000000000000004`, `1.1*1.1` is `1.2100000000000002`. JavaScript's
+ * `String(n)` prints them (it needs up to 17 digits to round-trip); Excel keeps
+ * 15, so it shows `0.3` and `1.21`. This is the engine's `number_to_text`
+ * (crates/controller/.../number_text.rs) on this side of the WASM boundary:
+ * `toPrecision` rounds the exact binary value, as its Excel15 rule does.
+ * Where scientific notation kicks in is left to `String`, as before.
+ *
+ * For the General format only: an explicit number format goes through
+ * `formatNumber`. The stored value is unchanged.
+ */
+export function numberToText(n: number): string {
+    // Excel15 leaves magnitudes past 1e15 alone; so do we.
+    if (!Number.isFinite(n) || Math.abs(n) >= 1e15) return String(n)
+    return String(Number(n.toPrecision(15)))
+}
